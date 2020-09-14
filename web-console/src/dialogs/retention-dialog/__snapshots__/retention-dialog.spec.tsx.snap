@@ -238,7 +238,6 @@ exports[`retention dialog matches snapshot 1`] = `
                                 class="bp3-input"
                                 placeholder="P1D"
                                 style="padding-right: 0px;"
-                                suggestions="P1D,P7D,P1M,P1Y,P1000Y"
                                 type="text"
                                 value="P1000Y"
                               />
@@ -553,18 +552,22 @@ exports[`retention dialog matches snapshot 1`] = `
                 </a>
                 ):
               </p>
-              <button
-                class="bp3-button bp3-disabled"
-                disabled=""
-                tabindex="-1"
-                type="button"
+              <div
+                class="default-rule"
               >
-                <span
-                  class="bp3-button-text"
+                <button
+                  class="bp3-button bp3-disabled"
+                  disabled=""
+                  tabindex="-1"
+                  type="button"
                 >
-                  loadForever
-                </span>
-              </button>
+                  <span
+                    class="bp3-button-text"
+                  >
+                    loadForever
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -574,6 +577,16 @@ exports[`retention dialog matches snapshot 1`] = `
           <div
             class="bp3-dialog-footer-actions"
           >
+            <button
+              class="bp3-button bp3-minimal left-align-button"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                History
+              </span>
+            </button>
             <button
               class="bp3-button"
               type="button"

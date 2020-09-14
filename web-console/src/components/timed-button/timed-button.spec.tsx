@@ -25,10 +25,10 @@ describe('Timed button', () => {
   it('matches snapshot', () => {
     const timedButton = (
       <TimedButton
-        intervals={[{ label: 'timeValue', value: 1000 }]}
+        delays={[{ label: 'timeValue', delay: 1000 }]}
         onRefresh={() => null}
         label={'label'}
-        defaultValue={1000}
+        defaultDelay={1000}
       />
     );
     const { container } = render(timedButton);

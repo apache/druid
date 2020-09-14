@@ -40,16 +40,26 @@ function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
 }
 
+function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSON.stringify(value);
+
+    default:
+      return String(value);
+  }
+}
+
 export interface QueryOutputProps {
-  loading: boolean;
   queryResult?: QueryResult;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
-  error?: string;
   runeMode: boolean;
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult, loading, error } = props;
+  const { queryResult } = props;
   const parsedQuery = queryResult ? queryResult.sqlQuery : undefined;
   const [showValue, setShowValue] = useState();
 
@@ -211,69 +221,74 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     );
   }
 
-  function getCellMenu(header: string, headerIndex: number, value: any) {
+  function getCellMenu(header: string, headerIndex: number, value: unknown) {
     const { runeMode } = props;
 
-    const showFullValueMenuItem =
-      typeof value === 'string' ? (
-        <MenuItem
-          icon={IconNames.EYE_OPEN}
-          text={`Show full value`}
-          onClick={() => {
-            setShowValue(value);
-          }}
-        />
-      ) : (
-        undefined
-      );
+    const val = SqlLiteral.maybe(value);
+    const showFullValueMenuItem = (
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text="Show full value"
+        onClick={() => {
+          setShowValue(stringifyValue(value));
+        }}
+      />
+    );
 
-    const val = SqlLiteral.create(value);
     if (parsedQuery) {
+      let ex: SqlExpression | undefined;
+      let having = false;
       const selectValue = parsedQuery.getSelectExpressionForIndex(headerIndex);
       if (selectValue) {
         const outputName = selectValue.getOutputName();
-        const having = parsedQuery.isAggregateSelectIndex(headerIndex);
-        let ex: SqlExpression;
+        having = parsedQuery.isAggregateSelectIndex(headerIndex);
         if (having && outputName) {
           ex = SqlRef.column(outputName);
         } else {
           ex = selectValue.expression as SqlExpression;
         }
-
-        return (
-          <Menu>
-            {isComparable(value) && (
-              <>
-                {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
-                {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
-              </>
-            )}
-            {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
-            {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
-            {showFullValueMenuItem}
-          </Menu>
-        );
+      } else if (parsedQuery.hasStarInSelect()) {
+        ex = SqlRef.column(header);
       }
-    }
 
-    const ref = SqlRef.column(header);
-    const trimmedValue = trimString(String(value), 50);
-    return (
-      <Menu>
-        <MenuItem
-          icon={IconNames.CLIPBOARD}
-          text={`Copy: ${trimmedValue}`}
-          onClick={() => copyAndAlert(value, `${trimmedValue} copied to clipboard`)}
-        />
-        {!runeMode && (
-          <>
-            {clipboardMenuItem(ref.equal(val))}
-            {clipboardMenuItem(ref.unequal(val))}
-          </>
-        )}
-        {showFullValueMenuItem}
-      </Menu>
-    );
+      return (
+        <Menu>
+          {ex && val && (
+            <>
+              {isComparable(value) && (
+                <>
+                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
+                </>
+              )}
+              {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
+            </>
+          )}
+          {showFullValueMenuItem}
+        </Menu>
+      );
+    } else {
+      const ref = SqlRef.column(header);
+      const stringValue = stringifyValue(value);
+      const trimmedValue = trimString(stringValue, 50);
+      return (
+        <Menu>
+          <MenuItem
+            icon={IconNames.CLIPBOARD}
+            text={`Copy: ${trimmedValue}`}
+            onClick={() => copyAndAlert(stringValue, `${trimmedValue} copied to clipboard`)}
+          />
+          {!runeMode && val && (
+            <>
+              {clipboardMenuItem(ref.equal(val))}
+              {clipboardMenuItem(ref.unequal(val))}
+            </>
+          )}
+          {showFullValueMenuItem}
+        </Menu>
+      );
+    }
   }
 
   function getHeaderClassName(header: string) {
@@ -296,12 +311,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     <div className="query-output">
       <ReactTable
         data={queryResult ? (queryResult.rows as any[][]) : []}
-        loading={loading}
-        noDataText={
-          !loading && queryResult && !queryResult.rows.length
-            ? 'Query returned no data'
-            : error || ''
-        }
+        noDataText={queryResult && !queryResult.rows.length ? 'Query returned no data' : ''}
         sortable={false}
         columns={(queryResult ? queryResult.header : []).map((column, i) => {
           const h = column.name;
