@@ -429,7 +429,8 @@ public class CompactSegmentsTest
       long expectedIntervalCountProcessed,
       long expectedSegmentCountAwaitingCompaction,
       long expectedSegmentCountProcessed
-  ) {
+  )
+  {
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
     AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(dataSourceName);
     Assert.assertEquals(dataSourceName, snapshot.getDataSource());
