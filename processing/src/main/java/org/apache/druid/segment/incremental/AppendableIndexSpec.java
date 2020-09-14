@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 
-@ExtensionPoint
+@UnstableApi
 public interface AppendableIndexSpec
 {
   // Returns a builder of the appendable index.
