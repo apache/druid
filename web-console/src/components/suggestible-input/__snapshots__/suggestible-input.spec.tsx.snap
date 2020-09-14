@@ -7,7 +7,6 @@ exports[`suggestible input matches snapshot 1`] = `
   <input
     class="bp3-input"
     style="padding-right: 0px;"
-    suggestions="a,b,c"
     type="text"
     value=""
   />

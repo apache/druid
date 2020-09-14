@@ -16,15 +16,93 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
-import { SupervisorStatisticsTable } from './supervisor-statistics-table';
+import { QueryState } from '../../utils';
 
-describe('rule editor', () => {
-  it('matches snapshot', () => {
-    const showJson = <SupervisorStatisticsTable endpoint={'test'} downloadFilename={'test'} />;
-    const { container } = render(showJson);
-    expect(container.firstChild).toMatchSnapshot();
+import {
+  normalizeSupervisorStatisticsResults,
+  SupervisorStatisticsTable,
+  SupervisorStatisticsTableRow,
+} from './supervisor-statistics-table';
+
+let supervisorStatisticsState: QueryState<SupervisorStatisticsTableRow[]> = QueryState.INIT;
+jest.mock('../../hooks', () => {
+  return {
+    useQueryManager: () => [supervisorStatisticsState],
+  };
+});
+
+describe('SupervisorStatisticsTable', () => {
+  function makeSupervisorStatisticsTable() {
+    return <SupervisorStatisticsTable supervisorId="sup-id" downloadFilename={'test'} />;
+  }
+
+  it('matches snapshot on init', () => {
+    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+  });
+
+  it('matches snapshot on loading', () => {
+    supervisorStatisticsState = QueryState.LOADING;
+
+    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+  });
+
+  it('matches snapshot on error', () => {
+    supervisorStatisticsState = new QueryState({ error: new Error('test error') });
+
+    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+  });
+
+  it('matches snapshot on no data', () => {
+    supervisorStatisticsState = new QueryState({
+      data: normalizeSupervisorStatisticsResults({}),
+    });
+
+    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+  });
+
+  it('matches snapshot on some data', () => {
+    supervisorStatisticsState = new QueryState({
+      data: normalizeSupervisorStatisticsResults({
+        '0': {
+          index_kafka_github_dfde87f265a8cc9_pnmcaldn: {
+            movingAverages: {
+              buildSegments: {
+                '5m': {
+                  processed: 3.5455993615040584,
+                  unparseable: 0,
+                  thrownAway: 0,
+                  processedWithError: 0,
+                },
+                '15m': {
+                  processed: 5.544749689510444,
+                  unparseable: 0,
+                  thrownAway: 0,
+                  processedWithError: 0,
+                },
+                '1m': {
+                  processed: 4.593670088770785,
+                  unparseable: 0,
+                  thrownAway: 0,
+                  processedWithError: 0,
+                },
+              },
+            },
+            totals: {
+              buildSegments: {
+                processed: 7516,
+                processedWithError: 0,
+                thrownAway: 0,
+                unparseable: 0,
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
   });
 });
