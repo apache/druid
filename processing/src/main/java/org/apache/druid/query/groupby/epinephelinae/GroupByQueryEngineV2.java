@@ -55,6 +55,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -321,7 +322,7 @@ public class GroupByQueryEngineV2
    * broker merge, for example with an 'inline' datasource subquery.
    */
   public static boolean isAllSingleValueDims(
-      final ColumnSelectorFactory factory,
+      final ColumnInspector inspector,
       final List<DimensionSpec> dimensions
   )
   {
@@ -336,7 +337,7 @@ public class GroupByQueryEngineV2
               }
 
               // Now check column capabilities, which must be present and explicitly not multi-valued
-              final ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(dimension.getDimension());
+              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
               return columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse();
             });
   }

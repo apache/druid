@@ -120,9 +120,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
       return spec.decorate(selector);
     };
 
-    // We cannot use dimensionSelectorCache.computeIfAbsent() here since the function being
-    // applied may modify the dimensionSelectorCache itself through virtual column references,
-    // triggering a ConcurrentModificationException in JDK 9 and above.
+    // We cannot use computeIfAbsent() here since the function being applied may modify the cache itself through
+    // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
     MultiValueDimensionVectorSelector selector = multiValueDimensionSelectorCache.get(dimensionSpec);
     if (selector == null) {
       selector = mappingFunction.apply(dimensionSpec);
@@ -178,9 +177,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
       return spec.decorate(selector);
     };
 
-    // We cannot use dimensionSelectorCache.computeIfAbsent() here since the function being
-    // applied may modify the dimensionSelectorCache itself through virtual column references,
-    // triggering a ConcurrentModificationException in JDK 9 and above.
+    // We cannot use computeIfAbsent() here since the function being applied may modify the cache itself through
+    // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
     SingleValueDimensionVectorSelector selector = singleValueDimensionSelectorCache.get(dimensionSpec);
     if (selector == null) {
       selector = mappingFunction.apply(dimensionSpec);
@@ -209,9 +207,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
         return column.makeVectorValueSelector(offset);
       }
     };
-    // We cannot use valueSelectorCache.computeIfAbsent() here since the function being
-    // applied may modify the valueSelectorCache itself through virtual column references,
-    // triggering a ConcurrentModificationException in JDK 9 and above.
+    // We cannot use computeIfAbsent() here since the function being applied may modify the cache itself through
+    // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
     VectorValueSelector columnValueSelector = valueSelectorCache.get(columnName);
     if (columnValueSelector == null) {
       columnValueSelector = mappingFunction.apply(columnName);
@@ -240,9 +237,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
         return column.makeVectorObjectSelector(offset);
       }
     };
-    // We cannot use valueSelectorCache.computeIfAbsent() here since the function being
-    // applied may modify the valueSelectorCache itself through virtual column references,
-    // triggering a ConcurrentModificationException in JDK 9 and above.
+    // We cannot use computeIfAbsent() here since the function being applied may modify the cache itself through
+    // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
     VectorObjectSelector columnValueSelector = objectSelectorCache.get(columnName);
     if (columnValueSelector == null) {
       columnValueSelector = mappingFunction.apply(columnName);
