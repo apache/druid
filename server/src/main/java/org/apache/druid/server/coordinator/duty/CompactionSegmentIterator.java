@@ -33,32 +33,31 @@ import java.util.Map;
 public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
   /**
-   * Iterate through all the compacted segments for all datasources currently in this iterator.
-   * This method can be use before calling {@code totalRemainingStatistics}, {@code totalProcessedStatistics},
-   * {@code totalSkippedStatistics} to get correct statistics for the datasources regardless of
+   * Iterate through all the remaining segments for all datasources currently in this iterator.
+   * This method can be use before calling {@code totalRemainingStatistics} and {@code totalProcessedStatistics}
+   * to get correct statistics for the datasources regardless of
    * how many (or none) times this iterator was iterated.
+   * This method should determines remaining segments as needs compaction or does not needs compaction
+   * and aggregates the segment's statistics accordingly.
    *
-   * WARNING: this may iterate the underlying iterator and causes segments from intervals that needs compaction
-   * AND intervals that does not needs compaction to be iterated. This method should only be called when
-   * iteration of this iterator is no longer required.
+   * WARNING: this method iterate the underlying iterator and causes segments to be iterated.
+   * This method should only be called when iteration of this iterator is no longer required.
    */
-  void iterateAllCompactedSegments();
+  void flushAllSegments();
 
   /**
    * Return a map of (dataSource, CompactionStatistics) for all dataSources.
-   * This method should consider all segments except the segments iterated by {@link #next()}.
+   * This method should consider only segments that was not iterated by {@link #next()} and was not deemed as
+   * needs compaction by {@link #flushAllSegments()}.
    */
   Map<String, CompactionStatistics> totalRemainingStatistics();
 
   /**
    * Return a map of (dataSource, CompactionStatistics) for all dataSources.
-   * This method should consider only segments that was iterated and returned by {@link #next().
+   * This method should consider only segments that has one of the following:
+   * - iterated and returned by {@link #next()} (needs compaction)
+   * - Skipped from iteration as segments does not needs compaction
+   * - Deemed as does not needs compaction by {@link #flushAllSegments()}
    */
   Map<String, CompactionStatistics> totalProcessedStatistics();
-
-  /**
-   * Return a map of (dataSource, CompactionStatistics) for all dataSources.
-   * This method should consider only segments that was iterated but not returned by {@link #next().
-   */
-  Map<String, CompactionStatistics> totalSkippedStatistics();
 }

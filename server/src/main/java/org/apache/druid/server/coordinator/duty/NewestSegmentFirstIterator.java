@@ -70,9 +70,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private final ObjectMapper objectMapper;
   private final Map<String, DataSourceCompactionConfig> compactionConfigs;
   private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-  private final Map<String, CompactionStatistics> skippedSegments = new HashMap<>();
-  private final Map<String, CompactionStatistics> returnedSegments = new HashMap<>();
-
+  private final Map<String, CompactionStatistics> processedSegments = new HashMap<>();
+  private final Map<String, CompactionStatistics> remainingSegments = new HashMap<>();
 
   // dataSource -> intervalToFind
   // searchIntervals keeps track of the current state of which interval should be considered to search segments to
@@ -118,45 +117,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   @Override
   public Map<String, CompactionStatistics> totalRemainingStatistics()
   {
-    final Map<String, CompactionStatistics> resultMap = new HashMap<>();
-    for (QueueEntry entry : queue) {
-      final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(entry.getDataSource());
-      final Interval interval = new Interval(timeline.first().getInterval().getStart(), entry.interval.getEnd());
-
-      final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(interval);
-
-      long byteSum = 0;
-      long segmentNumberCountSum = 0;
-      long segmentIntervalCountSum = holders.size();
-
-      for (DataSegment segment : FluentIterable
-          .from(holders)
-          .transformAndConcat(TimelineObjectHolder::getObject)
-          .transform(PartitionChunk::getObject)) {
-        byteSum += segment.getSize();
-        segmentNumberCountSum += 1;
-      }
-
-      CompactionStatistics statistics = new CompactionStatistics(byteSum, segmentNumberCountSum, segmentIntervalCountSum);
-      resultMap.put(entry.getDataSource(), statistics);
-    }
-    return resultMap;
+    return remainingSegments;
   }
 
   @Override
   public Map<String, CompactionStatistics> totalProcessedStatistics()
   {
-    return returnedSegments;
+    return processedSegments;
   }
 
   @Override
-  public Map<String, CompactionStatistics> totalSkippedStatistics()
-  {
-    return skippedSegments;
-  }
-
-  @Override
-  public void iterateAllCompactedSegments()
+  public void flushAllSegments()
   {
     if (queue.isEmpty()) {
       return;
@@ -165,13 +136,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     while ((entry = queue.poll()) != null) {
       final List<DataSegment> resultSegments = entry.segments;
       final String dataSourceName = resultSegments.get(0).getDataSource();
+      // This entry was in the queue, meaning that it was not processed. Hence, also aggregates it's
+      // statistic to the remaining segments counts.
+      collectSegmentStatistics(remainingSegments, dataSourceName, new SegmentsToCompact(entry.segments));
       final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor = timelineIterators.get(
           dataSourceName
       );
-      // WARNING: This iterates the compactibleTimelineObjectHolderCursor and can iterates through both segments
-      // that needs compaction and segments that does not. Since this method is intended to only be use after all
-      // necessary iteration is done on this iterate (and hence the compactibleTimelineObjectHolderCursor), this
-      // implementation is ok.
+      // WARNING: This iterates the compactibleTimelineObjectHolderCursor.
+      // Since this method is intended to only be use after all necessary iteration is done on this iterator
+      // (and hence the compactibleTimelineObjectHolderCursor), this implementation is ok.
       iterateAllSegments(dataSourceName, compactibleTimelineObjectHolderCursor, compactionConfigs.get(dataSourceName));
     }
   }
@@ -201,13 +174,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final String dataSource = resultSegments.get(0).getDataSource();
 
-    CompactionStatistics statistics = returnedSegments.computeIfAbsent(
-        dataSource,
-        v -> CompactionStatistics.initializeCompactionStatistics()
-    );
-    statistics.incrementCompactedByte(resultSegments.stream().mapToLong(DataSegment::getSize).sum());
-    statistics.incrementCompactedIntervals(resultSegments.stream().map(DataSegment::getInterval).distinct().count());
-    statistics.incrementCompactedSegments(resultSegments.size());
+    collectSegmentStatistics(processedSegments, dataSource, new SegmentsToCompact(resultSegments));
 
     updateQueue(dataSource, compactionConfigs.get(dataSource));
 
@@ -394,8 +361,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-      if (isSegmentsNeedCompact(dataSourceName, candidates, config, true)) {
+      if (isSegmentsNeedCompact(candidates, config, true)) {
         return candidates;
+      } else {
+        collectSegmentStatistics(processedSegments, dataSourceName, candidates);
       }
     }
     log.info("All segments look good! Nothing to compact");
@@ -416,7 +385,13 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-      isSegmentsNeedCompact(dataSourceName, candidates, config, true);
+      if (isSegmentsNeedCompact(candidates, config, false)) {
+        // Collect statistic for segments that need compaction
+        collectSegmentStatistics(remainingSegments, dataSourceName, candidates);
+      } else {
+        // Collect statistic for segments that does not need compaction
+        collectSegmentStatistics(processedSegments, dataSourceName, candidates);
+      }
     }
   }
 
@@ -428,7 +403,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    * @return true if the {@param candidates} needs compaction, false if the {@param candidates} does not needs compaction
    */
   private boolean isSegmentsNeedCompact(
-      String dataSourceName,
       SegmentsToCompact candidates,
       final DataSourceCompactionConfig config,
       boolean logCannotCompactReason)
@@ -445,13 +419,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (isCompactibleSize && needsCompaction) {
         return true;
       } else {
-        CompactionStatistics statistics = skippedSegments.computeIfAbsent(
-            dataSourceName,
-            v -> CompactionStatistics.initializeCompactionStatistics()
-        );
-        statistics.incrementCompactedByte(candidates.getTotalSize());
-        statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
-        statistics.incrementCompactedSegments(candidates.getNumberOfSegments());
         if (logCannotCompactReason) {
           if (!isCompactibleSize) {
             log.warn(
@@ -469,6 +436,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     } else {
       throw new ISE("No segment is found?");
     }
+  }
+
+  private void collectSegmentStatistics(
+      Map<String, CompactionStatistics> statisticsMap,
+      String dataSourceName,
+      SegmentsToCompact segments)
+  {
+    CompactionStatistics statistics = statisticsMap.computeIfAbsent(
+        dataSourceName,
+        v -> CompactionStatistics.initializeCompactionStatistics()
+    );
+    statistics.incrementCompactedByte(segments.getTotalSize());
+    statistics.incrementCompactedIntervals(segments.getNumberOfIntervals());
+    statistics.incrementCompactedSegments(segments.getNumberOfSegments());
   }
 
   /**

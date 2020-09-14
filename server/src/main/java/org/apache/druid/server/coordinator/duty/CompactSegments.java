@@ -272,25 +272,20 @@ public class CompactSegments implements CoordinatorDuty
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
 
-    // Make sure that the iterator iterate through all the compacted segments so that we can get accurate and correct
+    // Make sure that the iterator iterate through all the remaining segments so that we can get accurate and correct
     // statistics (remaining, skipped, processed, etc.). The reason we have to do this explicitly here is because
     // earlier (when we are iterating to submit compaction tasks) we may have ran out of task slot and were not able
     // to iterate to the first segment that needs compaction for some datasource.
-    iterator.iterateAllCompactedSegments();
-    // Statistics of all segments that was not iterated (during this run)
-    Map<String, CompactionStatistics> totalRemainingStatistics = iterator.totalRemainingStatistics();
-    // Statistics of all segments iterated but not scheduled in compaction task (during this run) since segments
-    // were already compacted or skipped
-    Map<String, CompactionStatistics> totalSkippedStatistics = iterator.totalSkippedStatistics();
-    // Statistics of all segments scheduled in compaction tasks (during this run)
-    Map<String, CompactionStatistics> totalProcessedStatistics = iterator.totalProcessedStatistics();
-
+    iterator.flushAllSegments();
+    // Statistics of all segments that still need compaction after this run
+    Map<String, CompactionStatistics> allRemainingStatistics = iterator.totalRemainingStatistics();
+    // Statistics of all segments either compacted or skipped after this run
+    Map<String, CompactionStatistics> allProcessedStatistics = iterator.totalProcessedStatistics();
 
     for (Map.Entry<String, AutoCompactionSnapshot> autoCompactionSnapshotEntry : autoCompactionSnapshotPerDataSource.entrySet()) {
       final String dataSource = autoCompactionSnapshotEntry.getKey();
-      CompactionStatistics remainingStatistics = totalRemainingStatistics.get(dataSource);
-      CompactionStatistics skippedStatistics = totalSkippedStatistics.get(dataSource);
-      CompactionStatistics processedStatistics = totalProcessedStatistics.get(dataSource);
+      CompactionStatistics remainingStatistics = allRemainingStatistics.get(dataSource);
+      CompactionStatistics processedStatistics = allProcessedStatistics.get(dataSource);
 
       long byteAwaitingCompaction = 0;
       long segmentCountAwaitingCompaction = 0;
@@ -303,26 +298,21 @@ public class CompactSegments implements CoordinatorDuty
         intervalCountAwaitingCompaction = remainingStatistics.getSegmentIntervalCountSum();
       }
 
-      long byteDoNotNeedCompaction = 0;
-      long segmentCountDoNotNeedCompaction = 0;
-      long intervalCountDoNotNeedCompaction = 0;
+      long byteProcessed = 0;
+      long segmentCountProcessed = 0;
+      long intervalCountProcessed = 0;
       if (processedStatistics != null) {
-        byteDoNotNeedCompaction += processedStatistics.getByteSum();
-        segmentCountDoNotNeedCompaction += processedStatistics.getSegmentNumberCountSum();
-        intervalCountDoNotNeedCompaction += processedStatistics.getSegmentIntervalCountSum();
-      }
-      if (skippedStatistics != null) {
-        byteDoNotNeedCompaction += skippedStatistics.getByteSum();
-        segmentCountDoNotNeedCompaction += skippedStatistics.getSegmentNumberCountSum();
-        intervalCountDoNotNeedCompaction += skippedStatistics.getSegmentIntervalCountSum();
+        byteProcessed = processedStatistics.getByteSum();
+        segmentCountProcessed = processedStatistics.getSegmentNumberCountSum();
+        intervalCountProcessed = processedStatistics.getSegmentIntervalCountSum();
       }
 
       autoCompactionSnapshotEntry.getValue().setByteAwaitingCompaction(byteAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setByteProcessed(byteDoNotNeedCompaction);
+      autoCompactionSnapshotEntry.getValue().setByteProcessed(byteProcessed);
       autoCompactionSnapshotEntry.getValue().setSegmentCountAwaitingCompaction(segmentCountAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setSegmentCountProcessed(segmentCountDoNotNeedCompaction);
+      autoCompactionSnapshotEntry.getValue().setSegmentCountProcessed(segmentCountProcessed);
       autoCompactionSnapshotEntry.getValue().setIntervalCountAwaitingCompaction(intervalCountAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setIntervalCountProcessed(intervalCountDoNotNeedCompaction);
+      autoCompactionSnapshotEntry.getValue().setIntervalCountProcessed(intervalCountProcessed);
 
       stats.addToDataSourceStat(
           TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION,
@@ -342,17 +332,17 @@ public class CompactSegments implements CoordinatorDuty
       stats.addToDataSourceStat(
           TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
           dataSource,
-          byteDoNotNeedCompaction
+          byteProcessed
       );
       stats.addToDataSourceStat(
           TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
           dataSource,
-          segmentCountDoNotNeedCompaction
+          segmentCountProcessed
       );
       stats.addToDataSourceStat(
           TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
           dataSource,
-          intervalCountDoNotNeedCompaction
+          intervalCountProcessed
       );
     }
 
