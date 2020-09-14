@@ -186,11 +186,11 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`task/running/count`|Number of current running tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
 |`task/pending/count`|Number of current pending tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
 |`task/waiting/count`|Number of current waiting tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
-|`peon/total/count`|Number of total peons per emission period. This metric is only available if the WorkerCountStatsMonitor module is included.| |Varies.|
-|`peon/idle/count`|Number of idle peons per emission period. This metric is only available if the WorkerCountStatsMonitor module is included.| |Varies.|
-|`peon/used/count`|Number of busy peons per emission period. This metric is only available if the WorkerCountStatsMonitor module is included.| |Varies.|
-|`peon/lazy/count`|Number of lazy peons per emission period. This metric is only available if the WorkerCountStatsMonitor module is included.| |Varies.|
-|`peon/blacklisted/count`|Number of peons workers per emission period. This metric is only available if the WorkerCountStatsMonitor module is included.| |Varies.|
+|`peon/total/count`|Number of total peons per emission period. This metric is only available if the PeonCountStatsMonitor module is included.| |Varies.|
+|`peon/idle/count`|Number of idle peons per emission period. This metric is only available if the PeonCountStatsMonitor module is included.| |Varies.|
+|`peon/used/count`|Number of busy peons per emission period. This metric is only available if the PeonCountStatsMonitor module is included.| |Varies.|
+|`peon/lazy/count`|Number of lazy peons per emission period. This metric is only available if the PeonCountStatsMonitor module is included.| |Varies.|
+|`peon/blacklisted/count`|Number of blacklisted peons per emission period. This metric is only available if the PeonCountStatsMonitor module is included.| |Varies.|
 
 ## Coordination
 

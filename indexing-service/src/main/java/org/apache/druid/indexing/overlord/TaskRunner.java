@@ -123,7 +123,7 @@ public interface TaskRunner
   Optional<ScalingStats> getScalingStats();
 
   /**
-   * APIs useful for emitting statistics for @WorkerCountStatsMonitor
+   * APIs useful for emitting statistics for @PeonCountStatsMonitor
   */
   long getTotalPeonCount();
 

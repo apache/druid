@@ -22,27 +22,27 @@ package org.apache.druid.server.metrics;
 public interface PeonCountStatsProvider
 {
   /**
-   * Return the number of total workers during emission period.
+   * Return the number of total peons during emission period.
    */
   long getTotalPeonCount();
 
   /**
-   * Return the number of idle workers during emission period.
+   * Return the number of idle peons during emission period.
    */
   long getIdlePeonCount();
 
   /**
-   * Return the number of used workers during emission period.
+   * Return the number of used peons during emission period.
    */
   long getUsedPeonCount();
 
   /**
-   * Return the number of lazy workers during emission period.
+   * Return the number of lazy peons during emission period.
    */
   long getLazyPeonCount();
 
   /**
-   * Return the number of blacklisted workers during emission period.
+   * Return the number of blacklisted peons during emission period.
    */
   long getBlacklistedPeonCount();
 }
