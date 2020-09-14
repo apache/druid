@@ -29,12 +29,13 @@ enum DatasourceColumn {
   NAME = 0,
   AVAILABILITY,
   SEGMENT_LOAD_DROP,
-  RETENTION,
+  TOTAL_DATA_SIZE,
+  SEGMENT_SIZE,
+  TOTAL_ROWS,
+  AVG_ROW_SIZE,
   REPLICATED_SIZE,
-  SIZE,
   COMPACTION,
-  AVG_SEGMENT_SIZE,
-  NUM_ROWS,
+  RETENTION,
 }
 
 /**
@@ -60,7 +61,7 @@ export class DatasourcesOverview {
         new Datasource({
           name: row[DatasourceColumn.NAME],
           availability: row[DatasourceColumn.AVAILABILITY],
-          numRows: DatasourcesOverview.parseNumber(row[DatasourceColumn.NUM_ROWS]),
+          numRows: DatasourcesOverview.parseNumber(row[DatasourceColumn.TOTAL_ROWS]),
         }),
     );
   }
