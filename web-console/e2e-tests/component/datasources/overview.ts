@@ -36,6 +36,7 @@ enum DatasourceColumn {
   REPLICATED_SIZE,
   COMPACTION,
   RETENTION,
+  ACTIONS,
 }
 
 /**
@@ -61,7 +62,7 @@ export class DatasourcesOverview {
         new Datasource({
           name: row[DatasourceColumn.NAME],
           availability: row[DatasourceColumn.AVAILABILITY],
-          numRows: DatasourcesOverview.parseNumber(row[DatasourceColumn.TOTAL_ROWS]),
+          totalRows: DatasourcesOverview.parseNumber(row[DatasourceColumn.TOTAL_ROWS]),
         }),
     );
   }
