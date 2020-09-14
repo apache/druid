@@ -66,11 +66,18 @@ public class IndexedTableLoadingBenchmark
   Closer closer = Closer.create();
 
   QueryableIndexSegment tableSegment = null;
+  IndexedTable table = null;
 
   @Setup(Level.Trial)
   public void setup()
   {
     tableSegment = IndexedTableJoinCursorBenchmark.makeQueryableIndexSegment(closer, "join", rowsPerSegment);
+  }
+
+  @TearDown(Level.Iteration)
+  public void tearDownIteration() throws IOException
+  {
+    table.close();
   }
 
   @TearDown
@@ -84,14 +91,8 @@ public class IndexedTableLoadingBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void loadTable(Blackhole blackhole)
   {
-    try (
-        IndexedTable table =
-            IndexedTableJoinCursorBenchmark.makeTable(indexedTableType, KEY_COLUMN_SETS.get(keyColumns), tableSegment)
-    ) {
-      blackhole.consume(table);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    table =
+        IndexedTableJoinCursorBenchmark.makeTable(indexedTableType, KEY_COLUMN_SETS.get(keyColumns), tableSegment);
+    blackhole.consume(table);
   }
 }
