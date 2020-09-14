@@ -28,12 +28,7 @@ import java.nio.ByteBuffer;
 public class ApproximateHistogramFoldingBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector<ApproximateHistogram> selector;
-  private final int resolution;
-  private final float upperLimit;
-  private final float lowerLimit;
-
-  private float[] tmpBufferP;
-  private long[] tmpBufferB;
+  private final ApproximateHistogramFoldingBufferAggregatorHelper innerAggregator;
 
   public ApproximateHistogramFoldingBufferAggregator(
       BaseObjectColumnValueSelector<ApproximateHistogram> selector,
@@ -43,50 +38,26 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   )
   {
     this.selector = selector;
-    this.resolution = resolution;
-    this.lowerLimit = lowerLimit;
-    this.upperLimit = upperLimit;
-
-    tmpBufferP = new float[resolution];
-    tmpBufferB = new long[resolution];
+    this.innerAggregator = new ApproximateHistogramFoldingBufferAggregatorHelper(resolution, lowerLimit, upperLimit);
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    ApproximateHistogram h = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
-
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-    // use dense storage for aggregation
-    h.toBytesDense(mutationBuffer);
+    innerAggregator.init(buf, position);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
     ApproximateHistogram hNext = selector.getObject();
-    if (hNext == null) {
-      return;
-    }
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-
-    ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
-    h0.setLowerLimit(lowerLimit);
-    h0.setUpperLimit(upperLimit);
-    h0.foldFast(hNext, tmpBufferP, tmpBufferB);
-
-    mutationBuffer.position(position);
-    h0.toBytesDense(mutationBuffer);
+    innerAggregator.aggregate(buf, position, hNext);
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    ByteBuffer mutationBuffer = buf.asReadOnlyBuffer();
-    mutationBuffer.position(position);
-    return ApproximateHistogram.fromBytesDense(mutationBuffer);
+    return innerAggregator.get(buf, position);
   }
 
   @Override
@@ -106,6 +77,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   {
     throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getDouble()");
   }
+
   @Override
   public void close()
   {

@@ -596,6 +596,7 @@ url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
+fixedBucketsHistogram
 bucketNum
 lowerLimit
 numBuckets

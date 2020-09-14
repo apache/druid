@@ -415,7 +415,6 @@ public class GroupByTypeInterfaceBenchmark
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
