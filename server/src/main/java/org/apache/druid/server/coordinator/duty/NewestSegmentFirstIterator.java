@@ -156,6 +156,27 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
+  public void iterateAllCompactedSegments()
+  {
+    if (queue.isEmpty()) {
+      return;
+    }
+    QueueEntry entry;
+    while ((entry = queue.poll()) != null) {
+      final List<DataSegment> resultSegments = entry.segments;
+      final String dataSourceName = resultSegments.get(0).getDataSource();
+      final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor = timelineIterators.get(
+          dataSourceName
+      );
+      // WARNING: This iterates the compactibleTimelineObjectHolderCursor and can iterates through both segments
+      // that needs compaction and segments that does not. Since this method is intended to only be use after all
+      // necessary iteration is done on this iterate (and hence the compactibleTimelineObjectHolderCursor), this
+      // implementation is ok.
+      iterateAllSegments(dataSourceName, compactibleTimelineObjectHolderCursor, compactionConfigs.get(dataSourceName));
+    }
+  }
+
+  @Override
   public boolean hasNext()
   {
     return !queue.isEmpty();
@@ -371,28 +392,67 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config
   )
   {
-    final long inputSegmentSize = config.getInputSegmentSizeBytes();
-
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
+      if (isSegmentsNeedCompact(dataSourceName, candidates, config, true)) {
+        return candidates;
+      }
+    }
+    log.info("All segments look good! Nothing to compact");
+    return new SegmentsToCompact();
+  }
 
-      if (!candidates.isEmpty()) {
-        final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
-        final boolean needsCompaction = needsCompaction(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
-            candidates
+  /**
+   * Progressively iterates all remaining time intervals (latest first) in the
+   * timeline {@param compactibleTimelineObjectHolderCursor}. Note that the timeline lookup duration is one day.
+   * The logic for checking if the segments can be compacted or not is then perform on each iteration.
+   * This is repeated until no remaining time intervals in {@param compactibleTimelineObjectHolderCursor}.
+   */
+  private void iterateAllSegments(
+      final String dataSourceName,
+      final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor,
+      final DataSourceCompactionConfig config
+  )
+  {
+    while (compactibleTimelineObjectHolderCursor.hasNext()) {
+      final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
+      isSegmentsNeedCompact(dataSourceName, candidates, config, true);
+    }
+  }
+
+  /**
+   * This method encapsulates the logic for checking if a given {@param candidates} needs compaction or not.
+   * If {@param logCannotCompactReason} is true then the reason for {@param candidates} not needing compaction is
+   * logged (for the case that {@param candidates} does not needs compaction).
+   *
+   * @return true if the {@param candidates} needs compaction, false if the {@param candidates} does not needs compaction
+   */
+  private boolean isSegmentsNeedCompact(
+      String dataSourceName,
+      SegmentsToCompact candidates,
+      final DataSourceCompactionConfig config,
+      boolean logCannotCompactReason)
+  {
+    final long inputSegmentSize = config.getInputSegmentSizeBytes();
+
+    if (!candidates.isEmpty()) {
+      final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
+      final boolean needsCompaction = needsCompaction(
+          ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+          candidates
+      );
+
+      if (isCompactibleSize && needsCompaction) {
+        return true;
+      } else {
+        CompactionStatistics statistics = skippedSegments.computeIfAbsent(
+            dataSourceName,
+            v -> CompactionStatistics.initializeCompactionStatistics()
         );
-
-        if (isCompactibleSize && needsCompaction) {
-          return candidates;
-        } else {
-          CompactionStatistics statistics = skippedSegments.computeIfAbsent(
-              dataSourceName,
-              v -> CompactionStatistics.initializeCompactionStatistics()
-          );
-          statistics.incrementCompactedByte(candidates.getTotalSize());
-          statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
-          statistics.incrementCompactedSegments(candidates.getNumberOfSegments());
+        statistics.incrementCompactedByte(candidates.getTotalSize());
+        statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
+        statistics.incrementCompactedSegments(candidates.getNumberOfSegments());
+        if (logCannotCompactReason) {
           if (!isCompactibleSize) {
             log.warn(
                 "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
@@ -404,12 +464,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             );
           }
         }
-      } else {
-        throw new ISE("No segment is found?");
+        return false;
       }
+    } else {
+      throw new ISE("No segment is found?");
     }
-    log.info("All segments look good! Nothing to compact");
-    return new SegmentsToCompact();
   }
 
   /**

@@ -270,6 +270,84 @@ public class CompactSegmentsTest
     assertLastSegmentNotCompacted(compactSegments);
   }
 
+  @Test
+  public void testRun2()
+  {
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    leaderClient.start();
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+
+    final Supplier<String> expectedVersionSupplier = new Supplier<String>()
+    {
+      private int i = 0;
+
+      @Override
+      public String get()
+      {
+        return "newVersion_" + i++;
+      }
+    };
+    int expectedCompactTaskCount = 1;
+    int expectedRemainingSegments = 400;
+
+    // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
+    assertCompactSegments(
+        compactSegments,
+        Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 9, 9),
+        expectedRemainingSegments,
+        expectedCompactTaskCount,
+        expectedVersionSupplier
+    );
+    expectedRemainingSegments -= 40;
+    assertCompactSegments(
+        compactSegments,
+        Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 8, 9),
+        expectedRemainingSegments,
+        expectedCompactTaskCount,
+        expectedVersionSupplier
+    );
+
+    // compact for 2017-01-07T12:00:00.000Z/2017-01-08T12:00:00.000Z
+    expectedRemainingSegments -= 40;
+    assertCompactSegments(
+        compactSegments,
+        Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 8, 8),
+        expectedRemainingSegments,
+        expectedCompactTaskCount,
+        expectedVersionSupplier
+    );
+    expectedRemainingSegments -= 40;
+    assertCompactSegments(
+        compactSegments,
+        Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 4, 5),
+        expectedRemainingSegments,
+        expectedCompactTaskCount,
+        expectedVersionSupplier
+    );
+
+    for (int endDay = 4; endDay > 1; endDay -= 1) {
+      expectedRemainingSegments -= 40;
+      assertCompactSegments(
+          compactSegments,
+          Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", endDay, endDay),
+          expectedRemainingSegments,
+          expectedCompactTaskCount,
+          expectedVersionSupplier
+      );
+      expectedRemainingSegments -= 40;
+      assertCompactSegments(
+          compactSegments,
+          Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", endDay - 1, endDay),
+          expectedRemainingSegments,
+          expectedCompactTaskCount,
+          expectedVersionSupplier
+      );
+    }
+
+    assertLastSegmentNotCompacted(compactSegments);
+  }
+
   private CoordinatorStats doCompactSegments(CompactSegments compactSegments)
   {
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers

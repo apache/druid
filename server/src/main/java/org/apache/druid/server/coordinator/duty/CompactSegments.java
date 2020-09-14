@@ -271,6 +271,12 @@ public class CompactSegments implements CoordinatorDuty
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
+
+    // Make sure that the iterator iterate through all the compacted segments so that we can get accurate and correct
+    // statistics (remaining, skipped, processed, etc.). The reason we have to do this explicitly here is because
+    // earlier (when we are iterating to submit compaction tasks) we may have ran out of task slot and were not able
+    // to iterate to the first segment that needs compaction for some datasource.
+    iterator.iterateAllCompactedSegments();
     // Statistics of all segments that was not iterated (during this run)
     Map<String, CompactionStatistics> totalRemainingStatistics = iterator.totalRemainingStatistics();
     // Statistics of all segments iterated but not scheduled in compaction task (during this run) since segments

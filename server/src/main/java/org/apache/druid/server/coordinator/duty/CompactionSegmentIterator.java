@@ -33,6 +33,18 @@ import java.util.Map;
 public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
   /**
+   * Iterate through all the compacted segments for all datasources currently in this iterator.
+   * This method can be use before calling {@code totalRemainingStatistics}, {@code totalProcessedStatistics},
+   * {@code totalSkippedStatistics} to get correct statistics for the datasources regardless of
+   * how many (or none) times this iterator was iterated.
+   *
+   * WARNING: this may iterate the underlying iterator and causes segments from intervals that needs compaction
+   * AND intervals that does not needs compaction to be iterated. This method should only be called when
+   * iteration of this iterator is no longer required.
+   */
+  void iterateAllCompactedSegments();
+
+  /**
    * Return a map of (dataSource, CompactionStatistics) for all dataSources.
    * This method should consider all segments except the segments iterated by {@link #next()}.
    */
