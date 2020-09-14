@@ -162,6 +162,7 @@ public class PartialDimensionDistributionTaskTest
       reportCapture = Capture.newInstance();
       ParallelIndexSupervisorTaskClient taskClient = EasyMock.mock(ParallelIndexSupervisorTaskClient.class);
       taskClient.report(EasyMock.eq(ParallelIndexTestingFactory.SUPERVISOR_TASK_ID), EasyMock.capture(reportCapture));
+      EasyMock.expectLastCall().anyTimes();
       EasyMock.replay(taskClient);
       taskToolbox = EasyMock.mock(TaskToolbox.class);
       EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder.getRoot());
