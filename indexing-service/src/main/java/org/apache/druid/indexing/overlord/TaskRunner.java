@@ -125,13 +125,13 @@ public interface TaskRunner
   /**
    * APIs useful for emitting statistics for @WorkerCountStatsMonitor
   */
-  long getTotalWorkerCount();
+  long getTotalPeonCount();
 
-  long getIdleWorkerCount();
+  long getIdlePeonCount();
 
-  long getUsedWorkerCount();
+  long getUsedPeonCount();
 
-  long getLazyWorkerCount();
+  long getLazyPeonCount();
 
-  long getBlacklistedWorkerCount();
+  long getBlacklistedPeonCount();
 }

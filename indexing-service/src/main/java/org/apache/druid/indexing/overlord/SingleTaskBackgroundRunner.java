@@ -314,31 +314,31 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
-  public long getTotalWorkerCount()
+  public long getTotalPeonCount()
   {
     return 1;
   }
 
   @Override
-  public long getIdleWorkerCount()
+  public long getIdlePeonCount()
   {
-    return getTotalWorkerCount() - getUsedWorkerCount();
+    return runningItem == null ? 1 : 0;
   }
 
   @Override
-  public long getUsedWorkerCount()
+  public long getUsedPeonCount()
   {
-    return getRunningTasks().size();
+    return runningItem == null ? 0 : 1;
   }
 
   @Override
-  public long getLazyWorkerCount()
+  public long getLazyPeonCount()
   {
     return 0;
   }
 
   @Override
-  public long getBlacklistedWorkerCount()
+  public long getBlacklistedPeonCount()
   {
     return 0;
   }

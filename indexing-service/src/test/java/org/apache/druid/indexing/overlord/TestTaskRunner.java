@@ -269,31 +269,31 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
-  public long getTotalWorkerCount()
+  public long getTotalPeonCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getIdleWorkerCount()
+  public long getIdlePeonCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getUsedWorkerCount()
+  public long getUsedPeonCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getLazyWorkerCount()
+  public long getLazyPeonCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getBlacklistedWorkerCount()
+  public long getBlacklistedPeonCount()
   {
     throw new UnsupportedOperationException();
   }

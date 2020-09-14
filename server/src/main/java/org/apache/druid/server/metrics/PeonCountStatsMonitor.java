@@ -24,13 +24,13 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
-public class WorkerCountStatsMonitor extends AbstractMonitor
+public class PeonCountStatsMonitor extends AbstractMonitor
 {
-  private final WorkerCountStatsProvider statsProvider;
+  private final PeonCountStatsProvider statsProvider;
 
   @Inject
-  public WorkerCountStatsMonitor(
-          WorkerCountStatsProvider statsProvider
+  public PeonCountStatsMonitor(
+          PeonCountStatsProvider statsProvider
   )
   {
     this.statsProvider = statsProvider;
@@ -39,11 +39,11 @@ public class WorkerCountStatsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emit(emitter, "worker/total/count", statsProvider.getTotalWorkerCount());
-    emit(emitter, "worker/idle/count", statsProvider.getIdleWorkerCount());
-    emit(emitter, "worker/used/count", statsProvider.getUsedWorkerCount());
-    emit(emitter, "worker/lazy/count", statsProvider.getLazyWorkerCount());
-    emit(emitter, "worker/blacklisted/count", statsProvider.getBlacklistedWorkerCount());
+    emit(emitter, "peon/total/count", statsProvider.getTotalPeonCount());
+    emit(emitter, "peon/idle/count", statsProvider.getIdlePeonCount());
+    emit(emitter, "peon/used/count", statsProvider.getUsedPeonCount());
+    emit(emitter, "peon/lazy/count", statsProvider.getLazyPeonCount());
+    emit(emitter, "peon/blacklisted/count", statsProvider.getBlacklistedPeonCount());
     return true;
   }
 

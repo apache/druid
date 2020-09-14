@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -1342,6 +1343,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     ).collect(Collectors.toList());
   }
 
+  public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
+  {
+    synchronized (blackListedWorkers) {
+      return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
+    }
+  }
+
   /**
    * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource} , used for read only.
    */
@@ -1548,33 +1556,58 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getTotalWorkerCount()
+  public long getTotalPeonCount()
   {
-    return getWorkers().size();
+    long totalPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalPeons;
   }
 
   @Override
-  public long getIdleWorkerCount()
+  public long getIdlePeonCount()
   {
-    return getWorkersEligibleToRunTasks().size();
+    long totalIdlePeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalIdlePeons += worker.getAvailableCapacity();
+    }
+
+    return totalIdlePeons;
   }
 
   @Override
-  public long getUsedWorkerCount()
+  public long getUsedPeonCount()
   {
-    return getWorkersWithUnacknowledgedTasks().size();
+    long totalUsedPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalUsedPeons += worker.getCurrCapacityUsed();
+    }
+
+    return totalUsedPeons;
   }
 
   @Override
-  public long getLazyWorkerCount()
+  public long getLazyPeonCount()
   {
-    return getLazyWorkers().size();
+    long totalLazyPeons = 0;
+    for (Worker worker : getLazyWorkers()) {
+      totalLazyPeons += worker.getCapacity();
+    }
+
+    return totalLazyPeons;
   }
 
   @Override
-  public long getBlacklistedWorkerCount()
+  public long getBlacklistedPeonCount()
   {
-    return getBlacklistedWorkers().size();
+    long totalBlacklistedPeons = 0;
+    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+      totalBlacklistedPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalBlacklistedPeons;
   }
 
   private static class HttpRemoteTaskRunnerWorkItem extends RemoteTaskRunnerWorkItem

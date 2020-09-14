@@ -41,8 +41,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.metrics.PeonCountStatsProvider;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
-import org.apache.druid.server.metrics.WorkerCountStatsProvider;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,7 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster implements TaskCountStatsProvider, WorkerCountStatsProvider
+public class TaskMaster implements TaskCountStatsProvider, PeonCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -341,55 +341,55 @@ public class TaskMaster implements TaskCountStatsProvider, WorkerCountStatsProvi
   }
 
   @Override
-  public long getTotalWorkerCount()
+  public long getTotalPeonCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getTotalWorkerCount();
+      return taskRunner.get().getTotalPeonCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getIdleWorkerCount()
+  public long getIdlePeonCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getIdleWorkerCount();
+      return taskRunner.get().getIdlePeonCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getUsedWorkerCount()
+  public long getUsedPeonCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getUsedWorkerCount();
+      return taskRunner.get().getUsedPeonCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getLazyWorkerCount()
+  public long getLazyPeonCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getLazyWorkerCount();
+      return taskRunner.get().getLazyPeonCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getBlacklistedWorkerCount()
+  public long getBlacklistedPeonCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getBlacklistedWorkerCount();
+      return taskRunner.get().getBlacklistedPeonCount();
     } else {
       return 0;
     }

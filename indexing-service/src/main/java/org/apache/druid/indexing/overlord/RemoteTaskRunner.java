@@ -1436,32 +1436,57 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getTotalWorkerCount()
+  public long getTotalPeonCount()
   {
-    return getWorkers().size();
+    long totalPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalPeons;
   }
 
   @Override
-  public long getIdleWorkerCount()
+  public long getIdlePeonCount()
   {
-    return getTotalWorkerCount() - (getUsedWorkerCount() + getLazyWorkerCount() + getBlacklistedWorkerCount());
+    long totalIdlePeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalIdlePeons += worker.getAvailableCapacity();
+    }
+
+    return totalIdlePeons;
   }
 
   @Override
-  public long getUsedWorkerCount()
+  public long getUsedPeonCount()
   {
-    return getWorkersWithUnacknowledgedTask().size();
+    long totalUsedPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalUsedPeons += worker.getCurrCapacityUsed();
+    }
+
+    return totalUsedPeons;
   }
 
   @Override
-  public long getLazyWorkerCount()
+  public long getLazyPeonCount()
   {
-    return getLazyWorkers().size();
+    long totalLazyPeons = 0;
+    for (Worker worker : getLazyWorkers()) {
+      totalLazyPeons += worker.getCapacity();
+    }
+
+    return totalLazyPeons;
   }
 
   @Override
-  public long getBlacklistedWorkerCount()
+  public long getBlacklistedPeonCount()
   {
-    return getBlackListedWorkers().size();
+    long totalBlacklistedPeons = 0;
+    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+      totalBlacklistedPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalBlacklistedPeons;
   }
 }

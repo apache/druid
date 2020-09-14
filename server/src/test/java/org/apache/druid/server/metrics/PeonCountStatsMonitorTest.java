@@ -24,41 +24,41 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class WorkerCountStatsMonitorTest
+public class PeonCountStatsMonitorTest
 {
-  private WorkerCountStatsProvider statsProvider;
+  private PeonCountStatsProvider statsProvider;
 
   @Before
   public void setUp()
   {
-    statsProvider = new WorkerCountStatsProvider()
+    statsProvider = new PeonCountStatsProvider()
     {
       @Override
-      public long getTotalWorkerCount()
+      public long getTotalPeonCount()
       {
         return 1L;
       }
 
       @Override
-      public long getIdleWorkerCount()
+      public long getIdlePeonCount()
       {
         return 1L;
       }
 
       @Override
-      public long getUsedWorkerCount()
+      public long getUsedPeonCount()
       {
         return 1L;
       }
 
       @Override
-      public long getLazyWorkerCount()
+      public long getLazyPeonCount()
       {
         return 1L;
       }
 
       @Override
-      public long getBlacklistedWorkerCount()
+      public long getBlacklistedPeonCount()
       {
         return 1L;
       }
@@ -68,19 +68,19 @@ public class WorkerCountStatsMonitorTest
   @Test
   public void testMonitor()
   {
-    final WorkerCountStatsMonitor monitor = new WorkerCountStatsMonitor(statsProvider);
+    final PeonCountStatsMonitor monitor = new PeonCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getEvents().size());
-    Assert.assertEquals("worker/total/count", emitter.getEvents().get(0).toMap().get("metric"));
+    Assert.assertEquals("peon/total/count", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(0).toMap().get("value"));
-    Assert.assertEquals("worker/idle/count", emitter.getEvents().get(1).toMap().get("metric"));
+    Assert.assertEquals("peon/idle/count", emitter.getEvents().get(1).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(1).toMap().get("value"));
-    Assert.assertEquals("worker/used/count", emitter.getEvents().get(2).toMap().get("metric"));
+    Assert.assertEquals("peon/used/count", emitter.getEvents().get(2).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(2).toMap().get("value"));
-    Assert.assertEquals("worker/lazy/count", emitter.getEvents().get(3).toMap().get("metric"));
+    Assert.assertEquals("peon/lazy/count", emitter.getEvents().get(3).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(3).toMap().get("value"));
-    Assert.assertEquals("worker/blacklisted/count", emitter.getEvents().get(4).toMap().get("metric"));
+    Assert.assertEquals("peon/blacklisted/count", emitter.getEvents().get(4).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
   }
 }
