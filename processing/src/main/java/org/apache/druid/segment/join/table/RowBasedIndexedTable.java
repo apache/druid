@@ -52,6 +52,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   private final List<Function<RowType, Object>> columnFunctions;
   private final Set<String> keyColumns;
   private final String version;
+  private final Optional<byte[]> cacheKey;
 
   public RowBasedIndexedTable(
       final List<RowType> table,
@@ -61,12 +62,25 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       final String version
   )
   {
+    this(table, rowAdapter, rowSignature, keyColumns, version, Optional.empty());
+  }
+
+  public RowBasedIndexedTable(
+      final List<RowType> table,
+      final RowAdapter<RowType> rowAdapter,
+      final RowSignature rowSignature,
+      final Set<String> keyColumns,
+      final String version,
+      final Optional<byte[]> cacheKey
+  )
+  {
     this.table = table;
     this.rowSignature = rowSignature;
     this.columnFunctions =
         rowSignature.getColumnNames().stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
     this.keyColumns = keyColumns;
     this.version = version;
+    this.cacheKey = cacheKey;
 
     if (!ImmutableSet.copyOf(rowSignature.getColumnNames()).containsAll(keyColumns)) {
       throw new ISE(
@@ -140,6 +154,12 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     }
 
     return row -> columnFn.apply(table.get(row));
+  }
+
+  @Override
+  public Optional<byte[]> computeCacheKey()
+  {
+    return this.cacheKey;
   }
 
   @Override

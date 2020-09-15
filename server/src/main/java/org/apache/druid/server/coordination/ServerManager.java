@@ -90,7 +90,7 @@ public class ServerManager implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
-  private final JoinableFactory joinableFactory;
+  private final Joinables joinables;
   private final ServerConfig serverConfig;
 
   @Inject
@@ -117,7 +117,7 @@ public class ServerManager implements QuerySegmentWalker
 
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
-    this.joinableFactory = joinableFactory;
+    this.joinables = new Joinables(joinableFactory);
     this.serverConfig = serverConfig;
   }
 
@@ -197,16 +197,14 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
     );
 
-    final Optional<byte[]> cacheKeyPrefix = Joinables.computeDataSourceCacheKey(
-        analysis,
-        joinableFactory
+    final Optional<byte[]> cacheKeyPrefix = joinables.computeJoinDataSourceCacheKey(
+        analysis
     );
 
     final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
@@ -302,23 +300,17 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    QueryRunner<T> queryRunner;
-    if (cacheKeyPrefix.isPresent()) {
-      queryRunner = new CachingQueryRunner<>(
-          segmentIdString,
-          cacheKeyPrefix.get(),
-          segmentDescriptor,
-          objectMapper,
-          cache,
-          toolChest,
-          metricsEmittingQueryRunnerInner,
-          cachePopulator,
-          cacheConfig
-      );
-    } else {
-      // Empty key prefix implies that its a join segment but unsupported data sources
-      queryRunner = metricsEmittingQueryRunnerInner;
-    }
+    QueryRunner<T> queryRunner = new CachingQueryRunner<>(
+        segmentIdString,
+        cacheKeyPrefix,
+        segmentDescriptor,
+        objectMapper,
+        cache,
+        toolChest,
+        metricsEmittingQueryRunnerInner,
+        cachePopulator,
+        cacheConfig
+    );
 
     BySegmentQueryRunner<T> bySegmentQueryRunner = new BySegmentQueryRunner<>(
         segmentId,

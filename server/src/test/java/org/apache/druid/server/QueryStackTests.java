@@ -68,6 +68,7 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -120,7 +121,7 @@ public class QueryStackTests
             return conglomerate.findFactory(query).getToolchest();
           }
         },
-        joinableFactory,
+        new Joinables(joinableFactory),
         new RetryQueryRunnerConfig(),
         TestHelper.makeJsonMapper(),
         serverConfig,

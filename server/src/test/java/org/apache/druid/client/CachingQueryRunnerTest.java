@@ -78,6 +78,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -279,7 +280,7 @@ public class CachingQueryRunnerTest
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
         cacheId,
-        StringUtils.EMPTY_BYTES,
+        Optional.of(StringUtils.EMPTY_BYTES),
         segmentDescriptor,
         objectMapper,
         cache,
@@ -366,7 +367,7 @@ public class CachingQueryRunnerTest
 
     CachingQueryRunner runner = new CachingQueryRunner(
         cacheId,
-        StringUtils.EMPTY_BYTES,
+        Optional.of(StringUtils.EMPTY_BYTES),
         segmentDescriptor,
         objectMapper,
         cache,

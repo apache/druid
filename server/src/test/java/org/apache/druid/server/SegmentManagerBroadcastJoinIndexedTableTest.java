@@ -59,7 +59,10 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,6 +73,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -170,6 +174,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(dataSource);
+    Assert.assertTrue(bytes.isPresent());
+    assertSegmentIdEquals(segment.getId(), bytes.get());
 
     // dropping the segment should make the table no longer available
     segmentManager.dropSegment(segment);
@@ -177,6 +184,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     maybeJoinable = makeJoinable(dataSource);
 
     Assert.assertFalse(maybeJoinable.isPresent());
+
+    bytes = joinableFactory.computeJoinCacheKey(dataSource);
+    Assert.assertFalse(bytes.isPresent());
   }
 
   @Test
@@ -215,6 +225,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    Optional<byte[]> cacheKey = joinableFactory.computeJoinCacheKey(dataSource);
+    Assert.assertTrue(cacheKey.isPresent());
+    assertSegmentIdEquals(segment2.getId(), cacheKey.get());
 
     segmentManager.dropSegment(segment2);
 
@@ -236,6 +249,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    cacheKey = joinableFactory.computeJoinCacheKey(dataSource);
+    Assert.assertTrue(cacheKey.isPresent());
+    assertSegmentIdEquals(segment1.getId(), cacheKey.get());
   }
 
 
@@ -339,5 +355,16 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     return tmpSegment.withLoadSpec(
         ImmutableMap.of("type", "local", "path", segmentDir.getAbsolutePath())
     );
+  }
+
+  private void assertSegmentIdEquals(SegmentId id, byte[] bytes)
+  {
+    ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+    long start = byteBuffer.getLong();
+    long end = byteBuffer.getLong();
+    String version = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getVersion()));
+    String dataSource = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getDataSource()));
+    int partition = byteBuffer.getInt();
+    Assert.assertEquals(id, SegmentId.of(dataSource, new Interval(start, end, DateTimeZone.UTC), version, partition));
   }
 }

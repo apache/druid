@@ -53,7 +53,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
@@ -80,7 +80,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final QuerySegmentWalker clusterClient;
   private final QuerySegmentWalker localClient;
   private final QueryToolChestWarehouse warehouse;
-  private final JoinableFactory joinableFactory;
+  private final Joinables joinables;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
   private final ServerConfig serverConfig;
@@ -92,7 +92,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       QuerySegmentWalker clusterClient,
       QuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
-      JoinableFactory joinableFactory,
+      Joinables joinables,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -104,7 +104,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.clusterClient = clusterClient;
     this.localClient = localClient;
     this.warehouse = warehouse;
-    this.joinableFactory = joinableFactory;
+    this.joinables = joinables;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
     this.serverConfig = serverConfig;
@@ -118,7 +118,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CachingClusteredClient clusterClient,
       LocalQuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
-      JoinableFactory joinableFactory,
+      Joinables joinables,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -131,7 +131,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (QuerySegmentWalker) clusterClient,
         (QuerySegmentWalker) localClient,
         warehouse,
-        joinableFactory,
+        joinables,
         retryConfig,
         objectMapper,
         serverConfig,
@@ -261,7 +261,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     if (dataSource instanceof TableDataSource) {
       GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(((TableDataSource) dataSource).getName());
-      if (joinableFactory.isDirectlyJoinable(maybeGlobal)) {
+      if (joinables.getJoinableFactory().isDirectlyJoinable(maybeGlobal)) {
         return maybeGlobal;
       }
       return dataSource;
@@ -427,7 +427,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                     objectMapper,
                     cache,
                     cacheConfig,
-                    joinableFactory
+                    joinables
                 )
         );
   }

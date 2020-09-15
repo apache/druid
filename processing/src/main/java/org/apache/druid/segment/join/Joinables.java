@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -43,39 +45,26 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
- * Utility methods for working with {@link Joinable} related classes.
+ * A wrapper class over {@link JoinableFactory} for working with {@link Joinable} related classes.
  */
 public class Joinables
 {
   private static final Comparator<String> DESCENDING_LENGTH_STRING_COMPARATOR = (s1, s2) ->
       Integer.compare(s2.length(), s1.length());
 
-  private static final byte REGULAR_OPERATION = 0x1;
-  private static final byte JOIN_OPERATION = 0x2;
+  private static final byte JOIN_OPERATION = 0x1;
   private static final Logger log = new Logger(Joinables.class);
 
-  /**
-   * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
-   * returns it. Otherwise, throws an exception.
-   */
-  public static String validatePrefix(@Nullable final String prefix)
+  private final JoinableFactory joinableFactory;
+
+  public Joinables(final JoinableFactory joinableFactory)
   {
-    if (prefix == null || prefix.isEmpty()) {
-      throw new IAE("Join clause cannot have null or empty prefix");
-    } else if (isPrefixedBy(ColumnHolder.TIME_COLUMN_NAME, prefix) || ColumnHolder.TIME_COLUMN_NAME.equals(prefix)) {
-      throw new IAE(
-          "Join clause cannot have prefix[%s], since it would shadow %s",
-          prefix,
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    } else {
-      return prefix;
-    }
+    this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
   }
 
-  public static boolean isPrefixedBy(final String columnName, final String prefix)
+  public JoinableFactory getJoinableFactory()
   {
-    return columnName.length() > prefix.length() && columnName.startsWith(prefix);
+    return this.joinableFactory;
   }
 
   /**
@@ -83,7 +72,6 @@ public class Joinables
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
    *
    * @param clauses            Pre-joinable clauses
-   * @param joinableFactory    Factory for joinables
    * @param cpuTimeAccumulator An accumulator that we will add CPU nanos to; this is part of the function to encourage
    *                           callers to remember to track metrics on CPU time required for creation of Joinables
    * @param query              The query that will be run on the mapped segments. Usually this should be
@@ -91,9 +79,8 @@ public class Joinables
    *                           {@link DataSourceAnalysis} and "query" is the original
    *                           query from the end user.
    */
-  public static Function<SegmentReference, SegmentReference> createSegmentMapFn(
+  public Function<SegmentReference, SegmentReference> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
-      final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
       final Query<?> query
   )
@@ -127,44 +114,71 @@ public class Joinables
   }
 
   /**
-   * Compute a cache key prefix for data sources that is to be used in segment level and result level caches. The
-   * data source can either be base (clauses is empty) or RHS of a join (clauses is non-empty). In both of the cases,
-   * a non-null cache is returned. However, the cache key is null if there is a join and some of the right data sources
-   * participating in the join do not support caching yet
+   * Compute a cache key prefix for data sources that participate in the RHS of a join. This key prefix
+   * can be used in segment level cache or result level cache. The function can return following wrapped in an
+   * Optional
+   *  - Empty byte array - If there is no join datasource involved
+   *  - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
+   *  join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
+   *  - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
+   *  in the JOIN is not cacheable.
    *
    * @param dataSourceAnalysis
-   * @param joinableFactory
    * @return
    */
-  public static Optional<byte[]> computeDataSourceCacheKey(
-      final DataSourceAnalysis dataSourceAnalysis,
-      final JoinableFactory joinableFactory
+  public Optional<byte[]> computeJoinDataSourceCacheKey(
+      final DataSourceAnalysis dataSourceAnalysis
   )
   {
-    final CacheKeyBuilder keyBuilder;
+
     final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
-      keyBuilder = new CacheKeyBuilder(REGULAR_OPERATION);
-    } else {
-      keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
-      for (PreJoinableClause clause : clauses) {
-        if (!clause.getCondition().canHashJoin()) {
-          log.debug("skipping caching for join since [%s] does not support hash-join", clause.getCondition());
-          return Optional.empty();
-        }
-        Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource());
-        if (!bytes.isPresent()) {
-          // Encountered a data source which didn't support cache yet
-          log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
-          return Optional.empty();
-        }
-        keyBuilder.appendByteArray(bytes.get());
-        keyBuilder.appendString(clause.getPrefix());    //TODO - prefix shouldn't be required IMO
-        keyBuilder.appendString(clause.getCondition().getOriginalExpression());
-        keyBuilder.appendString(clause.getJoinType().name());
+      return Optional.of(StringUtils.EMPTY_BYTES);
+    }
+
+    final CacheKeyBuilder keyBuilder;
+    keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
+    for (PreJoinableClause clause : clauses) {
+      if (!clause.getCondition().canHashJoin()) {
+        log.debug("skipping caching for join since [%s] does not support hash-join", clause.getCondition());
+        return Optional.empty();
       }
+      Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource());
+      if (!bytes.isPresent()) {
+        // Encountered a data source which didn't support cache yet
+        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+        return Optional.empty();
+      }
+      keyBuilder.appendByteArray(bytes.get());
+      keyBuilder.appendString(clause.getPrefix());    //TODO - prefix shouldn't be required IMO
+      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getJoinType().name());
     }
     return Optional.ofNullable(keyBuilder.build());
+  }
+
+  /**
+   * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
+   * returns it. Otherwise, throws an exception.
+   */
+  public static String validatePrefix(@Nullable final String prefix)
+  {
+    if (prefix == null || prefix.isEmpty()) {
+      throw new IAE("Join clause cannot have null or empty prefix");
+    } else if (isPrefixedBy(ColumnHolder.TIME_COLUMN_NAME, prefix) || ColumnHolder.TIME_COLUMN_NAME.equals(prefix)) {
+      throw new IAE(
+          "Join clause cannot have prefix[%s], since it would shadow %s",
+          prefix,
+          ColumnHolder.TIME_COLUMN_NAME
+      );
+    } else {
+      return prefix;
+    }
+  }
+
+  public static boolean isPrefixedBy(final String columnName, final String prefix)
+  {
+    return columnName.length() > prefix.length() && columnName.startsWith(prefix);
   }
 
   /**

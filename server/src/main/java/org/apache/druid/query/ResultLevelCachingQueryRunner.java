@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.QueryResource;
 
@@ -56,7 +55,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   private final boolean useResultCache;
   private final boolean populateResultCache;
   private Query<T> query;
-  private JoinableFactory joinableFactory;
+  private final Joinables joinables;
   private final CacheStrategy<T, Object, Query<T>> strategy;
 
 
@@ -67,7 +66,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ObjectMapper objectMapper,
       Cache cache,
       CacheConfig cacheConfig,
-      JoinableFactory joinableFactory
+      Joinables joinables
   )
   {
     this.baseRunner = baseRunner;
@@ -75,7 +74,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.query = query;
-    this.joinableFactory = joinableFactory;
+    this.joinables = joinables;
     this.strategy = queryToolChest.getCacheStrategy(query);
     this.populateResultCache = CacheUtil.isPopulateResultCache(
         query,
@@ -93,7 +92,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
       DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-      byte[] dataSourceCacheKey = Joinables.computeDataSourceCacheKey(analysis, joinableFactory).orElse(null);
+      byte[] dataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(analysis).orElse(null);
       if (null == dataSourceCacheKey) {
         return baseRunner.run(
             queryPlus,

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.server.SegmentManager;
@@ -55,30 +56,19 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
       JoinConditionAnalysis condition
   )
   {
-    GlobalTableDataSource broadcastDatasource = (GlobalTableDataSource) dataSource;
-    if (condition.canHashJoin()) {
-      DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(broadcastDatasource);
-      return segmentManager.getIndexedTables(analysis).map(tables -> {
-        Iterator<ReferenceCountingIndexedTable> tableIterator = tables.iterator();
-        if (!tableIterator.hasNext()) {
-          return null;
-        }
-        try {
-          return new IndexedTableJoinable(Iterators.getOnlyElement(tableIterator));
-        }
-        catch (IllegalArgumentException iae) {
-          throw new ISE(
-              "Currently only single segment datasources are supported for broadcast joins, dataSource[%s] has multiple segments. Reingest the data so that it is entirely contained within a single segment to use in JOIN queries.",
-              broadcastDatasource.getName()
-          );
-        }
-      });
+    if (!condition.canHashJoin()) {
+      return Optional.empty();
     }
-    return Optional.empty();
+    return getIndexedTable(dataSource).map(IndexedTableJoinable::new);
   }
 
   @Override
   public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+  {
+    return getIndexedTable(dataSource).flatMap(IndexedTable::computeCacheKey);
+  }
+
+  private Optional<ReferenceCountingIndexedTable> getIndexedTable(DataSource dataSource)
   {
     GlobalTableDataSource broadcastDataSource = (GlobalTableDataSource) dataSource;
     DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSource);
@@ -88,8 +78,7 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
         return Optional.empty();
       }
       try {
-        ReferenceCountingIndexedTable table = Iterators.getOnlyElement(tableIterator);
-        return table.computeCacheKey();
+        return Optional.of(Iterators.getOnlyElement(tableIterator));
       }
       catch (IllegalArgumentException iae) {
         throw new ISE(

@@ -40,12 +40,13 @@ import org.apache.druid.query.context.ResponseContext;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Optional;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
   private final String cacheId;
   private final SegmentDescriptor segmentDescriptor;
-  private final byte[] cacheKeyPrefix;
+  private final Optional<byte[]> cacheKeyPrefix;
   private final QueryRunner<T> base;
   private final QueryToolChest toolChest;
   private final Cache cache;
@@ -55,7 +56,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
   public CachingQueryRunner(
       String cacheId,
-      byte[] cacheKeyPrefix,
+      Optional<byte[]> cacheKeyPrefix,
       SegmentDescriptor segmentDescriptor,
       ObjectMapper mapper,
       Cache cache,
@@ -86,15 +87,21 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
         strategy,
         cacheConfig,
         CacheUtil.ServerType.DATA
-    );
-    final boolean useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.DATA);
+    ) && (strategy != null) && cacheKeyPrefix.isPresent();
+
+    final boolean useCache = CacheUtil.isUseSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    ) && (strategy != null) && cacheKeyPrefix.isPresent();
 
     final Cache.NamedKey key;
-    if (strategy != null && (useCache || populateCache)) {
+    if (useCache || populateCache) {
       key = CacheUtil.computeSegmentCacheKey(
           cacheId,
           segmentDescriptor,
-          Bytes.concat(cacheKeyPrefix, strategy.computeCacheKey(query))
+          Bytes.concat(cacheKeyPrefix.get(), strategy.computeCacheKey(query))
       );
     } else {
       key = null;

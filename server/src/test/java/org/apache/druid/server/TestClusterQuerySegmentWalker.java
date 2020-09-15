@@ -76,7 +76,7 @@ import java.util.function.Function;
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final JoinableFactory joinableFactory;
+  private final Joinables joinables;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
@@ -89,7 +89,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     this.timelines = timelines;
-    this.joinableFactory = joinableFactory;
+    this.joinables = new Joinables(joinableFactory);
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
   }
@@ -142,9 +142,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         new AtomicLong(),
         analysis.getBaseQuery().orElse(query)
     );

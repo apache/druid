@@ -24,8 +24,10 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -35,10 +37,17 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
+
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
 
 public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
 {
   private Cache cache;
+  private Joinables joinables;
 
   @Before
   public void setup()
@@ -228,11 +237,87 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     }
   }
 
+  @Test
+  public void testPopulateAndUseWithNullJoinCacheKey()
+  {
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    joinables = mock(Joinables.class);
+    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.empty());
+    replay(joinables);
+
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
+        newCacheConfig(true, true),
+        query
+    );
+
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    );
+    final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
+  }
+
+  @Test
+  public void testPopulateAndUseWithNonEmptyJoinCacheKey()
+  {
+    prepareCluster(10);
+    byte[] bytes = new byte[]{1, 2, 3};
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
+        newCacheConfig(true, true),
+        query
+    );
+    reset(joinables);
+    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(bytes)).anyTimes();
+    replay(joinables);
+
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    );
+    final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
+        newCacheConfig(true, true),
+        query
+    );
+    reset(joinables);
+    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(bytes)).anyTimes();
+    replay(joinables);
+
+    final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    );
+    final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
+    Assert.assertEquals(results1, results2);
+    Assert.assertEquals(1, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    String cacheStr = StringUtils.fromUtf8(toolChestWarehouse.getToolChest(query)
+                                                             .getCacheStrategy(query)
+                                                             .computeResultLevelCacheKey(query));
+    Assert.assertNotNull(cache.get(new Cache.NamedKey(cacheStr, bytes)));
+  }
+
   private <T> ResultLevelCachingQueryRunner<T> createQueryRunner(
       CacheConfig cacheConfig,
       Query<T> query
   )
   {
+    joinables = mock(Joinables.class);
+    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(StringUtils.EMPTY_BYTES))
+                                                                .anyTimes();
+    replay(joinables);
     final QueryRunner<T> baseRunner = cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals());
     return new ResultLevelCachingQueryRunner<>(
         new RetryQueryRunner<>(
@@ -245,7 +330,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query,
         objectMapper,
         cache,
-        cacheConfig
+        cacheConfig,
+        joinables
     );
   }
 

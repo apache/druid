@@ -52,6 +52,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -83,7 +84,7 @@ import java.util.stream.IntStream;
  * }
  * </pre>
  */
-public abstract class QueryRunnerBasedOnClusteredClientTestBase
+public abstract class QueryRunnerBasedOnClusteredClientTestBase extends EasyMockSupport
 {
   protected static final GeneratorSchemaInfo BASE_SCHEMA_INFO = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
 

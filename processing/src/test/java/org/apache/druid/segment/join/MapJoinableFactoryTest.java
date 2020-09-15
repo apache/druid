@@ -21,6 +21,7 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.InlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -83,6 +84,36 @@ public class MapJoinableFactoryTest
     EasyMock.replay(noopJoinableFactory);
     Optional<Joinable> joinable = target.build(noopDataSource, condition);
     Assert.assertEquals(mockJoinable, joinable.get());
+
+  }
+
+  @Test
+  public void testComputeJoinCacheKey()
+  {
+    Optional<byte[]> expected = Optional.of(new byte[]{1, 2, 3});
+    EasyMock.expect(noopJoinableFactory.computeJoinCacheKey(noopDataSource)).andReturn(expected);
+    EasyMock.replay(noopJoinableFactory);
+    Optional<byte[]> actual = target.computeJoinCacheKey(noopDataSource);
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test(expected = ISE.class)
+  public void testBuildExceptionWhenTwoJoinableFactoryForSameDataSource()
+  {
+    JoinableFactory anotherNoopJoinableFactory = EasyMock.mock(MapJoinableFactory.class);
+    target = new MapJoinableFactory(
+        ImmutableSet.of(noopJoinableFactory, anotherNoopJoinableFactory),
+        ImmutableMap.of(
+            noopJoinableFactory.getClass(),
+            NoopDataSource.class,
+            anotherNoopJoinableFactory.getClass(),
+            NoopDataSource.class
+        )
+    );
+    EasyMock.expect(noopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
+    EasyMock.expect(anotherNoopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
+    EasyMock.replay(noopJoinableFactory, anotherNoopJoinableFactory);
+    target.build(noopDataSource, condition);
   }
 
   @Test
