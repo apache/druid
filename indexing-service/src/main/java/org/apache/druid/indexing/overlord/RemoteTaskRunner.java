@@ -58,6 +58,8 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
+import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
@@ -823,17 +825,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         synchronized (workersWithUnacknowledgedTask) {
           immutableZkWorker = strategy.findWorkerForTask(
               config,
-              ImmutableMap.copyOf(
-                  Maps.transformEntries(
-                      Maps.filterEntries(
-                          zkWorkers,
-                          input -> !lazyWorkers.containsKey(input.getKey()) &&
-                                   !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                                   !blackListedWorkers.contains(input.getValue())
-                      ),
-                      (String key, ZkWorker value) -> value.toImmutable()
-                  )
-              ),
+              ImmutableMap.copyOf(getWorkersEligibleToRunTasks()),
               task
           );
 
@@ -865,6 +857,19 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
       }
     }
+  }
+
+  Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
+  {
+    return Maps.transformEntries(
+            Maps.filterEntries(
+                    zkWorkers,
+                    input -> !lazyWorkers.containsKey(input.getKey()) &&
+                            !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                            !blackListedWorkers.contains(input.getValue())
+            ),
+            (String key, ZkWorker value) -> value.toImmutable()
+    );
   }
 
   /**
@@ -1450,7 +1455,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public long getIdlePeonCount()
   {
     long totalIdlePeons = 0;
-    for (ImmutableWorkerInfo worker : getWorkers()) {
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
       totalIdlePeons += worker.getAvailableCapacity();
     }
 

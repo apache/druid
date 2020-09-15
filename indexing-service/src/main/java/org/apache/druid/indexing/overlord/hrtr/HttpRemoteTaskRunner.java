@@ -1570,7 +1570,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public long getIdlePeonCount()
   {
     long totalIdlePeons = 0;
-    for (ImmutableWorkerInfo worker : getWorkers()) {
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
       totalIdlePeons += worker.getAvailableCapacity();
     }
 
