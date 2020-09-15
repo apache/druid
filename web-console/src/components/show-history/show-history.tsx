@@ -21,7 +21,6 @@ import axios from 'axios';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
-import { QueryState } from '../../utils';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
@@ -35,10 +34,6 @@ export interface VersionSpec {
 export interface ShowHistoryProps {
   endpoint: string;
   downloadFilename?: string;
-}
-
-export interface ShowHistoryState {
-  historyState: QueryState<VersionSpec[]>;
 }
 
 export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryProps) {

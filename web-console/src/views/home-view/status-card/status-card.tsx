@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
 import { useQueryManager } from '../../../hooks';
-import { pluralIfNeeded, QueryState } from '../../../utils';
+import { pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 interface StatusSummary {
@@ -31,11 +31,6 @@ interface StatusSummary {
 }
 
 export interface StatusCardProps {}
-
-export interface StatusCardState {
-  statusSummaryState: QueryState<StatusSummary>;
-  showStatusDialog: boolean;
-}
 
 export const StatusCard = React.memo(function StatusCard(_props: StatusCardProps) {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
