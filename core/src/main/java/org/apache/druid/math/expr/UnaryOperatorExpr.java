@@ -24,6 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -59,10 +60,17 @@ abstract class UnaryExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     // currently all unary operators only operate on scalar inputs
     return expr.analyzeInputs().withScalarArguments(ImmutableSet.of(expr));
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return expr.getOutputType(inputTypes);
   }
 
   @Override
@@ -162,5 +170,16 @@ class UnaryNotExpr extends UnaryExpr
   public String toString()
   {
     return StringUtils.format("!%s", expr);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
