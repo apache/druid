@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.function.Function;
 
 /**
@@ -62,11 +63,18 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
 
     if (s == null) {
       // same behavior as regexp_like.
-      return ExprEval.of(false, ExprType.LONG);
+      return ExprEval.ofLongBoolean(false);
     } else {
       final boolean doesContain = searchFunction.apply(s);
-      return ExprEval.of(doesContain, ExprType.LONG);
+      return ExprEval.ofLongBoolean(doesContain);
     }
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return ExprType.LONG;
   }
 
   @Override
