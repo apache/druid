@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +41,20 @@ public class JsonInputFormat extends NestedInputFormat
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
   private final boolean keepNullColumns;
+
+  /**
+   * <pre>
+   * This parameter is introduced to support json string of an object in multiple lines in streaming ingestion records
+   *
+   * It indicates whether the input text can be splitted into lines in first, which will then be parsed into JSON objects one by one independently.
+   *
+   * This parameter should always be true for batch ingestion and false for streaming ingestion.
+   *
+   * For more information, see: https://github.com/apache/druid/pull/10383
+   * </pre>
+   */
+  @JsonIgnore
+  private boolean lineSplittable = true;
 
   @JsonCreator
   public JsonInputFormat(
@@ -73,7 +88,14 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+    return this.lineSplittable ?
+           new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns) :
+           new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+  }
+
+  public void setLineSplittable(boolean lineSplittable)
+  {
+    this.lineSplittable = lineSplittable;
   }
 
   @Override

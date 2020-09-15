@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.Transformer;
@@ -62,6 +63,9 @@ class SettableByteEntityReader implements InputEntityReader
 
   void setEntity(ByteEntity entity)
   {
+    if (inputFormat instanceof JsonInputFormat) {
+      ((JsonInputFormat) inputFormat).setLineSplittable(false);
+    }
     this.delegate = new TransformingInputEntityReader(
         // Yes, we are creating a new reader for every stream chunk.
         // This should be fine as long as initializing a reader is cheap which it is for now.

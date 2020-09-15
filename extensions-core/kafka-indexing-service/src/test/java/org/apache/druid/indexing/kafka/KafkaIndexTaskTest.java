@@ -122,6 +122,7 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -139,6 +140,7 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -2724,6 +2726,88 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null
+    );
+  }
+
+  @Test(timeout = 60_000L)
+  public void testMultipleLinesJSONText() throws Exception
+  {
+    reportParseExceptions = false;
+    maxParseExceptions = 1000;
+    maxSavedParseExceptions = 2;
+
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+
+      //multiple objects in one Kafka record will yield 2 rows in druid
+      String wellformed = toJsonString(true,"2049", "d2", "y", "10", "22.0", "2.0") +
+                     toJsonString(true,"2049", "d3", "y", "10", "23.0", "3.0");
+
+      //multiple objects in one Kafka record but some objects are in ill-formed format
+      //the whole ProducerRecord will be discarded
+      String illformed = "{\"timestamp\":2049, \"dim1\": \"d4\", \"dim2\":\"x\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"2.0\" }" +
+                     "{\"timestamp\":2049, \"dim1\": \"d5\", \"dim2\":\"y\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":invalidFormat }" +
+                     "{\"timestamp\":2049, \"dim1\": \"d6\", \"dim2\":\"z\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"3.0\" }";
+
+      ProducerRecord[] producerRecords = new ProducerRecord[]{
+          // pretty formatted
+          new ProducerRecord<>(topic, 0, null, jb(true,"2049", "d1", "y", "10", "20.0", "1.0")),
+
+          //well-formed
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
+
+          //ill-formed
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(illformed)),
+
+          //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
+          new ProducerRecord<>(topic, 0, null, jb(true,"2049", "d7", "y", "10", "20.0", "1.0"))
+      };
+      for (ProducerRecord<byte[], byte[]> record : producerRecords) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.commitTransaction();
+    }
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 4L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    // 4 records processed, 3 success, 1 failed
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            // 4 rows at last in druid
+            sdd("2049/P1D", 0, ImmutableList.of("d1", "d2", "d3", "d7"))
+        ),
+        publishedDescriptors()
+    );
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 4L))),
+        newDataSchemaMetadata()
     );
   }
 }
