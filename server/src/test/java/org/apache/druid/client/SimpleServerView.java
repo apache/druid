@@ -32,6 +32,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -136,7 +137,11 @@ public class SimpleServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
   {
-    return Optional.ofNullable(timelines.get(analysis.getBaseTableDataSource().get().getName()));
+    final TableDataSource table =
+        analysis.getBaseTableDataSource()
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+
+    return Optional.ofNullable(timelines.get(table.getName()));
   }
 
   @Override

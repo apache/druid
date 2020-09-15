@@ -139,12 +139,12 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
     if (storeDoubleAsFloat) {
-      return "float";
+      return ValueType.FLOAT;
     }
-    return "double";
+    return ValueType.DOUBLE;
   }
 
   @Override

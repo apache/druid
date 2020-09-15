@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -247,17 +248,30 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
   }
 
-  private boolean needsCompaction(DataSourceCompactionConfig config, SegmentsToCompact candidates)
+  @VisibleForTesting
+  static PartitionsSpec findPartitinosSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  {
+    final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
+    if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
+      return new DynamicPartitionsSpec(
+          partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
+          ((DynamicPartitionsSpec) partitionsSpecFromTuningConfig).getMaxTotalRowsOr(Long.MAX_VALUE)
+      );
+    } else {
+      final long maxTotalRows = tuningConfig.getMaxTotalRows() != null
+                                ? tuningConfig.getMaxTotalRows()
+                                : Long.MAX_VALUE;
+      return partitionsSpecFromTuningConfig == null
+             ? new DynamicPartitionsSpec(tuningConfig.getMaxRowsPerSegment(), maxTotalRows)
+             : partitionsSpecFromTuningConfig;
+    }
+  }
+
+  private boolean needsCompaction(ClientCompactionTaskQueryTuningConfig tuningConfig, SegmentsToCompact candidates)
   {
     Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
-    final int maxRowsPerSegment = config.getMaxRowsPerSegment() == null
-                                  ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
-                                  : config.getMaxRowsPerSegment();
-    @Nullable Long maxTotalRows = config.getTuningConfig() == null
-                                        ? null
-                                        : config.getTuningConfig().getMaxTotalRows();
-    maxTotalRows = maxTotalRows == null ? Long.MAX_VALUE : maxTotalRows;
 
+    final PartitionsSpec partitionsSpecFromConfig = findPartitinosSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
       log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
@@ -283,30 +297,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     final PartitionsSpec segmentPartitionsSpec = lastCompactionState.getPartitionsSpec();
-    if (!(segmentPartitionsSpec instanceof DynamicPartitionsSpec)) {
-      log.info(
-          "Candidate segment[%s] was compacted with a non dynamic partitions spec. Needs compaction.",
-          candidates.segments.get(0).getId()
-      );
-      return true;
-    }
-    final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) segmentPartitionsSpec;
     final IndexSpec segmentIndexSpec = objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class);
     final IndexSpec configuredIndexSpec;
-    if (config.getTuningConfig() == null || config.getTuningConfig().getIndexSpec() == null) {
+    if (tuningConfig.getIndexSpec() == null) {
       configuredIndexSpec = new IndexSpec();
     } else {
-      configuredIndexSpec = config.getTuningConfig().getIndexSpec();
+      configuredIndexSpec = tuningConfig.getIndexSpec();
     }
     boolean needsCompaction = false;
-    if (!Objects.equals(maxRowsPerSegment, dynamicPartitionsSpec.getMaxRowsPerSegment())
-        || !Objects.equals(maxTotalRows, dynamicPartitionsSpec.getMaxTotalRows())) {
+    if (!Objects.equals(partitionsSpecFromConfig, segmentPartitionsSpec)) {
       log.info(
-          "Configured maxRowsPerSegment[%s] and maxTotalRows[%s] are differenet from "
+          "Configured partitionsSpec[%s] is differenet from "
           + "the partitionsSpec[%s] of segments. Needs compaction.",
-          maxRowsPerSegment,
-          maxTotalRows,
-          dynamicPartitionsSpec
+          partitionsSpecFromConfig,
+          segmentPartitionsSpec
       );
       needsCompaction = true;
     }
@@ -343,7 +347,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
       if (!candidates.isEmpty()) {
         final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
-        final boolean needsCompaction = needsCompaction(config, candidates);
+        final boolean needsCompaction = needsCompaction(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            candidates
+        );
 
         if (isCompactibleSize && needsCompaction) {
           return candidates;

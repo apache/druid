@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -41,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -222,6 +224,31 @@ public class DataSegmentTest
     final DataSegment segment2 = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals("empty dimensions", ImmutableList.of(), segment2.getDimensions());
     Assert.assertEquals("empty metrics", ImmutableList.of(), segment2.getMetrics());
+  }
+
+  @Test
+  public void testWithLastCompactionState()
+  {
+    final CompactionState compactionState = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        Collections.singletonMap("test", "map")
+    );
+    final DataSegment segment1 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .lastCompactionState(compactionState)
+                                            .build();
+    final DataSegment segment2 = DataSegment.builder()
+                                           .dataSource("foo")
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                           .shardSpec(getShardSpec(7))
+                                           .size(0)
+                                           .build();
+    Assert.assertEquals(segment1, segment2.withLastCompactionState(compactionState));
   }
 
   private DataSegment makeDataSegment(String dataSource, String interval, String version)

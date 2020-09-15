@@ -247,7 +247,8 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
-          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER)
+                     .getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
       );
@@ -326,7 +327,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                                                        .bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
         if (!maybeInterval.isPresent()) {
-          throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
+          throw new ISE("No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
         }
         interval = maybeInterval.get();
       }
@@ -395,7 +396,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
 
         if (!intervalOptional.isPresent()) {
-          throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+          throw new ISE("No bucket found for timestamp: %s", key.get());
         }
         interval = intervalOptional.get();
       }

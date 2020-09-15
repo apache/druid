@@ -17,28 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.momentsketch.aggregator;
+package org.apache.druid.segment.incremental;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class MomentSketchAggregatorFactorySerdeTest
+public class IncrementalIndexAddResultTest
 {
   @Test
-  public void serializeDeserializeFactoryWithFieldName() throws Exception
+  public void testIsRowAdded()
   {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    MomentSketchAggregatorFactory factory = new MomentSketchAggregatorFactory(
-        "name", "fieldName", 128, true
-    );
+    Assert.assertTrue(new IncrementalIndexAddResult(0, 0L).isRowAdded());
+    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, "test").isRowAdded());
+    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, new ParseException("test")).isRowAdded());
+  }
 
-    MomentSketchAggregatorFactory other = objectMapper.readValue(
-        objectMapper.writeValueAsString(factory),
-        MomentSketchAggregatorFactory.class
-    );
-
-    Assert.assertEquals(factory, other);
+  @Test
+  public void testHasParseException()
+  {
+    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L).hasParseException());
+    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, "test").hasParseException());
+    Assert.assertTrue(new IncrementalIndexAddResult(0, 0L, new ParseException("test")).hasParseException());
   }
 }

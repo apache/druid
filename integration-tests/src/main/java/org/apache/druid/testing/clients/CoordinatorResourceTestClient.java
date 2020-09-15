@@ -33,6 +33,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
@@ -363,6 +364,26 @@ public class CoordinatorResourceTestClient
         new Request(HttpMethod.POST, new URL(url)).setContent(
             "application/json",
             jsonMapper.writeValueAsBytes(coordinatorDynamicConfig)
+        ), responseHandler
+    ).get();
+
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error while setting dynamic config[%s] status[%s] content[%s]",
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+  }
+
+  public void postLoadRules(String datasourceName, List<Rule> rules) throws Exception
+  {
+    String url = StringUtils.format("%srules/%s", getCoordinatorURL(), datasourceName);
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(rules)
         ), responseHandler
     ).get();
 

@@ -72,6 +72,7 @@ export interface LookupSpec {
   firstCacheTimeout?: number;
   injective?: boolean;
 }
+
 export interface LookupEditDialogProps {
   onClose: () => void;
   onSubmit: (updateLookupVersion: boolean) => void;

@@ -61,6 +61,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -280,6 +281,50 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals(
         ImmutableList.of(defaultSegment.getId().toString(), defaultSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
+  }
+
+  @Test
+  public void testAnnounceHistoricalSegments() throws IOException
+  {
+    Set<DataSegment> segments = new HashSet<>();
+    for (int i = 0; i < 105; i++) {
+      segments.add(
+          new DataSegment(
+              "fooDataSource",
+              Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(i),
+              9,
+              100
+          )
+      );
+    }
+
+    coordinator.announceHistoricalSegments(segments);
+    for (DataSegment segment : segments) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getId().toString()
+          )
+      );
+    }
+
+    List<String> segmentIds = segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList());
+    segmentIds.sort(Comparator.naturalOrder());
+    Assert.assertEquals(
+        segmentIds,
         retrieveUsedSegmentIds()
     );
 

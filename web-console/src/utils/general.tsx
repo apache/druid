@@ -26,6 +26,7 @@ import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons/toaster';
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -137,7 +138,7 @@ export function caseInsensitiveContains(testString: string, searchString: string
 // ----------------------------
 
 export function countBy<T>(
-  array: T[],
+  array: readonly T[],
   fn: (x: T, index: number) => string = String,
 ): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -148,20 +149,21 @@ export function countBy<T>(
   return counts;
 }
 
-function identity(x: any): any {
+function identity<T>(x: T): T {
   return x;
 }
 
-export function lookupBy<T, Q>(
-  array: T[],
+export function lookupBy<T, Q = T>(
+  array: readonly T[],
   keyFn: (x: T, index: number) => string = String,
-  valueFn: (x: T, index: number) => Q = identity,
+  valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
+  if (!valueFn) valueFn = identity as any;
   const lookup: Record<string, Q> = {};
   const n = array.length;
   for (let i = 0; i < n; i++) {
     const a = array[i];
-    lookup[keyFn(a, i)] = valueFn(a, i);
+    lookup[keyFn(a, i)] = valueFn!(a, i);
   }
   return lookup;
 }
@@ -260,7 +262,7 @@ export function validJson(json: string): boolean {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
@@ -277,9 +279,9 @@ export function alphanumericCompare(a: string, b: string): number {
 }
 
 export function sortWithPrefixSuffix(
-  things: string[],
-  prefix: string[],
-  suffix: string[],
+  things: readonly string[],
+  prefix: readonly string[],
+  suffix: readonly string[],
   cmp: null | ((a: string, b: string) => number),
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
@@ -321,4 +323,12 @@ export function delay(ms: number) {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+export function swapElements<T>(items: readonly T[], indexA: number, indexB: number): T[] {
+  const newItems = items.concat();
+  const t = newItems[indexA];
+  newItems[indexA] = newItems[indexB];
+  newItems[indexB] = t;
+  return newItems;
 }

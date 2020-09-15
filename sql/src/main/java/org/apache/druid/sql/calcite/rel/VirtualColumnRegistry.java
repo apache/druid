@@ -19,9 +19,10 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -74,19 +75,19 @@ public class VirtualColumnRegistry
   }
 
   /**
-   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression}.
+   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression} and {@link ValueType}.
    */
   public VirtualColumn getOrCreateVirtualColumnForExpression(
       PlannerContext plannerContext,
       DruidExpression expression,
-      SqlTypeName typeName
+      ValueType valueType
   )
   {
     if (!virtualColumnsByExpression.containsKey(expression.getExpression())) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
       final VirtualColumn virtualColumn = expression.toVirtualColumn(
           virtualColumnName,
-          Calcites.getValueTypeForSqlTypeName(typeName),
+          valueType,
           plannerContext.getExprMacroTable()
       );
       virtualColumnsByExpression.put(
@@ -100,6 +101,22 @@ public class VirtualColumnRegistry
     }
 
     return virtualColumnsByExpression.get(expression.getExpression());
+  }
+
+  /**
+   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression} and {@link RelDataType}
+   */
+  public VirtualColumn getOrCreateVirtualColumnForExpression(
+      PlannerContext plannerContext,
+      DruidExpression expression,
+      RelDataType dataType
+  )
+  {
+    return getOrCreateVirtualColumnForExpression(
+        plannerContext,
+        expression,
+        Calcites.getValueTypeForRelDataType(dataType)
+    );
   }
 
   /**

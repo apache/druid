@@ -17,9 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.stats;
+package org.apache.druid.segment;
 
-public interface RowIngestionMetersFactory
+import org.apache.druid.segment.data.Offset;
+
+public abstract class SimpleSettableOffset extends Offset
 {
-  RowIngestionMeters createRowIngestionMeters();
+  public abstract void setCurrentOffset(int currentOffset);
 }

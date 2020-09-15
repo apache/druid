@@ -487,7 +487,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     long workerDiscoveryStartTime = System.currentTimeMillis();
     while (!workerViewInitialized.await(30, TimeUnit.SECONDS)) {
       if (System.currentTimeMillis() - workerDiscoveryStartTime > TimeUnit.MINUTES.toMillis(5)) {
-        throw new ISE("WTF! Couldn't discover workers.");
+        throw new ISE("Couldn't discover workers.");
       } else {
         log.info("Waiting for worker discovery...");
       }
@@ -1169,7 +1169,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
 
         if (immutableWorker == null) {
-          throw new ISE("WTH! NULL immutableWorker");
+          throw new ISE("Unexpected state: null immutableWorker");
         }
 
         try {
@@ -1405,7 +1405,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               break;
             default:
               log.makeAlert(
-                  "WTF! Found unrecognized state[%s] of task[%s] in taskStorage. Notification[%s] from worker[%s] is ignored.",
+                  "Found unrecognized state[%s] of task[%s] in taskStorage. Notification[%s] from worker[%s] is ignored.",
                   knownStatusInStorage.get().getStatusCode(),
                   taskId,
                   announcement,
@@ -1468,7 +1468,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 break;
               default:
                 log.makeAlert(
-                    "WTF! Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
+                    "Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
                     taskItem.getState(),
                     taskId,
                     announcement,
@@ -1513,7 +1513,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 break;
               default:
                 log.makeAlert(
-                    "WTF! Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
+                    "Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
                     taskItem.getState(),
                     taskId,
                     announcement,
@@ -1523,7 +1523,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             break;
           default:
             log.makeAlert(
-                "WTF! Worker[%s] reported unrecognized state[%s] for task[%s].",
+                "Worker[%s] reported unrecognized state[%s] for task[%s].",
                 worker.getHost(),
                 announcement.getTaskStatus().getStatusCode(),
                 taskId
