@@ -306,6 +306,7 @@ numerics
 parameterized
 parseable
 partitioner
+partitionsSpec
 performant
 plaintext
 pluggable
@@ -971,7 +972,6 @@ overwriteFiles
 partitionDimension
 partitionDimensions
 partitionSpec
-partitionsSpec
 pathFormat
 segmentOutputPath
 segmentTable
