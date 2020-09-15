@@ -108,13 +108,13 @@ public class UriExtractionNamespaceTest
         1
     );
     // parser return empyt list as the 1 row header need to be skipped.
-    Assert.assertEquals(ImmutableMap.of(),parser.getParser().parseToMap("row to skip "));
+    Assert.assertEquals(ImmutableMap.of(), parser.getParser().parseToMap("row to skip "));
     //Header also need to be skipped.
-    Assert.assertEquals(ImmutableMap.of(),parser.getParser().parseToMap("col1,col2,col3"));
+    Assert.assertEquals(ImmutableMap.of(), parser.getParser().parseToMap("col1,col2,col3"));
     // test the header is parsed
-    Assert.assertEquals(ImmutableList.of("col1","col2","col3"),parser.getParser().getFieldNames());
+    Assert.assertEquals(ImmutableList.of("col1", "col2", "col3"), parser.getParser().getFieldNames());
     // The third row will parse to data
-    Assert.assertEquals(ImmutableMap.of("val2","val3"),parser.getParser().parseToMap("val1,val2,val3"));
+    Assert.assertEquals(ImmutableMap.of("val2", "val3"), parser.getParser().parseToMap("val1,val2,val3"));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -183,7 +183,7 @@ public class UriExtractionNamespaceTest
     // skip the header as well
     Assert.assertEquals(ImmutableMap.of(), parser.getParser().parseToMap("col1\\u0001col2\\u0001col3"));
     // test if the headers are parsed well.
-    Assert.assertEquals(ImmutableList.of("col1","col2","col3"),parser.getParser().getFieldNames());
+    Assert.assertEquals(ImmutableList.of("col1", "col2", "col3"), parser.getParser().getFieldNames());
     // test if the data row is parsed correctly
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A\\u0001B\\u0001C"));
   }
