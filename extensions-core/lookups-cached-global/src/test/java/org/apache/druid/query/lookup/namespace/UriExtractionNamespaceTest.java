@@ -98,7 +98,8 @@ public class UriExtractionNamespaceTest
   }
 
   @Test
-  public void testCSVWithHeader(){
+  public void testCSVWithHeader()
+  {
     UriExtractionNamespace.CSVFlatDataParser parser = new UriExtractionNamespace.CSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "col2",
