@@ -136,7 +136,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return new VarianceAggregator.DoubleVarianceAggregator(selector);
     } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.LongVarianceAggregator(selector);
-    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type) || ValueType.COMPLEX.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
@@ -161,7 +161,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return new VarianceBufferAggregator.DoubleVarianceAggregator(selector);
     } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.LongVarianceAggregator(selector);
-    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type) || ValueType.COMPLEX.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
@@ -181,7 +181,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return new VarianceDoubleVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceLongVectorAggregator(selectorFactory.makeValueSelector(fieldName));
-    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type) || ValueType.COMPLEX.name().equalsIgnoreCase(type)) {
       return new VarianceObjectVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
     }
     throw new IAE(

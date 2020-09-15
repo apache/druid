@@ -21,8 +21,12 @@ package org.apache.druid.query.aggregation.variance;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -31,6 +35,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Answers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -43,6 +48,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   private static final String VARIANCE = "variance";
   private static final String UNKNOWN = "unknown";
 
+  @Mock
+  private ColumnCapabilities capabilities;
   @Mock
   private VectorColumnSelectorFactory selectorFactory;
   @Mock(answer = Answers.RETURNS_MOCKS)
@@ -83,12 +90,39 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void factorizeVectorForVarianceShouldReturnFloatVectorAggregator()
+  public void factorizeVectorForVarianceShouldReturnObjectVectorAggregator()
   {
     target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, VARIANCE);
     VectorAggregator agg = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(agg);
     Assert.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
+  }
+
+  @Test
+  public void factorizeVectorForComplexShouldReturnObjectVectorAggregator()
+  {
+    mockType(ValueType.COMPLEX);
+    VectorAggregator agg = target.factorizeVector(selectorFactory);
+    Assert.assertNotNull(agg);
+    Assert.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
+  }
+
+  @Test
+  public void factorizeBufferedForComplexShouldReturnObjectVectorAggregator()
+  {
+    mockType(ValueType.COMPLEX);
+    BufferAggregator agg = target.factorizeBuffered(metricFactory);
+    Assert.assertNotNull(agg);
+    Assert.assertEquals(VarianceBufferAggregator.ObjectVarianceAggregator.class, agg.getClass());
+  }
+
+  @Test
+  public void factorizeForComplexShouldReturnObjectVectorAggregator()
+  {
+    mockType(ValueType.COMPLEX);
+    Aggregator agg = target.factorize(metricFactory);
+    Assert.assertNotNull(agg);
+    Assert.assertEquals(VarianceAggregator.ObjectVarianceAggregator.class, agg.getClass());
   }
 
   @Test(expected = IAE.class)
@@ -111,5 +145,12 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
     EqualsVerifier.forClass(VarianceAggregatorFactory.class)
                   .usingGetClass()
                   .verify();
+  }
+
+  private void mockType(ValueType type)
+  {
+    Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
+    Mockito.doReturn(capabilities).when(metricFactory).getColumnCapabilities(FIELD_NAME);
+    Mockito.doReturn(type).when(capabilities).getType();
   }
 }
