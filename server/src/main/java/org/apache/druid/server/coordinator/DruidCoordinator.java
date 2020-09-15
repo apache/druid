@@ -580,7 +580,7 @@ public class DruidCoordinator
       }
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
-        ScheduledExecutors.scheduleWithFixedDelay(
+        ScheduledExecutors.scheduleAtFixedRate(
             exec,
             config.getCoordinatorStartDelay(),
             dutiesRunnable.rhs,
@@ -643,8 +643,9 @@ public class DruidCoordinator
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());
-    duties.addAll(makeCompactSegmentsDuty());
     duties.addAll(indexingServiceDuties);
+    // CompactSegmentsDuty should be the last duty as it can takea long time
+    duties.addAll(makeCompactSegmentsDuty());
 
     log.debug(
         "Done making indexing service duties %s",

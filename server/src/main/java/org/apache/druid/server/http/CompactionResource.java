@@ -81,7 +81,7 @@ public class CompactionResource
   }
 
   @GET
-  @Path("/snapshot")
+  @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
   public Response getCompactionSnapshotForDataSource(
