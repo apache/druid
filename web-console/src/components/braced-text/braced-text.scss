@@ -16,19 +16,23 @@
  * limitations under the License.
  */
 
-/**
- * Represents datasource row in datasource overview table.
- */
-export class Datasource {
-  constructor(props: DatasourceProps) {
-    Object.assign(this, props);
+.braced-text {
+  position: relative;
+  text-align: right;
+  white-space: nowrap;
+
+  .brace-text {
+    position: relative;
+    top: -50000px; // Send it into the stratosphere (get it out of the parent container to prevent the browser from adding '...')
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .real-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
   }
 }
-
-interface DatasourceProps {
-  readonly name: string;
-  readonly availability: string;
-  readonly totalRows: number;
-}
-
-export interface Datasource extends DatasourceProps {}

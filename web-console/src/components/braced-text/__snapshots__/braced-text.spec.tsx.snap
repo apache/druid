@@ -1,0 +1,18 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`BracedText matches snapshot 1`] = `
+<span
+  className="braced-text"
+>
+  <span
+    className="brace-text"
+  >
+    00,000.0
+  </span>
+  <span
+    className="real-text"
+  >
+    23.3
+  </span>
+</span>
+`;

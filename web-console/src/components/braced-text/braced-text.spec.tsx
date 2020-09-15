@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
-/**
- * Represents datasource row in datasource overview table.
- */
-export class Datasource {
-  constructor(props: DatasourceProps) {
-    Object.assign(this, props);
-  }
-}
+import { shallow } from 'enzyme';
+import React from 'react';
 
-interface DatasourceProps {
-  readonly name: string;
-  readonly availability: string;
-  readonly totalRows: number;
-}
+import { BracedText } from './braced-text';
 
-export interface Datasource extends DatasourceProps {}
+describe('BracedText', () => {
+  it('matches snapshot', () => {
+    const bracedText = shallow(<BracedText text="23.3" braces={['34', '23,423.4']} />);
+
+    expect(bracedText).toMatchSnapshot();
+  });
+});

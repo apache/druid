@@ -38,13 +38,15 @@ interface SegmentTimelineProps {
   dataQueryManager?: QueryManager<{ capabilities: Capabilities; timeSpan: number }, any>;
 }
 
+type ActiveDataType = 'sizeData' | 'countData';
+
 interface SegmentTimelineState {
   data?: Record<string, any>;
   datasources: string[];
   stackedData?: Record<string, BarUnitData[]>;
   singleDatasourceData?: Record<string, Record<string, BarUnitData[]>>;
   activeDatasource: string | null;
-  activeDataType: string; // "countData" || "sizeData"
+  activeDataType: ActiveDataType;
   dataToRender: BarUnitData[];
   timeSpan: number; // by months
   loading: boolean;
@@ -232,7 +234,7 @@ export class SegmentTimeline extends React.PureComponent<
       singleDatasourceData: {},
       dataToRender: [],
       activeDatasource: null,
-      activeDataType: 'countData',
+      activeDataType: 'sizeData',
       timeSpan: DEFAULT_TIME_SPAN_MONTHS,
       loading: true,
       xScale: null,
@@ -517,8 +519,8 @@ ORDER BY "start" DESC`;
               onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
               selectedValue={activeDataType}
             >
-              <Radio label={'Segment count'} value={'countData'} />
               <Radio label={'Total size'} value={'sizeData'} />
+              <Radio label={'Segment count'} value={'countData'} />
             </RadioGroup>
           </FormGroup>
 
