@@ -1556,7 +1556,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getTotalPeonCount()
+  public long getTotalTaskSlotCount()
   {
     long totalPeons = 0;
     for (ImmutableWorkerInfo worker : getWorkers()) {
@@ -1567,7 +1567,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getIdlePeonCount()
+  public long getIdleTaskSlotCount()
   {
     long totalIdlePeons = 0;
     for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
@@ -1578,7 +1578,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getUsedPeonCount()
+  public long getUsedTaskSlotCount()
   {
     long totalUsedPeons = 0;
     for (ImmutableWorkerInfo worker : getWorkers()) {
@@ -1589,7 +1589,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getLazyPeonCount()
+  public long getLazyTaskSlotCount()
   {
     long totalLazyPeons = 0;
     for (Worker worker : getLazyWorkers()) {
@@ -1600,7 +1600,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getBlacklistedPeonCount()
+  public long getBlacklistedTaskSlotCount()
   {
     long totalBlacklistedPeons = 0;
     for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {

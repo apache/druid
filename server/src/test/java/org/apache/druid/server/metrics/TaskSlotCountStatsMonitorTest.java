@@ -24,41 +24,41 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class PeonCountStatsMonitorTest
+public class TaskSlotCountStatsMonitorTest
 {
-  private PeonCountStatsProvider statsProvider;
+  private TaskSlotCountStatsProvider statsProvider;
 
   @Before
   public void setUp()
   {
-    statsProvider = new PeonCountStatsProvider()
+    statsProvider = new TaskSlotCountStatsProvider()
     {
       @Override
-      public long getTotalPeonCount()
+      public long getTotalTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getIdlePeonCount()
+      public long getIdleTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getUsedPeonCount()
+      public long getUsedTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getLazyPeonCount()
+      public long getLazyTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getBlacklistedPeonCount()
+      public long getBlacklistedTaskSlotCount()
       {
         return 1L;
       }
@@ -68,19 +68,19 @@ public class PeonCountStatsMonitorTest
   @Test
   public void testMonitor()
   {
-    final PeonCountStatsMonitor monitor = new PeonCountStatsMonitor(statsProvider);
+    final TaskSlotCountStatsMonitor monitor = new TaskSlotCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getEvents().size());
-    Assert.assertEquals("peon/total/count", emitter.getEvents().get(0).toMap().get("metric"));
+    Assert.assertEquals("taskSlot/total/count", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(0).toMap().get("value"));
-    Assert.assertEquals("peon/idle/count", emitter.getEvents().get(1).toMap().get("metric"));
+    Assert.assertEquals("taskSlot/idle/count", emitter.getEvents().get(1).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(1).toMap().get("value"));
-    Assert.assertEquals("peon/used/count", emitter.getEvents().get(2).toMap().get("metric"));
+    Assert.assertEquals("taskSlot/used/count", emitter.getEvents().get(2).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(2).toMap().get("value"));
-    Assert.assertEquals("peon/lazy/count", emitter.getEvents().get(3).toMap().get("metric"));
+    Assert.assertEquals("taskSlot/lazy/count", emitter.getEvents().get(3).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(3).toMap().get("value"));
-    Assert.assertEquals("peon/blacklisted/count", emitter.getEvents().get(4).toMap().get("metric"));
+    Assert.assertEquals("taskSlot/blacklisted/count", emitter.getEvents().get(4).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
   }
 }

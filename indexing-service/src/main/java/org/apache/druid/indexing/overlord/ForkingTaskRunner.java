@@ -650,7 +650,7 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getTotalPeonCount()
+  public long getTotalTaskSlotCount()
   {
     if (config.getPorts() != null && !config.getPorts().isEmpty()) {
       return config.getPorts().size();
@@ -659,25 +659,25 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getIdlePeonCount()
+  public long getIdleTaskSlotCount()
   {
-    return Math.max(getTotalPeonCount() - getUsedPeonCount(), 0);
+    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
   }
 
   @Override
-  public long getUsedPeonCount()
+  public long getUsedTaskSlotCount()
   {
     return portFinder.findUsedPortCount();
   }
 
   @Override
-  public long getLazyPeonCount()
+  public long getLazyTaskSlotCount()
   {
     return 0;
   }
 
   @Override
-  public long getBlacklistedPeonCount()
+  public long getBlacklistedTaskSlotCount()
   {
     return 0;
   }

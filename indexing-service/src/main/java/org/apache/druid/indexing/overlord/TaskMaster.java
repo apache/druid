@@ -41,8 +41,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import org.apache.druid.server.metrics.PeonCountStatsProvider;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
+import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,7 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster implements TaskCountStatsProvider, PeonCountStatsProvider
+public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -341,55 +341,55 @@ public class TaskMaster implements TaskCountStatsProvider, PeonCountStatsProvide
   }
 
   @Override
-  public long getTotalPeonCount()
+  public long getTotalTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getTotalPeonCount();
+      return taskRunner.get().getTotalTaskSlotCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getIdlePeonCount()
+  public long getIdleTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getIdlePeonCount();
+      return taskRunner.get().getIdleTaskSlotCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getUsedPeonCount()
+  public long getUsedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getUsedPeonCount();
+      return taskRunner.get().getUsedTaskSlotCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getLazyPeonCount()
+  public long getLazyTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getLazyPeonCount();
+      return taskRunner.get().getLazyTaskSlotCount();
     } else {
       return 0;
     }
   }
 
   @Override
-  public long getBlacklistedPeonCount()
+  public long getBlacklistedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
-      return taskRunner.get().getBlacklistedPeonCount();
+      return taskRunner.get().getBlacklistedTaskSlotCount();
     } else {
       return 0;
     }

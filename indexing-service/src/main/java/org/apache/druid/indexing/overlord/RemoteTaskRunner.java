@@ -58,8 +58,6 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
-import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
@@ -862,13 +860,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
   {
     return Maps.transformEntries(
-            Maps.filterEntries(
-                    zkWorkers,
-                    input -> !lazyWorkers.containsKey(input.getKey()) &&
-                            !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                            !blackListedWorkers.contains(input.getValue())
-            ),
-            (String key, ZkWorker value) -> value.toImmutable()
+      Maps.filterEntries(zkWorkers,
+        input -> !lazyWorkers.containsKey(input.getKey()) &&
+                !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                !blackListedWorkers.contains(input.getValue())
+        ),
+        (String key, ZkWorker value) -> value.toImmutable()
     );
   }
 
@@ -1441,7 +1438,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getTotalPeonCount()
+  public long getTotalTaskSlotCount()
   {
     long totalPeons = 0;
     for (ImmutableWorkerInfo worker : getWorkers()) {
@@ -1452,7 +1449,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getIdlePeonCount()
+  public long getIdleTaskSlotCount()
   {
     long totalIdlePeons = 0;
     for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
@@ -1463,7 +1460,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getUsedPeonCount()
+  public long getUsedTaskSlotCount()
   {
     long totalUsedPeons = 0;
     for (ImmutableWorkerInfo worker : getWorkers()) {
@@ -1474,7 +1471,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getLazyPeonCount()
+  public long getLazyTaskSlotCount()
   {
     long totalLazyPeons = 0;
     for (Worker worker : getLazyWorkers()) {
@@ -1485,7 +1482,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getBlacklistedPeonCount()
+  public long getBlacklistedTaskSlotCount()
   {
     long totalBlacklistedPeons = 0;
     for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {

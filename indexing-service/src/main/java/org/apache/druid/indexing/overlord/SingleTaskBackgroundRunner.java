@@ -314,31 +314,31 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
-  public long getTotalPeonCount()
+  public long getTotalTaskSlotCount()
   {
     return 1;
   }
 
   @Override
-  public long getIdlePeonCount()
+  public long getIdleTaskSlotCount()
   {
     return runningItem == null ? 1 : 0;
   }
 
   @Override
-  public long getUsedPeonCount()
+  public long getUsedTaskSlotCount()
   {
     return runningItem == null ? 0 : 1;
   }
 
   @Override
-  public long getLazyPeonCount()
+  public long getLazyTaskSlotCount()
   {
     return 0;
   }
 
   @Override
-  public long getBlacklistedPeonCount()
+  public long getBlacklistedTaskSlotCount()
   {
     return 0;
   }

@@ -454,31 +454,31 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public long getTotalPeonCount()
+  public long getTotalTaskSlotCount()
   {
     return workerConfig.getCapacity();
   }
 
   @Override
-  public long getIdlePeonCount()
+  public long getIdleTaskSlotCount()
   {
-    return Math.max(getTotalPeonCount() - getUsedPeonCount(), 0);
+    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
   }
 
   @Override
-  public long getUsedPeonCount()
+  public long getUsedTaskSlotCount()
   {
     return getRunningTasks().size();
   }
 
   @Override
-  public long getLazyPeonCount()
+  public long getLazyTaskSlotCount()
   {
     return 0;
   }
 
   @Override
-  public long getBlacklistedPeonCount()
+  public long getBlacklistedTaskSlotCount()
   {
     return 0;
   }

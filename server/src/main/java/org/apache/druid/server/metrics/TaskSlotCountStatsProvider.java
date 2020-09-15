@@ -19,30 +19,30 @@
 
 package org.apache.druid.server.metrics;
 
-public interface PeonCountStatsProvider
+public interface TaskSlotCountStatsProvider
 {
   /**
-   * Return the number of total peons during emission period.
+   * Return the number of total task slots during emission period.
    */
-  long getTotalPeonCount();
+  long getTotalTaskSlotCount();
 
   /**
-   * Return the number of idle peons during emission period.
+   * Return the number of idle task slots during emission period.
    */
-  long getIdlePeonCount();
+  long getIdleTaskSlotCount();
 
   /**
-   * Return the number of used peons during emission period.
+   * Return the number of used task slots during emission period.
    */
-  long getUsedPeonCount();
+  long getUsedTaskSlotCount();
 
   /**
-   * Return the number of lazy peons during emission period.
+   * Return the number of lazy task slots during emission period.
    */
-  long getLazyPeonCount();
+  long getLazyTaskSlotCount();
 
   /**
-   * Return the number of blacklisted peons during emission period.
+   * Return the number of blacklisted task slots during emission period.
    */
-  long getBlacklistedPeonCount();
+  long getBlacklistedTaskSlotCount();
 }

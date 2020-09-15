@@ -123,15 +123,15 @@ public interface TaskRunner
   Optional<ScalingStats> getScalingStats();
 
   /**
-   * APIs useful for emitting statistics for @PeonCountStatsMonitor
+   * APIs useful for emitting statistics for @TaskSlotCountStatsMonitor
   */
-  long getTotalPeonCount();
+  long getTotalTaskSlotCount();
 
-  long getIdlePeonCount();
+  long getIdleTaskSlotCount();
 
-  long getUsedPeonCount();
+  long getUsedTaskSlotCount();
 
-  long getLazyPeonCount();
+  long getLazyTaskSlotCount();
 
-  long getBlacklistedPeonCount();
+  long getBlacklistedTaskSlotCount();
 }

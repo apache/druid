@@ -385,31 +385,31 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
 
     @Override
-    public long getTotalPeonCount()
+    public long getTotalTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getIdlePeonCount()
+    public long getIdleTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getUsedPeonCount()
+    public long getUsedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getLazyPeonCount()
+    public long getLazyTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getBlacklistedPeonCount()
+    public long getBlacklistedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
