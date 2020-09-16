@@ -233,7 +233,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
             StringUtils.format(
-                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
+                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
