@@ -87,14 +87,14 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
         strategy,
         cacheConfig,
         CacheUtil.ServerType.DATA
-    ) && (strategy != null) && cacheKeyPrefix.isPresent();
+    ) && cacheKeyPrefix.isPresent();
 
     final boolean useCache = CacheUtil.isUseSegmentCache(
         query,
         strategy,
         cacheConfig,
         CacheUtil.ServerType.DATA
-    ) && (strategy != null) && cacheKeyPrefix.isPresent();
+    ) && cacheKeyPrefix.isPresent();
 
     final Cache.NamedKey key;
     if (useCache || populateCache) {
