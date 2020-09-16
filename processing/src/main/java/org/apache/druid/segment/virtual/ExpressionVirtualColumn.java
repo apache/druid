@@ -55,6 +55,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
 {
   private final String name;
   private final String expression;
+  @Nullable
   private final ValueType outputType;
   private final Supplier<Expr> parsedExpression;
 
@@ -68,7 +69,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
+    this.outputType = outputType;
     this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
@@ -85,7 +86,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // Unfortunately this string representation can't be reparsed into the same expression, might be useful
     // if the expression system supported that
     this.expression = parsedExpression.toString();
-    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
+    this.outputType = outputType;
     this.parsedExpression = Suppliers.ofInstance(parsedExpression);
   }
 
@@ -102,6 +103,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return expression;
   }
 
+  @Nullable
   @JsonProperty
   public ValueType getOutputType()
   {
@@ -170,19 +172,22 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // Note: Ideally we would fill out additional information instead of leaving capabilities as 'unknown', e.g. examine
     // if the expression in question could potentially return multiple values and anything else. However, we don't
     // currently have a good way of determining this, so fill this out more once we do
-    return new ColumnCapabilitiesImpl().setType(outputType);
+    return new ColumnCapabilitiesImpl().setType(outputType == null ? ValueType.FLOAT : outputType);
   }
 
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
-    final ExprType outputType = parsedExpression.get().getOutputType(inspector);
+    final ExprType inferredOutputType = parsedExpression.get().getOutputType(inspector);
 
-    if (outputType != null) {
-      final ValueType valueType = ExprType.toValueType(outputType);
+    if (inferredOutputType != null) {
+      final ValueType valueType = ExprType.toValueType(inferredOutputType);
       if (valueType.isNumeric()) {
-        // numbers are easy
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ExprType.toValueType(outputType));
+        // if float was explicitly specified preserve it, because it will currently never be the computed output type
+        if (ValueType.FLOAT.equals(outputType)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
+        }
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ExprType.toValueType(inferredOutputType));
       }
       if (valueType.isArray()) {
         // always a multi-value string since wider engine does not yet support array types
@@ -233,11 +238,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
+    CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
         .appendString(name)
-        .appendString(expression)
-        .appendString(outputType.toString())
-        .build();
+        .appendString(expression);
+
+    if (outputType != null) {
+      builder.appendString(outputType.toString());
+    }
+    return builder.build();
   }
 
   @Override
