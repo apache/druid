@@ -42,7 +42,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) < 0, ExprType.LONG);
+    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) < 0);
   }
 
   @Override
@@ -56,6 +56,17 @@ class BinLtExpr extends BinaryEvalOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) < 0);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
 
@@ -75,7 +86,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) <= 0, ExprType.LONG);
+    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) <= 0);
   }
 
   @Override
@@ -89,6 +100,17 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) <= 0);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
 
@@ -108,7 +130,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) > 0, ExprType.LONG);
+    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) > 0);
   }
 
   @Override
@@ -122,6 +144,17 @@ class BinGtExpr extends BinaryEvalOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) > 0);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
 
@@ -141,7 +174,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) >= 0, ExprType.LONG);
+    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) >= 0);
   }
 
   @Override
@@ -155,6 +188,17 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) >= 0);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
 
@@ -174,7 +218,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(Objects.equals(left, right), ExprType.LONG);
+    return ExprEval.ofLongBoolean(Objects.equals(left, right));
   }
 
   @Override
@@ -187,6 +231,17 @@ class BinEqExpr extends BinaryEvalOpExprBase
   protected final double evalDouble(double left, double right)
   {
     return Evals.asDouble(left == right);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
 
@@ -206,7 +261,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(!Objects.equals(left, right), ExprType.LONG);
+    return ExprEval.ofLongBoolean(!Objects.equals(left, right));
   }
 
   @Override
@@ -219,6 +274,17 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   protected final double evalDouble(double left, double right)
   {
     return Evals.asDouble(left != right);
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    ExprType implicitCast = super.getOutputType(inputTypes);
+    if (ExprType.STRING.equals(implicitCast)) {
+      return ExprType.LONG;
+    }
+    return implicitCast;
   }
 }
 
@@ -262,5 +328,4 @@ class BinOrExpr extends BinaryOpExprBase
     ExprEval leftVal = left.eval(bindings);
     return leftVal.asBoolean() ? leftVal : right.eval(bindings);
   }
-
 }

@@ -32,6 +32,7 @@ import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-his
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
+  ColumnMetadata,
   downloadFile,
   DruidError,
   findEmptyLiteralPosition,
@@ -48,7 +49,6 @@ import {
   RowColumn,
   SemiJoinQueryExplanation,
 } from '../../utils';
-import { ColumnMetadata } from '../../utils/column-metadata';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 

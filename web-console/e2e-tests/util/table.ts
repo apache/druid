@@ -39,7 +39,12 @@ export async function extractTable(
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const columns = row.querySelectorAll(rowSelector);
-        const values = Array.from(columns).map(c => (c as HTMLElement).innerText);
+        const values = Array.from(columns).map(c => {
+          const realTexts = Array.from(c.querySelectorAll('.real-text'));
+          return realTexts.length
+            ? (realTexts[0] as HTMLElement).innerText
+            : (c as HTMLElement).innerText;
+        });
         if (!values.every(value => value === BLANK_VALUE)) {
           data.push(values);
         }

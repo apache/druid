@@ -306,6 +306,7 @@ numerics
 parameterized
 parseable
 partitioner
+partitionsSpec
 performant
 plaintext
 pluggable
@@ -538,6 +539,7 @@ MeanNoNulls
 P1D
 cycleSize
 doubleMax
+doubleAny
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -545,6 +547,7 @@ doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
+longAny
 longMean
 longMeanNoNulls
 longMin
@@ -969,7 +972,6 @@ overwriteFiles
 partitionDimension
 partitionDimensions
 partitionSpec
-partitionsSpec
 pathFormat
 segmentOutputPath
 segmentTable
@@ -1095,6 +1097,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint
@@ -1105,6 +1109,7 @@ signum
 str1
 str2
 string_to_array
+stringAny
 strlen
 strpos
 timestamp_ceil
@@ -1670,6 +1675,7 @@ file.encoding
 fillCapacity
 first_location
 floatMax
+floatAny
 floatMin
 floatSum
 freeSpacePercent
