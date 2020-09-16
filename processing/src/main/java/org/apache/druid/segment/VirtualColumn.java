@@ -246,6 +246,12 @@ public interface VirtualColumn extends Cacheable
    */
   ColumnCapabilities capabilities(String columnName);
 
+
+  default ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
+  {
+    return capabilities(columnName);
+  }
+
   /**
    * Returns a list of columns that this virtual column will access. This may include the
    * names of other virtual columns. May be empty if a virtual column doesn't access any

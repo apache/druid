@@ -28,13 +28,16 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.math.expr.vector.VectorExprProcessor;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
@@ -44,6 +47,11 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.vector.NilVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorSizeInspector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -126,6 +134,32 @@ public class ExpressionSelectors
     };
   }
 
+
+
+  public static VectorValueSelector makeVectorValueSelector(
+      VectorColumnSelectorFactory factory,
+      Expr expression
+  )
+  {
+    final Expr.BindingAnalysis exprAnalysis = expression.analyzeInputs();
+    Parser.validateExpr(expression, exprAnalysis);
+    final Expr.VectorInputBinding bindings = createVectorBindings(exprAnalysis, factory);
+    final VectorExprProcessor<?> processor = expression.buildVectorized(bindings);
+    return new ExpressionVectorValueSelector(processor, bindings);
+  }
+
+  public static VectorObjectSelector makeVectorObjectSelector(
+      VectorColumnSelectorFactory factory,
+      Expr expression
+  )
+  {
+    final Expr.BindingAnalysis exprAnalysis = expression.analyzeInputs();
+    Parser.validateExpr(expression, exprAnalysis);
+    final Expr.VectorInputBinding bindings = createVectorBindings(exprAnalysis, factory);
+    final VectorExprProcessor<?> processor = expression.buildVectorized(bindings);
+    return new ExpressionVectorObjectSelector(processor, bindings);
+  }
+
   /**
    * Makes a ColumnValueSelector whose getObject method returns an {@link ExprEval}.
    *
@@ -164,8 +198,7 @@ public class ExpressionSelectors
       }
     }
 
-    final Pair<Set<String>, Set<String>> arrayUsage =
-        examineColumnSelectorFactoryArrays(columnSelectorFactory, bindingAnalysis, columns);
+    final Pair<Set<String>, Set<String>> arrayUsage = findArrayInputBindings(columnSelectorFactory, bindingAnalysis);
     final Set<String> actualArrays = arrayUsage.lhs;
     final Set<String> unknownIfArrays = arrayUsage.rhs;
 
@@ -235,8 +268,7 @@ public class ExpressionSelectors
       }
     }
 
-    final Pair<Set<String>, Set<String>> arrayUsage =
-        examineColumnSelectorFactoryArrays(columnSelectorFactory, bindingAnalysis, columns);
+    final Pair<Set<String>, Set<String>> arrayUsage = findArrayInputBindings(columnSelectorFactory, bindingAnalysis);
     final Set<String> actualArrays = arrayUsage.lhs;
     final Set<String> unknownIfArrays = arrayUsage.rhs;
 
@@ -337,6 +369,7 @@ public class ExpressionSelectors
     }
   }
 
+
   /**
    * Returns whether an expression can be applied to unique values of a particular column (like those in a dictionary)
    * rather than being applied to each row individually.
@@ -369,8 +402,7 @@ public class ExpressionSelectors
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
     for (String columnName : columns) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory
-          .getColumnCapabilities(columnName);
+      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
@@ -418,6 +450,33 @@ public class ExpressionSelectors
     } else {
       return Parser.withSuppliers(suppliers);
     }
+  }
+
+  private static Expr.VectorInputBinding createVectorBindings(
+      Expr.BindingAnalysis bindingAnalysis,
+      VectorColumnSelectorFactory vectorColumnSelectorFactory
+  )
+  {
+    VectorSelectorVectorInputBinding binding = new VectorSelectorVectorInputBinding(vectorColumnSelectorFactory.getVectorSizeInspector());
+    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
+    for (String columnName : columns) {
+      final ColumnCapabilities columnCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(columnName);
+      final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
+      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
+
+      switch (nativeType) {
+        case FLOAT:
+        case DOUBLE:
+          binding.addNumeric(columnName, ExprType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));
+          break;
+        case LONG:
+          binding.addNumeric(columnName, ExprType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
+          break;
+        default:
+          binding.addObjectSelector(columnName, ExprType.STRING, vectorColumnSelectorFactory.makeObjectSelector(columnName));
+      }
+    }
+    return binding;
   }
 
   /**
@@ -597,18 +656,17 @@ public class ExpressionSelectors
 
   /**
    * Returns pair of columns which are definitely multi-valued, or 'actual' arrays, and those which we are unable to
-   * discern from the {@link ColumnSelectorFactory#getColumnCapabilities(String)}, or 'unknown' arrays.
+   * discern from the {@link ColumnInspector#getColumnCapabilities(String)}, or 'unknown' arrays.
    */
-  private static Pair<Set<String>, Set<String>> examineColumnSelectorFactoryArrays(
-      ColumnSelectorFactory columnSelectorFactory,
-      Expr.BindingAnalysis bindingAnalysis,
-      List<String> columns
+  public static Pair<Set<String>, Set<String>> findArrayInputBindings(
+      ColumnInspector inspector,
+      Expr.BindingAnalysis bindingAnalysis
   )
   {
     final Set<String> actualArrays = new HashSet<>();
     final Set<String> unknownIfArrays = new HashSet<>();
-    for (String column : columns) {
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
+    for (String column : bindingAnalysis.getRequiredBindings()) {
+      final ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
       if (capabilities != null) {
         if (capabilities.hasMultipleValues().isTrue()) {
           actualArrays.add(column);
@@ -625,5 +683,118 @@ public class ExpressionSelectors
     }
 
     return new Pair<>(actualArrays, unknownIfArrays);
+  }
+
+  public static Expr.InputBindingTypes makeInspectorBindingTypes(ColumnInspector inspector)
+  {
+    return new ColumnInspectorVectorInputBindingTypes(inspector);
+  }
+
+  static class VectorSelectorVectorInputBinding implements Expr.VectorInputBinding
+  {
+    private final Map<String, VectorValueSelector> numeric;
+    private final Map<String, VectorObjectSelector> objects;
+    private final Map<String, ExprType> types;
+    private final NilVectorSelector nilSelector;
+
+    private final VectorSizeInspector sizeInspector;
+
+    public VectorSelectorVectorInputBinding(VectorSizeInspector sizeInspector)
+    {
+      this.numeric = new HashMap<>();
+      this.objects = new HashMap<>();
+      this.types = new HashMap<>();
+      this.sizeInspector = sizeInspector;
+      this.nilSelector = NilVectorSelector.create(sizeInspector);
+    }
+
+    public VectorSelectorVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
+    {
+      numeric.put(name, selector);
+      types.put(name, type);
+      return this;
+    }
+
+    public VectorSelectorVectorInputBinding addObjectSelector(String name, ExprType type, VectorObjectSelector selector)
+    {
+      objects.put(name, selector);
+      types.put(name, type);
+      return this;
+    }
+
+    @Override
+    public <T> T[] getObjectVector(String name)
+    {
+      if (objects.containsKey(name)) {
+        return (T[]) objects.get(name).getObjectVector();
+      }
+      return (T[]) nilSelector.getObjectVector();
+    }
+
+    @Override
+    public ExprType getType(String name)
+    {
+      return types.get(name);
+    }
+
+    @Override
+    public long[] getLongVector(String name)
+    {
+      if (numeric.containsKey(name)) {
+        return numeric.get(name).getLongVector();
+      }
+      return nilSelector.getLongVector();
+    }
+
+    @Override
+    public double[] getDoubleVector(String name)
+    {
+      if (numeric.containsKey(name)) {
+        return numeric.get(name).getDoubleVector();
+      }
+      return nilSelector.getDoubleVector();
+    }
+
+    @Override
+    public boolean[] getNullVector(String name)
+    {
+      if (numeric.containsKey(name)) {
+        return numeric.get(name).getNullVector();
+      }
+      return nilSelector.getNullVector();
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return sizeInspector.getMaxVectorSize();
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return sizeInspector.getCurrentVectorSize();
+    }
+  }
+
+  static class ColumnInspectorVectorInputBindingTypes implements Expr.InputBindingTypes
+  {
+    private final ColumnInspector inspector;
+
+    public ColumnInspectorVectorInputBindingTypes(ColumnInspector inspector)
+    {
+      this.inspector = inspector;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getType(String name)
+    {
+      ColumnCapabilities capabilities = inspector.getColumnCapabilities(name);
+      if (capabilities != null) {
+        return ExprType.fromValueType(capabilities.getType());
+      }
+      return null;
+    }
   }
 }

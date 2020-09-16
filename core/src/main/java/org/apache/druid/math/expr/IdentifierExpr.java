@@ -21,6 +21,11 @@ package org.apache.druid.math.expr;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.DoubleVectorExprEval;
+import org.apache.druid.math.expr.vector.LongVectorExprEval;
+import org.apache.druid.math.expr.vector.StringVectorExprEval;
+import org.apache.druid.math.expr.vector.VectorExprEval;
+import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -32,8 +37,8 @@ import java.util.Objects;
  */
 class IdentifierExpr implements Expr
 {
-  private final String identifier;
-  private final String binding;
+  final String identifier;
+  final String binding;
 
   /**
    * Construct a identifier expression for a {@link LambdaExpr}, where the {@link #identifier} is equal to
@@ -114,6 +119,12 @@ class IdentifierExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return true;
+  }
+
+  @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.bestEffortOf(bindings.get(binding));
@@ -139,6 +150,42 @@ class IdentifierExpr implements Expr
   }
 
   @Override
+  public VectorExprProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    switch (inputTypes.getType(binding)) {
+      case LONG:
+        return new IdentifierVectorProcessor<long[]>(ExprType.LONG)
+        {
+          @Override
+          public VectorExprEval<long[]> evalVector(VectorInputBinding bindings)
+          {
+            return new LongVectorExprEval(bindings.getLongVector(binding), bindings.getNullVector(binding));
+          }
+        };
+      case DOUBLE:
+        return new IdentifierVectorProcessor<double[]>(ExprType.DOUBLE)
+        {
+          @Override
+          public VectorExprEval<double[]> evalVector(VectorInputBinding bindings)
+          {
+            return new DoubleVectorExprEval(bindings.getDoubleVector(binding), bindings.getNullVector(binding));
+          }
+        };
+      case STRING:
+        return new IdentifierVectorProcessor<String[]>(ExprType.STRING)
+        {
+          @Override
+          public VectorExprEval<String[]> evalVector(VectorInputBinding bindings)
+          {
+            return new StringVectorExprEval(bindings.getObjectVector(binding));
+          }
+        };
+      default:
+        throw Exprs.cannotVectorize(this);
+    }
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -157,3 +204,20 @@ class IdentifierExpr implements Expr
     return Objects.hash(identifier);
   }
 }
+
+abstract class IdentifierVectorProcessor<T> implements VectorExprProcessor<T>
+{
+  private final ExprType outputType;
+
+  public IdentifierVectorProcessor(ExprType outputType)
+  {
+    this.outputType = outputType;
+  }
+
+  @Override
+  public ExprType getOutputType()
+  {
+    return outputType;
+  }
+}
+

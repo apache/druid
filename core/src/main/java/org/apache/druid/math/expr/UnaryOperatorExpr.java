@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.DoubleUnivariateFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -32,10 +35,12 @@ import java.util.Objects;
  */
 abstract class UnaryExpr implements Expr
 {
+  final String op;
   final Expr expr;
 
-  UnaryExpr(Expr expr)
+  UnaryExpr(String op, Expr expr)
   {
+    this.op = op;
     this.expr = expr;
   }
 
@@ -91,19 +96,31 @@ abstract class UnaryExpr implements Expr
   {
     return Objects.hash(expr);
   }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("%s%s", op, expr.stringify());
+  }
+
+  @Override
+  public String toString()
+  {
+    return StringUtils.format("%s%s", op, expr);
+  }
 }
 
 class UnaryMinusExpr extends UnaryExpr
 {
-  UnaryMinusExpr(Expr expr)
+  UnaryMinusExpr(String op, Expr expr)
   {
-    super(expr);
+    super(op, expr);
   }
 
   @Override
   UnaryExpr copy(Expr expr)
   {
-    return new UnaryMinusExpr(expr);
+    return new UnaryMinusExpr(op, expr);
   }
 
   @Override
@@ -123,29 +140,58 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
-  public String stringify()
+  public boolean canVectorize(InputBindingTypes inputTypes)
   {
-    return StringUtils.format("-%s", expr.stringify());
+    return inputTypes.areNumeric(expr) && expr.canVectorize(inputTypes);
   }
 
   @Override
-  public String toString()
+  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    return StringUtils.format("-%s", expr);
+    final ExprType inputType = expr.getOutputType(inputTypes);
+    if (inputType == null) {
+      throw Exprs.cannotVectorize(this);
+    }
+
+    final int maxVectorSize = inputTypes.getMaxVectorSize();
+    VectorExprProcessor<?> processor = null;
+    if (ExprType.LONG.equals(inputType)) {
+      processor = new LongUnivariateFunctionVectorProcessor(expr.buildVectorized(inputTypes), maxVectorSize)
+      {
+        @Override
+        public long apply(long input)
+        {
+          return -input;
+        }
+      };
+    } else if (ExprType.DOUBLE.equals(inputType)) {
+      processor = new DoubleUnivariateFunctionVectorProcessor(expr.buildVectorized(inputTypes), maxVectorSize)
+      {
+        @Override
+        public double apply(double input)
+        {
+          return -input;
+        }
+      };
+    }
+    if (processor == null) {
+      throw Exprs.cannotVectorize(this);
+    }
+    return (VectorExprProcessor<T>) processor;
   }
 }
 
 class UnaryNotExpr extends UnaryExpr
 {
-  UnaryNotExpr(Expr expr)
+  UnaryNotExpr(String op, Expr expr)
   {
-    super(expr);
+    super(op, expr);
   }
 
   @Override
   UnaryExpr copy(Expr expr)
   {
-    return new UnaryNotExpr(expr);
+    return new UnaryNotExpr(op, expr);
   }
 
   @Override
@@ -158,18 +204,6 @@ class UnaryNotExpr extends UnaryExpr
     // conforming to other boolean-returning binary operators
     ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
     return ExprEval.of(!ret.asBoolean(), retType);
-  }
-
-  @Override
-  public String stringify()
-  {
-    return StringUtils.format("!%s", expr.stringify());
-  }
-
-  @Override
-  public String toString()
-  {
-    return StringUtils.format("!%s", expr);
   }
 
   @Nullable

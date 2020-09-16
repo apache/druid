@@ -27,11 +27,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -39,10 +42,14 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class ExpressionVirtualColumn implements VirtualColumn
 {
@@ -129,6 +136,35 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
   }
 
+
+  @Override
+  public boolean canVectorize(ColumnInspector inspector)
+  {
+    Expr expr = parsedExpression.get();
+    Expr.BindingAnalysis analysis = expr.analyzeInputs();
+    Expr.InputBindingTypes inputTypes = ExpressionSelectors.makeInspectorBindingTypes(inspector);
+    // we don't currently support multi-value inputs or outputs for vectorized expressions
+    return !analysis.hasInputArrays() &&
+           !analysis.isOutputArray() &&
+           analysis.getRequiredBindingsList().stream().noneMatch(column -> {
+             ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
+             return capabilities == null || capabilities.hasMultipleValues().isMaybeTrue();
+           }) &&
+           parsedExpression.get().canVectorize(inputTypes);
+  }
+
+  @Override
+  public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    return ExpressionSelectors.makeVectorValueSelector(factory, parsedExpression.get());
+  }
+
+  @Override
+  public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    return ExpressionSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+  }
+
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
@@ -136,6 +172,53 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // if the expression in question could potentially return multiple values and anything else. However, we don't
     // currently have a good way of determining this, so fill this out more once we do
     return new ColumnCapabilitiesImpl().setType(outputType);
+  }
+
+  @Override
+  public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
+  {
+    final ExprType outputType = parsedExpression.get().getOutputType(
+        ExpressionSelectors.makeInspectorBindingTypes(inspector)
+    );
+
+    if (outputType != null) {
+      final ValueType valueType = ExprType.toValueType(outputType);
+      if (valueType.isNumeric()) {
+        // numbers are easy
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ExprType.toValueType(outputType));
+      }
+      if (valueType.isArray()) {
+        // always a multi-value string since wider engine does not yet support array types
+        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
+      }
+
+      final Expr.BindingAnalysis analysis = parsedExpression.get().analyzeInputs();
+      if (analysis.isOutputArray()) {
+        // always a multi-value string since wider engine does not yet support array types
+        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
+      }
+
+      // dupe of some logic in ExpressionSelectors to detect if any possiblility of this producing multi value outputs
+      final Pair<Set<String>, Set<String>> arrayUsage = ExpressionSelectors.findArrayInputBindings(inspector, analysis);
+      final Set<String> actualArrays = arrayUsage.lhs;
+      final Set<String> unknownIfArrays = arrayUsage.rhs;
+      final long needsAppliedCount =
+          analysis.getRequiredBindings()
+                  .stream()
+                  .filter(c -> actualArrays.contains(c) && !analysis.getArrayBindings().contains(c))
+                  .count();
+
+      // unapplied multi-valued inputs result in multi-valued outputs, and unknowns are unknown
+      if (unknownIfArrays.size() > 0 || needsAppliedCount > 0) {
+        // always a multi-value string since wider engine does not yet support array types
+        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
+      }
+      // if we got here, lets call it single value string output
+      return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                         .setHasMultipleValues(false)
+                                         .setDictionaryEncoded(false);
+    }
+    return capabilities(columnName);
   }
 
   @Override

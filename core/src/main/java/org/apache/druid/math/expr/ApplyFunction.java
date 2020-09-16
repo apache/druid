@@ -27,6 +27,8 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -48,6 +50,16 @@ public interface ApplyFunction
    * Name of the function
    */
   String name();
+
+  default boolean canVectorize(Expr.InputBindingTypes inputTypes, Expr lambda, List<Expr> args)
+  {
+    return false;
+  }
+
+  default <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, Expr lambda, List<Expr> args)
+  {
+    throw new UOE("%s is not vectorized", name());
+  }
 
   /**
    * Apply {@link LambdaExpr} to argument list of {@link Expr} given a set of outer {@link Expr.ObjectBinding}. These

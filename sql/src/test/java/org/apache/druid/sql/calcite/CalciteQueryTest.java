@@ -5912,9 +5912,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingUsingCastToLong() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  CAST(m1 AS BIGINT) / 2 * 2,\n"
@@ -6653,9 +6650,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumOfString() throws Exception
   {
-    // Cannot vectorize due to expressions in aggregators.
-    cannotVectorize();
-
     testQuery(
         "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -6713,9 +6707,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR),\n"
@@ -9191,9 +9182,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT floor(__time TO year), dim2, COUNT(*)"
         + " FROM druid.foo"
@@ -11432,9 +11420,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesUsingTimeFloorWithTimestampAdd() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
@@ -11944,11 +11929,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesWithLimitAndOffset() throws Exception
   {
-    // Cannot vectorize due to expressions.
-    cannotVectorize();
-
     // Timeseries cannot handle offsets, so the query morphs into a groupBy.
-
     testQuery(
         "SELECT gran, SUM(cnt)\n"
         + "FROM (\n"
@@ -12013,9 +11994,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByTimeAndOtherDimension() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
@@ -15939,8 +15917,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRepeatedIdenticalVirtualExpressionGrouping() throws Exception
   {
-    cannotVectorize();
-
     final String query = "SELECT \n"
                          + "\tCASE dim1 WHEN NULL THEN FALSE ELSE TRUE END AS col_a,\n"
                          + "\tCASE dim2 WHEN NULL THEN FALSE ELSE TRUE END AS col_b\n"

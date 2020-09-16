@@ -121,6 +121,20 @@ public abstract class ExprEval<T>
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
 
+  @Nullable
+  public static Number computeNumber(@Nullable String value)
+  {
+    Number rv;
+    Long v = GuavaUtils.tryParseLong(value);
+    // Do NOT use ternary operator here, because it makes Java to convert Long to Double
+    if (v != null) {
+      rv = v;
+    } else {
+      rv = Doubles.tryParse(value);
+    }
+    return rv;
+  }
+
   // Cached String values
   private boolean stringValueCached = false;
   @Nullable
@@ -496,7 +510,7 @@ public abstract class ExprEval<T>
     }
 
     @Nullable
-    private Number computeNumber()
+    Number computeNumber()
     {
       if (value == null) {
         return null;
@@ -505,17 +519,8 @@ public abstract class ExprEval<T>
         // Optimization for non-null case.
         return numericVal;
       }
-      Number rv;
-      Long v = GuavaUtils.tryParseLong(value);
-      // Do NOT use ternary operator here, because it makes Java to convert Long to Double
-      if (v != null) {
-        rv = v;
-      } else {
-        rv = Doubles.tryParse(value);
-      }
-
-      numericVal = rv;
-      return rv;
+      numericVal = computeNumber(value);
+      return numericVal;
     }
 
     @Override

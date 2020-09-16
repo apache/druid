@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
@@ -30,6 +31,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
@@ -191,7 +194,7 @@ public class AggregatorUtil
   )
   {
     if ((fieldName == null) == (fieldExpression == null)) {
-      throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
+      throw new IllegalArgumentException("Only one of fieldName or expression should be non-null");
     }
     if (fieldName != null) {
       return metricFactory.makeColumnValueSelector(fieldName);
@@ -223,6 +226,22 @@ public class AggregatorUtil
       }
       return new ExpressionFloatColumnSelector();
     }
+  }
+
+  public static VectorValueSelector makeVectorValueSelector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      String fieldName,
+      String expression,
+      Supplier<Expr> fieldExpression
+  )
+  {
+    if ((fieldName == null) == (expression == null)) {
+      throw new IllegalArgumentException("Only one of fieldName or expression should be non-null");
+    }
+    if (expression != null) {
+      return ExpressionSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
+    }
+    return columnSelectorFactory.makeValueSelector(fieldName);
   }
 
   /**

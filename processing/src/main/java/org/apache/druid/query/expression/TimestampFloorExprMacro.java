@@ -26,6 +26,9 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -118,6 +121,31 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     public ExprType getOutputType(InputBindingTypes inputTypes)
     {
       return ExprType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingTypes inputTypes)
+    {
+      return args.get(0).canVectorize(inputTypes);
+    }
+
+    @Override
+    public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+    {
+      VectorExprProcessor<?> processor;
+      processor = new LongUnivariateFunctionVectorProcessor(
+          CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.LONG),
+          inputTypes.getMaxVectorSize()
+      )
+      {
+        @Override
+        public long apply(long input)
+        {
+          return granularity.bucketStart(DateTimes.utc(input)).getMillis();
+        }
+      };
+
+      return (VectorExprProcessor<T>) processor;
     }
 
     @Override

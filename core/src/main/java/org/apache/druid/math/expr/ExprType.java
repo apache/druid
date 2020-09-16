@@ -37,6 +37,7 @@ public enum ExprType
   LONG_ARRAY,
   STRING_ARRAY;
 
+
   public boolean isNumeric()
   {
     return isNumeric(this);
@@ -71,6 +72,27 @@ public enum ExprType
       case COMPLEX:
       default:
         throw new ISE("Unsupported value type[%s]", valueType);
+    }
+  }
+
+
+  public static ValueType toValueType(ExprType exprType)
+  {
+    switch (exprType) {
+      case LONG:
+        return ValueType.LONG;
+      case LONG_ARRAY:
+        return ValueType.LONG_ARRAY;
+      case DOUBLE:
+        return ValueType.DOUBLE;
+      case DOUBLE_ARRAY:
+        return ValueType.DOUBLE_ARRAY;
+      case STRING:
+        return ValueType.STRING;
+      case STRING_ARRAY:
+        return ValueType.STRING_ARRAY;
+      default:
+        throw new ISE("Unsupported expression type[%s]", exprType);
     }
   }
 
