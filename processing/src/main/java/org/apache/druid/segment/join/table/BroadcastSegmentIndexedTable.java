@@ -245,19 +245,25 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   }
 
   @Override
-  public Optional<byte[]> computeCacheKey()
+  public byte[] computeCacheKey()
   {
     SegmentId segmentId = segment.getId();
     byte[] versionBytes = StringUtils.toUtf8(segmentId.getVersion());
     byte[] dataSourceBytes = StringUtils.toUtf8(segmentId.getDataSource());
-    return Optional.of(ByteBuffer
+    return ByteBuffer
                            .allocate(16 + versionBytes.length + dataSourceBytes.length + 4)
                            .putLong(segmentId.getInterval().getStartMillis())
                            .putLong(segmentId.getInterval().getEndMillis())
                            .put(versionBytes)
                            .put(dataSourceBytes)
                            .putInt(segmentId.getPartitionNum())
-                           .array());
+                           .array();
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return true;
   }
 
   @Override

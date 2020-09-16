@@ -77,8 +77,14 @@ public class ReferenceCountingIndexedTable extends ReferenceCountingCloseableObj
   }
 
   @Override
-  public Optional<byte[]> computeCacheKey()
+  public byte[] computeCacheKey()
   {
     return baseObject.computeCacheKey();
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return baseObject.isCacheable();
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,7 +54,8 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   private final List<Function<RowType, Object>> columnFunctions;
   private final Set<String> keyColumns;
   private final String version;
-  private final Optional<byte[]> cacheKey;
+  @Nullable
+  private final byte[] cacheKey;
 
   public RowBasedIndexedTable(
       final List<RowType> table,
@@ -62,7 +65,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       final String version
   )
   {
-    this(table, rowAdapter, rowSignature, keyColumns, version, Optional.empty());
+    this(table, rowAdapter, rowSignature, keyColumns, version, null);
   }
 
   public RowBasedIndexedTable(
@@ -71,7 +74,8 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       final RowSignature rowSignature,
       final Set<String> keyColumns,
       final String version,
-      final Optional<byte[]> cacheKey
+      @Nullable
+      final byte[] cacheKey
   )
   {
     this.table = table;
@@ -157,9 +161,15 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
-  public Optional<byte[]> computeCacheKey()
+  public byte[] computeCacheKey()
   {
-    return this.cacheKey;
+    return Preconditions.checkNotNull(cacheKey, "Cache key can't be null");
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return (null != cacheKey);
   }
 
   @Override

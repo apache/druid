@@ -59,16 +59,16 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
     if (!condition.canHashJoin()) {
       return Optional.empty();
     }
-    return getIndexedTable(dataSource).map(IndexedTableJoinable::new);
+    return getOnlyIndexedTable(dataSource).map(IndexedTableJoinable::new);
   }
 
   @Override
   public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
   {
-    return getIndexedTable(dataSource).flatMap(IndexedTable::computeCacheKey);
+    return getOnlyIndexedTable(dataSource).filter(IndexedTable::isCacheable).map(IndexedTable::computeCacheKey);
   }
 
-  private Optional<ReferenceCountingIndexedTable> getIndexedTable(DataSource dataSource)
+  private Optional<ReferenceCountingIndexedTable> getOnlyIndexedTable(DataSource dataSource)
   {
     GlobalTableDataSource broadcastDataSource = (GlobalTableDataSource) dataSource;
     DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSource);

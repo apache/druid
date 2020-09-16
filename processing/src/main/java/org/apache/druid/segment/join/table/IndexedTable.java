@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ReferenceCountedObject;
@@ -29,7 +30,6 @@ import org.apache.druid.segment.data.ReadableOffset;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -92,11 +92,21 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
    * Computes a {@code byte[]} key for the table that can be used for computing cache keys for join operations.
    * see {@link org.apache.druid.segment.join.JoinableFactory#computeJoinCacheKey}
    *
-   * @return Empty optional if operation is not supported, otherwise the byte array for cache key
+   * @return the byte array for cache key
+   * @throws {@link org.apache.druid.java.util.common.IAE} if caching is not supported
    */
-  default Optional<byte[]> computeCacheKey()
+  default byte[] computeCacheKey()
   {
-    return Optional.empty();
+    throw new IAE("Caching is not supported. Check `isCacheable` before calling computeCacheKey");
+  }
+
+  /**
+   * Returns whether this indexed table can be cached for the join operations
+   * @return
+   */
+  default boolean isCacheable()
+  {
+    return false;
   }
 
   /**
