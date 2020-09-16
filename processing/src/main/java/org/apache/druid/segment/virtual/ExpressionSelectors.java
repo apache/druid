@@ -463,16 +463,23 @@ public class ExpressionSelectors
       final ColumnCapabilities columnCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
 
-      switch (nativeType) {
-        case FLOAT:
-        case DOUBLE:
-          binding.addNumeric(columnName, ExprType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));
-          break;
-        case LONG:
-          binding.addNumeric(columnName, ExprType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
-          break;
-        default:
-          binding.addObjectSelector(columnName, ExprType.STRING, vectorColumnSelectorFactory.makeObjectSelector(columnName));
+      // null capabilities should be backed by a nil vector selector since it means the column effectively doesnt exist
+      if (nativeType != null) {
+        switch (nativeType) {
+          case FLOAT:
+          case DOUBLE:
+            binding.addNumeric(columnName, ExprType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));
+            break;
+          case LONG:
+            binding.addNumeric(columnName, ExprType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
+            break;
+          default:
+            binding.addObjectSelector(
+                columnName,
+                ExprType.STRING,
+                vectorColumnSelectorFactory.makeObjectSelector(columnName)
+            );
+        }
       }
     }
     return binding;

@@ -548,36 +548,30 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      ExprType parseType = args.get(0).getOutputType(inputTypes);
-      VectorExprProcessor<?> processor;
+      VectorExprProcessor<?> processor = null;
 
       if (args.size() == 1) {
-        VectorExprProcessor<?> inputProcessor = args.get(0).buildVectorized(inputTypes);
-        // if its already a long, just pass it through
-        if (ExprType.LONG.equals(inputProcessor.getOutputType())) {
-          processor = inputProcessor;
-        } else {
-          // else, always convert the argument to a string, who cares what it is
-          processor = new StringLongUnivariateFunctionVectorProcessor(
-              CastToTypeVectorProcessor.castToType(inputProcessor, ExprType.STRING),
-              inputTypes.getMaxVectorSize()
-          )
+        processor = new StringLongUnivariateFunctionVectorProcessor(
+            CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.STRING),
+            inputTypes.getMaxVectorSize()
+        )
+        {
+          @Override
+          public void processIndex(String[] strings, long[] longs, boolean[] outputNulls, int i)
           {
-            @Override
-            public void processIndex(String[] strings, long[] longs, boolean[] outputNulls, int i)
-            {
-              try {
-                longs[i] = Long.parseLong(strings[i], 10);
-                outputNulls[i] = false;
-              }
-              catch (NumberFormatException e) {
-                longs[i] = 0L;
-                outputNulls[i] = NullHandling.sqlCompatible();
-              }
+            try {
+              longs[i] = Long.parseLong(strings[i], 10);
+              outputNulls[i] = false;
             }
-          };
-        }
-      } else {
+            catch (NumberFormatException e) {
+              longs[i] = 0L;
+              outputNulls[i] = NullHandling.sqlCompatible();
+            }
+          }
+        };
+      }
+
+      if (processor == null) {
         // not yet implemented, how did we get here
         throw Exprs.cannotVectorize(this);
       }
