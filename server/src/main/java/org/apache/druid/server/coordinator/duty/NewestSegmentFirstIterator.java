@@ -68,8 +68,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   private final ObjectMapper objectMapper;
   private final Map<String, DataSourceCompactionConfig> compactionConfigs;
-  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-  private final Map<String, CompactionStatistics> processedSegments = new HashMap<>();
+  private final Map<String, CompactionStatistics> compactedSegments = new HashMap<>();
+  private final Map<String, CompactionStatistics> skippedSegments = new HashMap<>();
   private final Map<String, CompactionStatistics> remainingSegments = new HashMap<>();
 
   // dataSource -> intervalToFind
@@ -90,7 +90,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     this.objectMapper = objectMapper;
     this.compactionConfigs = compactionConfigs;
-    this.dataSources = dataSources;
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
@@ -120,9 +119,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
-  public Map<String, CompactionStatistics> totalProcessedStatistics()
+  public Map<String, CompactionStatistics> totalCompactedStatistics()
   {
-    return processedSegments;
+    return compactedSegments;
+  }
+
+  @Override
+  public Map<String, CompactionStatistics> totalSkippedStatistics()
+  {
+    return skippedSegments;
   }
 
   @Override
@@ -173,7 +178,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final String dataSource = resultSegments.get(0).getDataSource();
 
-    collectSegmentStatistics(processedSegments, dataSource, new SegmentsToCompact(resultSegments));
+    collectSegmentStatistics(compactedSegments, dataSource, new SegmentsToCompact(resultSegments));
 
     updateQueue(dataSource, compactionConfigs.get(dataSource));
 
@@ -360,10 +365,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-      if (isSegmentsNeedCompact(candidates, config, true)) {
+      if (doSegmentsNeedCompaction(dataSourceName, candidates, config, true)) {
         return candidates;
-      } else {
-        collectSegmentStatistics(processedSegments, dataSourceName, candidates);
       }
     }
     log.info("All segments look good! Nothing to compact");
@@ -384,12 +387,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-      if (isSegmentsNeedCompact(candidates, config, false)) {
+      if (doSegmentsNeedCompaction(dataSourceName, candidates, config, false)) {
         // Collect statistic for segments that need compaction
         collectSegmentStatistics(remainingSegments, dataSourceName, candidates);
-      } else {
-        // Collect statistic for segments that does not need compaction
-        collectSegmentStatistics(processedSegments, dataSourceName, candidates);
       }
     }
   }
@@ -401,7 +401,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    *
    * @return true if the {@param candidates} needs compaction, false if the {@param candidates} does not needs compaction
    */
-  private boolean isSegmentsNeedCompact(
+  private boolean doSegmentsNeedCompaction(
+      final String dataSourceName,
       SegmentsToCompact candidates,
       final DataSourceCompactionConfig config,
       boolean logCannotCompactReason)
@@ -418,8 +419,13 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (isCompactibleSize && needsCompaction) {
         return true;
       } else {
-        if (logCannotCompactReason) {
-          if (!isCompactibleSize) {
+        if (!needsCompaction) {
+          // Collect statistic for segments that is already compacted
+          collectSegmentStatistics(compactedSegments, dataSourceName, candidates);
+        } else {
+          // Collect statistic for segments that is skipped
+          collectSegmentStatistics(skippedSegments, dataSourceName, candidates);
+          if (logCannotCompactReason) {
             log.warn(
                 "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
                 + " Continue to the next interval.",

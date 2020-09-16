@@ -35,6 +35,21 @@ import java.util.Map;
 public class CompactionResourceTest
 {
   private DruidCoordinator mock;
+  private String dataSourceName = "datasource_1";
+  private AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
+      dataSourceName,
+      AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+      ImmutableList.of("task123"),
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+  );
 
   @Before
   public void setUp()
@@ -51,17 +66,16 @@ public class CompactionResourceTest
   @Test
   public void testGetCompactionSnapshotForDataSourceWithEmptyQueryParameter()
   {
-    String dataSourceName = "datasource_1";
     Map<String, AutoCompactionSnapshot> expected = ImmutableMap.of(
         dataSourceName,
-        new AutoCompactionSnapshot(dataSourceName, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+        expectedSnapshot
     );
 
     EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource("");
-    Assert.assertEquals(ImmutableMap.of("latestSnapshots", expected.values()), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 
@@ -71,14 +85,14 @@ public class CompactionResourceTest
     String dataSourceName = "datasource_1";
     Map<String, AutoCompactionSnapshot> expected = ImmutableMap.of(
         dataSourceName,
-        new AutoCompactionSnapshot(dataSourceName, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+        expectedSnapshot
     );
 
     EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(null);
-    Assert.assertEquals(ImmutableMap.of("latestSnapshots", expected.values()), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 
@@ -86,13 +100,12 @@ public class CompactionResourceTest
   public void testGetCompactionSnapshotForDataSourceWithValidQueryParameter()
   {
     String dataSourceName = "datasource_1";
-    AutoCompactionSnapshot expected = new AutoCompactionSnapshot(dataSourceName, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING);
 
-    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(expected).once();
+    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(expectedSnapshot).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
-    Assert.assertEquals(ImmutableMap.of("latestSnapshots", ImmutableList.of(expected)), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("latestStatus", ImmutableList.of(expectedSnapshot)), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 

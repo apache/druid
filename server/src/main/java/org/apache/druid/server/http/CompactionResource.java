@@ -98,6 +98,6 @@ public class CompactionResource
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
-    return Response.ok(ImmutableMap.of("latestSnapshots", snapshots)).build();
+    return Response.ok(ImmutableMap.of("latestStatus", snapshots)).build();
   }
 }

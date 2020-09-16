@@ -55,9 +55,15 @@ public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
   /**
    * Return a map of (dataSource, CompactionStatistics) for all dataSources.
    * This method should consider only segments that has one of the following:
-   * - iterated and returned by {@link #next()} (needs compaction)
-   * - Skipped from iteration as segments does not needs compaction
-   * - Deemed as does not needs compaction by {@link #flushAllSegments()}
+   * - iterated and returned by {@link #next()}
+   * - Segments was already compacted and does not need to be compacted again
    */
-  Map<String, CompactionStatistics> totalProcessedStatistics();
+  Map<String, CompactionStatistics> totalCompactedStatistics();
+
+  /**
+   * Return a map of (dataSource, CompactionStatistics) for all dataSources.
+   * This method should consider only segments that cannot be compacted and hence was skipped from iteration
+   */
+  Map<String, CompactionStatistics> totalSkippedStatistics();
+
 }

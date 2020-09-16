@@ -304,9 +304,12 @@ public class CompactSegmentsTest
           0,
           TOTAL_BYTE_PER_DATASOURCE,
           0,
+          0,
           TOTAL_INTERVAL_PER_DATASOURCE,
           0,
-          TOTAL_SEGMENT_PER_DATASOURCE / 2
+          0,
+          TOTAL_SEGMENT_PER_DATASOURCE / 2,
+          0
       );
     }
 
@@ -325,9 +328,12 @@ public class CompactSegmentsTest
           0,
           TOTAL_BYTE_PER_DATASOURCE,
           0,
+          0,
           TOTAL_INTERVAL_PER_DATASOURCE,
           0,
-          TOTAL_SEGMENT_PER_DATASOURCE / 2
+          0,
+          TOTAL_SEGMENT_PER_DATASOURCE / 2,
+          0
       );
     }
 
@@ -388,13 +394,16 @@ public class CompactSegmentsTest
           dataSourceName,
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compaction_run_count + 1),
           120 + 40 * (compaction_run_count + 1),
+          0,
           TOTAL_INTERVAL_PER_DATASOURCE - 3 - (compaction_run_count + 1),
           3 + (compaction_run_count + 1),
+          0,
           TOTAL_SEGMENT_PER_DATASOURCE - 12 - 4 * (compaction_run_count + 1),
-          // 12 segments was processed before any auto compaction
-          // 4 segments was processed in this run of auto compaction
+          // 12 segments was compressed before any auto compaction
+          // 4 segments was compressed in this run of auto compaction
           // Each previous auto compaction run resulted in 2 compacted segments (4 segments compacted into 2 segments)
-          12 + 4 + 2 * (compaction_run_count)
+          12 + 4 + 2 * (compaction_run_count),
+          0
       );
     }
 
@@ -411,11 +420,104 @@ public class CompactSegmentsTest
         0,
         TOTAL_BYTE_PER_DATASOURCE,
         0,
+        0,
         TOTAL_INTERVAL_PER_DATASOURCE,
         0,
-        // 12 segments was processed before any auto compaction
+        0,
+        // 12 segments was compressed before any auto compaction
         // 32 segments needs compaction which is now compacted into 16 segments (4 segments compacted into 2 segments each run)
-        12 + 16
+        12 + 16,
+        0
+    );
+  }
+
+  @Test
+  public void testMakeStatsForDataSourceWithSkipped()
+  {
+    // Only test and validate for one datasource for simplicity.
+    // This dataSource has three intervals skipped (3 intervals, 1200 byte, 12 segments skipped by auto compaction)
+    // Note that these segment used to be 10 bytes each in other tests, we are increasing it to 100 bytes each here
+    // so that they will be skipped by the auto compaction.
+    String dataSourceName = DATA_SOURCE_PREFIX + 1;
+    List<DataSegment> segments = new ArrayList<>();
+    for (int j : new int[]{0, 1, 2, 3, 7, 8}) {
+      for (int k = 0; k < 4; k++) {
+        DataSegment beforeNoon = createSegment(dataSourceName, j, true, k);
+        DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
+        if (j == 3) {
+          // Make two intervals on this day skipped (two skipped intervals back-to-back)
+          beforeNoon = beforeNoon.withSize(100);
+          afterNoon = afterNoon.withSize(100);
+        }
+        if (j == 1) {
+          // Make one interval on this day skipped
+          afterNoon = afterNoon.withSize(100);
+        }
+        segments.add(beforeNoon);
+        segments.add(afterNoon);
+      }
+    }
+
+    dataSources = DataSourcesSnapshot
+        .fromUsedSegments(segments, ImmutableMap.of())
+        .getUsedSegmentsTimelinesPerDataSource();
+
+
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    leaderClient.start();
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+
+    // Before any compaction, we do not have any snapshot of compactions
+    Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
+    Assert.assertEquals(0, autoCompactionSnapshots.size());
+
+    // 3 intervals, 1200 byte (each segment is 100 bytes), 12 segments will be skipped by auto compaction
+    for (int compaction_run_count = 0; compaction_run_count < 8; compaction_run_count++) {
+      // Do a cycle of auto compaction which creates one compaction task
+      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      Assert.assertEquals(
+          1,
+          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+      );
+
+      verifySnapshot(
+          compactSegments,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          dataSourceName,
+          // Minus 120 bytes accounting for the three skipped segments' original size
+          TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compaction_run_count + 1),
+          40 * (compaction_run_count + 1),
+          1200,
+          TOTAL_INTERVAL_PER_DATASOURCE - 3 - (compaction_run_count + 1),
+          (compaction_run_count + 1),
+          3,
+          TOTAL_SEGMENT_PER_DATASOURCE - 12 - 4 * (compaction_run_count + 1),
+          4 + 2 * (compaction_run_count),
+          12
+      );
+    }
+
+    // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
+    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    Assert.assertEquals(
+        0,
+        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+    );
+    verifySnapshot(
+        compactSegments,
+        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        dataSourceName,
+        0,
+        // Minus 120 bytes accounting for the three skipped segments' original size
+        TOTAL_BYTE_PER_DATASOURCE - 120,
+        1200,
+        0,
+        TOTAL_INTERVAL_PER_DATASOURCE - 3,
+        3,
+        0,
+        16,
+        12
     );
   }
 
@@ -424,23 +526,29 @@ public class CompactSegmentsTest
       AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
       String dataSourceName,
       long expectedByteCountAwaitingCompaction,
-      long expectedByteCountProcessed,
+      long expectedByteCountCompressed,
+      long expectedByteCountSkipped,
       long expectedIntervalCountAwaitingCompaction,
-      long expectedIntervalCountProcessed,
+      long expectedIntervalCountCompressed,
+      long expectedIntervalCountSkipped,
       long expectedSegmentCountAwaitingCompaction,
-      long expectedSegmentCountProcessed
+      long expectedSegmentCountCompressed,
+      long expectedSegmentCountSkipped
   )
   {
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
     AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(dataSourceName);
     Assert.assertEquals(dataSourceName, snapshot.getDataSource());
     Assert.assertEquals(scheduleStatus, snapshot.getScheduleStatus());
-    Assert.assertEquals(expectedByteCountAwaitingCompaction, snapshot.getByteCountAwaitingCompaction());
-    Assert.assertEquals(expectedByteCountProcessed, snapshot.getByteCountProcessed());
+    Assert.assertEquals(expectedByteCountAwaitingCompaction, snapshot.getBytesAwaitingCompaction());
+    Assert.assertEquals(expectedByteCountCompressed, snapshot.getBytesCompacted());
+    Assert.assertEquals(expectedByteCountSkipped, snapshot.getBytesSkipped());
     Assert.assertEquals(expectedIntervalCountAwaitingCompaction, snapshot.getIntervalCountAwaitingCompaction());
-    Assert.assertEquals(expectedIntervalCountProcessed, snapshot.getIntervalCountProcessed());
+    Assert.assertEquals(expectedIntervalCountCompressed, snapshot.getIntervalCountCompacted());
+    Assert.assertEquals(expectedIntervalCountSkipped, snapshot.getIntervalCountSkipped());
     Assert.assertEquals(expectedSegmentCountAwaitingCompaction, snapshot.getSegmentCountAwaitingCompaction());
-    Assert.assertEquals(expectedSegmentCountProcessed, snapshot.getSegmentCountProcessed());
+    Assert.assertEquals(expectedSegmentCountCompressed, snapshot.getSegmentCountCompacted());
+    Assert.assertEquals(expectedSegmentCountSkipped, snapshot.getSegmentCountSkipped());
   }
 
   private void assertCompactSegmentStatistics(CompactSegments compactSegments, int compaction_run_count)
@@ -455,7 +563,7 @@ public class CompactSegmentsTest
       Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
       // Note: Subsequent compaction run after the dataSource was compacted will show different numbers than
       // on the run it was compacted. For example, in a compaction run, if a dataSource had 4 segments compacted,
-      // on the same compaction run the segment processed count will be 4 but on subsequent run it might be 2
+      // on the same compaction run the segment compressed count will be 4 but on subsequent run it might be 2
       // (assuming the 4 segments was compacted into 2 segments).
       for (int i = 0; i <= dataSourceIndex; i++) {
         // dataSource up to dataSourceIndex now compacted. Check that the stats match the expectedAfterCompaction values
@@ -467,10 +575,13 @@ public class CompactSegmentsTest
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40 * (compaction_run_count + 1),
               40 * (compaction_run_count + 1),
+              0,
               TOTAL_INTERVAL_PER_DATASOURCE - (compaction_run_count + 1),
               (compaction_run_count + 1),
+              0,
               TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compaction_run_count + 1),
-              2 * (compaction_run_count + 1)
+              2 * (compaction_run_count + 1),
+              0
           );
         } else {
           verifySnapshot(
@@ -479,10 +590,13 @@ public class CompactSegmentsTest
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40 * (compaction_run_count + 1),
               40 * (compaction_run_count + 1),
+              0,
               TOTAL_INTERVAL_PER_DATASOURCE - (compaction_run_count + 1),
               (compaction_run_count + 1),
+              0,
               TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compaction_run_count + 1),
-              2 * compaction_run_count + 4
+              2 * compaction_run_count + 4,
+              0
           );
         }
       }
@@ -495,10 +609,13 @@ public class CompactSegmentsTest
             DATA_SOURCE_PREFIX + i,
             TOTAL_BYTE_PER_DATASOURCE - 40 * compaction_run_count,
             40 * compaction_run_count,
+            0,
             TOTAL_INTERVAL_PER_DATASOURCE - compaction_run_count,
             compaction_run_count,
+            0,
             TOTAL_SEGMENT_PER_DATASOURCE - 4 * compaction_run_count,
-            2 * compaction_run_count
+            2 * compaction_run_count,
+            0
         );
       }
     }
@@ -539,9 +656,9 @@ public class CompactSegmentsTest
         // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting for
         // compaction.
         long numDataSourceOfExpectedRemainingSegments = stats
-            .getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION)
+            .getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING)
             .stream()
-            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION, ds))
+            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING, ds))
             .filter(stat -> stat == expectedRemainingSegments)
             .count();
         Assert.assertEquals(i + 1, numDataSourceOfExpectedRemainingSegments);
@@ -549,7 +666,7 @@ public class CompactSegmentsTest
         // Otherwise, we check how many dataSources are in the coordinator stats.
         Assert.assertEquals(
             2 - i,
-            stats.getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION).size()
+            stats.getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING).size()
         );
       }
     }
