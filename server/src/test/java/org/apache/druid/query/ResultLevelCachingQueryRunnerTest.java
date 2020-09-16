@@ -53,6 +53,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
   public void setup()
   {
     cache = MapCache.create(1024);
+    joinables = mock(Joinables.class);
+    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(StringUtils.EMPTY_BYTES))
+                                                                .anyTimes();
+    replay(joinables);
   }
 
   @After
@@ -314,10 +318,6 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
       Query<T> query
   )
   {
-    joinables = mock(Joinables.class);
-    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(StringUtils.EMPTY_BYTES))
-                                                                .anyTimes();
-    replay(joinables);
     final QueryRunner<T> baseRunner = cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals());
     return new ResultLevelCachingQueryRunner<>(
         new RetryQueryRunner<>(
