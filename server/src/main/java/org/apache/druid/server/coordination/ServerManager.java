@@ -203,9 +203,9 @@ public class ServerManager implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
-    final Optional<byte[]> cacheKeyPrefix = joinables.computeJoinDataSourceCacheKey(
-        analysis
-    );
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinables.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
 
     final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)

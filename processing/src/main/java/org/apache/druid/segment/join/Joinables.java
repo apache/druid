@@ -21,7 +21,6 @@ package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -117,12 +116,12 @@ public class Joinables
    * Compute a cache key prefix for data sources that participate in the RHS of a join. This key prefix
    * can be used in segment level cache or result level cache. The function can return following wrapped in an
    * Optional
-   *  - Empty byte array - If there is no join datasource involved
    *  - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
    *  join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
    *  - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
    *  in the JOIN is not cacheable.
    *
+   * @throws {@link IAE} if this operation is called on a non-join data source
    * @param dataSourceAnalysis
    * @return
    */
@@ -133,7 +132,7 @@ public class Joinables
 
     final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
-      return Optional.of(StringUtils.EMPTY_BYTES);
+      throw new IAE("No join clauses to build the cache key");
     }
 
     final CacheKeyBuilder keyBuilder;

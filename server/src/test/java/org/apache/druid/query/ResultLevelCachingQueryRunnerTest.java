@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.google.common.primitives.Bytes;
+import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.SimpleServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -26,7 +28,10 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -39,7 +44,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
@@ -54,8 +58,6 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
   {
     cache = MapCache.create(1024);
     joinables = mock(Joinables.class);
-    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(StringUtils.EMPTY_BYTES))
-                                                                .anyTimes();
     replay(joinables);
   }
 
@@ -63,6 +65,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
   public void tearDown() throws IOException
   {
     cache.close();
+    verifyAll();
   }
 
   @Test
@@ -245,11 +248,21 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
   public void testPopulateAndUseWithNullJoinCacheKey()
   {
     prepareCluster(10);
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final JoinDataSource joinDataSource = JoinDataSource.create(
+        query.getDataSource(),
+        new GlobalTableDataSource("global"),
+        "r.",
+        "x == \"r.x\"",
+        JoinType.INNER,
+        ExprMacroTable.nil()
+    );
     joinables = mock(Joinables.class);
-    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.empty());
+    DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(joinDataSource);
+    expect(joinables.computeJoinDataSourceCacheKey(analysis)).andReturn(Optional.empty());
     replay(joinables);
 
+    query = query.withDataSource(joinDataSource);
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
         newCacheConfig(true, true),
         query
@@ -270,16 +283,25 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
   {
     prepareCluster(10);
     byte[] bytes = new byte[]{1, 2, 3};
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final JoinDataSource joinDataSource = JoinDataSource.create(
+        query.getDataSource(),
+        new GlobalTableDataSource("global"),
+        "r.",
+        "x == \"r.x\"",
+        JoinType.INNER,
+        ExprMacroTable.nil()
+    );
+    query = query.withDataSource(joinDataSource);
+    DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(joinDataSource);
+    reset(joinables);
+    expect(joinables.computeJoinDataSourceCacheKey(analysis)).andReturn(Optional.of(bytes)).anyTimes();
+    replay(joinables);
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
         newCacheConfig(true, true),
         query
     );
-    reset(joinables);
-    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(bytes)).anyTimes();
-    replay(joinables);
-
     final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
         QueryPlus.wrap(query),
         responseContext()
@@ -289,14 +311,14 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
 
+    reset(joinables);
+    expect(joinables.computeJoinDataSourceCacheKey(analysis)).andReturn(Optional.of(bytes)).anyTimes();
+    replay(joinables);
+
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(true, true),
         query
     );
-    reset(joinables);
-    expect(joinables.computeJoinDataSourceCacheKey(anyObject())).andReturn(Optional.of(bytes)).anyTimes();
-    replay(joinables);
-
     final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
         QueryPlus.wrap(query),
         responseContext()
@@ -307,10 +329,13 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
 
-    String cacheStr = StringUtils.fromUtf8(toolChestWarehouse.getToolChest(query)
-                                                             .getCacheStrategy(query)
-                                                             .computeResultLevelCacheKey(query));
-    Assert.assertNotNull(cache.get(new Cache.NamedKey(cacheStr, bytes)));
+    String cacheStr = StringUtils.fromUtf8(Bytes.concat(
+        bytes,
+        toolChestWarehouse.getToolChest(query)
+                          .getCacheStrategy(query)
+                          .computeResultLevelCacheKey(query)
+    ));
+    Assert.assertNotNull(cache.get(CacheUtil.computeResultLevelCacheKey(cacheStr)));
   }
 
   private <T> ResultLevelCachingQueryRunner<T> createQueryRunner(

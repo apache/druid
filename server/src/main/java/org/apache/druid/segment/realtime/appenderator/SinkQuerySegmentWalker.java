@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -173,9 +174,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
-    final Optional<byte[]> cacheKeyPrefix = joinables.computeJoinDataSourceCacheKey(
-        analysis
-    );
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinables.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,

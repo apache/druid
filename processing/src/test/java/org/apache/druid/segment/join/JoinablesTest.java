@@ -196,17 +196,14 @@ public class JoinablesTest
     Assert.assertNotSame(Function.identity(), segmentMapFn);
   }
 
-  @Test
+  @Test(expected = IAE.class)
   public void test_computeJoinDataSourceCacheKey_noClauses()
   {
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.replay(analysis);
     Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinables.computeJoinDataSourceCacheKey(analysis);
-
-    Assert.assertTrue(cacheKey.isPresent());
-    Assert.assertEquals(cacheKey.get(), StringUtils.EMPTY_BYTES);
+    joinables.computeJoinDataSourceCacheKey(analysis);
   }
 
   @Test

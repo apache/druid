@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Bytes;
 import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -90,16 +91,20 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
+      byte[] cacheKeyBytes = strategy.computeResultLevelCacheKey(query);
       DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-      byte[] dataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(analysis).orElse(null);
-      if (null == dataSourceCacheKey) {
-        return baseRunner.run(
-            queryPlus,
-            responseContext
-        );
+      if (analysis.isJoin()) {
+        final byte[] dataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(analysis).orElse(null);
+        if (null == dataSourceCacheKey) {
+          return baseRunner.run(
+              queryPlus,
+              responseContext
+          );
+        }
+        cacheKeyBytes = Bytes.concat(dataSourceCacheKey, cacheKeyBytes);
       }
-      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr, dataSourceCacheKey);
+      final String cacheKeyStr = StringUtils.fromUtf8(cacheKeyBytes);
+      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
@@ -119,7 +124,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         @Nullable
         ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
             cacheKeyStr,
-            dataSourceCacheKey,
             newResultSetId
         );
         if (resultLevelCachePopulator == null) {
@@ -178,12 +182,11 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
   @Nullable
   private byte[] fetchResultsFromResultLevelCache(
-      final String queryCacheKey,
-      final byte[] dataSourceCacheKey
+      final String queryCacheKey
   )
   {
     if (useResultCache && queryCacheKey != null) {
-      return cache.get(new Cache.NamedKey(queryCacheKey, dataSourceCacheKey));
+      return cache.get(CacheUtil.computeResultLevelCacheKey(queryCacheKey));
     }
     return null;
   }
@@ -229,8 +232,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   }
 
   private ResultLevelCachePopulator createResultLevelCachePopulator(
-      String cacheKeyNamespace,
-      byte[] cacheKey,
+      String cacheKeyStr,
       String resultSetId
   )
   {
@@ -238,7 +240,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          new Cache.NamedKey(cacheKeyNamespace, cacheKey),
+          CacheUtil.computeResultLevelCacheKey(cacheKeyStr),
           cacheConfig,
           true
       );
