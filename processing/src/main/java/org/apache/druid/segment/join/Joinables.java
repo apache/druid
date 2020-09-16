@@ -153,7 +153,7 @@ public class Joinables
       keyBuilder.appendString(clause.getCondition().getOriginalExpression());
       keyBuilder.appendString(clause.getJoinType().name());
     }
-    return Optional.ofNullable(keyBuilder.build());
+    return Optional.of(keyBuilder.build());
   }
 
   /**
