@@ -93,7 +93,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
    * see {@link org.apache.druid.segment.join.JoinableFactory#computeJoinCacheKey}
    *
    * @return the byte array for cache key
-   * @throws {@link org.apache.druid.java.util.common.IAE} if caching is not supported
+   * @throws {@link IAE} if caching is not supported
    */
   default byte[] computeCacheKey()
   {

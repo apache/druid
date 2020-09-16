@@ -53,6 +53,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
@@ -118,7 +119,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CachingClusteredClient clusterClient,
       LocalQuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
-      Joinables joinables,
+      JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -131,7 +132,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (QuerySegmentWalker) clusterClient,
         (QuerySegmentWalker) localClient,
         warehouse,
-        joinables,
+        new Joinables(joinableFactory),
         retryConfig,
         objectMapper,
         serverConfig,
