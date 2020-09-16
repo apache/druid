@@ -93,17 +93,19 @@ public class SQLAuditManager implements AuditManager
   @Override
   public void doAudit(AuditEntry auditEntry, Handle handle) throws IOException
   {
-    emitter.emit(
-        new ServiceMetricEvent.Builder()
-            .setDimension("key", auditEntry.getKey())
-            .setDimension("type", auditEntry.getType())
-            .setDimension("author", auditEntry.getAuditInfo().getAuthor())
-            .setDimension("comment", auditEntry.getAuditInfo().getComment())
-            .setDimension("remote_address", auditEntry.getAuditInfo().getIp())
-            .setDimension("created_date", auditEntry.getAuditTime().toString())
-            .setDimension("payload", auditEntry.getPayload())
-            .build("config/audit", 1)
-    );
+    ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+                                                .setDimension("key", auditEntry.getKey())
+                                                .setDimension("type", auditEntry.getType())
+                                                .setDimension("author", auditEntry.getAuditInfo().getAuthor())
+                                                .setDimension("comment", auditEntry.getAuditInfo().getComment())
+                                                .setDimension("remote_address", auditEntry.getAuditInfo().getIp())
+                                                .setDimension("created_date", auditEntry.getAuditTime().toString());
+
+    if (config.getAddPayloadToAuditMetricDimension()) {
+      builder.setDimension("payload", auditEntry.getPayload());
+    }
+
+    emitter.emit(builder.build("config/audit", 1));
 
     handle.createStatement(
         StringUtils.format(

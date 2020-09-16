@@ -330,6 +330,15 @@ Switching Request Logger routes native query's request logs to one request logge
 |`druid.request.logging.nativeQueryLogger`|request logger for emitting native query's request logs.|none|
 |`druid.request.logging.sqlQueryLogger`|request logger for emitting SQL query's request logs.|none|
 
+### Audit Logging
+
+Coordinator and Overlord log changes to lookups, segment load/drop rules, dynamic configuration changes for auditing
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.audit.manager.auditHistoryMillis`|Default duration for querying audit history.|1 week|
+|`druid.audit.manager.addPayloadToAuditMetricDimension`|Boolean flag on whether to add `payload` column in service metric.|false|
+
 ### Enabling Metrics
 
 Druid processes periodically emit metrics and different metrics monitors can be included. Each process can overwrite the default list of monitors.
