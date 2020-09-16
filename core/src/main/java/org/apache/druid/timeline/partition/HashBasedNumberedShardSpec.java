@@ -21,7 +21,6 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,7 +50,6 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
    */
   private final int numBuckets;
   private final ObjectMapper jsonMapper;
-  @JsonIgnore
   private final List<String> partitionDimensions;
 
   /**
@@ -222,6 +220,11 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return hashPartitionFunction.hash(serializeGroupKey(jsonMapper, groupKey), numBuckets) == bucketId;
   }
 
+  /**
+   * Serializes a group key into a byte array. The serialization algorithm can affect hash values of partition keys
+   * since {@link HashPartitionFunction#hash} takes the result of this method as its input. This means, the returned
+   * byte array should be backwards-compatible in cases where we need to modify this method.
+   */
   public static byte[] serializeGroupKey(ObjectMapper jsonMapper, List<Object> partitionKeys)
   {
     try {
