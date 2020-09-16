@@ -224,7 +224,8 @@ public class AutoCompactionSnapshot
       this.scheduledTaskIds = new ArrayList<>();
     }
 
-    public Builder addScheduledTaskId(String taskId) {
+    public Builder addScheduledTaskId(String taskId)
+    {
       scheduledTaskIds.add(taskId);
       return this;
     }
