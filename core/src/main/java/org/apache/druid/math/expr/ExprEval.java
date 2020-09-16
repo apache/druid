@@ -124,6 +124,9 @@ public abstract class ExprEval<T>
   @Nullable
   public static Number computeNumber(@Nullable String value)
   {
+    if (value == null) {
+      return null;
+    }
     Number rv;
     Long v = GuavaUtils.tryParseLong(value);
     // Do NOT use ternary operator here, because it makes Java to convert Long to Double

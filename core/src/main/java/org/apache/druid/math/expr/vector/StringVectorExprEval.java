@@ -43,19 +43,21 @@ public class StringVectorExprEval extends VectorExprEval<String[]>
 
   private void computeNumbers()
   {
-    longs = new long[values.length];
-    doubles = new double[values.length];
-    numericNulls = new boolean[values.length];
-    for (int i = 0; i < values.length; i++) {
-      Number n = ExprEval.computeNumber(values[i]);
-      if (n != null) {
-        longs[i] = n.longValue();
-        doubles[i] = n.doubleValue();
-        numericNulls[i] = false;
-      } else {
-        longs[i] = 0L;
-        doubles[i] = 0.0;
-        numericNulls[i] = NullHandling.sqlCompatible();
+    if (longs == null) {
+      longs = new long[values.length];
+      doubles = new double[values.length];
+      numericNulls = new boolean[values.length];
+      for (int i = 0; i < values.length; i++) {
+        Number n = ExprEval.computeNumber(values[i]);
+        if (n != null) {
+          longs[i] = n.longValue();
+          doubles[i] = n.doubleValue();
+          numericNulls[i] = false;
+        } else {
+          longs[i] = 0L;
+          doubles[i] = 0.0;
+          numericNulls[i] = NullHandling.sqlCompatible();
+        }
       }
     }
   }
@@ -64,9 +66,7 @@ public class StringVectorExprEval extends VectorExprEval<String[]>
   @Override
   public boolean[] getNullVector()
   {
-    if (numericNulls == null) {
-      computeNumbers();
-    }
+    computeNumbers();
     return numericNulls;
   }
 
@@ -79,18 +79,14 @@ public class StringVectorExprEval extends VectorExprEval<String[]>
   @Override
   public long[] getLongVector()
   {
-    if (longs == null) {
-      computeNumbers();
-    }
+    computeNumbers();
     return longs;
   }
 
   @Override
   public double[] getDoubleVector()
   {
-    if (doubles == null) {
-      computeNumbers();
-    }
+    computeNumbers();
     return doubles;
   }
 

@@ -86,7 +86,8 @@ public class SqlExpressionBenchmark
     NullHandling.initializeForTests();
     Calcites.setSystemProperties();
   }
-  static DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
+
+  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
     public int intermediateComputeSizeBytes()

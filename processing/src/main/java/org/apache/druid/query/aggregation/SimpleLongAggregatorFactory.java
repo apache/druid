@@ -35,7 +35,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -235,7 +234,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
       return capabilities == null || ValueType.isNumeric(capabilities.getType());
     }
     if (expression != null) {
-      return fieldExpression.get().canVectorize(ExpressionSelectors.makeInspectorBindingTypes(columnInspector));
+      return fieldExpression.get().canVectorize(columnInspector);
     }
     return false;
   }

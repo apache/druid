@@ -457,12 +457,11 @@ public class ExpressionSelectors
       VectorColumnSelectorFactory vectorColumnSelectorFactory
   )
   {
-    VectorSelectorVectorInputBinding binding = new VectorSelectorVectorInputBinding(vectorColumnSelectorFactory.getVectorSizeInspector());
+    VectorSelectorsVectorInputBinding binding = new VectorSelectorsVectorInputBinding(vectorColumnSelectorFactory.getVectorSizeInspector());
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
 
       switch (nativeType) {
         case FLOAT:
@@ -685,12 +684,7 @@ public class ExpressionSelectors
     return new Pair<>(actualArrays, unknownIfArrays);
   }
 
-  public static Expr.InputBindingTypes makeInspectorBindingTypes(ColumnInspector inspector)
-  {
-    return new ColumnInspectorVectorInputBindingTypes(inspector);
-  }
-
-  static class VectorSelectorVectorInputBinding implements Expr.VectorInputBinding
+  static class VectorSelectorsVectorInputBinding implements Expr.VectorInputBinding
   {
     private final Map<String, VectorValueSelector> numeric;
     private final Map<String, VectorObjectSelector> objects;
@@ -699,7 +693,7 @@ public class ExpressionSelectors
 
     private final VectorSizeInspector sizeInspector;
 
-    public VectorSelectorVectorInputBinding(VectorSizeInspector sizeInspector)
+    public VectorSelectorsVectorInputBinding(VectorSizeInspector sizeInspector)
     {
       this.numeric = new HashMap<>();
       this.objects = new HashMap<>();
@@ -708,14 +702,14 @@ public class ExpressionSelectors
       this.nilSelector = NilVectorSelector.create(sizeInspector);
     }
 
-    public VectorSelectorVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
+    public VectorSelectorsVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
     {
       numeric.put(name, selector);
       types.put(name, type);
       return this;
     }
 
-    public VectorSelectorVectorInputBinding addObjectSelector(String name, ExprType type, VectorObjectSelector selector)
+    public VectorSelectorsVectorInputBinding addObjectSelector(String name, ExprType type, VectorObjectSelector selector)
     {
       objects.put(name, selector);
       types.put(name, type);
@@ -725,10 +719,7 @@ public class ExpressionSelectors
     @Override
     public <T> T[] getObjectVector(String name)
     {
-      if (objects.containsKey(name)) {
-        return (T[]) objects.get(name).getObjectVector();
-      }
-      return (T[]) nilSelector.getObjectVector();
+      return (T[]) objects.getOrDefault(name, nilSelector).getObjectVector();
     }
 
     @Override
@@ -740,28 +731,20 @@ public class ExpressionSelectors
     @Override
     public long[] getLongVector(String name)
     {
-      if (numeric.containsKey(name)) {
-        return numeric.get(name).getLongVector();
-      }
-      return nilSelector.getLongVector();
+      return numeric.getOrDefault(name, nilSelector).getLongVector();
     }
 
     @Override
     public double[] getDoubleVector(String name)
     {
-      if (numeric.containsKey(name)) {
-        return numeric.get(name).getDoubleVector();
-      }
-      return nilSelector.getDoubleVector();
+      return numeric.getOrDefault(name, nilSelector).getDoubleVector();
     }
 
+    @Nullable
     @Override
     public boolean[] getNullVector(String name)
     {
-      if (numeric.containsKey(name)) {
-        return numeric.get(name).getNullVector();
-      }
-      return nilSelector.getNullVector();
+      return numeric.getOrDefault(name, nilSelector).getNullVector();
     }
 
     @Override
@@ -774,27 +757,6 @@ public class ExpressionSelectors
     public int getCurrentVectorSize()
     {
       return sizeInspector.getCurrentVectorSize();
-    }
-  }
-
-  static class ColumnInspectorVectorInputBindingTypes implements Expr.InputBindingTypes
-  {
-    private final ColumnInspector inspector;
-
-    public ColumnInspectorVectorInputBindingTypes(ColumnInspector inspector)
-    {
-      this.inspector = inspector;
-    }
-
-    @Nullable
-    @Override
-    public ExprType getType(String name)
-    {
-      ColumnCapabilities capabilities = inspector.getColumnCapabilities(name);
-      if (capabilities != null) {
-        return ExprType.fromValueType(capabilities.getType());
-      }
-      return null;
     }
   }
 }

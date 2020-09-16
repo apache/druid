@@ -402,6 +402,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
       return doubles.get(name);
     }
 
+    @Nullable
     @Override
     public boolean[] getNullVector(String name)
     {

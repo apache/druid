@@ -43,7 +43,6 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -131,7 +130,7 @@ public class ExpressionVectorSelectorBenchmark
 
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     outputType = parsed.getOutputType(
-        ExpressionSelectors.makeInspectorBindingTypes(new ColumnInspector()
+        new ColumnInspector()
         {
           @Nullable
           @Override
@@ -139,7 +138,7 @@ public class ExpressionVectorSelectorBenchmark
           {
             return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
           }
-        })
+        }
     );
     checkSanity();
   }

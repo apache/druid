@@ -720,6 +720,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -805,6 +810,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -860,6 +870,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -915,6 +930,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -1229,6 +1249,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -1284,6 +1309,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -1354,6 +1384,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -1409,6 +1444,11 @@ public interface Function
           }
         };
       }
+
+      if (processor == null) {
+        throw Exprs.cannotVectorize(this);
+      }
+
       return (VectorExprProcessor<T>) processor;
     }
   }
@@ -1839,13 +1879,11 @@ public interface Function
     @Override
     public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return args.get(0).canVectorize(inputTypes) && (args.get(1).isLiteral() || args.get(1).canVectorize(inputTypes));
+      return args.get(0).canVectorize(inputTypes) && args.get(1).isLiteral();
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(
-        Expr.VectorInputBindingTypes inputTypes, List<Expr> args
-    )
+    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return CastToTypeVectorProcessor.castToType(
           args.get(0).buildVectorized(inputTypes),

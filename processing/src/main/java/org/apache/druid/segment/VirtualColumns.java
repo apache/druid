@@ -371,21 +371,6 @@ public class VirtualColumns implements Cacheable
   }
 
   @Nullable
-  public ColumnCapabilities getColumnCapabilities(String columnName)
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn != null) {
-      return Preconditions.checkNotNull(
-          virtualColumn.capabilities(columnName),
-          "capabilities for column[%s]",
-          columnName
-      );
-    } else {
-      return null;
-    }
-  }
-
-  @Nullable
   public ColumnCapabilities getColumnCapabilities(ColumnInspector inspector, String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);

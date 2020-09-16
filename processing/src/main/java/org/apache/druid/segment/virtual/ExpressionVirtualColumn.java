@@ -142,7 +142,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     Expr expr = parsedExpression.get();
     Expr.BindingAnalysis analysis = expr.analyzeInputs();
-    Expr.InputBindingTypes inputTypes = ExpressionSelectors.makeInspectorBindingTypes(inspector);
     // we don't currently support multi-value inputs or outputs for vectorized expressions
     return !analysis.hasInputArrays() &&
            !analysis.isOutputArray() &&
@@ -150,7 +149,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
              ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
              return capabilities == null || capabilities.hasMultipleValues().isMaybeTrue();
            }) &&
-           parsedExpression.get().canVectorize(inputTypes);
+           parsedExpression.get().canVectorize(inspector);
   }
 
   @Override
@@ -177,9 +176,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
-    final ExprType outputType = parsedExpression.get().getOutputType(
-        ExpressionSelectors.makeInspectorBindingTypes(inspector)
-    );
+    final ExprType outputType = parsedExpression.get().getOutputType(inspector);
 
     if (outputType != null) {
       final ValueType valueType = ExprType.toValueType(outputType);

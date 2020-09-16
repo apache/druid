@@ -232,6 +232,7 @@ public interface Expr
 
     long[] getLongVector(String name);
     double[] getDoubleVector(String name);
+    @Nullable
     boolean[] getNullVector(String name);
 
     int getCurrentVectorSize();
