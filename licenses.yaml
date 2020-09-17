@@ -231,6 +231,7 @@ libraries:
   - com.fasterxml.jackson.jaxrs: jackson-jaxrs-json-provider
   - com.fasterxml.jackson.jaxrs: jackson-jaxrs-smile-provider
   - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
+  - com.fasterxml.jackson.module: jackson-module-guice
 notice: |
   # Jackson JSON processor
 
@@ -4123,16 +4124,6 @@ license_name: Apache License version 2.0
 version: v1-rev20190607-1.26.0
 libraries:
   - com.google.apis: google-api-services-compute
-
----
-
-name: "Jackson Module: Guice"
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.6.7
-libraries:
-  - com.fasterxml.jackson.module: jackson-module-guice
 
 ---
 
