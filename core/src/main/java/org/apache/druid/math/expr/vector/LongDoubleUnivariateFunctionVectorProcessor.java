@@ -37,9 +37,9 @@ public abstract class LongDoubleUnivariateFunctionVectorProcessor extends Univar
   }
 
   @Override
-  final void processIndex(long[] longs, int i)
+  final void processIndex(long[] input, int i)
   {
-    outValues[i] = apply(longs[i]);
+    outValues[i] = apply(input[i]);
   }
 
   @Override

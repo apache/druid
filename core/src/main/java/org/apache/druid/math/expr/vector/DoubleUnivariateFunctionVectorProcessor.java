@@ -37,9 +37,9 @@ public abstract class DoubleUnivariateFunctionVectorProcessor extends Univariate
   }
 
   @Override
-  final void processIndex(double[] longs, int i)
+  final void processIndex(double[] input, int i)
   {
-    outValues[i] = apply(longs[i]);
+    outValues[i] = apply(input[i]);
   }
 
   @Override

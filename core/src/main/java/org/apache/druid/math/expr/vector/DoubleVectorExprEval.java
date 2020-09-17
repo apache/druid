@@ -60,7 +60,13 @@ public class DoubleVectorExprEval extends VectorExprEval<double[]>
   {
     switch (type) {
       case STRING:
-        return (E) Arrays.stream(values).mapToObj(String::valueOf).toArray(String[]::new);
+        String[] s = new String[values.length];
+        if (nulls != null) {
+          for (int i = 0; i < values.length; i++) {
+            s[i] = nulls[i] ? null : String.valueOf(values[i]);
+          }
+        }
+        return (E) s;
       default:
         throw new IAE("Cannot convert %s to %s object vector", getType(), type);
     }
