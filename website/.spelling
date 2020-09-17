@@ -306,6 +306,7 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
 performant
 plaintext
 pluggable
@@ -361,6 +362,7 @@ runtime
 schemas
 searchable
 seekable-stream
+segmentPruning
 servlet
 simple-client-sslcontext
 sharded
