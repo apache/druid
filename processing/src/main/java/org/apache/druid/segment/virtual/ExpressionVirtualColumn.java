@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
@@ -49,7 +48,6 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 public class ExpressionVirtualColumn implements VirtualColumn
 {
@@ -138,88 +136,64 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
   }
 
-
   @Override
   public boolean canVectorize(ColumnInspector inspector)
   {
-    Expr expr = parsedExpression.get();
-    Expr.BindingAnalysis analysis = expr.analyzeInputs();
-    // we don't currently support multi-value inputs or outputs for vectorized expressions
-    return !analysis.hasInputArrays() &&
-           !analysis.isOutputArray() &&
-           analysis.getRequiredBindingsList().stream().noneMatch(column -> {
-             ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
-             return capabilities == null || capabilities.hasMultipleValues().isMaybeTrue();
-           }) &&
-           parsedExpression.get().canVectorize(inspector);
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
+    return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
   }
 
   @Override
   public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
-    return ExpressionSelectors.makeVectorValueSelector(factory, parsedExpression.get());
+    return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get());
   }
 
   @Override
   public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
   {
-    return ExpressionSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
   }
 
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    // Note: Ideally we would fill out additional information instead of leaving capabilities as 'unknown', e.g. examine
-    // if the expression in question could potentially return multiple values and anything else. However, we don't
-    // currently have a good way of determining this, so fill this out more once we do
+    // If possible, this should only be used as a fallback method for when capabilities are truly 'unknown', because we
+    // are unable to compute the output type of the expression, either due to incomplete type information of the
+    // inputs or because of unimplemented methods on expression implementations themselves, or, because a
+    // ColumnInspector is not available
     return new ColumnCapabilitiesImpl().setType(outputType == null ? ValueType.FLOAT : outputType);
   }
 
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
-    final ExprType inferredOutputType = parsedExpression.get().getOutputType(inspector);
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
 
-    if (inferredOutputType != null) {
+    if (plan.getOutputType() != null) {
+      final ExprType inferredOutputType = plan.getOutputType();
       final ValueType valueType = ExprType.toValueType(inferredOutputType);
       if (valueType.isNumeric()) {
         // if float was explicitly specified preserve it, because it will currently never be the computed output type
-        if (ValueType.FLOAT.equals(outputType)) {
+        if (ValueType.FLOAT == outputType) {
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
         }
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ExprType.toValueType(inferredOutputType));
       }
-      if (valueType.isArray()) {
+
+      // we don't have to check for unknown input here because output type is unable to be inferred if we don't know
+      // the complete set of input types
+      if (plan.any(ExpressionPlan.Trait.NON_SCALAR_OUTPUT, ExpressionPlan.Trait.NEEDS_APPLIED)) {
         // always a multi-value string since wider engine does not yet support array types
-        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
+        return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
       }
 
-      final Expr.BindingAnalysis analysis = parsedExpression.get().analyzeInputs();
-      if (analysis.isOutputArray()) {
-        // always a multi-value string since wider engine does not yet support array types
-        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
-      }
-
-      // dupe of some logic in ExpressionSelectors to detect if any possiblility of this producing multi value outputs
-      final Pair<Set<String>, Set<String>> arrayUsage = ExpressionSelectors.findArrayInputBindings(inspector, analysis);
-      final Set<String> actualArrays = arrayUsage.lhs;
-      final Set<String> unknownIfArrays = arrayUsage.rhs;
-      final long needsAppliedCount =
-          analysis.getRequiredBindings()
-                  .stream()
-                  .filter(c -> actualArrays.contains(c) && !analysis.getArrayBindings().contains(c))
-                  .count();
-
-      // unapplied multi-valued inputs result in multi-valued outputs, and unknowns are unknown
-      if (unknownIfArrays.size() > 0 || needsAppliedCount > 0) {
-        // always a multi-value string since wider engine does not yet support array types
-        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
-      }
       // if we got here, lets call it single value string output
       return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                          .setHasMultipleValues(false)
                                          .setDictionaryEncoded(false);
     }
+    // fallback to
     return capabilities(columnName);
   }
 

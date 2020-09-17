@@ -25,7 +25,7 @@ import org.apache.druid.math.expr.ExprType;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
-public class LongVectorExprEval extends VectorExprEval<long[]>
+public final class LongVectorExprEval extends VectorExprEval<long[]>
 {
   public LongVectorExprEval(long[] values, @Nullable boolean[] nulls)
   {

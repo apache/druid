@@ -21,6 +21,11 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
 
+/**
+ * common machinery for processing single input operators and functions, which should always treat null input as null
+ * output, and are backed by a primitive value instead of an object value (and need to use the null vector instead of
+ * checking the vector itself for nulls)
+ */
 public abstract class UnivariateFunctionVectorProcessor<TInput, TOutput> implements VectorExprProcessor<TOutput>
 {
   final VectorExprProcessor<TInput> processor;
@@ -56,8 +61,6 @@ public abstract class UnivariateFunctionVectorProcessor<TInput, TOutput> impleme
         outNulls[i] = inputNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
-        } else {
-          processNull(i);
         }
       }
     } else {
@@ -70,8 +73,6 @@ public abstract class UnivariateFunctionVectorProcessor<TInput, TOutput> impleme
   }
 
   abstract void processIndex(TInput input, int i);
-
-  abstract void processNull(int i);
 
   abstract VectorExprEval<TOutput> asEval();
 }

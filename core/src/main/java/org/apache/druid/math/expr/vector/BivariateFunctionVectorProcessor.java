@@ -21,6 +21,11 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
 
+/**
+ * common machinery for processing two input operators and functions, which should always treat null inputs as null
+ * output, and are backed by a primitive values instead of an object values (and need to use the null vectors instead of
+ * checking the vector themselves for nulls)
+ */
 public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput> implements VectorExprProcessor<TOutput>
 {
   final VectorExprProcessor<TLeftInput> left;
@@ -64,8 +69,6 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
         outNulls[i] = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
         if (!outNulls[i]) {
           processIndex(leftInput, rightInput, i);
-        } else {
-          processNull(i);
         }
       }
     } else {

@@ -209,6 +209,9 @@ public interface Expr
     }
   }
 
+  /**
+   * {@link InputBindingTypes} + vectorizations stuff for {@link #buildVectorized}
+   */
   interface VectorInputBindingTypes extends InputBindingTypes
   {
     int getMaxVectorSize();
@@ -226,6 +229,11 @@ public interface Expr
     Object get(String name);
   }
 
+  /**
+   * Mechanism to supply batches of input values to a {@link VectorExprProcessor} for optimized processing. Mirrors
+   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * which exist
+   */
   interface VectorInputBinding extends VectorInputBindingTypes
   {
     <T> T[] getObjectVector(String name);

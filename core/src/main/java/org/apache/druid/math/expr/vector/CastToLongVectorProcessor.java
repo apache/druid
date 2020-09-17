@@ -22,7 +22,7 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 
-public class CastToLongVectorProcessor extends CastToTypeVectorProcessor<long[]>
+public final class CastToLongVectorProcessor extends CastToTypeVectorProcessor<long[]>
 {
   public CastToLongVectorProcessor(VectorExprProcessor<?> delegate)
   {

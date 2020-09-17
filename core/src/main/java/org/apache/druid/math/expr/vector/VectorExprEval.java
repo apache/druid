@@ -25,6 +25,12 @@ import org.apache.druid.math.expr.ExprType;
 import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 
+/**
+ * Result of {@link VectorExprProcessor#evalVector} which wraps the actual evaluated results of the operation over the
+ * input vector(s). Methods to get actual results mirror vectorized value and object selectors.
+ *
+ * The generic parameter T should be the native java array type of the vector result (long[], String[], etc.)
+ */
 public abstract class VectorExprEval<T>
 {
   final T values;

@@ -43,12 +43,6 @@ public abstract class DoubleUnivariateFunctionVectorProcessor extends Univariate
   }
 
   @Override
-  void processNull(int i)
-  {
-    outValues[i] = 0;
-  }
-
-  @Override
   final VectorExprEval<double[]> asEval()
   {
     return new DoubleVectorExprEval(outValues, outNulls);

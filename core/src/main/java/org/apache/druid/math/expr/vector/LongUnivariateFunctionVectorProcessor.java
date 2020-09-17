@@ -41,12 +41,6 @@ public abstract class LongUnivariateFunctionVectorProcessor extends UnivariateFu
   {
     outValues[i] = apply(input[i]);
   }
-  
-  @Override
-  void processNull(int i)
-  {
-    outValues[i] = 0;
-  }
 
   @Override
   final VectorExprEval<long[]> asEval()

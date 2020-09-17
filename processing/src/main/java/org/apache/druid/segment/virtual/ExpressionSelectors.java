@@ -24,20 +24,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.BaseSingleValueDimensionSelector;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
@@ -47,19 +42,12 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.vector.NilVectorSelector;
-import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-import org.apache.druid.segment.vector.VectorObjectSelector;
-import org.apache.druid.segment.vector.VectorSizeInspector;
-import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ExpressionSelectors
@@ -134,32 +122,6 @@ public class ExpressionSelectors
     };
   }
 
-
-
-  public static VectorValueSelector makeVectorValueSelector(
-      VectorColumnSelectorFactory factory,
-      Expr expression
-  )
-  {
-    final Expr.BindingAnalysis exprAnalysis = expression.analyzeInputs();
-    Parser.validateExpr(expression, exprAnalysis);
-    final Expr.VectorInputBinding bindings = createVectorBindings(exprAnalysis, factory);
-    final VectorExprProcessor<?> processor = expression.buildVectorized(bindings);
-    return new ExpressionVectorValueSelector(processor, bindings);
-  }
-
-  public static VectorObjectSelector makeVectorObjectSelector(
-      VectorColumnSelectorFactory factory,
-      Expr expression
-  )
-  {
-    final Expr.BindingAnalysis exprAnalysis = expression.analyzeInputs();
-    Parser.validateExpr(expression, exprAnalysis);
-    final Expr.VectorInputBinding bindings = createVectorBindings(exprAnalysis, factory);
-    final VectorExprProcessor<?> processor = expression.buildVectorized(bindings);
-    return new ExpressionVectorObjectSelector(processor, bindings);
-  }
-
   /**
    * Makes a ColumnValueSelector whose getObject method returns an {@link ExprEval}.
    *
@@ -170,69 +132,45 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    final Expr.BindingAnalysis bindingAnalysis = expression.analyzeInputs();
-    Parser.validateExpr(expression, bindingAnalysis);
-    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
+    return makeExprEvalSelector(columnSelectorFactory, ExpressionPlanner.plan(columnSelectorFactory, expression));
+  }
 
-    if (columns.size() == 1) {
-      final String column = Iterables.getOnlyElement(columns);
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-
-      if (capabilities != null && capabilities.getType() == ValueType.LONG) {
-        // Optimization for expressions that hit one long column and nothing else.
+  public static ColumnValueSelector<ExprEval> makeExprEvalSelector(
+      ColumnSelectorFactory columnSelectorFactory,
+      ExpressionPlan plan
+  )
+  {
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
+      final String column = plan.getSingleInputName();
+      final ValueType inputType = plan.getSingleInputType();
+      if (inputType == ValueType.LONG) {
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
-            expression,
+            plan.getExpression(),
             !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
-      } else if (capabilities != null
-                 && capabilities.getType() == ValueType.STRING
-                 && capabilities.isDictionaryEncoded().isTrue()
-                 && capabilities.hasMultipleValues().isFalse()
-                 && bindingAnalysis.getArrayBindings().isEmpty()) {
-        // Optimization for expressions that hit one scalar string column and nothing else.
+      } else if (inputType == ValueType.STRING) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
-            expression
+            plan.getExpression()
         );
       }
     }
+    final Expr.ObjectBinding bindings = createBindings(plan.getAnalysis(), columnSelectorFactory);
 
-    final Pair<Set<String>, Set<String>> arrayUsage = findArrayInputBindings(columnSelectorFactory, bindingAnalysis);
-    final Set<String> actualArrays = arrayUsage.lhs;
-    final Set<String> unknownIfArrays = arrayUsage.rhs;
-
-    final List<String> needsApplied =
-        columns.stream()
-               .filter(c -> actualArrays.contains(c) && !bindingAnalysis.getArrayBindings().contains(c))
-               .collect(Collectors.toList());
-    final Expr finalExpr;
-    if (needsApplied.size() > 0) {
-      finalExpr = Parser.applyUnappliedBindings(expression, bindingAnalysis, needsApplied);
-    } else {
-      finalExpr = expression;
-    }
-
-    final Expr.ObjectBinding bindings = createBindings(bindingAnalysis, columnSelectorFactory);
-
+    // Optimization for constant expressions
     if (bindings.equals(ExprUtils.nilBindings())) {
-      // Optimization for constant expressions.
-      return new ConstantExprEvalSelector(expression.eval(bindings));
+      return new ConstantExprEvalSelector(plan.getExpression().eval(bindings));
     }
 
     // if any unknown column input types, fall back to an expression selector that examines input bindings on a
     // per row basis
-    if (unknownIfArrays.size() > 0) {
-      return new RowBasedExpressionColumnValueSelector(
-          finalExpr,
-          bindingAnalysis,
-          bindings,
-          unknownIfArrays
-      );
+    if (plan.is(ExpressionPlan.Trait.UNKNOWN_INPUTS)) {
+      return new RowBasedExpressionColumnValueSelector(plan, bindings);
     }
 
     // generic expression value selector for fully known input types
-    return new ExpressionColumnValueSelector(finalExpr, bindings);
+    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings);
   }
 
   /**
@@ -245,38 +183,19 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final Expr.BindingAnalysis bindingAnalysis = expression.analyzeInputs();
-    Parser.validateExpr(expression, bindingAnalysis);
-    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
+    final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
 
-    if (columns.size() == 1) {
-      final String column = Iterables.getOnlyElement(columns);
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-
-      // Optimization for dimension selectors that wrap a single underlying string column.
-      // The string column can be multi-valued, but if so, it must be implicitly mappable (i.e. the expression is
-      // not treating it as an array and not wanting to output an array
-      if (capabilities != null
-          && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded().isTrue()
-          && canMapOverDictionary(bindingAnalysis, capabilities.hasMultipleValues())
-      ) {
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
+      final String column = plan.getSingleInputName();
+      if (plan.getSingleInputType() == ValueType.STRING) {
         return new SingleStringInputDimensionSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
+            columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
         );
       }
     }
 
-    final Pair<Set<String>, Set<String>> arrayUsage = findArrayInputBindings(columnSelectorFactory, bindingAnalysis);
-    final Set<String> actualArrays = arrayUsage.lhs;
-    final Set<String> unknownIfArrays = arrayUsage.rhs;
-
-
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
-    final boolean multiVal = actualArrays.size() > 0 ||
-                             bindingAnalysis.getArrayBindings().size() > 0 ||
-                             unknownIfArrays.size() > 0;
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
@@ -284,87 +203,15 @@ public class ExpressionSelectors
     } else if (baseSelector instanceof NilColumnValueSelector) {
       // Optimization for null dimension selector.
       return DimensionSelector.constant(null);
-    } else if (extractionFn == null) {
-
-      if (multiVal) {
-        return new MultiValueExpressionDimensionSelector(baseSelector);
-      } else {
-        class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-        {
-          @Override
-          protected String getValue()
-          {
-            return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("baseSelector", baseSelector);
-          }
-        }
-        return new DefaultExpressionDimensionSelector();
-      }
     } else {
-      if (multiVal) {
-        class ExtractionMultiValueDimensionSelector extends MultiValueExpressionDimensionSelector
-        {
-          private ExtractionMultiValueDimensionSelector()
-          {
-            super(baseSelector);
-          }
-
-          @Override
-          String getValue(ExprEval evaluated)
-          {
-            assert !evaluated.isArray();
-            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(evaluated.asString()));
-          }
-
-          @Override
-          List<String> getArray(ExprEval evaluated)
-          {
-            assert evaluated.isArray();
-            return Arrays.stream(evaluated.asStringArray())
-                         .map(x -> extractionFn.apply(NullHandling.emptyToNullIfNeeded(x)))
-                         .collect(Collectors.toList());
-          }
-
-          @Override
-          String getArrayValue(ExprEval evaluated, int i)
-          {
-            assert evaluated.isArray();
-            String[] stringArray = evaluated.asStringArray();
-            assert i < stringArray.length;
-            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(stringArray[i]));
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("baseSelector", baseSelector);
-            inspector.visit("extractionFn", extractionFn);
-          }
-        }
-        return new ExtractionMultiValueDimensionSelector();
-
+      if (plan.any(
+          ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+          ExpressionPlan.Trait.NEEDS_APPLIED,
+          ExpressionPlan.Trait.UNKNOWN_INPUTS
+      )) {
+        return ExpressionMultiValueDimensionSelector.fromValueSelector(baseSelector, extractionFn);
       } else {
-        class ExtractionExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-        {
-          @Override
-          protected String getValue()
-          {
-            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("baseSelector", baseSelector);
-            inspector.visit("extractionFn", extractionFn);
-          }
-        }
-        return new ExtractionExpressionDimensionSelector();
+        return ExpressionSingleValueDimensionSelector.fromValueSelector(baseSelector, extractionFn);
       }
     }
   }
@@ -450,39 +297,6 @@ public class ExpressionSelectors
     } else {
       return Parser.withSuppliers(suppliers);
     }
-  }
-
-  private static Expr.VectorInputBinding createVectorBindings(
-      Expr.BindingAnalysis bindingAnalysis,
-      VectorColumnSelectorFactory vectorColumnSelectorFactory
-  )
-  {
-    VectorSelectorsVectorInputBinding binding = new VectorSelectorsVectorInputBinding(vectorColumnSelectorFactory.getVectorSizeInspector());
-    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
-    for (String columnName : columns) {
-      final ColumnCapabilities columnCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(columnName);
-      final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-
-      // null capabilities should be backed by a nil vector selector since it means the column effectively doesnt exist
-      if (nativeType != null) {
-        switch (nativeType) {
-          case FLOAT:
-          case DOUBLE:
-            binding.addNumeric(columnName, ExprType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));
-            break;
-          case LONG:
-            binding.addNumeric(columnName, ExprType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
-            break;
-          default:
-            binding.addObjectSelector(
-                columnName,
-                ExprType.STRING,
-                vectorColumnSelectorFactory.makeObjectSelector(columnName)
-            );
-        }
-      }
-    }
-    return binding;
   }
 
   /**
@@ -657,113 +471,6 @@ public class ExpressionSelectors
         return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
       default:
         return eval.value();
-    }
-  }
-
-  /**
-   * Returns pair of columns which are definitely multi-valued, or 'actual' arrays, and those which we are unable to
-   * discern from the {@link ColumnInspector#getColumnCapabilities(String)}, or 'unknown' arrays.
-   */
-  public static Pair<Set<String>, Set<String>> findArrayInputBindings(
-      ColumnInspector inspector,
-      Expr.BindingAnalysis bindingAnalysis
-  )
-  {
-    final Set<String> actualArrays = new HashSet<>();
-    final Set<String> unknownIfArrays = new HashSet<>();
-    for (String column : bindingAnalysis.getRequiredBindings()) {
-      final ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
-      if (capabilities != null) {
-        if (capabilities.hasMultipleValues().isTrue()) {
-          actualArrays.add(column);
-        } else if (
-            capabilities.getType().equals(ValueType.STRING) &&
-            capabilities.hasMultipleValues().isMaybeTrue() &&
-            !bindingAnalysis.getArrayBindings().contains(column)
-        ) {
-          unknownIfArrays.add(column);
-        }
-      } else {
-        unknownIfArrays.add(column);
-      }
-    }
-
-    return new Pair<>(actualArrays, unknownIfArrays);
-  }
-
-  static class VectorSelectorsVectorInputBinding implements Expr.VectorInputBinding
-  {
-    private final Map<String, VectorValueSelector> numeric;
-    private final Map<String, VectorObjectSelector> objects;
-    private final Map<String, ExprType> types;
-    private final NilVectorSelector nilSelector;
-
-    private final VectorSizeInspector sizeInspector;
-
-    public VectorSelectorsVectorInputBinding(VectorSizeInspector sizeInspector)
-    {
-      this.numeric = new HashMap<>();
-      this.objects = new HashMap<>();
-      this.types = new HashMap<>();
-      this.sizeInspector = sizeInspector;
-      this.nilSelector = NilVectorSelector.create(sizeInspector);
-    }
-
-    public VectorSelectorsVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
-    {
-      numeric.put(name, selector);
-      types.put(name, type);
-      return this;
-    }
-
-    public VectorSelectorsVectorInputBinding addObjectSelector(String name, ExprType type, VectorObjectSelector selector)
-    {
-      objects.put(name, selector);
-      types.put(name, type);
-      return this;
-    }
-
-    @Override
-    public <T> T[] getObjectVector(String name)
-    {
-      return (T[]) objects.getOrDefault(name, nilSelector).getObjectVector();
-    }
-
-    @Override
-    public ExprType getType(String name)
-    {
-      return types.get(name);
-    }
-
-    @Override
-    public long[] getLongVector(String name)
-    {
-      return numeric.getOrDefault(name, nilSelector).getLongVector();
-    }
-
-    @Override
-    public double[] getDoubleVector(String name)
-    {
-      return numeric.getOrDefault(name, nilSelector).getDoubleVector();
-    }
-
-    @Nullable
-    @Override
-    public boolean[] getNullVector(String name)
-    {
-      return numeric.getOrDefault(name, nilSelector).getNullVector();
-    }
-
-    @Override
-    public int getMaxVectorSize()
-    {
-      return sizeInspector.getMaxVectorSize();
-    }
-
-    @Override
-    public int getCurrentVectorSize()
-    {
-      return sizeInspector.getCurrentVectorSize();
     }
   }
 }

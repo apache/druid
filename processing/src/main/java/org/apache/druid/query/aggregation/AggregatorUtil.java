@@ -34,6 +34,7 @@ import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -239,7 +240,7 @@ public class AggregatorUtil
       throw new IllegalArgumentException("Only one of fieldName or expression should be non-null");
     }
     if (expression != null) {
-      return ExpressionSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
+      return ExpressionVectorSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
     }
     return columnSelectorFactory.makeValueSelector(fieldName);
   }

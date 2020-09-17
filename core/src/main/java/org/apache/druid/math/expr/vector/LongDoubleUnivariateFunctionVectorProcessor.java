@@ -43,12 +43,6 @@ public abstract class LongDoubleUnivariateFunctionVectorProcessor extends Univar
   }
 
   @Override
-  void processNull(int i)
-  {
-    outValues[i] = 0;
-  }
-
-  @Override
   final VectorExprEval<double[]> asEval()
   {
     return new DoubleVectorExprEval(outValues, outNulls);

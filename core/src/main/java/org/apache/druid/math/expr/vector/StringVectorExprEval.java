@@ -26,7 +26,7 @@ import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nullable;
 
-public class StringVectorExprEval extends VectorExprEval<String[]>
+public final class StringVectorExprEval extends VectorExprEval<String[]>
 {
   @Nullable
   private long[] longs;
