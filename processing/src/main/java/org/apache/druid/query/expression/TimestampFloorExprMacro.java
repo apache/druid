@@ -25,8 +25,10 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -111,6 +113,13 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
       return shuttle.visit(new TimestampFloorExpr(newArgs));
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(InputBindingTypes inputTypes)
+    {
+      return ExprType.LONG;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -154,6 +163,13 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     {
       List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
       return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(InputBindingTypes inputTypes)
+    {
+      return ExprType.LONG;
     }
   }
 }

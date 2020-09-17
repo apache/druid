@@ -40,11 +40,6 @@ export interface RetentionDialogProps {
   onSave: (datasource: string, newRules: Rule[], comment: string) => void;
 }
 
-export interface RetentionDialogState {
-  currentRules: Rule[];
-  historyRecords: any[] | undefined;
-}
-
 export const RetentionDialog = React.memo(function RetentionDialog(props: RetentionDialogProps) {
   const { datasource, onCancel, onEditDefaults, rules, defaultRules, tiers } = props;
   const [currentRules, setCurrentRules] = useState(props.rules);

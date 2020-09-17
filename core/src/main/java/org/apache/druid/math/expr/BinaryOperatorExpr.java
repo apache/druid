@@ -81,10 +81,17 @@ abstract class BinaryOpExprBase implements Expr
   protected abstract BinaryOpExprBase copy(Expr left, Expr right);
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     // currently all binary operators operate on scalar inputs
     return left.analyzeInputs().with(right).withScalarArguments(ImmutableSet.of(left, right));
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return ExprType.operatorAutoTypeConversion(left.getOutputType(inputTypes), right.getOutputType(inputTypes));
   }
 
   @Override

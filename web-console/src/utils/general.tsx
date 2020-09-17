@@ -215,7 +215,7 @@ export function parseList(list: string): string[] {
 
 // ----------------------------
 
-export function formatNumber(n: number): string {
+export function formatInteger(n: number): string {
   return numeral(n).format('0,0');
 }
 
@@ -225,6 +225,10 @@ export function formatBytes(n: number): string {
 
 export function formatBytesCompact(n: number): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatMegabytes(n: number): string {
+  return numeral(n / 1048576).format('0,0.0');
 }
 
 function pad2(str: string | number): string {
@@ -240,7 +244,7 @@ export function formatDuration(ms: number): string {
 
 export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
-  return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
+  return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------

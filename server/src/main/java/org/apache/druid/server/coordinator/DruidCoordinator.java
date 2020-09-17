@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -148,6 +149,9 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+
+  private int cachedBalancerThreadNumber;
+  private ListeningExecutorService balancerExec;
 
   @Inject
   public DruidCoordinator(
@@ -483,6 +487,18 @@ public class DruidCoordinator
     }
   }
 
+  @VisibleForTesting
+  public int getCachedBalancerThreadNumber()
+  {
+    return cachedBalancerThreadNumber;
+  }
+  
+  @VisibleForTesting
+  public ListeningExecutorService getBalancerExec()
+  {
+    return balancerExec;
+  }
+
   @LifecycleStart
   public void start()
   {
@@ -524,6 +540,10 @@ public class DruidCoordinator
       started = false;
 
       exec.shutdownNow();
+
+      if (balancerExec != null) {
+        balancerExec.shutdownNow();
+      }
     }
   }
 
@@ -612,6 +632,11 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       segmentsMetadataManager.stopPollingDatabasePeriodically();
+
+      if (balancerExec != null) {
+        balancerExec.shutdownNow();
+        balancerExec = null;
+      }
     }
   }
 
@@ -647,22 +672,52 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
-  private class DutiesRunnable implements Runnable
+  @VisibleForTesting
+  protected class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
 
-    private DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
+    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;
     }
 
+    @VisibleForTesting
+    protected void initBalancerExecutor()
+    {
+      final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
+      final String threadNameFormat = "coordinator-cost-balancer-%s";
+      // fist time initialization
+      if (balancerExec == null) {
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            currentNumber,
+            threadNameFormat
+        ));
+        cachedBalancerThreadNumber = currentNumber;
+        return;
+      }
+
+      if (cachedBalancerThreadNumber != currentNumber) {
+        log.info(
+            "balancerComputeThreads has been changed from [%s] to [%s], recreating the thread pool.",
+            cachedBalancerThreadNumber,
+            currentNumber
+        );
+        balancerExec.shutdownNow();
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            currentNumber,
+            threadNameFormat
+        ));
+        cachedBalancerThreadNumber = currentNumber;
+      }
+    }
+
     @Override
     public void run()
     {
-      ListeningExecutorService balancerExec = null;
       try {
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
@@ -684,10 +739,7 @@ public class DruidCoordinator
           }
         }
 
-        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-            getDynamicConfigs().getBalancerComputeThreads(),
-            "coordinator-cost-balancer-%s"
-        ));
+        initBalancerExecutor();
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
@@ -732,11 +784,6 @@ public class DruidCoordinator
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
-      }
-      finally {
-        if (balancerExec != null) {
-          balancerExec.shutdownNow();
-        }
       }
     }
   }

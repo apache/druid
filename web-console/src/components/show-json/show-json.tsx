@@ -24,7 +24,7 @@ import React from 'react';
 import { useQueryManager } from '../../hooks';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile, QueryState } from '../../utils';
+import { downloadFile } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './show-json.scss';
@@ -33,10 +33,6 @@ export interface ShowJsonProps {
   endpoint: string;
   transform?: (x: any) => any;
   downloadFilename?: string;
-}
-
-export interface ShowJsonState {
-  jsonState: QueryState<string>;
 }
 
 export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {

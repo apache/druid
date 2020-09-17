@@ -21,7 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import { ColumnMetadata, queryDruidSql, QueryState } from '../../utils';
+import { ColumnMetadata, queryDruidSql } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './datasource-columns-table.scss';
@@ -34,10 +34,6 @@ export interface DatasourceColumnsTableRow {
 export interface DatasourceColumnsTableProps {
   datasourceId: string;
   downloadFilename?: string;
-}
-
-export interface DatasourceColumnsTableState {
-  columnsState: QueryState<DatasourceColumnsTableRow[]>;
 }
 
 export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable(

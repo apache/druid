@@ -219,9 +219,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       }
     }
 
-    // 1) Virtual columns can't vectorize yet
-    // 2) Vector cursors can't iterate backwards yet
-    return virtualColumns.size() == 0 && !descending;
+    // vector cursors can't iterate backwards yet
+    return virtualColumns.canVectorize(this) && !descending;
   }
 
   @Override

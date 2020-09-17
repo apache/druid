@@ -156,7 +156,7 @@ async function validateDatasourceStatus(page: playwright.Page, datasourceName: s
     const datasource = datasources.find(t => t.name === datasourceName);
     expect(datasource).toBeDefined();
     expect(datasource!.availability).toMatch('Fully available (1 segment)');
-    expect(datasource!.numRows).toBe(39244);
+    expect(datasource!.totalRows).toBe(39244);
   });
 }
 

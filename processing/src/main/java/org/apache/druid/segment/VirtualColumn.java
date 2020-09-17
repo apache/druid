@@ -26,14 +26,21 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Virtual columns are "views" created over a ColumnSelectorFactory or ColumnSelector. They can potentially draw from multiple
- * underlying columns, although they always present themselves as if they were a single column.
+ * Virtual columns are "views" created over a {@link ColumnSelectorFactory} or {@link ColumnSelector}. They can
+ * potentially draw from multiple underlying columns, although they always present themselves as if they were a single
+ * column.
  *
  * A virtual column object will be shared amongst threads and must be thread safe. The selectors returned
  * from the various makeXXXSelector methods need not be thread safe.
@@ -56,59 +63,173 @@ public interface VirtualColumn extends Cacheable
    * virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which
    * is useful if this column uses dot notation. The virtual column is expected to apply any
    * necessary decoration from the dimensionSpec.
-   *
-   * @param dimensionSpec the dimensionSpec this column was referenced with
-   * @param factory       column selector factory
-   *
-   * @return the selector, must not be null
    */
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory);
 
   /**
-   * Returns similar DimensionSelector object as returned by {@link #makeDimensionSelector(DimensionSpec, ColumnSelectorFactory)}
-   * except this method has full access to underlying column and can potentially provide a more efficient implementation.
+   * Returns similar {@link DimensionSelector} object as returned by
+   * {@link #makeDimensionSelector(DimensionSpec, ColumnSelectorFactory)} except this method has full access to the
+   * underlying column and can potentially provide a more efficient implementation.
    *
-   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
-   * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
-   *
-   * @param dimensionSpec
-   * @param columnSelector
-   * @param offset
-   * @return the selector
+   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called
+   * in query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
    */
   @SuppressWarnings("unused")
   @Nullable
-  default DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
+  default DimensionSelector makeDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
   {
     return null;
   }
 
   /**
-   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * Build a {@link ColumnValueSelector} corresponding to this virtual column. Also provides the name that the
    * virtual column was referenced with, which is useful if this column uses dot notation.
-   *
-   * @param columnName the name this virtual column was referenced with
-   * @param factory    column selector factory
-   *
-   * @return the selector, must not be null
    */
   ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory);
 
   /**
-   * Returns similar ColumnValueSelector object as returned by {@link #makeColumnValueSelector(String, ColumnSelectorFactory)}
-   * except this method has full access to underlying column and can potentially provide a more efficient implementation.
+   * Returns similar {@link ColumnValueSelector} object as returned by
+   * {@link #makeColumnValueSelector(String, ColumnSelectorFactory)} except this method has full access to the
+   * underlying column and can potentially provide a more efficient implementation.
    *
-   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
-   * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
-   *
-   * @param columnName
-   * @param columnSelector
-   * @param offset
-   * @return the selector
+   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called
+   * in query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
    */
   @SuppressWarnings("unused")
   @Nullable
-  default ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
+  default ColumnValueSelector<?> makeColumnValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
+  {
+    return null;
+  }
+
+  default boolean canVectorize(ColumnInspector inspector)
+  {
+    return false;
+  }
+
+  /**
+   * Build a {@link SingleValueDimensionVectorSelector} corresponding to this virtual column. Also provides the name
+   * that the virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which is useful if this
+   * column uses dot notation. The virtual column is expected to apply any necessary decoration from the
+   * {@link DimensionSpec}.
+   */
+  default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  /**
+   * Returns similar {@link SingleValueDimensionVectorSelector} object as returned by
+   * {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)} except this
+   * method has full access to the underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible.
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Build a {@link MultiValueDimensionVectorSelector} corresponding to this virtual column. Also provides
+   * the name that the virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which is useful
+   * if this column uses dot notation. The virtual column is expected to apply any necessary decoration from the
+   * {@link DimensionSpec}.
+   */
+  default MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  /**
+   * Returns similar {@link SingleValueDimensionVectorSelector} object as returned by
+   * {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)} except this
+   * method has full access to the underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible.
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
+
+  /**
+   * Build a {@link VectorValueSelector} corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   */
+  default VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  /**
+   * Returns similar {@link VectorValueSelector} object as returned by
+   * {@link #makeVectorValueSelector(String, VectorColumnSelectorFactory)} except this method has full access to the
+   * underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible.
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default VectorValueSelector makeVectorValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Build a {@link VectorObjectSelector} corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   */
+  default VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  /**
+   * Returns similar {@link VectorObjectSelector} object as returned by
+   * {@link #makeVectorObjectSelector(String, VectorColumnSelectorFactory)} except this method has full access to the
+   * underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible.
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default VectorObjectSelector makeVectorObjectSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
   {
     return null;
   }
