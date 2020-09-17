@@ -18,7 +18,6 @@
 
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import classNames from 'classnames';
 import { SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
@@ -44,6 +43,7 @@ import {
   RetentionDialog,
 } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
+import { Api } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -275,8 +275,8 @@ GROUP BY 1`;
         if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
         } else if (capabilities.hasCoordinatorAccess()) {
-          const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
-          const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
+          const datasourcesResp = await Api.get('/druid/coordinator/v1/datasources?simple');
+          const loadstatusResp = await Api.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.data.map(
             (d: any): DatasourceQueryResultRow => {
@@ -320,16 +320,16 @@ GROUP BY 1`;
         if (this.state.showUnused) {
           // Using 'includeDisabled' parameter for compatibility.
           // Should be changed to 'includeUnused' in Druid 0.17
-          const unusedResp = await axios.get(
+          const unusedResp = await Api.get(
             '/druid/coordinator/v1/metadata/datasources?includeDisabled',
           );
           unused = unusedResp.data.filter((d: string) => !seen[d]);
         }
 
-        const rulesResp = await axios.get('/druid/coordinator/v1/rules');
+        const rulesResp = await Api.get('/druid/coordinator/v1/rules');
         const rules = rulesResp.data;
 
-        const compactionResp = await axios.get('/druid/coordinator/v1/config/compaction');
+        const compactionResp = await Api.get('/druid/coordinator/v1/config/compaction');
         const compaction = lookupBy(
           compactionResp.data.compactionConfigs,
           (c: any) => c.dataSource,
@@ -358,7 +358,7 @@ GROUP BY 1`;
     this.tiersQueryManager = new QueryManager({
       processQuery: async capabilities => {
         if (capabilities.hasCoordinatorAccess()) {
-          const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
+          const tiersResp = await Api.get('/druid/coordinator/v1/tiers');
           return tiersResp.data;
         } else {
           throw new Error(`must have coordinator access`);
@@ -401,7 +401,7 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.delete(
+          const resp = await Api.delete(
             `/druid/coordinator/v1/datasources/${datasourceToMarkAsUnusedAllSegmentsIn}`,
             {},
           );
@@ -432,7 +432,7 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.post(
             `/druid/coordinator/v1/datasources/${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
             {},
           );
@@ -464,7 +464,7 @@ GROUP BY 1`;
         action={async () => {
           if (!useUnuseInterval) return;
           const param = isUse ? 'markUsed' : 'markUnused';
-          const resp = await axios.post(
+          const resp = await Api.post(
             `/druid/coordinator/v1/datasources/${datasourceToMarkSegmentsByIntervalIn}/${param}`,
             {
               interval: useUnuseInterval,
@@ -506,7 +506,7 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.delete(
+          const resp = await Api.delete(
             `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
             {},
           );
@@ -554,7 +554,7 @@ GROUP BY 1`;
 
   private saveRules = async (datasource: string, rules: any[], comment: string) => {
     try {
-      await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
+      await Api.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,
@@ -595,7 +595,7 @@ GROUP BY 1`;
   private saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
-      await axios.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      await Api.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
       this.setState({ compactionDialogOpenOn: undefined });
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
@@ -617,7 +617,7 @@ GROUP BY 1`;
         text: 'Confirm',
         onClick: async () => {
           try {
-            await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
+            await Api.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
             this.setState({ compactionDialogOpenOn: undefined }, () =>
               this.datasourceQueryManager.rerunLastQuery(),
             );

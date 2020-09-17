@@ -18,7 +18,6 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -35,6 +34,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
+import { Api } from '../../singletons/api';
 import {
   addFilter,
   compact,
@@ -264,10 +264,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsNoSqlQueryManager = new QueryManager({
       processQuery: async () => {
-        const datasourceList = (await axios.get('/druid/coordinator/v1/metadata/datasources')).data;
+        const datasourceList = (await Api.get('/druid/coordinator/v1/metadata/datasources')).data;
         const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
           datasourceList.map(async (d: string) => {
-            const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
+            const segments = (await Api.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
               .segments;
 
             return segments.map((segment: any) => {
@@ -610,7 +610,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.delete(
+          const resp = await Api.delete(
             `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
             {},
           );

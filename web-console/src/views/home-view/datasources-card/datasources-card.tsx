@@ -17,10 +17,10 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons/api';
 import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
@@ -38,7 +38,7 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
           query: `SELECT datasource FROM sys.segments GROUP BY 1`,
         });
       } else if (capabilities.hasCoordinatorAccess()) {
-        const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources');
+        const datasourcesResp = await Api.get('/druid/coordinator/v1/datasources');
         datasources = datasourcesResp.data;
       } else {
         throw new Error(`must have SQL or coordinator access`);

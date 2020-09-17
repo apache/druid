@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
 import 'brace'; // Import Ace editor and all the sub components used in the app
 import 'brace/ext/language_tools';
 import 'brace/theme/solarized_dark';
@@ -30,6 +29,7 @@ import './ace-modes/hjson';
 import './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import { Links, setLinkOverrides } from './links';
+import { Api } from './singletons/api';
 import { UrlBaser } from './singletons/url-baser';
 
 import './entry.scss';
@@ -70,14 +70,14 @@ if (typeof consoleConfig.title === 'string') {
 }
 
 if (consoleConfig.baseURL) {
-  axios.defaults.baseURL = consoleConfig.baseURL;
+  Api.defaults.baseURL = consoleConfig.baseURL;
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  axios.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  Api.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
-  Object.assign(axios.defaults.headers, consoleConfig.customHeaders);
+  Object.assign(Api.defaults.headers, consoleConfig.customHeaders);
 }
 if (consoleConfig.linkOverrides) {
   setLinkOverrides(consoleConfig.linkOverrides);

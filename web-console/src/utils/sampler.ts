@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
+import { Api } from '../singletons/api';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
@@ -166,7 +166,7 @@ export function headerAndRowsFromSampleResponse(
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
-    statusResp = await axios.get(`/proxy/overlord/status`);
+    statusResp = await Api.get(`/proxy/overlord/status`);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -182,7 +182,7 @@ export async function postToSampler(
 
   let sampleResp: any;
   try {
-    sampleResp = await axios.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

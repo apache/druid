@@ -18,7 +18,6 @@
 
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 import ReactTable from 'react-table';
 
@@ -34,6 +33,7 @@ import {
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
+import { Api } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage,
@@ -97,12 +97,12 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     this.lookupsQueryManager = new QueryManager({
       processQuery: async () => {
-        const tiersResp = await axios.get('/druid/coordinator/v1/lookups/config?discover=true');
+        const tiersResp = await Api.get('/druid/coordinator/v1/lookups/config?discover=true');
         const tiers =
           tiersResp.data && tiersResp.data.length > 0 ? tiersResp.data : [DEFAULT_LOOKUP_TIER];
 
         const lookupEntries: {}[] = [];
-        const lookupResp = await axios.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.get('/druid/coordinator/v1/lookups/config/all');
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
@@ -139,7 +139,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   private async initializeLookup() {
     try {
-      await axios.post(`/druid/coordinator/v1/lookups/config`, {});
+      await Api.post(`/druid/coordinator/v1/lookups/config`, {});
       this.lookupsQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
@@ -216,7 +216,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       };
     }
     try {
-      await axios.post(endpoint, dataJson);
+      await Api.post(endpoint, dataJson);
       this.setState({
         lookupEdit: undefined,
       });
@@ -253,7 +253,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     return (
       <AsyncActionDialog
         action={async () => {
-          await axios.delete(
+          await Api.delete(
             `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
           );
         }}
