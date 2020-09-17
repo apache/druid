@@ -138,7 +138,10 @@ improve performance.
 See [Multi-value dimensions](multi-value-dimensions.html) for more details.
 
 ## More on subtotalsSpec
-The subtotals feature allows computation of multiple sub-groupings in a single query. To use this feature, add a "subtotalsSpec" to your query, which should be a list of subgroup dimension sets. It should contain the "outputName" from dimensions in your "dimensions" attribute, in the same order as they appear in the "dimensions" attribute (although, of course, you may skip some). For example, consider a groupBy query like this one:
+
+The subtotals feature allows computation of multiple sub-groupings in a single query. To use this feature, add a "subtotalsSpec" to your query as a list of subgroup dimension sets. It should contain the `outputName` from dimensions in your `dimensions` attribute, in the same order as they appear in the `dimensions` attribute (although, of course, you may skip some). 
+
+For example, consider a groupBy query like this one:
 
 ```json
 {
@@ -172,8 +175,8 @@ The subtotals feature allows computation of multiple sub-groupings in a single q
 }
 ```
 
-Response returned would be equivalent to concatenating result of 3 groupBy queries with "dimensions" field being ["D1", "D2", D3"], ["D1", "D3"] and ["D3"] with appropriate `DimensionSpec` json blob as used in above query.
-Response for above query would look something like below...
+The result of the subtotalSpec would be equivalent to concatenating the result of three groupBy queries, with the "dimensions" field being `["D1", "D2", D3"]`, `["D1", "D3"]` and `["D3"]`, given the `DimensionSpec` shown above.
+The response for the query above query would look something like: 
 
 ```json
 [
@@ -195,13 +198,13 @@ Response for above query would look something like below...
    {
     "version" : "v1",
     "timestamp" : "t1",
-    "event" : { "D1": "..", "D3": ".." }
+    "event" : { "D1": "..", "D2": null, "D3": ".." }
     }
   },
     {
     "version" : "v1",
     "timestamp" : "t2",
-    "event" : { "D1": "..", "D3": ".." }
+    "event" : { "D1": "..", "D2": null, "D3": ".." }
     }
   },
   ...
@@ -210,18 +213,21 @@ Response for above query would look something like below...
   {
     "version" : "v1",
     "timestamp" : "t1",
-    "event" : { "D3": ".." }
+    "event" : { "D1": null, "D2": null, "D3": ".." }
     }
   },
     {
     "version" : "v1",
     "timestamp" : "t2",
-    "event" : { "D3": ".." }
+    "event" : { "D1": null, "D2": null, "D3": ".." }
     }
   },
 ...
 ]
 ```
+
+> Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0. In release 0.17.0 and earlier, such dimensions were entirely excluded from the result.   
+
 
 ## Implementation details
 
