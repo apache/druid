@@ -20,6 +20,7 @@ export * from './action-cell/action-cell';
 export * from './action-icon/action-icon';
 export * from './array-input/array-input';
 export * from './auto-form/auto-form';
+export * from './braced-text/braced-text';
 export * from './center-message/center-message';
 export * from './clearable-input/clearable-input';
 export * from './external-link/external-link';

@@ -27,6 +27,7 @@ import {
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  BracedText,
   MoreButton,
   RefreshButton,
   TableColumnSelector,
@@ -39,7 +40,7 @@ import {
   compact,
   filterMap,
   formatBytes,
-  formatNumber,
+  formatInteger,
   LocalStorageKeys,
   makeBooleanFilter,
   queryDruidSql,
@@ -380,9 +381,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     } = this.state;
     const { capabilities } = this.props;
 
+    const segments = trimmedSegments || segmentsState.data || [];
+
+    const sizeValues = segments.map(d => formatBytes(d.size)).concat('(realtime)');
+
+    const numRowsValues = segments.map(d => formatInteger(d.num_rows)).concat('(unknown)');
+
     return (
       <ReactTable
-        data={trimmedSegments || segmentsState.data || []}
+        data={segments}
         pages={10000000} // Dummy, we are hiding the page selector
         loading={segmentsState.loading}
         noDataText={segmentsState.isEmpty() ? 'No segments' : segmentsState.getErrorMessage() || ''}
@@ -406,12 +413,13 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         columns={[
           {
             Header: 'Segment ID',
+            show: hiddenColumns.exists('Segment ID'),
             accessor: 'segment_id',
             width: 300,
-            show: hiddenColumns.exists('Segment ID'),
           },
           {
             Header: 'Datasource',
+            show: hiddenColumns.exists('Datasource'),
             accessor: 'datasource',
             Cell: row => {
               const value = row.value;
@@ -425,10 +433,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 </a>
               );
             },
-            show: hiddenColumns.exists('Datasource'),
           },
           {
             Header: 'Interval',
+            show: groupByInterval,
             accessor: 'interval',
             width: 120,
             defaultSortDesc: true,
@@ -444,10 +452,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 </a>
               );
             },
-            show: hiddenColumns.exists('interval') && groupByInterval,
           },
           {
             Header: 'Start',
+            show: hiddenColumns.exists('Start'),
             accessor: 'start',
             width: 120,
             defaultSortDesc: true,
@@ -463,10 +471,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 </a>
               );
             },
-            show: hiddenColumns.exists('Start'),
           },
           {
             Header: 'End',
+            show: hiddenColumns.exists('End'),
             accessor: 'end',
             defaultSortDesc: true,
             width: 120,
@@ -482,79 +490,90 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 </a>
               );
             },
-            show: hiddenColumns.exists('End'),
           },
           {
             Header: 'Version',
+            show: hiddenColumns.exists('Version'),
             accessor: 'version',
             defaultSortDesc: true,
             width: 120,
-            show: hiddenColumns.exists('Version'),
           },
           {
             Header: 'Partition',
+            show: hiddenColumns.exists('Partition'),
             accessor: 'partition_num',
             width: 60,
             filterable: false,
-            show: hiddenColumns.exists('Partition'),
           },
           {
             Header: 'Size',
+            show: hiddenColumns.exists('Size'),
             accessor: 'size',
             filterable: false,
             defaultSortDesc: true,
-            Cell: row => {
-              if (row.value === 0 && row.original.is_realtime === 1) return '(realtime)';
-              return formatBytes(row.value);
-            },
-            show: hiddenColumns.exists('Size'),
+            Cell: row => (
+              <BracedText
+                text={
+                  row.value === 0 && row.original.is_realtime === 1
+                    ? '(realtime)'
+                    : formatBytes(row.value)
+                }
+                braces={sizeValues}
+              />
+            ),
           },
           {
             Header: 'Num rows',
+            show: capabilities.hasSql() && hiddenColumns.exists('Num rows'),
             accessor: 'num_rows',
             filterable: false,
             defaultSortDesc: true,
-            Cell: row => (row.original.is_available ? formatNumber(row.value) : <em>(unknown)</em>),
-            show: capabilities.hasSql() && hiddenColumns.exists('Num rows'),
+            Cell: row => (
+              <BracedText
+                text={row.original.is_available ? formatInteger(row.value) : '(unknown)'}
+                braces={numRowsValues}
+              />
+            ),
           },
           {
             Header: 'Replicas',
+            show: capabilities.hasSql() && hiddenColumns.exists('Replicas'),
             accessor: 'num_replicas',
             width: 60,
             filterable: false,
             defaultSortDesc: true,
-            show: capabilities.hasSql() && hiddenColumns.exists('Replicas'),
           },
           {
             Header: 'Is published',
+            show: capabilities.hasSql() && hiddenColumns.exists('Is published'),
             id: 'is_published',
             accessor: row => String(Boolean(row.is_published)),
             Filter: makeBooleanFilter(),
-            show: capabilities.hasSql() && hiddenColumns.exists('Is published'),
           },
           {
             Header: 'Is realtime',
+            show: capabilities.hasSql() && hiddenColumns.exists('Is realtime'),
             id: 'is_realtime',
             accessor: row => String(Boolean(row.is_realtime)),
             Filter: makeBooleanFilter(),
-            show: capabilities.hasSql() && hiddenColumns.exists('Is realtime'),
           },
           {
             Header: 'Is available',
+            show: capabilities.hasSql() && hiddenColumns.exists('Is available'),
             id: 'is_available',
             accessor: row => String(Boolean(row.is_available)),
             Filter: makeBooleanFilter(),
-            show: capabilities.hasSql() && hiddenColumns.exists('Is available'),
           },
           {
             Header: 'Is overshadowed',
+            show: capabilities.hasSql() && hiddenColumns.exists('Is overshadowed'),
             id: 'is_overshadowed',
             accessor: row => String(Boolean(row.is_overshadowed)),
             Filter: makeBooleanFilter(),
-            show: capabilities.hasSql() && hiddenColumns.exists('Is overshadowed'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
+            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             accessor: 'segment_id',
             width: ACTION_COLUMN_WIDTH,
@@ -577,7 +596,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               );
             },
             Aggregated: () => '',
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
         defaultPageSize={SegmentsView.PAGE_SIZE}

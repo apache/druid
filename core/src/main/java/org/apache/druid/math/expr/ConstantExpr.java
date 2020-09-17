@@ -35,6 +35,20 @@ import java.util.Objects;
  */
 abstract class ConstantExpr implements Expr
 {
+  final ExprType outputType;
+
+  protected ConstantExpr(ExprType outputType)
+  {
+    this.outputType = outputType;
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return outputType;
+  }
+
   @Override
   public boolean isLiteral()
   {
@@ -54,9 +68,9 @@ abstract class ConstantExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    return new BindingDetails();
+    return new BindingAnalysis();
   }
 
   @Override
@@ -71,6 +85,11 @@ abstract class ConstantExpr implements Expr
  */
 abstract class NullNumericConstantExpr extends ConstantExpr
 {
+  protected NullNumericConstantExpr(ExprType outputType)
+  {
+    super(outputType);
+  }
+
   @Override
   public Object getLiteralValue()
   {
@@ -82,6 +101,8 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   {
     return NULL_LITERAL;
   }
+
+
 }
 
 class LongExpr extends ConstantExpr
@@ -90,6 +111,7 @@ class LongExpr extends ConstantExpr
 
   LongExpr(Long value)
   {
+    super(ExprType.LONG);
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
@@ -133,6 +155,11 @@ class LongExpr extends ConstantExpr
 
 class NullLongExpr extends NullNumericConstantExpr
 {
+  NullLongExpr()
+  {
+    super(ExprType.LONG);
+  }
+
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -158,6 +185,7 @@ class LongArrayExpr extends ConstantExpr
 
   LongArrayExpr(Long[] value)
   {
+    super(ExprType.LONG_ARRAY);
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
@@ -215,6 +243,7 @@ class StringExpr extends ConstantExpr
 
   StringExpr(@Nullable String value)
   {
+    super(ExprType.STRING);
     this.value = NullHandling.emptyToNullIfNeeded(value);
   }
 
@@ -270,6 +299,7 @@ class StringArrayExpr extends ConstantExpr
 
   StringArrayExpr(String[] value)
   {
+    super(ExprType.STRING_ARRAY);
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
@@ -338,6 +368,7 @@ class DoubleExpr extends ConstantExpr
 
   DoubleExpr(Double value)
   {
+    super(ExprType.DOUBLE);
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
@@ -381,6 +412,11 @@ class DoubleExpr extends ConstantExpr
 
 class NullDoubleExpr extends NullNumericConstantExpr
 {
+  NullDoubleExpr()
+  {
+    super(ExprType.DOUBLE);
+  }
+
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -406,6 +442,7 @@ class DoubleArrayExpr extends ConstantExpr
 
   DoubleArrayExpr(Double[] value)
   {
+    super(ExprType.DOUBLE_ARRAY);
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
