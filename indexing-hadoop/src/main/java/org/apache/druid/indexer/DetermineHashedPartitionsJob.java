@@ -176,7 +176,6 @@ public class DetermineHashedPartitionsJob implements Jobby
       HashPartitionFunction partitionFunction = partitionsSpec instanceof HashedPartitionsSpec
                                                 ? ((HashedPartitionsSpec) partitionsSpec).getPartitionFunction()
                                                 : null;
-      partitionFunction = partitionFunction == null ? HashPartitionFunction.MURMUR3_32_ABS : partitionFunction;
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();

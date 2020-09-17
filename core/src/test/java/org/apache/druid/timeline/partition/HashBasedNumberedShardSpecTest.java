@@ -81,7 +81,7 @@ public class HashBasedNumberedShardSpecTest
     Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
     Assert.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
-        ((HashBasedNumberedShardSpec) spec).getHashPartitionFunction()
+        ((HashBasedNumberedShardSpec) spec).getPartitionFunction()
     );
   }
 
@@ -106,7 +106,7 @@ public class HashBasedNumberedShardSpecTest
         ImmutableList.of("visitor_id"),
         ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionDimensions()
     );
-    Assert.assertNull(((HashBasedNumberedShardSpec) specWithPartitionDimensions).getHashPartitionFunction());
+    Assert.assertNull(((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionFunction());
   }
 
   @Test

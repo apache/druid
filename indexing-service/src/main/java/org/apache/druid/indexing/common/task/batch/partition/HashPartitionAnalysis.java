@@ -25,7 +25,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
-import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -97,9 +96,6 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
     final Map<Interval, List<BucketNumberedShardSpec<?>>> intervalToLookup = Maps.newHashMapWithExpectedSize(
         intervalToNumBuckets.size()
     );
-    final HashPartitionFunction partitionFunction = partitionsSpec.getPartitionFunction() == null
-                                                    ? HashPartitionFunction.MURMUR3_32_ABS
-                                                    : partitionsSpec.getPartitionFunction();
     forEach((interval, numBuckets) -> {
       final List<BucketNumberedShardSpec<?>> buckets = IntStream
           .range(0, numBuckets)
@@ -107,7 +103,7 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
               i,
               numBuckets,
               partitionsSpec.getPartitionDimensions(),
-              partitionFunction,
+              partitionsSpec.getPartitionFunction(),
               toolbox.getJsonMapper()
           ))
           .collect(Collectors.toList());

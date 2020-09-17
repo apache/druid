@@ -59,7 +59,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
    * hash function is backward-compatible. The query will process all segments if this function is null.
    */
   @Nullable
-  private final HashPartitionFunction hashPartitionFunction;
+  private final HashPartitionFunction partitionFunction;
 
   @JsonCreator
   public HashBasedNumberedShardSpec(
@@ -68,7 +68,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       @JsonProperty("bucketId") @Nullable Integer bucketId, // nullable for backward compatibility
       @JsonProperty("numBuckets") @Nullable Integer numBuckets, // nullable for backward compatibility
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
-      @JsonProperty("hashPartitionFunction") @Nullable HashPartitionFunction hashPartitionFunction,
+      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -79,7 +79,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     // Use the core partition set size as the number of buckets.
     this.numBuckets = numBuckets == null ? partitions : numBuckets;
     this.partitionDimensions = partitionDimensions == null ? DEFAULT_PARTITION_DIMENSIONS : partitionDimensions;
-    this.hashPartitionFunction = hashPartitionFunction;
+    this.partitionFunction = partitionFunction;
     this.jsonMapper = jsonMapper;
   }
 
@@ -102,9 +102,9 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @JsonProperty
-  public @Nullable HashPartitionFunction getHashPartitionFunction()
+  public @Nullable HashPartitionFunction getPartitionFunction()
   {
-    return hashPartitionFunction;
+    return partitionFunction;
   }
 
   @Override
@@ -118,7 +118,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   {
     return new HashPartitioner(
         jsonMapper,
-        hashPartitionFunction,
+        partitionFunction,
         partitionDimensions,
         numBuckets
     ).createHashLookup(shardSpecs);
@@ -130,7 +130,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     // hashPartitionFunction should be used instead of HashPartitioner at query time.
     // We should process all segments if hashPartitionFunction is null because we don't know what hash function
     // was used to create segments at ingestion time.
-    if (hashPartitionFunction == null) {
+    if (partitionFunction == null) {
       return true;
     }
 
@@ -162,7 +162,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       }
     }
 
-    return !domainSet.isEmpty() && chunkPossibleInDomain(hashPartitionFunction, domainSet, new HashMap<>());
+    return !domainSet.isEmpty() && chunkPossibleInDomain(partitionFunction, domainSet, new HashMap<>());
   }
 
   /**
@@ -250,13 +250,13 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return bucketId == that.bucketId &&
            numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions) &&
-           hashPartitionFunction == that.hashPartitionFunction;
+           partitionFunction == that.partitionFunction;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), bucketId, numBuckets, partitionDimensions, hashPartitionFunction);
+    return Objects.hash(super.hashCode(), bucketId, numBuckets, partitionDimensions, partitionFunction);
   }
 
   @Override
@@ -266,7 +266,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
            "bucketId=" + bucketId +
            ", numBuckets=" + numBuckets +
            ", partitionDimensions=" + partitionDimensions +
-           ", hashPartitionFunction=" + hashPartitionFunction +
+           ", partitionFunction=" + partitionFunction +
            '}';
   }
 }

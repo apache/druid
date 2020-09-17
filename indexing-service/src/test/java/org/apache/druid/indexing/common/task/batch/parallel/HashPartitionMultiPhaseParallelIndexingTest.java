@@ -45,6 +45,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -140,7 +141,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         TaskState.SUCCESS,
         false
     );
-    assertHashedPartition(publishedSegments);
+    assertHashedPartition(publishedSegments, null);
   }
 
   @Test
@@ -151,7 +152,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         TaskState.SUCCESS,
         false
     );
-    assertHashedPartition(publishedSegments);
+    assertHashedPartition(publishedSegments, HashPartitionFunction.MURMUR3_32_ABS);
   }
 
   @Test
@@ -247,7 +248,10 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     }
   }
 
-  private void assertHashedPartition(Set<DataSegment> publishedSegments) throws IOException
+  private void assertHashedPartition(
+      Set<DataSegment> publishedSegments,
+      @Nullable HashPartitionFunction expectedPartitionFunction
+  ) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
@@ -259,7 +263,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       for (DataSegment segment : segmentsInInterval) {
         Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
         final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-        Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getHashPartitionFunction());
+        Assert.assertEquals(expectedPartitionFunction, shardSpec.getPartitionFunction());
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
         final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
             HashBasedNumberedShardSpec.serializeGroupKey(
