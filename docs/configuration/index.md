@@ -337,7 +337,7 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, dynami
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.audit.manager.auditHistoryMillis`|Default duration for querying audit history.|1 week|
-|`druid.audit.manager.addPayloadToAuditMetricDimension`|Boolean flag on whether to add `payload` column in service metric.|false|
+|`druid.audit.manager.includePayloadAsDimensionInMetric`|Boolean flag on whether to add `payload` column in service metric.|false|
 
 ### Enabling Metrics
 

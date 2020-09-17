@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.audit;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -29,15 +30,25 @@ public class SQLAuditManagerConfig
   private long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
 
   @JsonProperty
-  private boolean addPayloadToAuditMetricDimension = false;
+  private boolean includePayloadAsDimensionInMetric = false;
+
+  @JsonCreator
+  public SQLAuditManagerConfig(
+          @JsonProperty("auditHistoryMillis") long auditHistoryMillis,
+          @JsonProperty("includePayloadAsDimensionInMetric") boolean includePayloadAsDimensionInMetric
+  )
+  {
+    this.auditHistoryMillis = auditHistoryMillis;
+    this.includePayloadAsDimensionInMetric = includePayloadAsDimensionInMetric;
+  }
 
   public long getAuditHistoryMillis()
   {
     return auditHistoryMillis;
   }
 
-  public boolean getAddPayloadToAuditMetricDimension()
+  public boolean getIncludePayloadAsDimensionInMetric()
   {
-    return addPayloadToAuditMetricDimension;
+    return includePayloadAsDimensionInMetric;
   }
 }
