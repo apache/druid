@@ -68,7 +68,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       @JsonProperty("bucketId") @Nullable Integer bucketId, // nullable for backward compatibility
       @JsonProperty("numBuckets") @Nullable Integer numBuckets, // nullable for backward compatibility
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
-      @JsonProperty("hashPartitionFunctions") @Nullable HashPartitionFunction hashPartitionFunction,
+      @JsonProperty("hashPartitionFunction") @Nullable HashPartitionFunction hashPartitionFunction,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -102,8 +102,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @JsonProperty
-  @Nullable
-  public HashPartitionFunction getHashPartitionFunction()
+  public @Nullable HashPartitionFunction getHashPartitionFunction()
   {
     return hashPartitionFunction;
   }

@@ -88,6 +88,8 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
     Checks.checkAtMostOneNotNull(target, new Property<>(NUM_SHARDS, adjustedNumShards));
 
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
+    // partitionsSpec is stored in DataSegment#lastCompactionState. Since we should be able to tell segments
+    // compacted with partitionFunction and without it, we cannot set a default value here.
     this.partitionFunction = partitionFunction;
     this.numShards = adjustedNumShards;
 
@@ -110,6 +112,16 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
         "numShards[%s] should be positive",
         this.numShards
     );
+  }
+
+  public HashedPartitionsSpec(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Integer numShards,
+      @Nullable List<String> partitionDimensions,
+      @Nullable HashPartitionFunction partitionFunction
+  )
+  {
+    this(null, numShards, partitionDimensions, partitionFunction, maxRowsPerSegment, null);
   }
 
   public HashedPartitionsSpec(

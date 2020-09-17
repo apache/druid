@@ -260,7 +260,7 @@ The three `partitionsSpec` types have different characteristics.
 | PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Segment pruning at query time |
 |----------------|-----------------|---------------------|-----------------------|-------------------------------|
 | `dynamic` | Fastest  | Partitioning based on number of rows in segment. | Best-effort rollup | N/A |
-| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries if `partitionDimensions` is explicitly specified during ingestion. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing. |
+| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries if `partitionDimensions` is explicitly specified during ingestion. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` and `partitionFunction` must be set to enable segment pruning.|
 | `single_dim` | Slowest | Range partitioning based on the value of the partition dimension. Segment sizes may be skewed depending on the partition key distribution. This may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
 
 The recommended use case for each partitionsSpec is:
@@ -296,6 +296,7 @@ How the worker task creates segments is:
 |type|This should always be `hashed`|none|yes|
 |numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|yes|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
 
 The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
 The task runs in 2 phases, i.e., `partial segment generation` and `partial segment merge`.
@@ -313,10 +314,21 @@ the time chunk and the hash value of `partitionDimensions` to be merged; each wo
 falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges
 them to create the final segments. Finally, they push the final segments to the deep storage at once.
 
+##### Hash partition function
+
+In hash partitioning, the partition function is used to compute hash of partition dimensions. The partition dimension
+values are first serialized into a byte array as a whole, and then the partition function is applied to compute hash of
+the byte array.
+Druid currently supports only one partition function.
+
+|name|description|
+|----|-----------|
+|`murmur3_32_abs`|Applies an absolute value function to the result of [`murmur3_32`](https://guava.dev/releases/16.0/api/docs/com/google/common/hash/Hashing.html#murmur3_32()).|
+
 #### Single-dimension range partitioning
 
 > Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
-Try set `maxNumConcurrentSubTasks` to larger than 1 to use this partitioning.
+The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -737,6 +749,7 @@ For perfect rollup, you should use `hashed`.
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
 
 For best-effort rollup, you should use `dynamic`.
 

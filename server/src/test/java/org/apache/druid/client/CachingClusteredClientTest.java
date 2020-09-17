@@ -1551,7 +1551,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testHashBasedPruningQueryContextEnabled()
+  public void testHashBasedPruningQueryContextEnabledWithPartitionFunctionAndPartitionDimensionsDoSegmentPruning()
   {
     DimFilter filter = new AndDimFilter(
         new SelectorDimFilter("dim1", "a", null),
@@ -1584,23 +1584,101 @@ public class CachingClusteredClientTest
 
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     List<String> partitionDimensions1 = ImmutableList.of("dim1");
-    ServerSelector selector1 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 0, 6);
-    ServerSelector selector2 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 1, 6);
-    ServerSelector selector3 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 2, 6);
-    ServerSelector selector4 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 3, 6);
-    ServerSelector selector5 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 4, 6);
-    ServerSelector selector6 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 5, 6);
+    ServerSelector selector1 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions1,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        0,
+        6
+    );
+    ServerSelector selector2 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions1,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        1,
+        6
+    );
+    ServerSelector selector3 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions1,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        2,
+        6
+    );
+    ServerSelector selector4 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions1,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        3,
+        6
+    );
+    ServerSelector selector5 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions1,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        4,
+        6
+    );
+    ServerSelector selector6 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions1,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        5,
+        6
+    );
 
     List<String> partitionDimensions2 = ImmutableList.of("dim2");
-    ServerSelector selector7 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 0, 3);
-    ServerSelector selector8 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 1, 3);
-    ServerSelector selector9 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 2, 3);
+    ServerSelector selector7 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions2,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        0,
+        3
+    );
+    ServerSelector selector8 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions2,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        1,
+        3
+    );
+    ServerSelector selector9 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions2,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        2,
+        3
+    );
 
     List<String> partitionDimensions3 = ImmutableList.of("dim1", "dim3");
-    ServerSelector selector10 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 0, 4);
-    ServerSelector selector11 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 1, 4);
-    ServerSelector selector12 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 2, 4);
-    ServerSelector selector13 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 3, 4);
+    ServerSelector selector10 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions3,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        0,
+        4
+    );
+    ServerSelector selector11 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions3,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        1,
+        4
+    );
+    ServerSelector selector12 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions3,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        2,
+        4
+    );
+    ServerSelector selector13 = makeMockHashBasedSelector(
+        lastServer,
+        partitionDimensions3,
+        HashPartitionFunction.MURMUR3_32_ABS,
+        3,
+        4
+    );
 
     timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 6, selector1));
     timeline.add(interval1, "v", new NumberedPartitionChunk<>(1, 6, selector2));
@@ -1650,6 +1728,27 @@ public class CachingClusteredClientTest
   @Test
   public void testHashBasedPruningQueryContextDisabledNoSegmentPruning()
   {
+    testNoSegmentPruningForHashPartitionedSegments(false, HashPartitionFunction.MURMUR3_32_ABS, false);
+  }
+
+  @Test
+  public void testHashBasedPruningWithoutPartitionFunctionNoSegmentPruning()
+  {
+    testNoSegmentPruningForHashPartitionedSegments(true, null, false);
+  }
+
+  @Test
+  public void testHashBasedPruningWithEmptyPartitionDimensionsNoSegmentPruning()
+  {
+    testNoSegmentPruningForHashPartitionedSegments(true, HashPartitionFunction.MURMUR3_32_ABS, true);
+  }
+
+  private void testNoSegmentPruningForHashPartitionedSegments(
+      boolean enableSegmentPruning,
+      @Nullable HashPartitionFunction partitionFunction,
+      boolean useEmptyPartitionDimensions
+  )
+  {
     DimFilter filter = new AndDimFilter(
         new SelectorDimFilter("dim1", "a", null),
         new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC),
@@ -1661,7 +1760,7 @@ public class CachingClusteredClientTest
     );
 
     final Map<String, Object> context = new HashMap<>(CONTEXT);
-    context.put(QueryContexts.SEGMENT_PRUNING_KEY, false);
+    context.put(QueryContexts.SEGMENT_PRUNING_KEY, enableSegmentPruning);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .filters(filter)
@@ -1682,24 +1781,42 @@ public class CachingClusteredClientTest
     final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
 
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
-    List<String> partitionDimensions = ImmutableList.of("dim1");
+    List<String> partitionDimensions = useEmptyPartitionDimensions ? ImmutableList.of() : ImmutableList.of("dim1");
     final int numPartitions1 = 6;
     for (int i = 0; i < numPartitions1; i++) {
-      ServerSelector selector = makeMockHashBasedSelector(lastServer, partitionDimensions, i, numPartitions1);
+      ServerSelector selector = makeMockHashBasedSelector(
+          lastServer,
+          partitionDimensions,
+          partitionFunction,
+          i,
+          numPartitions1
+      );
       timeline.add(interval1, "v", new NumberedPartitionChunk<>(i, numPartitions1, selector));
     }
 
-    partitionDimensions = ImmutableList.of("dim2");
+    partitionDimensions = useEmptyPartitionDimensions ? ImmutableList.of() : ImmutableList.of("dim2");
     final int numPartitions2 = 3;
     for (int i = 0; i < numPartitions2; i++) {
-      ServerSelector selector = makeMockHashBasedSelector(lastServer, partitionDimensions, i, numPartitions2);
+      ServerSelector selector = makeMockHashBasedSelector(
+          lastServer,
+          partitionDimensions,
+          partitionFunction,
+          i,
+          numPartitions2
+      );
       timeline.add(interval2, "v", new NumberedPartitionChunk<>(i, numPartitions2, selector));
     }
 
-    partitionDimensions = ImmutableList.of("dim1", "dim3");
+    partitionDimensions = useEmptyPartitionDimensions ? ImmutableList.of() : ImmutableList.of("dim1", "dim3");
     final int numPartitions3 = 4;
     for (int i = 0; i < numPartitions3; i++) {
-      ServerSelector selector = makeMockHashBasedSelector(lastServer, partitionDimensions, i, numPartitions3);
+      ServerSelector selector = makeMockHashBasedSelector(
+          lastServer,
+          partitionDimensions,
+          partitionFunction,
+          i,
+          numPartitions3
+      );
       timeline.add(interval3, "v", new NumberedPartitionChunk<>(i, numPartitions3, selector));
     }
 
@@ -1734,6 +1851,7 @@ public class CachingClusteredClientTest
   private ServerSelector makeMockHashBasedSelector(
       DruidServer server,
       List<String> partitionDimensions,
+      @Nullable HashPartitionFunction partitionFunction,
       int partitionNum,
       int partitions
   )
@@ -1749,7 +1867,7 @@ public class CachingClusteredClientTest
             partitionNum,
             partitions,
             partitionDimensions,
-            HashPartitionFunction.MURMUR3_32_ABS,
+            partitionFunction,
             ServerTestHelper.MAPPER
         ),
         null,

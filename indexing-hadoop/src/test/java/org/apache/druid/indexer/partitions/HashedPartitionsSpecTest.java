@@ -38,6 +38,16 @@ public class HashedPartitionsSpecTest
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
+  public void testDefaultValues()
+  {
+    final HashedPartitionsSpec defaultSpec = HashedPartitionsSpec.defaultSpec();
+    Assert.assertEquals(Collections.emptyList(), defaultSpec.getPartitionDimensions());
+    Assert.assertNull(defaultSpec.getPartitionFunction());
+    Assert.assertNull(defaultSpec.getNumShards());
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, defaultSpec.getMaxRowsPerSegment().intValue());
+  }
+
+  @Test
   public void havingTargetRowsPerSegmentOnly()
   {
     final HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(

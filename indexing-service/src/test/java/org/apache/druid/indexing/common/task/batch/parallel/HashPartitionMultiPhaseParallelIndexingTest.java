@@ -144,6 +144,17 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   }
 
   @Test
+  public void testRunWithHashPartitionFunction() throws Exception
+  {
+    final Set<DataSegment> publishedSegments = runTestTask(
+        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2"), HashPartitionFunction.MURMUR3_32_ABS),
+        TaskState.SUCCESS,
+        false
+    );
+    assertHashedPartition(publishedSegments);
+  }
+
+  @Test
   public void testAppendLinearlyPartitionedSegmensToHashPartitionedDatasourceSuccessfullyAppend()
   {
     final Set<DataSegment> publishedSegments = new HashSet<>();
@@ -248,6 +259,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       for (DataSegment segment : segmentsInInterval) {
         Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
         final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+        Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getHashPartitionFunction());
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
         final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
             HashBasedNumberedShardSpec.serializeGroupKey(

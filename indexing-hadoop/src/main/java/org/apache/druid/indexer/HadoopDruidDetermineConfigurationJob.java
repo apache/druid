@@ -68,7 +68,9 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
         shardsPerInterval = PartitionsSpec.isEffectivelyNull(hashedPartitionsSpec.getNumShards())
                             ? 1
                             : hashedPartitionsSpec.getNumShards();
-        partitionFunction = hashedPartitionsSpec.getPartitionFunction();
+        partitionFunction = hashedPartitionsSpec.getPartitionFunction() == null
+                            ? HashPartitionFunction.MURMUR3_32_ABS
+                            : hashedPartitionsSpec.getPartitionFunction();
       } else {
         shardsPerInterval = 1;
         partitionFunction = null;

@@ -68,7 +68,7 @@ public class HashBasedNumberedShardSpecTest
                 1,
                 3,
                 ImmutableList.of("visitor_id"),
-                null,
+                HashPartitionFunction.MURMUR3_32_ABS,
                 objectMapper
             )
         ),
@@ -79,6 +79,10 @@ public class HashBasedNumberedShardSpecTest
     Assert.assertEquals(1, ((HashBasedNumberedShardSpec) spec).getBucketId());
     Assert.assertEquals(3, ((HashBasedNumberedShardSpec) spec).getNumBuckets());
     Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) spec).getHashPartitionFunction()
+    );
   }
 
   @Test
@@ -102,6 +106,7 @@ public class HashBasedNumberedShardSpecTest
         ImmutableList.of("visitor_id"),
         ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionDimensions()
     );
+    Assert.assertNull(((HashBasedNumberedShardSpec) specWithPartitionDimensions).getHashPartitionFunction());
   }
 
   @Test
