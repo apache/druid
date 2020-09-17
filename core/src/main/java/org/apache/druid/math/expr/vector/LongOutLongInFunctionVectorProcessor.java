@@ -21,40 +21,33 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExprType;
 
-public abstract class DoublesBivariateFunctionVectorProcessor extends BivariateFunctionVectorProcessor<double[], double[], double[]>
+/**
+ * specialized {@link UnivariateFunctionVectorProcessor} for processing (long[]) -> long[]
+ */
+public abstract class LongOutLongInFunctionVectorProcessor extends UnivariateFunctionVectorProcessor<long[], long[]>
 {
-  public DoublesBivariateFunctionVectorProcessor(
-      VectorExprProcessor<double[]> left,
-      VectorExprProcessor<double[]> right,
-      int maxVectorSize
-  )
+  public LongOutLongInFunctionVectorProcessor(VectorExprProcessor<long[]> processor, int maxVectorSize)
   {
-    super(left, right, maxVectorSize, new double[maxVectorSize]);
+    super(processor, maxVectorSize, new long[maxVectorSize]);
   }
 
-  public abstract double apply(double left, double right);
+  public abstract long apply(long input);
 
   @Override
   public ExprType getOutputType()
   {
-    return ExprType.DOUBLE;
+    return ExprType.LONG;
   }
 
   @Override
-  final void processIndex(double[] leftInput, double[] rightInput, int i)
+  final void processIndex(long[] input, int i)
   {
-    outValues[i] = apply(leftInput[i], rightInput[i]);
+    outValues[i] = apply(input[i]);
   }
 
   @Override
-  void processNull(int i)
+  final VectorExprEval<long[]> asEval()
   {
-    outValues[i] = 0;
-  }
-
-  @Override
-  final VectorExprEval<double[]> asEval()
-  {
-    return new DoubleVectorExprEval(outValues, outNulls);
+    return new LongVectorExprEval(outValues, outNulls);
   }
 }

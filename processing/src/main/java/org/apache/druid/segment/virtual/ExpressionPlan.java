@@ -128,11 +128,6 @@ public class ExpressionPlan
     return any(traits, flags);
   }
 
-  public boolean none(Trait... flags)
-  {
-    return none(traits, flags);
-  }
-
   @Nullable
   public ExprType getOutputType()
   {
@@ -153,11 +148,6 @@ public class ExpressionPlan
   public Set<String> getUnknownInputs()
   {
     return unknownInputs;
-  }
-
-  public List<String> getUnappliedInputs()
-  {
-    return unappliedInputs;
   }
 
   static boolean is(EnumSet<Trait> traits, Trait... args)

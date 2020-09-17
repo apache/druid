@@ -21,6 +21,10 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
 
+/**
+ * common machinery for processing single input operators and functions, which are backed by an object value instead of
+ * a primitive value (so do not need to use the null vector, and instead can check the value vector itself for nulls)
+ */
 public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> implements VectorExprProcessor<TOutput>
 {
   final VectorExprProcessor<TInput> processor;

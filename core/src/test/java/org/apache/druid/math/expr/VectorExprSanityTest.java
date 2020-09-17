@@ -60,6 +60,79 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
       .put("s2", ExprType.STRING)
       .build();
 
+  @Test
+  public void testUnaryOperators()
+  {
+    final String[] functions = new String[]{"-"};
+    final String[] templates = new String[]{"%sd1", "%sl1"};
+
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testBinaryOperators()
+  {
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
+    final String[][] templateInputs = makeTemplateArgs(columns, columns);
+    final String[] templates =
+        Arrays.stream(templateInputs)
+              .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
+              .toArray(String[]::new);
+    final String[] args = new String[]{"+", "-", "*", "/", "^", "%", ">", ">=", "<", "<=", "==", "!="};
+
+    testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testBinaryOperatorTrees()
+  {
+    final String[] columns = new String[]{"d1", "l1", "1", "1.0"};
+    final String[] columns2 = new String[]{"d2", "l2", "2", "2.0"};
+    final String[][] templateInputs = makeTemplateArgs(columns, columns2, columns);
+    final String[] templates =
+        Arrays.stream(templateInputs)
+              .map(i -> StringUtils.format("(%s %s %s) %s %s", i[0], "%s", i[1], "%s", i[2]))
+              .toArray(String[]::new);
+    final String[] ops = new String[]{"+", "-", "*", "/"};
+    final String[][] args = makeTemplateArgs(ops, ops);
+    testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testUnivariateFunctions()
+  {
+    final String[] functions = new String[]{"parse_long"};
+    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)"};
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testUnivariateMathFunctions()
+  {
+    final String[] functions = new String[]{"atan", "cos", "cosh", "cot", "sin", "sinh", "tan", "tanh"};
+    final String[] templates = new String[]{"%s(l1)", "%s(d1)"};
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testBivariateMathFunctions()
+  {
+    final String[] functions = new String[]{"max", "min", "pow"};
+    final String[] templates = new String[]{"%s(d1, d2)", "%s(d1, l1)", "%s(l1, d1)", "%s(l1, l2)"};
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testCast()
+  {
+    final String[] columns = new String[]{"d1", "l1", "s1"};
+    final String[] castTo = new String[]{"'STRING'", "'LONG'", "'DOUBLE'"};
+    final String[][] args = makeTemplateArgs(columns, castTo);
+    final String[] templates = new String[]{"cast(%s, %s)"};
+    testFunctions(types, templates, args);
+  }
+
+
   static void testFunctions(Map<String, ExprType> types, String[] templates, String[] args)
   {
     for (String template : templates) {
@@ -258,78 +331,6 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
                               Arrays.stream(arg2).flatMap(a2 -> Arrays.stream(arg3).map(a3 -> new String[]{a1, a2, a3}))
                  )
                  .toArray(String[][]::new);
-  }
-
-  @Test
-  public void testUnaryOperators()
-  {
-    final String[] functions = new String[]{"-"};
-    final String[] templates = new String[]{"%sd1", "%sl1"};
-
-    testFunctions(types, templates, functions);
-  }
-
-  @Test
-  public void testBinaryOperators()
-  {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns);
-    final String[] templates =
-        Arrays.stream(templateInputs)
-              .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
-              .toArray(String[]::new);
-    final String[] args = new String[]{"+", "-", "*", "/", "^", "%", ">", ">=", "<", "<=", "==", "!="};
-
-    testFunctions(types, templates, args);
-  }
-
-  @Test
-  public void testBinaryOperatorTrees()
-  {
-    final String[] columns = new String[]{"d1", "l1", "1", "1.0"};
-    final String[] columns2 = new String[]{"d2", "l2", "2", "2.0"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns2, columns);
-    final String[] templates =
-        Arrays.stream(templateInputs)
-              .map(i -> StringUtils.format("(%s %s %s) %s %s", i[0], "%s", i[1], "%s", i[2]))
-              .toArray(String[]::new);
-    final String[] ops = new String[]{"+", "-", "*", "/"};
-    final String[][] args = makeTemplateArgs(ops, ops);
-    testFunctions(types, templates, args);
-  }
-
-  @Test
-  public void testUnivariateFunctions()
-  {
-    final String[] functions = new String[]{"parse_long"};
-    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)"};
-    testFunctions(types, templates, functions);
-  }
-
-  @Test
-  public void testUnivariateMathFunctions()
-  {
-    final String[] functions = new String[]{"atan", "cos", "cosh", "cot", "sin", "sinh", "tan", "tanh"};
-    final String[] templates = new String[]{"%s(l1)", "%s(d1)"};
-    testFunctions(types, templates, functions);
-  }
-
-  @Test
-  public void testBivariateMathFunctions()
-  {
-    final String[] functions = new String[]{"max", "min"};
-    final String[] templates = new String[]{"%s(d1, d2)", "%s(d1, l1)", "%s(l1, d1)", "%s(l1, l2)"};
-    testFunctions(types, templates, functions);
-  }
-
-  @Test
-  public void testCast()
-  {
-    final String[] columns = new String[]{"d1", "l1", "s1"};
-    final String[] castTo = new String[]{"'STRING'", "'LONG'", "'DOUBLE'"};
-    final String[][] args = makeTemplateArgs(columns, castTo);
-    final String[] templates = new String[]{"cast(%s, %s)"};
-    testFunctions(types, templates, args);
   }
 
   static class SettableObjectBinding implements Expr.ObjectBinding

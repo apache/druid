@@ -21,9 +21,13 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExprType;
 
-public abstract class DoubleUnivariateFunctionVectorProcessor extends UnivariateFunctionVectorProcessor<double[], double[]>
+/**
+ * specialized {@link UnivariateFunctionVectorProcessor} for processing (double[]) -> double[]
+ */
+public abstract class DoubleOutDoubleInFunctionVectorProcessor
+    extends UnivariateFunctionVectorProcessor<double[], double[]>
 {
-  public DoubleUnivariateFunctionVectorProcessor(VectorExprProcessor<double[]> processor, int maxVectorSize)
+  public DoubleOutDoubleInFunctionVectorProcessor(VectorExprProcessor<double[]> processor, int maxVectorSize)
   {
     super(processor, maxVectorSize, new double[maxVectorSize]);
   }

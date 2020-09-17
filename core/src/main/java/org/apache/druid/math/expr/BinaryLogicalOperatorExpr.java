@@ -21,10 +21,10 @@ package org.apache.druid.math.expr;
 
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.vector.BivariateFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleDoubleLongBivariateFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleLongDoubleBivariateFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoublesBivariateFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.LongsBivariateFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleOutDoubleLongInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleOutDoublesInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleOutLongDoubleInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongOutLongsInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nullable;
@@ -90,7 +90,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
     if (ExprType.LONG.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new LongsBivariateFunctionVectorProcessor(
+        processor = new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -103,7 +103,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleLongDoubleBivariateFunctionVectorProcessor(
+        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -118,7 +118,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
       }
     } else if (ExprType.DOUBLE.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleDoubleLongBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -131,7 +131,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoublesBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoublesInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -211,7 +211,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
     if (ExprType.LONG.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new LongsBivariateFunctionVectorProcessor(
+        processor = new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -224,7 +224,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleLongDoubleBivariateFunctionVectorProcessor(
+        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -239,7 +239,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
       }
     } else if (ExprType.DOUBLE.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleDoubleLongBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -252,7 +252,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoublesBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoublesInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -331,7 +331,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
     if (ExprType.LONG.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new LongsBivariateFunctionVectorProcessor(
+        processor = new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -344,7 +344,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleLongDoubleBivariateFunctionVectorProcessor(
+        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -359,7 +359,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
       }
     } else if (ExprType.DOUBLE.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleDoubleLongBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -372,7 +372,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoublesBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoublesInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -452,7 +452,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
     if (ExprType.LONG.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new LongsBivariateFunctionVectorProcessor(
+        processor = new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -465,7 +465,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleLongDoubleBivariateFunctionVectorProcessor(
+        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -480,7 +480,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
       }
     } else if (ExprType.DOUBLE.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleDoubleLongBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -493,7 +493,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoublesBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoublesInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -572,7 +572,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
     if (ExprType.LONG.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new LongsBivariateFunctionVectorProcessor(
+        processor = new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -585,7 +585,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleLongDoubleBivariateFunctionVectorProcessor(
+        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -600,7 +600,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
       }
     } else if (ExprType.DOUBLE.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleDoubleLongBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -613,7 +613,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoublesBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoublesInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -692,7 +692,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
     if (ExprType.LONG.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new LongsBivariateFunctionVectorProcessor(
+        processor = new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -705,7 +705,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleLongDoubleBivariateFunctionVectorProcessor(
+        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -720,7 +720,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
       }
     } else if (ExprType.DOUBLE.equals(leftType)) {
       if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleDoubleLongBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize
@@ -733,7 +733,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
           }
         };
       } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoublesBivariateFunctionVectorProcessor(
+        processor = new DoubleOutDoublesInFunctionVectorProcessor(
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes),
             maxVectorSize

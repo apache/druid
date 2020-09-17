@@ -27,7 +27,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
-import org.apache.druid.math.expr.vector.LongUnivariateFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nonnull;
@@ -133,7 +133,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
     {
       VectorExprProcessor<?> processor;
-      processor = new LongUnivariateFunctionVectorProcessor(
+      processor = new LongOutLongInFunctionVectorProcessor(
           CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.LONG),
           inputTypes.getMaxVectorSize()
       )

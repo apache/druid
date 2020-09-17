@@ -21,14 +21,16 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExprType;
 
-public abstract class LongUnivariateFunctionVectorProcessor extends UnivariateFunctionVectorProcessor<long[], long[]>
+/**
+ * specialized {@link UnivariateFunctionVectorObjectProcessor} for processing (String[]) -> long[]
+ */
+public abstract class LongOutStringInFunctionVectorProcessor
+    extends UnivariateFunctionVectorObjectProcessor<String[], long[]>
 {
-  public LongUnivariateFunctionVectorProcessor(VectorExprProcessor<long[]> processor, int maxVectorSize)
+  public LongOutStringInFunctionVectorProcessor(VectorExprProcessor<String[]> processor, int maxVectorSize)
   {
     super(processor, maxVectorSize, new long[maxVectorSize]);
   }
-
-  public abstract long apply(long input);
 
   @Override
   public ExprType getOutputType()
@@ -37,13 +39,7 @@ public abstract class LongUnivariateFunctionVectorProcessor extends UnivariateFu
   }
 
   @Override
-  final void processIndex(long[] input, int i)
-  {
-    outValues[i] = apply(input[i]);
-  }
-
-  @Override
-  final VectorExprEval<long[]> asEval()
+  public final VectorExprEval<long[]> asEval()
   {
     return new LongVectorExprEval(outValues, outNulls);
   }

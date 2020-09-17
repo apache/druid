@@ -21,18 +21,22 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExprType;
 
-public abstract class DoubleLongDoubleBivariateFunctionVectorProcessor extends BivariateFunctionVectorProcessor<long[], double[], double[]>
+/**
+ * specialized {@link BivariateFunctionVectorProcessor} for processing (double[], long[]) -> double[]
+ */
+public abstract class DoubleOutDoubleLongInFunctionVectorProcessor
+    extends BivariateFunctionVectorProcessor<double[], long[], double[]>
 {
-  public DoubleLongDoubleBivariateFunctionVectorProcessor(
-      VectorExprProcessor<long[]> left,
-      VectorExprProcessor<double[]> right,
+  public DoubleOutDoubleLongInFunctionVectorProcessor(
+      VectorExprProcessor<double[]> left,
+      VectorExprProcessor<long[]> right,
       int maxVectorSize
   )
   {
     super(left, right, maxVectorSize, new double[maxVectorSize]);
   }
 
-  public abstract double apply(long left, double right);
+  public abstract double apply(double left, long right);
 
   @Override
   public ExprType getOutputType()
@@ -41,7 +45,7 @@ public abstract class DoubleLongDoubleBivariateFunctionVectorProcessor extends B
   }
 
   @Override
-  final void processIndex(long[] leftInput, double[] rightInput, int i)
+  final void processIndex(double[] leftInput, long[] rightInput, int i)
   {
     outValues[i] = apply(leftInput[i], rightInput[i]);
   }

@@ -26,7 +26,8 @@ import org.apache.druid.math.expr.Expr;
  * output, and are backed by a primitive values instead of an object values (and need to use the null vectors instead of
  * checking the vector themselves for nulls)
  */
-public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput> implements VectorExprProcessor<TOutput>
+public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput>
+    implements VectorExprProcessor<TOutput>
 {
   final VectorExprProcessor<TLeftInput> left;
   final VectorExprProcessor<TRightInput> right;
