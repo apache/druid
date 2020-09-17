@@ -134,39 +134,4 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * Implementations can use any method to convert the given row into a Map.
    */
   protected abstract Map<String, Object> toMap(T intermediateRow) throws IOException;
-
-  private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
-  {
-    private final Exception exception;
-
-    private boolean thrown = false;
-
-    private ExceptionThrowingIterator(Exception exception)
-    {
-      this.exception = exception;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return !thrown;
-    }
-
-    @Override
-    public InputRow next()
-    {
-      thrown = true;
-      if (exception instanceof RuntimeException) {
-        throw (RuntimeException) exception;
-      } else {
-        throw new RuntimeException(exception);
-      }
-    }
-
-    @Override
-    public void close()
-    {
-      // do nothing
-    }
-  }
 }

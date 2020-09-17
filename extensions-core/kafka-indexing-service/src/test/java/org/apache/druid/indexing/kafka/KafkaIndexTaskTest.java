@@ -122,7 +122,6 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -140,7 +139,6 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -2754,13 +2752,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       ProducerRecord[] producerRecords = new ProducerRecord[]{
           // pretty formatted
           new ProducerRecord<>(topic, 0, null, jb(true,"2049", "d1", "y", "10", "20.0", "1.0")),
-
           //well-formed
           new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
-
           //ill-formed
-          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(illformed)),
-
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("illformed")),
           //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
           new ProducerRecord<>(topic, 0, null, jb(true,"2049", "d7", "y", "10", "20.0", "1.0"))
       };

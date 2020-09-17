@@ -20,16 +20,17 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.IOUtils;
+import org.apache.druid.data.input.ExceptionThrowingIterator;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -39,6 +40,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -59,6 +61,73 @@ import java.util.NoSuchElementException;
  */
 public class JsonReader implements InputEntityReader
 {
+  abstract class JsonObjIterator<JsonObjType, TargetObjType> implements CloseableIterator<TargetObjType>
+  {
+    private final String inputText;
+    private final JsonParser parser;
+    private Iterator<JsonObjType> delegate;
+
+    JsonObjIterator(Class<JsonObjType> jsonObjClazz) throws IOException
+    {
+      inputText = IOUtils.toString(source.open(), StringUtils.UTF8_STRING);
+      parser = new JsonFactory().createParser(inputText);
+      delegate = mapper.readValues(parser, jsonObjClazz);
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      parser.close();
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      try {
+        return delegate.hasNext();
+      }
+      catch (RuntimeException e) {
+        //
+        // In most cases, the exception thrown here is due to failure of parsing input text.
+        //
+        // In order to handle these failures, exception is not thrown until the subsequent call of 'next'
+        // because in most cases, there's no try-catch enclosure on hasNext call
+        //
+        delegate = new ExceptionThrowingIterator<JsonObjType>(e);
+        return delegate.hasNext();
+      }
+    }
+
+    @Override
+    public TargetObjType next()
+    {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+
+      try {
+        return toObject(delegate.next());
+      }
+      catch (ParseException e) {
+        throw e;
+      }
+      catch (RuntimeException e) {
+        // subclass could determine whether the exception should be thrown
+        // or returns an object instead to ignore the exception
+        return handleException(inputText, e);
+      }
+    }
+
+    protected abstract TargetObjType toObject(JsonObjType node);
+
+    protected TargetObjType handleException(String jsonText, RuntimeException e)
+    {
+      //rethrow parse exception so that it can be processed by callers(such as ingest task) in a unified way
+      throw new ParseException(e.getCause() == null ? e : e.getCause(),
+                               "Unable to parse row [%s]", jsonText);
+    }
+  }
+
   private final ObjectFlattener<JsonNode> flattener;
   private final ObjectMapper mapper;
   private final InputEntity source;
@@ -78,71 +147,10 @@ public class JsonReader implements InputEntityReader
     this.mapper = mapper;
   }
 
-  abstract class Iterator<JsonObjType, TargetObjType> implements CloseableIterator<TargetObjType>
-  {
-    private final JsonParser parser;
-    private final MappingIterator<JsonObjType> delegate;
-
-    Iterator(Class<JsonObjType> clazz) throws IOException
-    {
-      parser = new JsonFactory().createParser(source.open());
-      delegate = mapper.readValues(
-          parser,
-          clazz
-      );
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      parser.close();
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      try {
-        return delegate.hasNext();
-      }
-      catch (RuntimeException e) {
-        if (e.getCause() instanceof JsonParseException) {
-          // skip the ill-formed input so that callers(such as index task) won't fail
-          return false;
-        }
-
-        // rethrow the unknown exception
-        throw e;
-      }
-    }
-
-    @Override
-    public TargetObjType next()
-    {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-
-      try {
-        return toObject(delegate.next());
-      }
-      catch (RuntimeException e) {
-        if (e.getCause() instanceof JsonParseException) {
-          //rethrow parse exception so that it can be processed by callers(such as ingest task) in a unified way
-          throw new ParseException(e.getCause(), e.getMessage());
-        }
-
-        // rethrow the unknown exception
-        throw e;
-      }
-    }
-
-    protected abstract TargetObjType toObject(JsonObjType node);
-  }
-
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
-    return new Iterator<JsonNode, InputRow>(JsonNode.class)
+    return new JsonObjIterator<JsonNode, InputRow>(JsonNode.class)
     {
       @Override
       protected InputRow toObject(JsonNode node)
@@ -155,7 +163,7 @@ public class JsonReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
-    return new Iterator<Map, InputRowListPlusRawValues>(Map.class)
+    return new JsonObjIterator<Map, InputRowListPlusRawValues>(Map.class)
     {
       @Override
       protected InputRowListPlusRawValues toObject(Map rawColumns)
@@ -169,6 +177,13 @@ public class JsonReader implements InputEntityReader
         catch (ParseException e) {
           return InputRowListPlusRawValues.of(rawColumns, e);
         }
+      }
+
+      @Override
+      protected InputRowListPlusRawValues handleException(String jsonText, RuntimeException e)
+      {
+        return InputRowListPlusRawValues.of(null,
+                                            new ParseException(e, "Unable to parse row [%s] into JSON", jsonText));
       }
     };
   }
