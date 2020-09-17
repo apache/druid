@@ -222,6 +222,15 @@ public class AutoCompactionSnapshot
       this.dataSource = dataSource;
       this.scheduleStatus = scheduleStatus;
       this.scheduledTaskIds = new ArrayList<>();
+      this.bytesAwaitingCompaction = 0;
+      this.bytesCompacted = 0;
+      this.bytesSkipped = 0;
+      this.segmentCountAwaitingCompaction = 0;
+      this.segmentCountCompacted = 0;
+      this.segmentCountSkipped = 0;
+      this.intervalCountAwaitingCompaction = 0;
+      this.intervalCountCompacted = 0;
+      this.intervalCountSkipped = 0;
     }
 
     public Builder addScheduledTaskId(String taskId)
@@ -230,57 +239,57 @@ public class AutoCompactionSnapshot
       return this;
     }
 
-    public Builder setBytesAwaitingCompaction(long bytesAwaitingCompaction)
+    public Builder incrementBytesAwaitingCompaction(long incrementValue)
     {
-      this.bytesAwaitingCompaction = bytesAwaitingCompaction;
+      this.bytesAwaitingCompaction = this.bytesAwaitingCompaction + incrementValue;
       return this;
     }
 
-    public Builder setBytesCompacted(long bytesCompacted)
+    public Builder incrementBytesCompacted(long incrementValue)
     {
-      this.bytesCompacted = bytesCompacted;
+      this.bytesCompacted = this.bytesCompacted + incrementValue;
       return this;
     }
 
-    public Builder setSegmentCountAwaitingCompaction(long segmentCountAwaitingCompaction)
+    public Builder incrementSegmentCountAwaitingCompaction(long incrementValue)
     {
-      this.segmentCountAwaitingCompaction = segmentCountAwaitingCompaction;
+      this.segmentCountAwaitingCompaction = this.segmentCountAwaitingCompaction + incrementValue;
       return this;
     }
 
-    public Builder setSegmentCountCompacted(long segmentCountCompacted)
+    public Builder incrementSegmentCountCompacted(long incrementValue)
     {
-      this.segmentCountCompacted = segmentCountCompacted;
+      this.segmentCountCompacted = this.segmentCountCompacted + incrementValue;
       return this;
     }
 
-    public Builder setIntervalCountAwaitingCompaction(long intervalCountAwaitingCompaction)
+    public Builder incrementIntervalCountAwaitingCompaction(long incrementValue)
     {
-      this.intervalCountAwaitingCompaction = intervalCountAwaitingCompaction;
+      this.intervalCountAwaitingCompaction = this.intervalCountAwaitingCompaction + incrementValue;
       return this;
     }
 
-    public Builder setIntervalCountCompacted(long intervalCountCompacted)
+    public Builder incrementIntervalCountCompacted(long incrementValue)
     {
-      this.intervalCountCompacted = intervalCountCompacted;
+      this.intervalCountCompacted = this.intervalCountCompacted + incrementValue;
       return this;
     }
 
-    public Builder setBytesSkipped(long bytesSkipped)
+    public Builder incrementBytesSkipped(long incrementValue)
     {
-      this.bytesSkipped = bytesSkipped;
+      this.bytesSkipped = this.bytesSkipped + incrementValue;
       return this;
     }
 
-    public Builder setSegmentCountSkipped(long segmentCountSkipped)
+    public Builder incrementSegmentCountSkipped(long incrementValue)
     {
-      this.segmentCountSkipped = segmentCountSkipped;
+      this.segmentCountSkipped = this.segmentCountSkipped + incrementValue;
       return this;
     }
 
-    public Builder setIntervalCountSkipped(long intervalCountSkipped)
+    public Builder incrementIntervalCountSkipped(long incrementValue)
     {
-      this.intervalCountSkipped = intervalCountSkipped;
+      this.intervalCountSkipped = this.intervalCountSkipped + incrementValue;
       return this;
     }
 
