@@ -62,7 +62,7 @@ public class SQLAuditManagerTest
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopServiceEmitter(),
         mapper,
-        new SQLAuditManagerConfig(7 * 24 * 60 * 60 * 1000L, false)
+        new SQLAuditManagerConfig()
     );
   }
 
@@ -86,7 +86,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  public void testAuditMetricEventBuilderConfig() throws IOException
+  public void testAuditMetricEventBuilderConfig()
   {
     AuditEntry entry = new AuditEntry(
             "testKey",
@@ -101,11 +101,18 @@ public class SQLAuditManagerTest
     );
 
     SQLAuditManager auditManagerWithPayloadAsDimension = new SQLAuditManager(
-            connector,
-            derbyConnectorRule.metadataTablesConfigSupplier(),
-            new NoopServiceEmitter(),
-            mapper,
-            new SQLAuditManagerConfig(10, true)
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopServiceEmitter(),
+        mapper,
+        new SQLAuditManagerConfig()
+        {
+          @Override
+          public boolean getIncludePayloadAsDimensionInMetric()
+          {
+            return true;
+          }
+        }
     );
 
     ServiceMetricEvent.Builder auditEntryBuilder = ((SQLAuditManager) auditManager).getAuditMetricEventBuilder(entry);

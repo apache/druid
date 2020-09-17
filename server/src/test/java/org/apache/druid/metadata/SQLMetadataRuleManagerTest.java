@@ -69,7 +69,7 @@ public class SQLMetadataRuleManagerTest
         Suppliers.ofInstance(tablesConfig),
         new NoopServiceEmitter(),
         mapper,
-        new SQLAuditManagerConfig(7 * 24 * 60 * 60 * 1000L, false)
+        new SQLAuditManagerConfig()
     );
 
     connector.createRulesTable();
