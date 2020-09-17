@@ -34,7 +34,7 @@ import java.util.List;
  * {@link #createHashLookup} is used to determine what hash bucket the given input row will belong to.
  *
  * Note: this class must be used only for ingestion. For segment pruning at query time,
- * {@link HashBasedNumberedShardSpec#hashPartitionFunction} should be used instead.
+ * {@link HashBasedNumberedShardSpec#partitionFunction} should be used instead.
  */
 class HashPartitioner
 {

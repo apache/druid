@@ -53,10 +53,15 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   private final List<String> partitionDimensions;
 
   /**
-   * A hash function to use for pruning segments at query time. This function can be null unless it is explicitly
-   * specified in {@link org.apache.druid.indexer.partitions.HashedPartitionsSpec}. This is because the default
+   * A hash function to use for both hash partitioning at ingestion time and pruning segments at query time.
+   *
+   * During ingestion, the partition function is defaulted to {@link HashPartitionFunction#MURMUR3_32_ABS} if this
+   * variable is null. See {@link HashPartitioner} for details.
+   *
+   * During query, this function will be null unless it is explicitly specified in
+   * {@link org.apache.druid.indexer.partitions.HashedPartitionsSpec} at ingestion time. This is because the default
    * hash function used to create segments at ingestion time can change over time, but we don't guarantee the changed
-   * hash function is backward-compatible. The query will process all segments if this function is null.
+   * hash function is backwards-compatible. The query will process all segments if this function is null.
    */
   @Nullable
   private final HashPartitionFunction partitionFunction;
@@ -127,8 +132,8 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    // hashPartitionFunction should be used instead of HashPartitioner at query time.
-    // We should process all segments if hashPartitionFunction is null because we don't know what hash function
+    // partitionFunction should be used instead of HashPartitioner at query time.
+    // We should process all segments if partitionFunction is null because we don't know what hash function
     // was used to create segments at ingestion time.
     if (partitionFunction == null) {
       return true;

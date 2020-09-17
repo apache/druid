@@ -36,20 +36,20 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   private final int bucketId;
   private final int numBuckets;
   @Nullable
-  private final HashPartitionFunction hashPartitionFunction;
+  private final HashPartitionFunction partitionFunction;
 
   @JsonCreator
   public HashBasedNumberedPartialShardSpec(
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numPartitions") int numBuckets,
-      @JsonProperty("hashPartitionFunction") @Nullable HashPartitionFunction hashPartitionFunction
+      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction
   )
   {
     this.partitionDimensions = partitionDimensions;
     this.bucketId = bucketId;
     this.numBuckets = numBuckets;
-    this.hashPartitionFunction = hashPartitionFunction;
+    this.partitionFunction = partitionFunction;
   }
 
   @Nullable
@@ -73,9 +73,9 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
 
   @JsonProperty
   @Nullable
-  public HashPartitionFunction getHashPartitionFunction()
+  public HashPartitionFunction getPartitionFunction()
   {
-    return hashPartitionFunction;
+    return partitionFunction;
   }
 
   @Override
@@ -87,7 +87,7 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
         bucketId,
         numBuckets,
         partitionDimensions,
-        hashPartitionFunction,
+        partitionFunction,
         objectMapper
     );
   }
@@ -111,12 +111,12 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
     return bucketId == that.bucketId &&
            numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions) &&
-           Objects.equals(hashPartitionFunction, that.hashPartitionFunction);
+           Objects.equals(partitionFunction, that.partitionFunction);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionDimensions, bucketId, numBuckets, hashPartitionFunction);
+    return Objects.hash(partitionDimensions, bucketId, numBuckets, partitionFunction);
   }
 }
