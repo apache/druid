@@ -345,7 +345,7 @@ public class CompactSegments implements CoordinatorDuty
     // Iterate through all the remaining segments in the iterator.
     // As these segments could be compacted but were not compacted due to lack of task slot, we will aggregates
     // the statistic to the AwaitingCompaction statistics
-    while(iterator.hasNext()) {
+    while (iterator.hasNext()) {
       final List<DataSegment> segmentsToCompact = iterator.next();
       if (!segmentsToCompact.isEmpty()) {
         final String dataSourceName = segmentsToCompact.get(0).getDataSource();
