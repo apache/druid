@@ -44,7 +44,7 @@ public class InputStatsMonitorTest
   public void setUp()
   {
     inputStats = new InputStats();
-    dimensions = ImmutableMap.of("k1", new String[] { "v1" });
+    dimensions = ImmutableMap.of("k1", new String[] {"v1"});
     events = new ArrayList<>();
     inputStatsMonitor = new InputStatsMonitor(inputStats, dimensions);
     emitter = new ServiceEmitter("", "", new TestEmitter(events));
