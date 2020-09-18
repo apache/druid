@@ -77,7 +77,9 @@ public class CompactSegments implements CoordinatorDuty
   private final CompactionSegmentSearchPolicy policy;
   private final IndexingServiceClient indexingServiceClient;
 
-  private AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
+  // This variable is updated by the Coordinator thread executing duties and
+  // read by HTTP threads processing Coordinator API calls.
+  private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
   @Inject
   public CompactSegments(
@@ -343,7 +345,7 @@ public class CompactSegments implements CoordinatorDuty
     // Iterate through all the remaining segments in the iterator.
     // As these segments could be compacted but were not compacted due to lack of task slot, we will aggregates
     // the statistic to the AwaitingCompaction statistics
-    for (; iterator.hasNext();) {
+    while(iterator.hasNext()) {
       final List<DataSegment> segmentsToCompact = iterator.next();
       if (!segmentsToCompact.isEmpty()) {
         final String dataSourceName = segmentsToCompact.get(0).getDataSource();

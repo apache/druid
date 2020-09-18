@@ -303,14 +303,14 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
-            "compact/maxSlot/count",
+            "compactTask/maxSlot/count",
             stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT)
         )
     );
 
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
-            "compact/availableSlot/count",
+            "compactTask/availableSlot/count",
             stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT)
         )
     );
@@ -321,7 +321,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/waitCompact/segmentBytes", count)
+                  .build("segment/waitCompact/bytes", count)
           );
         }
     );
@@ -332,7 +332,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/waitCompact/segmentCount", count)
+                  .build("segment/waitCompact/count", count)
           );
         }
     );
@@ -343,7 +343,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/waitCompact/intervalCount", count)
+                  .build("interval/waitCompact/count", count)
           );
         }
     );
@@ -354,7 +354,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/skipCompact/segmentBytes", count)
+                  .build("segment/skipCompact/bytes", count)
           );
         }
     );
@@ -365,7 +365,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/skipCompact/segmentCount", count)
+                  .build("segment/skipCompact/count", count)
           );
         }
     );
@@ -376,7 +376,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/skipCompact/intervalCount", count)
+                  .build("interval/skipCompact/count", count)
           );
         }
     );
@@ -387,7 +387,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/compacted/segmentBytes", count)
+                  .build("segment/compacted/bytes", count)
           );
         }
     );
@@ -398,7 +398,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/compacted/segmentCount", count)
+                  .build("segment/compacted/count", count)
           );
         }
     );
@@ -409,7 +409,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/compacted/intervalCount", count)
+                  .build("interval/compacted/count", count)
           );
         }
     );
