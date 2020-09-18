@@ -83,7 +83,5 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
 
   abstract void processIndex(TLeftInput leftInput, TRightInput rightInput, int i);
 
-  abstract void processNull(int i);
-
   abstract VectorExprEval<TOutput> asEval();
 }

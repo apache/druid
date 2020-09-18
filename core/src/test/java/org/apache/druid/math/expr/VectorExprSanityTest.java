@@ -110,7 +110,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   public void testUnivariateMathFunctions()
   {
     final String[] functions = new String[]{"atan", "cos", "cosh", "cot", "sin", "sinh", "tan", "tanh"};
-    final String[] templates = new String[]{"%s(l1)", "%s(d1)"};
+    final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())"};
     testFunctions(types, templates, functions);
   }
 
@@ -131,7 +131,6 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     final String[] templates = new String[]{"cast(%s, %s)"};
     testFunctions(types, templates, args);
   }
-
 
   static void testFunctions(Map<String, ExprType> types, String[] templates, String[] args)
   {

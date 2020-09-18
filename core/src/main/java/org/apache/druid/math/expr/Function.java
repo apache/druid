@@ -33,9 +33,11 @@ import org.apache.druid.math.expr.vector.DoubleOutDoubleLongInFunctionVectorProc
 import org.apache.druid.math.expr.vector.DoubleOutDoublesInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.DoubleOutLongDoubleInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.DoubleOutLongsInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleVectorExprEval;
 import org.apache.druid.math.expr.vector.LongOutDoubleInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.LongOutLongsInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.LongOutStringInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorExprEval;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -610,6 +612,36 @@ public interface Function
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
       return ExprType.DOUBLE;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return true;
+    }
+
+    @Override
+    public <T> VectorExprProcessor<T> asVectorProcessor(
+        Expr.VectorInputBindingTypes inputTypes, List<Expr> args
+    )
+    {
+      final double[] pi = new double[inputTypes.getMaxVectorSize()];
+      Arrays.fill(pi, PI);
+      final DoubleVectorExprEval eval = new DoubleVectorExprEval(pi,null);
+      return new VectorExprProcessor<T>()
+      {
+        @Override
+        public VectorExprEval<T> evalVector(Expr.VectorInputBinding bindings)
+        {
+          return (VectorExprEval<T>) eval;
+        }
+
+        @Override
+        public ExprType getOutputType()
+        {
+          return ExprType.DOUBLE;
+        }
+      };
     }
   }
 

@@ -51,12 +51,6 @@ public abstract class LongOutLongsInFunctionVectorProcessor
   }
 
   @Override
-  void processNull(int i)
-  {
-    outValues[i] = 0;
-  }
-
-  @Override
   final VectorExprEval<long[]> asEval()
   {
     return new LongVectorExprEval(outValues, outNulls);
