@@ -209,31 +209,9 @@ public class JoinablesTest
   @Test
   public void test_computeJoinDataSourceCacheKey_noHashJoin()
   {
-    GlobalTableDataSource dataSource = new GlobalTableDataSource("global");
-    JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x == \"j.x\"",
-        "j.",
-        ExprMacroTable.nil()
-    );
-    PreJoinableClause clause_1 = new PreJoinableClause(
-        "j.",
-        dataSource,
-        JoinType.LEFT,
-        conditionAnalysis
-    );
 
-    dataSource = new GlobalTableDataSource("dataSource_2");
-    conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x != \"h.x\"",
-        "h.",
-        ExprMacroTable.nil()
-    );
-    PreJoinableClause clause_2 = new PreJoinableClause(
-        "h.",
-        dataSource,
-        JoinType.LEFT,
-        conditionAnalysis
-    );
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_2", "x != \"h.x\"", "h.");
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause_1, clause_2)).anyTimes();
     EasyMock.replay(analysis);
@@ -246,31 +224,9 @@ public class JoinablesTest
   @Test
   public void test_computeJoinDataSourceCacheKey_cachingUnsupported()
   {
-    DataSource dataSource = new GlobalTableDataSource("global");
-    JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x == \"j.x\"",
-        "j.",
-        ExprMacroTable.nil()
-    );
-    PreJoinableClause clause_1 = new PreJoinableClause(
-        "j.",
-        dataSource,
-        JoinType.LEFT,
-        conditionAnalysis
-    );
-
-    dataSource = new LookupDataSource("lookup");
-    conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x == \"h.x\"",
-        "h.",
-        ExprMacroTable.nil()
-    );
-    PreJoinableClause clause_2 = new PreJoinableClause(
-        "h.",
-        dataSource,
-        JoinType.LEFT,
-        conditionAnalysis
-    );
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    DataSource dataSource = new LookupDataSource("lookup");
+    PreJoinableClause clause_2 = makePreJoinableClause(dataSource, "x == \"h.x\"", "h.", JoinType.LEFT);
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause_1, clause_2)).anyTimes();
     EasyMock.replay(analysis);
@@ -283,31 +239,9 @@ public class JoinablesTest
   @Test
   public void test_computeJoinDataSourceCacheKey_usableClauses()
   {
-    GlobalTableDataSource dataSource = new GlobalTableDataSource("global");
-    JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x == \"j.x\"",
-        "j.",
-        ExprMacroTable.nil()
-    );
-    PreJoinableClause clause_1 = new PreJoinableClause(
-        "j.",
-        dataSource,
-        JoinType.LEFT,
-        conditionAnalysis
-    );
 
-    dataSource = new GlobalTableDataSource("dataSource_2");
-    conditionAnalysis = JoinConditionAnalysis.forExpression(
-        "x == \"h.x\"",
-        "h.",
-        ExprMacroTable.nil()
-    );
-    PreJoinableClause clause_2 = new PreJoinableClause(
-        "h.",
-        dataSource,
-        JoinType.LEFT,
-        conditionAnalysis
-    );
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_2", "x == \"h.x\"", "h.");
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause_1, clause_2)).anyTimes();
     EasyMock.replay(analysis);
@@ -315,6 +249,121 @@ public class JoinablesTest
     Optional<byte[]> cacheKey = joinables.computeJoinDataSourceCacheKey(analysis);
 
     Assert.assertTrue(cacheKey.isPresent());
+  }
+
+  @Test
+  public void test_computeJoinDataSourceCacheKey_keyChangesWithExpression()
+  {
+    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
+    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "y == \"j.y\"", "j.");
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_1)).anyTimes();
+    EasyMock.replay(analysis);
+
+    Optional<byte[]> cacheKey_1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_1.isPresent());
+    Assert.assertNotEquals(0, cacheKey_1.get().length);
+
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    EasyMock.reset(analysis);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
+    EasyMock.replay(analysis);
+    Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+
+    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+  }
+
+  @Test
+  public void test_computeJoinDataSourceCacheKey_keyChangesWithJoinType()
+  {
+    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
+    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.", JoinType.LEFT);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_1)).anyTimes();
+    EasyMock.replay(analysis);
+
+    Optional<byte[]> cacheKey_1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_1.isPresent());
+    Assert.assertNotEquals(0, cacheKey_1.get().length);
+
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.", JoinType.INNER);
+    EasyMock.reset(analysis);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
+    EasyMock.replay(analysis);
+    Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+
+    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+  }
+
+  @Test
+  public void test_computeJoinDataSourceCacheKey_keyChangesWithPrefix()
+  {
+    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
+    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_1)).anyTimes();
+    EasyMock.replay(analysis);
+
+    Optional<byte[]> cacheKey_1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_1.isPresent());
+    Assert.assertNotEquals(0, cacheKey_1.get().length);
+
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"h.x\"", "h.");
+    EasyMock.reset(analysis);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
+    EasyMock.replay(analysis);
+    Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+
+    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+  }
+
+  @Test
+  public void test_computeJoinDataSourceCacheKey_keyChangesWithJoinable()
+  {
+    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
+    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_1)).anyTimes();
+    EasyMock.replay(analysis);
+
+    Optional<byte[]> cacheKey_1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_1.isPresent());
+    Assert.assertNotEquals(0, cacheKey_1.get().length);
+
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_2", "x == \"j.x\"", "j.");
+    EasyMock.reset(analysis);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
+    EasyMock.replay(analysis);
+    Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+
+    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+  }
+
+  @Test
+  public void test_computeJoinDataSourceCacheKey_sameKeyForSameJoin()
+  {
+    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
+    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+
+    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_1)).anyTimes();
+    EasyMock.replay(analysis);
+
+    Optional<byte[]> cacheKey_1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_1.isPresent());
+    Assert.assertNotEquals(0, cacheKey_1.get().length);
+
+    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
+    EasyMock.reset(analysis);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
+    EasyMock.replay(analysis);
+    Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+
+    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
   }
 
   @Test
@@ -364,6 +413,42 @@ public class JoinablesTest
     );
 
     Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+  }
+
+  private PreJoinableClause makeGlobalPreJoinableClause(String tableName, String expression, String prefix)
+  {
+    return makeGlobalPreJoinableClause(tableName, expression, prefix, JoinType.LEFT);
+  }
+
+  private PreJoinableClause makeGlobalPreJoinableClause(
+      String tableName,
+      String expression,
+      String prefix,
+      JoinType joinType
+  )
+  {
+    GlobalTableDataSource dataSource = new GlobalTableDataSource(tableName);
+    return makePreJoinableClause(dataSource, expression, prefix, joinType);
+  }
+
+  private PreJoinableClause makePreJoinableClause(
+      DataSource dataSource,
+      String expression,
+      String prefix,
+      JoinType joinType
+  )
+  {
+    JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
+        expression,
+        prefix,
+        ExprMacroTable.nil()
+    );
+    return new PreJoinableClause(
+        prefix,
+        dataSource,
+        joinType,
+        conditionAnalysis
+    );
   }
 
   private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory

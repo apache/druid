@@ -29,6 +29,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.Bytes;
 import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -70,6 +71,8 @@ import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -120,6 +123,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final DruidProcessingConfig processingConfig;
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
+  private final Joinables joinables;
 
   @Inject
   public CachingClusteredClient(
@@ -132,7 +136,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Client DruidHttpClientConfig httpClientConfig,
       DruidProcessingConfig processingConfig,
       @Merging ForkJoinPool pool,
-      QueryScheduler scheduler
+      QueryScheduler scheduler,
+      JoinableFactory joinableFactory
   )
   {
     this.warehouse = warehouse;
@@ -145,6 +150,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.processingConfig = processingConfig;
     this.pool = pool;
     this.scheduler = scheduler;
+    this.joinables = new Joinables(joinableFactory);
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -343,7 +349,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       @Nullable
-      final byte[] queryCacheKey = computeQueryCacheKey();
+      final byte[] queryCacheKey = computeQueryCacheKey(dataSourceAnalysis);
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable
         final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
@@ -484,15 +490,22 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     @Nullable
-    private byte[] computeQueryCacheKey()
+    private byte[] computeQueryCacheKey(DataSourceAnalysis dataSourceAnalysis)
     {
-      if ((populateCache || useCache) // implies strategy != null
-          && !isBySegment) { // explicit bySegment queries are never cached
-        assert strategy != null;
-        return strategy.computeCacheKey(query);
-      } else {
+      if ((!populateCache && !useCache) || isBySegment) { // explicit bySegment queries are never cached
         return null;
       }
+
+      byte[] joinDataSourceCacheKey = StringUtils.EMPTY_BYTES;
+      if (dataSourceAnalysis.isJoin()) {
+        joinDataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
+        if (null == joinDataSourceCacheKey) {
+          return null;    // A join operation that does not support caching
+        }
+      }
+
+      assert strategy != null;  // implies strategy != null
+      return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
     }
 
     @Nullable

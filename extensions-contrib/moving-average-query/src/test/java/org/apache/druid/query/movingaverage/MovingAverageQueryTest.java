@@ -367,7 +367,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           }
         },
         ForkJoinPool.commonPool(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
