@@ -349,7 +349,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       @Nullable
-      final byte[] queryCacheKey = computeQueryCacheKey(dataSourceAnalysis);
+      final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable
         final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
@@ -490,22 +490,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     @Nullable
-    private byte[] computeQueryCacheKey(DataSourceAnalysis dataSourceAnalysis)
+    private byte[] computeQueryCacheKey()
     {
       if ((!populateCache && !useCache) || isBySegment) { // explicit bySegment queries are never cached
         return null;
       }
 
-      byte[] joinDataSourceCacheKey = StringUtils.EMPTY_BYTES;
-      if (dataSourceAnalysis.isJoin()) {
-        joinDataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
-        if (null == joinDataSourceCacheKey) {
-          return null;    // A join operation that does not support caching
-        }
-      }
-
-      assert strategy != null;  // implies strategy != null
-      return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+      return computeQueryCacheKeyWithJoin();
     }
 
     @Nullable
@@ -525,15 +516,37 @@ public class CachingClusteredClient implements QuerySegmentWalker
         hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
       }
 
-      if (hasOnlyHistoricalSegments) {
-        hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
-
-        String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
-        responseContext.put(ResponseContext.Key.ETAG, currEtag);
-        return currEtag;
-      } else {
+      if (!hasOnlyHistoricalSegments) {
         return null;
       }
+
+      final byte[] queryCacheKeyFinal = (queryCacheKey == null) ? computeQueryCacheKeyWithJoin() : queryCacheKey;
+      if (queryCacheKeyFinal == null) {
+        return null;
+      }
+      hasher.putBytes(queryCacheKeyFinal);
+
+      String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
+      responseContext.put(Key.ETAG, currEtag);
+      return currEtag;
+    }
+
+    /**
+     * Adds the cache key prefix for join data sources. Return null if its a join but caching is not supported
+     * @return
+     */
+    @Nullable
+    private byte[] computeQueryCacheKeyWithJoin()
+    {
+      assert strategy != null;  // implies strategy != null
+      if (dataSourceAnalysis.isJoin()) {
+        byte[] joinDataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
+        if (null == joinDataSourceCacheKey) {
+          return null;    // A join operation that does not support caching
+        }
+        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+      }
+      return strategy.computeCacheKey(query);
     }
 
     private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(

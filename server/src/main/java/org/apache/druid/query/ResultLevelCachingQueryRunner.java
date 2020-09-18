@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Bytes;
 import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -36,8 +35,6 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.QueryResource;
 
 import javax.annotation.Nullable;
@@ -56,7 +53,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   private final boolean useResultCache;
   private final boolean populateResultCache;
   private Query<T> query;
-  private final Joinables joinables;
   private final CacheStrategy<T, Object, Query<T>> strategy;
 
 
@@ -66,8 +62,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       Query<T> query,
       ObjectMapper objectMapper,
       Cache cache,
-      CacheConfig cacheConfig,
-      Joinables joinables
+      CacheConfig cacheConfig
   )
   {
     this.baseRunner = baseRunner;
@@ -75,7 +70,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.query = query;
-    this.joinables = joinables;
     this.strategy = queryToolChest.getCacheStrategy(query);
     this.populateResultCache = CacheUtil.isPopulateResultCache(
         query,
@@ -91,19 +85,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      byte[] cacheKeyBytes = strategy.computeResultLevelCacheKey(query);
-      DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-      if (analysis.isJoin()) {
-        final byte[] dataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(analysis).orElse(null);
-        if (null == dataSourceCacheKey) {
-          return baseRunner.run(
-              queryPlus,
-              responseContext
-          );
-        }
-        cacheKeyBytes = Bytes.concat(dataSourceCacheKey, cacheKeyBytes);
-      }
-      final String cacheKeyStr = StringUtils.fromUtf8(cacheKeyBytes);
+      final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 

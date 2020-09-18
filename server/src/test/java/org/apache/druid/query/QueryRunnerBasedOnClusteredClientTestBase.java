@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -42,7 +41,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -56,7 +54,6 @@ import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -88,7 +85,7 @@ import java.util.stream.IntStream;
  * }
  * </pre>
  */
-public abstract class QueryRunnerBasedOnClusteredClientTestBase extends EasyMockSupport
+public abstract class QueryRunnerBasedOnClusteredClientTestBase
 {
   protected static final GeneratorSchemaInfo BASE_SCHEMA_INFO = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
 
@@ -111,7 +108,6 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase extends EasyMock
   protected QueryRunnerBasedOnClusteredClientTestBase()
   {
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER, USE_PARALLEL_MERGE_POOL_CONFIGURED);
-    objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil()));
 
     toolChestWarehouse = new QueryToolChestWarehouse()
     {

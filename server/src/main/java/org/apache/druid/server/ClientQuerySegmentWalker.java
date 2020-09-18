@@ -54,7 +54,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
@@ -81,7 +80,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final QuerySegmentWalker clusterClient;
   private final QuerySegmentWalker localClient;
   private final QueryToolChestWarehouse warehouse;
-  private final Joinables joinables;
+  private final JoinableFactory joinableFactory;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
   private final ServerConfig serverConfig;
@@ -93,7 +92,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       QuerySegmentWalker clusterClient,
       QuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
-      Joinables joinables,
+      JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -105,7 +104,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.clusterClient = clusterClient;
     this.localClient = localClient;
     this.warehouse = warehouse;
-    this.joinables = joinables;
+    this.joinableFactory = joinableFactory;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
     this.serverConfig = serverConfig;
@@ -132,7 +131,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (QuerySegmentWalker) clusterClient,
         (QuerySegmentWalker) localClient,
         warehouse,
-        new Joinables(joinableFactory),
+        joinableFactory,
         retryConfig,
         objectMapper,
         serverConfig,
@@ -262,7 +261,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     if (dataSource instanceof TableDataSource) {
       GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(((TableDataSource) dataSource).getName());
-      if (joinables.getJoinableFactory().isDirectlyJoinable(maybeGlobal)) {
+      if (joinableFactory.isDirectlyJoinable(maybeGlobal)) {
         return maybeGlobal;
       }
       return dataSource;
@@ -427,8 +426,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                     query,
                     objectMapper,
                     cache,
-                    cacheConfig,
-                    joinables
+                    cacheConfig
                 )
         );
   }
