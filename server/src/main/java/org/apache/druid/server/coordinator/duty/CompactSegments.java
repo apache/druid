@@ -269,7 +269,6 @@ public class CompactSegments implements CoordinatorDuty
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             newAutoCompactionContext(config.getTaskContext())
         );
-        currentRunAutoCompactionSnapshotBuilders.get(dataSourceName).addScheduledTaskId(taskId);
 
         LOG.info(
             "Submitted a compactionTask[%s] for %s segments",

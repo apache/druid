@@ -39,7 +39,6 @@ public class CompactionResourceTest
   private AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
       dataSourceName,
       AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-      ImmutableList.of("task123"),
       1,
       1,
       1,

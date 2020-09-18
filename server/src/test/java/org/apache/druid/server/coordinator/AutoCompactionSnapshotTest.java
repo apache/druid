@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,12 +28,8 @@ public class AutoCompactionSnapshotTest
   public void testAutoCompactionSnapshotBuilder()
   {
     final String expectedDataSource = "data";
-    final String expectedTask1 = "task1";
-    final String expectedTask2 = "task2";
     final AutoCompactionSnapshot.AutoCompactionScheduleStatus expectedStatus = AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING;
     AutoCompactionSnapshot.Builder builder = new AutoCompactionSnapshot.Builder(expectedDataSource, expectedStatus);
-    builder.addScheduledTaskId(expectedTask1);
-    builder.addScheduledTaskId(expectedTask2);
 
     // Increment every stats twice
     for (int i = 0; i < 2; i++) {
@@ -65,15 +60,10 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
     Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, actual.getScheduleStatus());
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
-    Assert.assertNotNull(actual.getScheduledTaskIds());
-    Assert.assertEquals(2, actual.getScheduledTaskIds().size());
-    Assert.assertTrue(actual.getScheduledTaskIds().contains(expectedTask1));
-    Assert.assertTrue(actual.getScheduledTaskIds().contains(expectedTask2));
 
     AutoCompactionSnapshot expected = new AutoCompactionSnapshot(
         expectedDataSource,
         AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-        ImmutableList.of(expectedTask1, expectedTask2),
         26,
         26,
         26,

@@ -42,8 +42,6 @@ public class AutoCompactionSnapshot
   @JsonProperty
   private AutoCompactionScheduleStatus scheduleStatus;
   @JsonProperty
-  private List<String> scheduledTaskIds;
-  @JsonProperty
   private long bytesAwaitingCompaction;
   @JsonProperty
   private long bytesCompacted;
@@ -66,7 +64,6 @@ public class AutoCompactionSnapshot
   public AutoCompactionSnapshot(
       @JsonProperty @NotNull String dataSource,
       @JsonProperty @NotNull AutoCompactionScheduleStatus scheduleStatus,
-      @JsonProperty @NotNull List<String> scheduledTaskIds,
       @JsonProperty long bytesAwaitingCompaction,
       @JsonProperty long bytesCompacted,
       @JsonProperty long bytesSkipped,
@@ -80,7 +77,6 @@ public class AutoCompactionSnapshot
   {
     this.dataSource = dataSource;
     this.scheduleStatus = scheduleStatus;
-    this.scheduledTaskIds = Collections.unmodifiableList(scheduledTaskIds);
     this.bytesAwaitingCompaction = bytesAwaitingCompaction;
     this.bytesCompacted = bytesCompacted;
     this.bytesSkipped = bytesSkipped;
@@ -102,12 +98,6 @@ public class AutoCompactionSnapshot
   public AutoCompactionScheduleStatus getScheduleStatus()
   {
     return scheduleStatus;
-  }
-
-  @NotNull
-  public List<String> getScheduledTaskIds()
-  {
-    return scheduledTaskIds;
   }
 
   public long getBytesAwaitingCompaction()
@@ -175,8 +165,7 @@ public class AutoCompactionSnapshot
            intervalCountCompacted == that.intervalCountCompacted &&
            intervalCountSkipped == that.intervalCountSkipped &&
            dataSource.equals(that.dataSource) &&
-           scheduleStatus == that.scheduleStatus &&
-           scheduledTaskIds.equals(that.scheduledTaskIds);
+           scheduleStatus == that.scheduleStatus;
   }
 
   @Override
@@ -185,7 +174,6 @@ public class AutoCompactionSnapshot
     return Objects.hash(
         dataSource,
         scheduleStatus,
-        scheduledTaskIds,
         bytesAwaitingCompaction,
         bytesCompacted,
         bytesSkipped,
@@ -202,7 +190,6 @@ public class AutoCompactionSnapshot
   {
     private String dataSource;
     private AutoCompactionScheduleStatus scheduleStatus;
-    private List<String> scheduledTaskIds;
     private long bytesAwaitingCompaction;
     private long bytesCompacted;
     private long bytesSkipped;
@@ -221,7 +208,6 @@ public class AutoCompactionSnapshot
     {
       this.dataSource = dataSource;
       this.scheduleStatus = scheduleStatus;
-      this.scheduledTaskIds = new ArrayList<>();
       this.bytesAwaitingCompaction = 0;
       this.bytesCompacted = 0;
       this.bytesSkipped = 0;
@@ -231,12 +217,6 @@ public class AutoCompactionSnapshot
       this.intervalCountAwaitingCompaction = 0;
       this.intervalCountCompacted = 0;
       this.intervalCountSkipped = 0;
-    }
-
-    public Builder addScheduledTaskId(String taskId)
-    {
-      scheduledTaskIds.add(taskId);
-      return this;
     }
 
     public Builder incrementBytesAwaitingCompaction(long incrementValue)
@@ -304,7 +284,6 @@ public class AutoCompactionSnapshot
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,
-          scheduledTaskIds,
           bytesAwaitingCompaction,
           bytesCompacted,
           bytesSkipped,
