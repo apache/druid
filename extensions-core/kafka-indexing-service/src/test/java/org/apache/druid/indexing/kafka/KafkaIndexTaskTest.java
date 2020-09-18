@@ -2740,8 +2740,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       kafkaProducer.beginTransaction();
 
       //multiple objects in one Kafka record will yield 2 rows in druid
-      String wellformed = toJsonString(true,"2049", "d2", "y", "10", "22.0", "2.0") +
-                     toJsonString(true,"2049", "d3", "y", "10", "23.0", "3.0");
+      String wellformed = toJsonString(true, "2049", "d2", "y", "10", "22.0", "2.0") +
+                     toJsonString(true, "2049", "d3", "y", "10", "23.0", "3.0");
 
       //multiple objects in one Kafka record but some objects are in ill-formed format
       //the whole ProducerRecord will be discarded
@@ -2751,13 +2751,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
       ProducerRecord[] producerRecords = new ProducerRecord[]{
           // pretty formatted
-          new ProducerRecord<>(topic, 0, null, jb(true,"2049", "d1", "y", "10", "20.0", "1.0")),
+          new ProducerRecord<>(topic, 0, null, jb(true, "2049", "d1", "y", "10", "20.0", "1.0")),
           //well-formed
           new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
           //ill-formed
           new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("illformed")),
           //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
-          new ProducerRecord<>(topic, 0, null, jb(true,"2049", "d7", "y", "10", "20.0", "1.0"))
+          new ProducerRecord<>(topic, 0, null, jb(true, "2049", "d7", "y", "10", "20.0", "1.0"))
       };
       for (ProducerRecord<byte[], byte[]> record : producerRecords) {
         kafkaProducer.send(record).get();
