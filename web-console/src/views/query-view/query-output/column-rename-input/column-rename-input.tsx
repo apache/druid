@@ -19,8 +19,6 @@
 import { InputGroup } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import './column-rename-input.scss';
-
 export interface ColumnRenameInputProps {
   initialName: string;
   onDone: (newName?: string) => void;
@@ -32,6 +30,14 @@ export const ColumnRenameInput = React.memo(function ColumnRenameInput(
   const { initialName, onDone } = props;
   const [newName, setNewName] = useState<string>(initialName);
 
+  function maybeDone() {
+    if (newName && newName !== initialName) {
+      onDone(newName);
+    } else {
+      onDone();
+    }
+  }
+
   return (
     <InputGroup
       className="column-rename-input"
@@ -40,7 +46,7 @@ export const ColumnRenameInput = React.memo(function ColumnRenameInput(
       onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
         switch (e.keyCode) {
           case 13: // Enter
-            onDone(newName);
+            maybeDone();
             break;
 
           case 27: // Esc
@@ -48,7 +54,7 @@ export const ColumnRenameInput = React.memo(function ColumnRenameInput(
             break;
         }
       }}
-      onBlur={() => onDone(newName)}
+      onBlur={maybeDone}
       small
       autoFocus
     />
