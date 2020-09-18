@@ -20,11 +20,7 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.math.expr.vector.BivariateFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutDoubleLongInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutDoublesInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutLongDoubleInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongsInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nullable;
@@ -83,72 +79,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType leftType = left.getOutputType(inputTypes);
-    final ExprType rightType = right.getOutputType(inputTypes);
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left < right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) < 0);
-          }
-        };
-      }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Evals.asDouble(Double.compare(left, right) < 0);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) < 0);
-          }
-        };
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorComparisonProcessors.lessThan(inputTypes, left, right);
   }
 }
 
@@ -204,72 +135,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType leftType = left.getOutputType(inputTypes);
-    final ExprType rightType = right.getOutputType(inputTypes);
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left <= right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) <= 0);
-          }
-        };
-      }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Evals.asDouble(Double.compare(left, right) <= 0);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) <= 0);
-          }
-        };
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorComparisonProcessors.lessThanOrEqual(inputTypes, left, right);
   }
 }
 
@@ -324,72 +190,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType leftType = left.getOutputType(inputTypes);
-    final ExprType rightType = right.getOutputType(inputTypes);
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left > right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) > 0);
-          }
-        };
-      }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Evals.asDouble(Double.compare(left, right) > 0);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) > 0);
-          }
-        };
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorComparisonProcessors.greaterThan(inputTypes, left, right);
   }
 }
 
@@ -445,72 +246,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType leftType = left.getOutputType(inputTypes);
-    final ExprType rightType = right.getOutputType(inputTypes);
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left >= right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) >= 0);
-          }
-        };
-      }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Evals.asDouble(Double.compare(left, right) >= 0);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Evals.asDouble(Double.compare(left, right) >= 0);
-          }
-        };
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorComparisonProcessors.greaterThanOrEqual(inputTypes, left, right);
   }
 }
 
@@ -565,72 +301,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType leftType = left.getOutputType(inputTypes);
-    final ExprType rightType = right.getOutputType(inputTypes);
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left == right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Evals.asDouble(left == right);
-          }
-        };
-      }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Evals.asDouble(left == right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Evals.asDouble(left == right);
-          }
-        };
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorComparisonProcessors.equal(inputTypes, left, right);
   }
 }
 
@@ -685,72 +356,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType leftType = left.getOutputType(inputTypes);
-    final ExprType rightType = right.getOutputType(inputTypes);
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left != right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Evals.asDouble(left != right);
-          }
-        };
-      }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
-        processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Evals.asDouble(left != right);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(rightType)) {
-        processor = new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            maxVectorSize
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Evals.asDouble(left != right);
-          }
-        };
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorComparisonProcessors.notEqual(inputTypes, left, right);
   }
 }
 

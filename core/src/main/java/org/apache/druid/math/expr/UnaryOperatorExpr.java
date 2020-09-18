@@ -23,9 +23,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.vector.DoubleOutDoubleInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.VectorMathProcessors;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -148,36 +147,7 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final ExprType inputType = expr.getOutputType(inputTypes);
-    if (inputType == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-
-    final int maxVectorSize = inputTypes.getMaxVectorSize();
-    VectorExprProcessor<?> processor = null;
-    if (ExprType.LONG.equals(inputType)) {
-      processor = new LongOutLongInFunctionVectorProcessor(expr.buildVectorized(inputTypes), maxVectorSize)
-      {
-        @Override
-        public long apply(long input)
-        {
-          return -input;
-        }
-      };
-    } else if (ExprType.DOUBLE.equals(inputType)) {
-      processor = new DoubleOutDoubleInFunctionVectorProcessor(expr.buildVectorized(inputTypes), maxVectorSize)
-      {
-        @Override
-        public double apply(double input)
-        {
-          return -input;
-        }
-      };
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(this);
-    }
-    return (VectorExprProcessor<T>) processor;
+    return VectorMathProcessors.negate(inputTypes, expr);
   }
 }
 

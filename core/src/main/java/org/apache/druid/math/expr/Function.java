@@ -26,19 +26,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.math.expr.vector.BivariateFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutDoubleInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutDoubleLongInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutDoublesInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutLongDoubleInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleOutLongsInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.DoubleVectorExprEval;
-import org.apache.druid.math.expr.vector.LongOutDoubleInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongsInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutStringInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.VectorExprEval;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.VectorMathProcessors;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -545,41 +536,18 @@ public interface Function
     @Override
     public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return args.size() == 1 && inputTypes.canVectorize(args);
+      return (args.size() == 1 || args.get(1).isLiteral()) && inputTypes.canVectorize(args);
     }
 
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      VectorExprProcessor<?> processor = null;
-
-      if (args.size() == 1) {
-        processor = new LongOutStringInFunctionVectorProcessor(
-            CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.STRING),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public void processIndex(String[] strings, long[] longs, boolean[] outputNulls, int i)
-          {
-            try {
-              longs[i] = Long.parseLong(strings[i], 10);
-              outputNulls[i] = false;
-            }
-            catch (NumberFormatException e) {
-              longs[i] = 0L;
-              outputNulls[i] = NullHandling.sqlCompatible();
-            }
-          }
-        };
+      if (args.size() == 1 || args.get(1).isLiteral()) {
+        final int radix = args.size() == 1 ? 10 : ((Number) args.get(1).getLiteralValue()).intValue();
+        return VectorProcessors.parseLong(inputTypes, args.get(0), radix);
       }
-
-      if (processor == null) {
-        // not yet implemented, how did we get here
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      // not yet implemented, how did we get here
+      throw Exprs.cannotVectorize(this);
     }
   }
 
@@ -621,27 +589,9 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(
-        Expr.VectorInputBindingTypes inputTypes, List<Expr> args
-    )
+    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      final double[] pi = new double[inputTypes.getMaxVectorSize()];
-      Arrays.fill(pi, PI);
-      final DoubleVectorExprEval eval = new DoubleVectorExprEval(pi,null);
-      return new VectorExprProcessor<T>()
-      {
-        @Override
-        public VectorExprEval<T> evalVector(Expr.VectorInputBinding bindings)
-        {
-          return (VectorExprEval<T>) eval;
-        }
-
-        @Override
-        public ExprType getOutputType()
-        {
-          return ExprType.DOUBLE;
-        }
-      };
+      return VectorProcessors.constantDouble(PI, inputTypes.getMaxVectorSize());
     }
   }
 
@@ -719,40 +669,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.atan(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.atan(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.atan(inputTypes, args.get(0));
     }
   }
 
@@ -809,40 +726,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cos(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cos(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.cos(inputTypes, args.get(0));
     }
   }
 
@@ -869,40 +753,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cosh(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cosh(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.cosh(inputTypes, args.get(0));
     }
   }
 
@@ -929,40 +780,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cos(input) / Math.sin(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cos(input) / Math.sin(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.cot(inputTypes, args.get(0));
     }
   }
 
@@ -984,6 +802,18 @@ public interface Function
     protected ExprEval eval(final double x, final double y)
     {
       return ExprEval.of((long) (x / y));
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
+    }
+
+    @Override
+    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.divide(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -1248,40 +1078,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.sin(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.sin(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.sin(inputTypes, args.get(0));
     }
   }
 
@@ -1308,40 +1105,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.sinh(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.sinh(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.sinh(inputTypes, args.get(0));
     }
   }
 
@@ -1383,40 +1147,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.tan(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.tan(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.tan(inputTypes, args.get(0));
     }
   }
 
@@ -1443,40 +1174,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      Expr arg = args.get(0);
-      ExprType inputType = arg.getOutputType(inputTypes);
-      VectorExprProcessor<?> processor = null;
-      if (ExprType.LONG.equals(inputType)) {
-        processor = new LongOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.tanh(input);
-          }
-        };
-      } else if (ExprType.DOUBLE.equals(inputType)) {
-        processor = new DoubleOutDoubleInFunctionVectorProcessor(
-            arg.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.tanh(input);
-          }
-        };
-      }
-
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.tanh(inputTypes, args.get(0));
     }
   }
 
@@ -1614,72 +1312,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      final ExprType leftType = args.get(0).getOutputType(inputTypes);
-      final ExprType rightType = args.get(1).getOutputType(inputTypes);
-
-      final int maxVectorSize = inputTypes.getMaxVectorSize();
-      BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-      if (ExprType.LONG.equals(leftType)) {
-        if (ExprType.LONG.equals(rightType)) {
-          processor = new LongOutLongsInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Math.max(left, right);
-            }
-          };
-        } else if (ExprType.DOUBLE.equals(rightType)) {
-          processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Math.max(left, right);
-            }
-          };
-        }
-      } else if (ExprType.DOUBLE.equals(leftType)) {
-        if (ExprType.LONG.equals(rightType)) {
-          processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Math.max(left, right);
-            }
-          };
-        } else if (ExprType.DOUBLE.equals(rightType)) {
-          processor = new DoubleOutDoublesInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Math.max(left, right);
-            }
-          };
-        }
-      }
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.max(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -1712,72 +1345,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      final ExprType leftType = args.get(0).getOutputType(inputTypes);
-      final ExprType rightType = args.get(1).getOutputType(inputTypes);
-
-      final int maxVectorSize = inputTypes.getMaxVectorSize();
-      BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-      if (ExprType.LONG.equals(leftType)) {
-        if (ExprType.LONG.equals(rightType)) {
-          processor = new LongOutLongsInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Math.min(left, right);
-            }
-          };
-        } else if (ExprType.DOUBLE.equals(rightType)) {
-          processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Math.min(left, right);
-            }
-          };
-        }
-      } else if (ExprType.DOUBLE.equals(leftType)) {
-        if (ExprType.LONG.equals(rightType)) {
-          processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Math.min(left, right);
-            }
-          };
-        } else if (ExprType.DOUBLE.equals(rightType)) {
-          processor = new DoubleOutDoublesInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Math.min(left, right);
-            }
-          };
-        }
-      }
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.min(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -1819,72 +1387,7 @@ public interface Function
     @Override
     public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      final ExprType leftType = args.get(0).getOutputType(inputTypes);
-      final ExprType rightType = args.get(1).getOutputType(inputTypes);
-
-      final int maxVectorSize = inputTypes.getMaxVectorSize();
-      BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-      if (ExprType.LONG.equals(leftType)) {
-        if (ExprType.LONG.equals(rightType)) {
-          processor = new DoubleOutLongsInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(long left, long right)
-            {
-              return Math.pow(left, right);
-            }
-          };
-        } else if (ExprType.DOUBLE.equals(rightType)) {
-          processor = new DoubleOutLongDoubleInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Math.pow(left, right);
-            }
-          };
-        }
-      } else if (ExprType.DOUBLE.equals(leftType)) {
-        if (ExprType.LONG.equals(rightType)) {
-          processor = new DoubleOutDoubleLongInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Math.pow(left, right);
-            }
-          };
-        } else if (ExprType.DOUBLE.equals(rightType)) {
-          processor = new DoubleOutDoublesInFunctionVectorProcessor(
-              args.get(0).buildVectorized(inputTypes),
-              args.get(1).buildVectorized(inputTypes),
-              maxVectorSize
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Math.pow(left, right);
-            }
-          };
-        }
-      }
-      if (processor == null) {
-        throw Exprs.cannotVectorize(this);
-      }
-      return (VectorExprProcessor<T>) processor;
+      return VectorMathProcessors.doublePower(inputTypes, args.get(0), args.get(1));
     }
   }
 

@@ -23,11 +23,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.vector.DoubleVectorExprEval;
-import org.apache.druid.math.expr.vector.LongVectorExprEval;
-import org.apache.druid.math.expr.vector.StringVectorExprEval;
-import org.apache.druid.math.expr.vector.VectorExprEval;
 import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -147,29 +144,7 @@ class LongExpr extends ConstantExpr
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final long[] constant = new long[inputTypes.getMaxVectorSize()];
-    final boolean[] nulls = new boolean[inputTypes.getMaxVectorSize()];
-    if (value != null) {
-      Arrays.fill(constant, value);
-    } else {
-      Arrays.fill(nulls, true);
-    }
-    return new VectorExprProcessor<T>()
-    {
-      private final VectorExprEval<T> eval =
-          (VectorExprEval<T>) new LongVectorExprEval(constant, nulls);
-      @Override
-      public VectorExprEval<T> evalVector(VectorInputBinding bindings)
-      {
-        return eval;
-      }
-
-      @Override
-      public ExprType getOutputType()
-      {
-        return ExprType.LONG;
-      }
-    };
+    return VectorProcessors.constantLong(value, inputTypes.getMaxVectorSize());
   }
 
   @Override
@@ -214,25 +189,7 @@ class NullLongExpr extends NullNumericConstantExpr
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final long[] constant = new long[inputTypes.getMaxVectorSize()];
-    final boolean[] nulls = new boolean[inputTypes.getMaxVectorSize()];
-    Arrays.fill(nulls, true);
-    return new VectorExprProcessor<T>()
-    {
-      private final VectorExprEval<T> eval =
-          (VectorExprEval<T>) new LongVectorExprEval(constant, nulls);
-      @Override
-      public VectorExprEval<T> evalVector(VectorInputBinding bindings)
-      {
-        return eval;
-      }
-
-      @Override
-      public ExprType getOutputType()
-      {
-        return ExprType.LONG;
-      }
-    };
+    return VectorProcessors.constantLong(null, inputTypes.getMaxVectorSize());
   }
 
   @Override
@@ -342,29 +299,7 @@ class DoubleExpr extends ConstantExpr
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final double[] constant = new double[inputTypes.getMaxVectorSize()];
-    final boolean[] nulls = new boolean[inputTypes.getMaxVectorSize()];
-    if (value != null) {
-      Arrays.fill(constant, value);
-    } else {
-      Arrays.fill(nulls, true);
-    }
-    return new VectorExprProcessor<T>()
-    {
-      private final VectorExprEval<T> eval =
-          (VectorExprEval<T>) new DoubleVectorExprEval(constant, nulls);
-      @Override
-      public VectorExprEval<T> evalVector(VectorInputBinding bindings)
-      {
-        return eval;
-      }
-
-      @Override
-      public ExprType getOutputType()
-      {
-        return ExprType.DOUBLE;
-      }
-    };
+    return VectorProcessors.constantDouble(value, inputTypes.getMaxVectorSize());
   }
   @Override
   public boolean equals(Object o)
@@ -408,25 +343,7 @@ class NullDoubleExpr extends NullNumericConstantExpr
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final double[] constant = new double[inputTypes.getMaxVectorSize()];
-    final boolean[] nulls = new boolean[inputTypes.getMaxVectorSize()];
-    Arrays.fill(nulls, true);
-    return new VectorExprProcessor<T>()
-    {
-      private final VectorExprEval<T> eval =
-          (VectorExprEval<T>) new DoubleVectorExprEval(constant, nulls);
-      @Override
-      public VectorExprEval<T> evalVector(VectorInputBinding bindings)
-      {
-        return eval;
-      }
-
-      @Override
-      public ExprType getOutputType()
-      {
-        return ExprType.DOUBLE;
-      }
-    };
+    return VectorProcessors.constantDouble(null, inputTypes.getMaxVectorSize());
   }
 
   @Override
@@ -538,24 +455,7 @@ class StringExpr extends ConstantExpr
   @Override
   public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    final String[] strings = new String[inputTypes.getMaxVectorSize()];
-    Arrays.fill(strings, value);
-    return new VectorExprProcessor<T>()
-    {
-      private final VectorExprEval<T> eval = (VectorExprEval<T>) new StringVectorExprEval(strings);
-
-      @Override
-      public VectorExprEval<T> evalVector(VectorInputBinding bindings)
-      {
-        return eval;
-      }
-
-      @Override
-      public ExprType getOutputType()
-      {
-        return ExprType.STRING;
-      }
-    };
+    return VectorProcessors.constantString(value, inputTypes.getMaxVectorSize());
   }
 
   @Override

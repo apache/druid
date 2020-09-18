@@ -119,12 +119,6 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
-  {
-    return true;
-  }
-
-  @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.bestEffortOf(bindings.get(binding));
@@ -150,9 +144,20 @@ class IdentifierExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.getType(binding) != null;
+  }
+
+  @Override
   public VectorExprProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    switch (inputTypes.getType(binding)) {
+    ExprType inputType = inputTypes.getType(binding);
+
+    if (inputType == null) {
+      throw Exprs.cannotVectorize(this);
+    }
+    switch (inputType) {
       case LONG:
         return new IdentifierVectorProcessor<long[]>(ExprType.LONG)
         {
