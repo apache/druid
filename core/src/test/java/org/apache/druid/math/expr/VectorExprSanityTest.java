@@ -24,7 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.vector.VectorExprEval;
+import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -174,7 +174,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   {
     Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(bindings.rhs));
     ExprType outputType = parsed.getOutputType(bindings.rhs);
-    VectorExprEval<?> vectorEval = parsed.buildVectorized(bindings.rhs).evalVector(bindings.rhs);
+    ExprEvalVector<?> vectorEval = parsed.buildVectorized(bindings.rhs).evalVector(bindings.rhs);
     Assert.assertEquals(outputType, vectorEval.getType());
     for (int i = 0; i < VECTOR_SIZE; i++) {
       ExprEval<?> eval = parsed.eval(bindings.lhs[i]);

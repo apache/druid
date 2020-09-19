@@ -20,8 +20,8 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -77,7 +77,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorComparisonProcessors.lessThan(inputTypes, left, right);
   }
@@ -133,7 +133,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorComparisonProcessors.lessThanOrEqual(inputTypes, left, right);
   }
@@ -188,7 +188,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorComparisonProcessors.greaterThan(inputTypes, left, right);
   }
@@ -244,7 +244,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorComparisonProcessors.greaterThanOrEqual(inputTypes, left, right);
   }
@@ -299,7 +299,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorComparisonProcessors.equal(inputTypes, left, right);
   }
@@ -354,7 +354,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorComparisonProcessors.notEqual(inputTypes, left, right);
   }

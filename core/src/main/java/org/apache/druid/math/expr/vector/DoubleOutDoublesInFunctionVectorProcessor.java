@@ -28,8 +28,8 @@ public abstract class DoubleOutDoublesInFunctionVectorProcessor
     extends BivariateFunctionVectorProcessor<double[], double[], double[]>
 {
   public DoubleOutDoublesInFunctionVectorProcessor(
-      VectorExprProcessor<double[]> left,
-      VectorExprProcessor<double[]> right,
+      ExprVectorProcessor<double[]> left,
+      ExprVectorProcessor<double[]> right,
       int maxVectorSize
   )
   {
@@ -51,8 +51,8 @@ public abstract class DoubleOutDoublesInFunctionVectorProcessor
   }
 
   @Override
-  final VectorExprEval<double[]> asEval()
+  final ExprEvalVector<double[]> asEval()
   {
-    return new DoubleVectorExprEval(outValues, outNulls);
+    return new ExprEvalDoubleVector(outValues, outNulls);
   }
 }

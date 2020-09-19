@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
@@ -51,6 +52,8 @@ import java.util.Objects;
 
 public class ExpressionVirtualColumn implements VirtualColumn
 {
+  private static final Logger log = new Logger(ExpressionVirtualColumn.class);
+
   private final String name;
   private final String expression;
   @Nullable
@@ -171,6 +174,15 @@ public class ExpressionVirtualColumn implements VirtualColumn
     final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
 
     if (plan.getOutputType() != null) {
+
+      if (outputType != null && ExprType.fromValueType(outputType) != plan.getOutputType()) {
+        log.warn(
+            "Projected output type %s of expression %s does not match provided type %s",
+            plan.getOutputType(),
+            expression,
+            outputType
+        );
+      }
       final ExprType inferredOutputType = plan.getOutputType();
       final ValueType valueType = ExprType.toValueType(inferredOutputType);
       if (valueType.isNumeric()) {

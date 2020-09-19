@@ -27,17 +27,17 @@ import org.apache.druid.math.expr.Expr;
  * checking the vector themselves for nulls)
  */
 public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput>
-    implements VectorExprProcessor<TOutput>
+    implements ExprVectorProcessor<TOutput>
 {
-  final VectorExprProcessor<TLeftInput> left;
-  final VectorExprProcessor<TRightInput> right;
+  final ExprVectorProcessor<TLeftInput> left;
+  final ExprVectorProcessor<TRightInput> right;
   final int maxVectorSize;
   final boolean[] outNulls;
   final TOutput outValues;
 
   protected BivariateFunctionVectorProcessor(
-      VectorExprProcessor<TLeftInput> left,
-      VectorExprProcessor<TRightInput> right,
+      ExprVectorProcessor<TLeftInput> left,
+      ExprVectorProcessor<TRightInput> right,
       int maxVectorSize,
       TOutput outValues
   )
@@ -50,10 +50,10 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
   }
 
   @Override
-  public final VectorExprEval<TOutput> evalVector(Expr.VectorInputBinding bindings)
+  public final ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings)
   {
-    final VectorExprEval<TLeftInput> lhs = left.evalVector(bindings);
-    final VectorExprEval<TRightInput> rhs = right.evalVector(bindings);
+    final ExprEvalVector<TLeftInput> lhs = left.evalVector(bindings);
+    final ExprEvalVector<TRightInput> rhs = right.evalVector(bindings);
 
     final int currentSize = bindings.getCurrentVectorSize();
     final boolean[] leftNulls = lhs.getNullVector();
@@ -83,5 +83,5 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
 
   abstract void processIndex(TLeftInput leftInput, TRightInput rightInput, int i);
 
-  abstract VectorExprEval<TOutput> asEval();
+  abstract ExprEvalVector<TOutput> asEval();
 }

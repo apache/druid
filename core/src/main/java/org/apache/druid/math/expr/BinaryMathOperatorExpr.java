@@ -22,7 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 
 import javax.annotation.Nullable;
@@ -67,7 +67,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.plus(inputTypes, left, right);
   }
@@ -105,7 +105,7 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.minus(inputTypes, left, right);
   }
@@ -143,7 +143,7 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.multiply(inputTypes, left, right);
   }
@@ -181,7 +181,7 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.divide(inputTypes, left, right);
   }
@@ -219,7 +219,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.power(inputTypes, left, right);
   }
@@ -257,7 +257,7 @@ class BinModuloExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.modulo(inputTypes, left, right);
   }

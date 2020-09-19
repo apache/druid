@@ -22,7 +22,7 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -46,7 +46,7 @@ public class ExpressionVectorSelectors
     final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
     Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
-    final VectorExprProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
+    final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
     return new ExpressionVectorValueSelector(processor, bindings);
   }
 
@@ -58,7 +58,7 @@ public class ExpressionVectorSelectors
     final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
     Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
-    final VectorExprProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
+    final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
     return new ExpressionVectorObjectSelector(processor, bindings);
   }
 

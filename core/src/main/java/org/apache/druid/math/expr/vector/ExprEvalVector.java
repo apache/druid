@@ -26,18 +26,18 @@ import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 
 /**
- * Result of {@link VectorExprProcessor#evalVector} which wraps the actual evaluated results of the operation over the
+ * Result of {@link ExprVectorProcessor#evalVector} which wraps the actual evaluated results of the operation over the
  * input vector(s). Methods to get actual results mirror vectorized value and object selectors.
  *
  * The generic parameter T should be the native java array type of the vector result (long[], String[], etc.)
  */
-public abstract class VectorExprEval<T>
+public abstract class ExprEvalVector<T>
 {
   final T values;
   @Nullable
   final boolean[] nulls;
 
-  public VectorExprEval(T values, @Nullable boolean[] nulls)
+  public ExprEvalVector(T values, @Nullable boolean[] nulls)
   {
     this.values = values;
     this.nulls = nulls;

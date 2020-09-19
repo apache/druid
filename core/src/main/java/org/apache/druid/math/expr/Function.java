@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.joda.time.DateTime;
@@ -122,7 +122,7 @@ public interface Function
     return false;
   }
 
-  default <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
   {
     throw new UOE("%s is not vectorized", name());
   }
@@ -536,11 +536,12 @@ public interface Function
     @Override
     public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return (args.size() == 1 || args.get(1).isLiteral()) && inputTypes.canVectorize(args);
+      return (args.size() == 1 || (args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof Number)) &&
+             inputTypes.canVectorize(args);
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       if (args.size() == 1 || args.get(1).isLiteral()) {
         final int radix = args.size() == 1 ? 10 : ((Number) args.get(1).getLiteralValue()).intValue();
@@ -589,7 +590,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorProcessors.constantDouble(PI, inputTypes.getMaxVectorSize());
     }
@@ -667,7 +668,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.atan(inputTypes, args.get(0));
     }
@@ -724,7 +725,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cos(inputTypes, args.get(0));
     }
@@ -751,7 +752,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cosh(inputTypes, args.get(0));
     }
@@ -778,7 +779,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cot(inputTypes, args.get(0));
     }
@@ -811,7 +812,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.divide(inputTypes, args.get(0), args.get(1));
     }
@@ -1076,7 +1077,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.sin(inputTypes, args.get(0));
     }
@@ -1103,7 +1104,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.sinh(inputTypes, args.get(0));
     }
@@ -1145,7 +1146,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.tan(inputTypes, args.get(0));
     }
@@ -1172,7 +1173,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.tanh(inputTypes, args.get(0));
     }
@@ -1310,7 +1311,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.max(inputTypes, args.get(0), args.get(1));
     }
@@ -1343,7 +1344,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.min(inputTypes, args.get(0), args.get(1));
     }
@@ -1385,7 +1386,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.doublePower(inputTypes, args.get(0), args.get(1));
     }
@@ -1491,7 +1492,7 @@ public interface Function
     }
 
     @Override
-    public <T> VectorExprProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return CastToTypeVectorProcessor.castToType(
           args.get(0).buildVectorized(inputTypes),

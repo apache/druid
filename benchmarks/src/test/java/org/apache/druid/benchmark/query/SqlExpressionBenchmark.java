@@ -354,8 +354,9 @@ public class SqlExpressionBenchmark
         Assert.assertTrue(vectorizedYielder.isDone());
         Assert.assertTrue(nonVectorizedYielder.isDone());
       }
-      catch (Throwable ignored) {
+      catch (Throwable t) {
         // the show must go on
+        log.warn(t.getMessage());
       }
     }
   }

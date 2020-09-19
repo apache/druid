@@ -27,8 +27,8 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorProcessor;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -130,9 +130,9 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
     {
-      VectorExprProcessor<?> processor;
+      ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorProcessor(
           CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.LONG),
           inputTypes.getMaxVectorSize()
@@ -145,7 +145,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
         }
       };
 
-      return (VectorExprProcessor<T>) processor;
+      return (ExprVectorProcessor<T>) processor;
     }
 
     @Override

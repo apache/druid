@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 
 import javax.annotation.Nullable;
@@ -145,7 +145,7 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorMathProcessors.negate(inputTypes, expr);
   }

@@ -24,16 +24,16 @@ import org.apache.druid.math.expr.ExprType;
 
 public final class CastToLongVectorProcessor extends CastToTypeVectorProcessor<long[]>
 {
-  public CastToLongVectorProcessor(VectorExprProcessor<?> delegate)
+  public CastToLongVectorProcessor(ExprVectorProcessor<?> delegate)
   {
     super(delegate);
   }
 
   @Override
-  public VectorExprEval<long[]> evalVector(Expr.VectorInputBinding bindings)
+  public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
   {
-    VectorExprEval<?> result = delegate.evalVector(bindings);
-    return new LongVectorExprEval(result.getLongVector(), result.getNullVector());
+    ExprEvalVector<?> result = delegate.evalVector(bindings);
+    return new ExprEvalLongVector(result.getLongVector(), result.getNullVector());
   }
 
   @Override

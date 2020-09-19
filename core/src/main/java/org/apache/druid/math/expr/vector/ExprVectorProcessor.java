@@ -26,9 +26,9 @@ import org.apache.druid.math.expr.ExprType;
  * Interface describing vectorized expression processors, which can be specialized using input type information to
  * produce optimized expression evaluators, which can operate on batches of primitive data with minimal object overhead
  */
-public interface VectorExprProcessor<TOutput>
+public interface ExprVectorProcessor<TOutput>
 {
-  VectorExprEval<TOutput> evalVector(Expr.VectorInputBinding bindings);
+  ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings);
 
   ExprType getOutputType();
 }

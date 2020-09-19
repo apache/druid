@@ -24,9 +24,9 @@ import org.apache.druid.math.expr.ExprType;
 
 import java.util.Arrays;
 
-public final class DoubleVectorExprEval extends VectorExprEval<double[]>
+public final class ExprEvalDoubleVector extends ExprEvalVector<double[]>
 {
-  public DoubleVectorExprEval(double[] values, boolean[] nulls)
+  public ExprEvalDoubleVector(double[] values, boolean[] nulls)
   {
     super(values, nulls);
   }

@@ -25,15 +25,15 @@ import org.apache.druid.math.expr.Expr;
  * common machinery for processing single input operators and functions, which are backed by an object value instead of
  * a primitive value (so do not need to use the null vector, and instead can check the value vector itself for nulls)
  */
-public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> implements VectorExprProcessor<TOutput>
+public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> implements ExprVectorProcessor<TOutput>
 {
-  final VectorExprProcessor<TInput> processor;
+  final ExprVectorProcessor<TInput> processor;
   final int maxVectorSize;
   final boolean[] outNulls;
   final TOutput outValues;
 
   public UnivariateFunctionVectorObjectProcessor(
-      VectorExprProcessor<TInput> processor,
+      ExprVectorProcessor<TInput> processor,
       int maxVectorSize,
       TOutput outValues
   )
@@ -45,9 +45,9 @@ public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> i
   }
 
   @Override
-  public VectorExprEval<TOutput> evalVector(Expr.VectorInputBinding bindings)
+  public ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings)
   {
-    final VectorExprEval<TInput> lhs = processor.evalVector(bindings);
+    final ExprEvalVector<TInput> lhs = processor.evalVector(bindings);
 
     final int currentSize = bindings.getCurrentVectorSize();
 
@@ -61,5 +61,5 @@ public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> i
 
   public abstract void processIndex(TInput input, TOutput output, boolean[] outputNulls, int i);
 
-  public abstract VectorExprEval<TOutput> asEval();
+  public abstract ExprEvalVector<TOutput> asEval();
 }

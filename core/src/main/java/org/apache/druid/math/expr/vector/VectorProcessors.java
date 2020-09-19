@@ -28,17 +28,17 @@ import java.util.Arrays;
 
 public class VectorProcessors
 {
-  public static <T> VectorExprProcessor<T> constantString(@Nullable String constant, int maxVectorSize)
+  public static <T> ExprVectorProcessor<T> constantString(@Nullable String constant, int maxVectorSize)
   {
     final String[] strings = new String[maxVectorSize];
     Arrays.fill(strings, constant);
-    final StringVectorExprEval eval = new StringVectorExprEval(strings);
-    return new VectorExprProcessor<T>()
+    final ExprEvalStringVector eval = new ExprEvalStringVector(strings);
+    return new ExprVectorProcessor<T>()
     {
       @Override
-      public VectorExprEval<T> evalVector(Expr.VectorInputBinding bindings)
+      public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
       {
-        return (VectorExprEval<T>) eval;
+        return (ExprEvalVector<T>) eval;
       }
 
       @Override
@@ -49,7 +49,7 @@ public class VectorProcessors
     };
   }
 
-  public static <T> VectorExprProcessor<T> constantDouble(@Nullable Double constant, int maxVectorSize)
+  public static <T> ExprVectorProcessor<T> constantDouble(@Nullable Double constant, int maxVectorSize)
   {
     final double[] doubles = new double[maxVectorSize];
     final boolean[] nulls;
@@ -60,13 +60,13 @@ public class VectorProcessors
       nulls = null;
       Arrays.fill(doubles, constant);
     }
-    final DoubleVectorExprEval eval = new DoubleVectorExprEval(doubles, nulls);
-    return new VectorExprProcessor<T>()
+    final ExprEvalDoubleVector eval = new ExprEvalDoubleVector(doubles, nulls);
+    return new ExprVectorProcessor<T>()
     {
       @Override
-      public VectorExprEval<T> evalVector(Expr.VectorInputBinding bindings)
+      public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
       {
-        return (VectorExprEval<T>) eval;
+        return (ExprEvalVector<T>) eval;
       }
 
       @Override
@@ -77,7 +77,7 @@ public class VectorProcessors
     };
   }
 
-  public static <T> VectorExprProcessor<T> constantLong(@Nullable Long constant, int maxVectorSize)
+  public static <T> ExprVectorProcessor<T> constantLong(@Nullable Long constant, int maxVectorSize)
   {
     final long[] longs = new long[maxVectorSize];
     final boolean[] nulls;
@@ -88,13 +88,13 @@ public class VectorProcessors
       nulls = null;
       Arrays.fill(longs, constant);
     }
-    final LongVectorExprEval eval = new LongVectorExprEval(longs, nulls);
-    return new VectorExprProcessor<T>()
+    final ExprEvalLongVector eval = new ExprEvalLongVector(longs, nulls);
+    return new ExprVectorProcessor<T>()
     {
       @Override
-      public VectorExprEval<T> evalVector(Expr.VectorInputBinding bindings)
+      public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
       {
-        return (VectorExprEval<T>) eval;
+        return (ExprEvalVector<T>) eval;
       }
 
       @Override
@@ -105,9 +105,9 @@ public class VectorProcessors
     };
   }
 
-  public static <T> VectorExprProcessor<T> parseLong(Expr.VectorInputBindingTypes inputTypes, Expr arg, int radix)
+  public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingTypes inputTypes, Expr arg, int radix)
   {
-    final VectorExprProcessor<?> processor = new LongOutStringInFunctionVectorProcessor(
+    final ExprVectorProcessor<?> processor = new LongOutStringInFunctionVectorProcessor(
         CastToTypeVectorProcessor.castToType(arg.buildVectorized(inputTypes), ExprType.STRING),
         inputTypes.getMaxVectorSize()
     )
@@ -126,6 +126,6 @@ public class VectorProcessors
       }
     };
 
-    return (VectorExprProcessor<T>) processor;
+    return (ExprVectorProcessor<T>) processor;
   }
 }

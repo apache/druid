@@ -21,15 +21,15 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 public class ExpressionVectorObjectSelector implements VectorObjectSelector
 {
   final Expr.VectorInputBinding bindings;
-  final VectorExprProcessor<?> processor;
+  final ExprVectorProcessor<?> processor;
 
-  public ExpressionVectorObjectSelector(VectorExprProcessor<?> processor, Expr.VectorInputBinding bindings)
+  public ExpressionVectorObjectSelector(ExprVectorProcessor<?> processor, Expr.VectorInputBinding bindings)
   {
     this.processor = Preconditions.checkNotNull(processor, "processor");
     this.bindings = Preconditions.checkNotNull(bindings, "bindings");

@@ -27,7 +27,7 @@ import org.apache.druid.math.expr.ExprType;
 public abstract class LongOutStringInFunctionVectorProcessor
     extends UnivariateFunctionVectorObjectProcessor<String[], long[]>
 {
-  public LongOutStringInFunctionVectorProcessor(VectorExprProcessor<String[]> processor, int maxVectorSize)
+  public LongOutStringInFunctionVectorProcessor(ExprVectorProcessor<String[]> processor, int maxVectorSize)
   {
     super(processor, maxVectorSize, new long[maxVectorSize]);
   }
@@ -39,8 +39,8 @@ public abstract class LongOutStringInFunctionVectorProcessor
   }
 
   @Override
-  public final VectorExprEval<long[]> asEval()
+  public final ExprEvalVector<long[]> asEval()
   {
-    return new LongVectorExprEval(outValues, outNulls);
+    return new ExprEvalLongVector(outValues, outNulls);
   }
 }

@@ -28,8 +28,8 @@ public abstract class LongOutLongsInFunctionVectorProcessor
     extends BivariateFunctionVectorProcessor<long[], long[], long[]>
 {
   public LongOutLongsInFunctionVectorProcessor(
-      VectorExprProcessor<long[]> left,
-      VectorExprProcessor<long[]> right,
+      ExprVectorProcessor<long[]> left,
+      ExprVectorProcessor<long[]> right,
       int maxVectorSize
   )
   {
@@ -51,8 +51,8 @@ public abstract class LongOutLongsInFunctionVectorProcessor
   }
 
   @Override
-  final VectorExprEval<long[]> asEval()
+  final ExprEvalVector<long[]> asEval()
   {
-    return new LongVectorExprEval(outValues, outNulls);
+    return new ExprEvalLongVector(outValues, outNulls);
   }
 }

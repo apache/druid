@@ -24,16 +24,16 @@ import org.apache.druid.math.expr.ExprType;
 
 public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor<String[]>
 {
-  public CastToStringVectorProcessor(VectorExprProcessor<?> delegate)
+  public CastToStringVectorProcessor(ExprVectorProcessor<?> delegate)
   {
     super(delegate);
   }
 
   @Override
-  public VectorExprEval<String[]> evalVector(Expr.VectorInputBinding bindings)
+  public ExprEvalVector<String[]> evalVector(Expr.VectorInputBinding bindings)
   {
-    VectorExprEval<?> result = delegate.evalVector(bindings);
-    return new StringVectorExprEval(result.asObjectVector(ExprType.STRING));
+    ExprEvalVector<?> result = delegate.evalVector(bindings);
+    return new ExprEvalStringVector(result.asObjectVector(ExprType.STRING));
   }
 
   @Override

@@ -22,7 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -84,7 +84,7 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return expr.buildVectorized(inputTypes);
   }
@@ -190,7 +190,7 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public VectorExprProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return function.asVectorProcessor(inputTypes, args);
   }
@@ -322,7 +322,7 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return function.asVectorProcessor(inputTypes, lambdaExpr, argsExpr);
   }

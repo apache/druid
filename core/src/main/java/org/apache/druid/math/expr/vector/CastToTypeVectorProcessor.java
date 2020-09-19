@@ -22,18 +22,18 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Exprs;
 
-public abstract class CastToTypeVectorProcessor<TOutput> implements VectorExprProcessor<TOutput>
+public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorProcessor<TOutput>
 {
-  protected final VectorExprProcessor<?> delegate;
+  protected final ExprVectorProcessor<?> delegate;
 
-  protected CastToTypeVectorProcessor(VectorExprProcessor<?> delegate)
+  protected CastToTypeVectorProcessor(ExprVectorProcessor<?> delegate)
   {
     this.delegate = delegate;
   }
 
-  public static <T> VectorExprProcessor<T> castToType(VectorExprProcessor<?> delegate, ExprType type)
+  public static <T> ExprVectorProcessor<T> castToType(ExprVectorProcessor<?> delegate, ExprType type)
   {
-    final VectorExprProcessor<?> caster;
+    final ExprVectorProcessor<?> caster;
     if (delegate.getOutputType() == type) {
       caster = delegate;
     } else {
@@ -51,6 +51,6 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements VectorExprPr
           throw Exprs.cannotVectorize();
       }
     }
-    return (VectorExprProcessor<T>) caster;
+    return (ExprVectorProcessor<T>) caster;
   }
 }

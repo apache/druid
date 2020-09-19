@@ -19,81 +19,35 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
-public final class StringVectorExprEval extends VectorExprEval<String[]>
+public final class ExprEvalLongVector extends ExprEvalVector<long[]>
 {
-  @Nullable
-  private long[] longs;
-  @Nullable
-  private double[] doubles;
-
-  @Nullable
-  private boolean[] numericNulls;
-
-  public StringVectorExprEval(String[] values)
+  public ExprEvalLongVector(long[] values, @Nullable boolean[] nulls)
   {
-    super(values, null);
-  }
-
-  private void computeNumbers()
-  {
-    if (longs == null) {
-      longs = new long[values.length];
-      doubles = new double[values.length];
-      numericNulls = new boolean[values.length];
-      for (int i = 0; i < values.length; i++) {
-        Number n = ExprEval.computeNumber(values[i]);
-        if (n != null) {
-          longs[i] = n.longValue();
-          doubles[i] = n.doubleValue();
-          numericNulls[i] = false;
-        } else {
-          longs[i] = 0L;
-          doubles[i] = 0.0;
-          numericNulls[i] = NullHandling.sqlCompatible();
-        }
-      }
-    }
-  }
-
-  @Nullable
-  @Override
-  public boolean[] getNullVector()
-  {
-    computeNumbers();
-    return numericNulls;
+    super(values, nulls);
   }
 
   @Override
   public ExprType getType()
   {
-    return ExprType.STRING;
+    return ExprType.LONG;
   }
 
   @Override
   public long[] getLongVector()
   {
-    computeNumbers();
-    return longs;
+    return values;
   }
 
   @Override
   public double[] getDoubleVector()
   {
-    computeNumbers();
-    return doubles;
-  }
-
-  @Override
-  public <E> E getObjectVector()
-  {
-    return (E) values;
+    return Arrays.stream(values).asDoubleStream().toArray();
   }
 
   @Override
@@ -101,7 +55,13 @@ public final class StringVectorExprEval extends VectorExprEval<String[]>
   {
     switch (type) {
       case STRING:
-        return (E) values;
+        String[] s = new String[values.length];
+        if (nulls != null) {
+          for (int i = 0; i < values.length; i++) {
+            s[i] = nulls[i] ? null : String.valueOf(values[i]);
+          }
+        }
+        return (E) s;
       default:
         throw new IAE("Cannot convert %s to %s object vector", getType(), type);
     }

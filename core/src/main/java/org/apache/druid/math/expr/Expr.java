@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -142,12 +142,21 @@ public interface Expr
     return null;
   }
 
+  /**
+   * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
+   * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
+   * to use with vectorized query engines.
+   */
   default boolean canVectorize(InputBindingTypes inputTypes)
   {
     return false;
   }
 
-  default <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  /**
+   * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
+   * query engines.
+   */
+  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     throw Exprs.cannotVectorize(this);
   }
@@ -230,7 +239,7 @@ public interface Expr
   }
 
   /**
-   * Mechanism to supply batches of input values to a {@link VectorExprProcessor} for optimized processing. Mirrors
+   * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
    * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
    * which exist
    */

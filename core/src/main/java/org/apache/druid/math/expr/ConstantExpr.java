@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.vector.VectorExprProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
@@ -142,7 +142,7 @@ class LongExpr extends ConstantExpr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorProcessors.constantLong(value, inputTypes.getMaxVectorSize());
   }
@@ -187,7 +187,7 @@ class NullLongExpr extends NullNumericConstantExpr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorProcessors.constantLong(null, inputTypes.getMaxVectorSize());
   }
@@ -297,7 +297,7 @@ class DoubleExpr extends ConstantExpr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorProcessors.constantDouble(value, inputTypes.getMaxVectorSize());
   }
@@ -341,7 +341,7 @@ class NullDoubleExpr extends NullNumericConstantExpr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorProcessors.constantDouble(null, inputTypes.getMaxVectorSize());
   }
@@ -453,7 +453,7 @@ class StringExpr extends ConstantExpr
   }
 
   @Override
-  public <T> VectorExprProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
   {
     return VectorProcessors.constantString(value, inputTypes.getMaxVectorSize());
   }
