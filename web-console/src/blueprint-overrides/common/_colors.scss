@@ -16,18 +16,8 @@
  * limitations under the License.
  */
 
-.spec-dialog {
-  &.bp3-dialog {
-    top: 5%;
-    width: 90%;
-  }
-
-  .spec-dialog-textarea {
-    background-color: #232c35;
-    margin-bottom: 10px;
-
-    .ace-solarized-dark {
-      background-color: #232c35;
-    }
-  }
-}
+$blue1: #0e5a8a;
+$blue2: #106ba3;
+$blue3: #137cbe; // Changed as a proof of concept
+$blue4: #2b95d6;
+$blue5: #48aff0;
