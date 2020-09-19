@@ -24,10 +24,10 @@ import org.apache.druid.math.expr.ExprType;
 /**
  * specialized {@link UnivariateFunctionVectorProcessor} for processing (long[]) -> double[]
  */
-public abstract class LongOutDoubleInFunctionVectorProcessor
+public abstract class DoubleOutLongInFunctionVectorProcessor
     extends UnivariateFunctionVectorProcessor<long[], double[]>
 {
-  public LongOutDoubleInFunctionVectorProcessor(VectorExprProcessor<long[]> processor, int maxVectorSize)
+  public DoubleOutLongInFunctionVectorProcessor(VectorExprProcessor<long[]> processor, int maxVectorSize)
   {
     super(processor, maxVectorSize, new double[maxVectorSize]);
   }
