@@ -175,8 +175,8 @@ For example, consider a groupBy query like this one:
 }
 ```
 
-The result of the subtotalSpec would be equivalent to concatenating the result of three groupBy queries, with the "dimensions" field being `["D1", "D2", D3"]`, `["D1", "D3"]` and `["D3"]`, given the `DimensionSpec` shown above.
-The response for the query above query would look something like: 
+The result of the subtotalsSpec would be equivalent to concatenating the result of three groupBy queries, with the "dimensions" field being `["D1", "D2", D3"]`, `["D1", "D3"]` and `["D3"]`, given the `DimensionSpec` shown above.
+The response for the query above would look something like: 
 
 ```json
 [
