@@ -185,10 +185,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private handleChangeLookup = (field: string, value: string | LookupSpec) => {
-    this.setState({
-      [field]: value,
-    } as any);
+  private handleChangeLookup = (field: keyof LookupEditInfo, value: string | LookupSpec) => {
+    this.setState(state => ({
+      lookupEdit: Object.assign({}, state.lookupEdit, { [field]: value }),
+    }));
   };
 
   private async submitLookupEdit(updatelookupEditVersion: boolean) {

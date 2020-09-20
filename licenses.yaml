@@ -4721,7 +4721,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.9.11
+version: 0.9.15
 
 ---
 
