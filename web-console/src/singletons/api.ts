@@ -18,4 +18,9 @@
 
 import axios from 'axios';
 
-export const Api = axios.create();
+function initialize() {
+  const instance = axios.create();
+  return instance;
+}
+
+export const Api = initialize();
