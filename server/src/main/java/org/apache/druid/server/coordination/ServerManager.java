@@ -300,7 +300,7 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    QueryRunner<T> queryRunner = new CachingQueryRunner<>(
+    CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
         cacheKeyPrefix,
         segmentDescriptor,
@@ -315,7 +315,7 @@ public class ServerManager implements QuerySegmentWalker
     BySegmentQueryRunner<T> bySegmentQueryRunner = new BySegmentQueryRunner<>(
         segmentId,
         segmentInterval.getStart(),
-        queryRunner
+        cachingQueryRunner
     );
 
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerOuter = new MetricsEmittingQueryRunner<>(

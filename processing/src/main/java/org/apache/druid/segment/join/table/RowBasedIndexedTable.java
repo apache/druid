@@ -45,6 +45,13 @@ import java.util.stream.Collectors;
 /**
  * An IndexedTable composed of a List-based table and Map-based indexes. The implementation is agnostic to the
  * specific row type; it uses a {@link RowAdapter} to work with any sort of object.
+ * The class allows passing in a cache key. If the key is non-null, results of any join on this table can be cached.
+ * That cache becomes invalidated if this key changes. Creators of this class can pass in a non-null cache key if its
+ * possible to construct a small identifier
+ *  - that must change when contents of this indexed table chances
+ *  - May remain unchanged when contents of this indexed table
+ *
+ *  How the cache key is constructed itself, depends on how the RowBasedIndexedTable is being built.
  */
 public class RowBasedIndexedTable<RowType> implements IndexedTable
 {

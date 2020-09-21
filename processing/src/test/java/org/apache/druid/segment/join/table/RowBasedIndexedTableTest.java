@@ -186,6 +186,6 @@ public class RowBasedIndexedTableTest
     Assert.assertFalse(countriesTable.isCacheable());
     RowBasedIndexedTable<Map<String, Object>> countriesTableWithCacheKey = JoinTestHelper.createCountriesIndexedTableWithCacheKey();
     Assert.assertTrue(countriesTableWithCacheKey.isCacheable());
-    Assert.assertEquals(countriesTableWithCacheKey.computeCacheKey(), JoinTestHelper.INDEXED_TABLE_CACHE_KEY);
+    Assert.assertArrayEquals(JoinTestHelper.INDEXED_TABLE_CACHE_KEY, countriesTableWithCacheKey.computeCacheKey());
   }
 }

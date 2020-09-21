@@ -228,7 +228,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
                       if (hydrantDefinitelySwapped && cache.isLocal()) {
-                        runner = new CachingQueryRunner<T>(
+                        runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
                             cacheKeyPrefix,
                             descriptor,

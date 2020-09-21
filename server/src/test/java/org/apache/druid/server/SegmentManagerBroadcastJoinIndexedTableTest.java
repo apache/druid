@@ -61,8 +61,6 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -365,6 +363,6 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     String version = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getVersion()));
     String dataSource = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getDataSource()));
     int partition = byteBuffer.getInt();
-    Assert.assertEquals(id, SegmentId.of(dataSource, new Interval(start, end, DateTimeZone.UTC), version, partition));
+    Assert.assertEquals(id, SegmentId.of(dataSource, Intervals.utc(start, end), version, partition));
   }
 }

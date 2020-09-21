@@ -102,7 +102,6 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
 
   /**
    * Returns whether this indexed table can be cached for the join operations
-   * @return
    */
   default boolean isCacheable()
   {

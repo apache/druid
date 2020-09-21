@@ -196,13 +196,21 @@ public class JoinablesTest
     Assert.assertNotSame(Function.identity(), segmentMapFn);
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void test_computeJoinDataSourceCacheKey_noClauses()
   {
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.emptyList()).anyTimes();
+    DataSource dataSource = new NoopDataSource();
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.emptyList());
+    EasyMock.expect(analysis.getDataSource()).andReturn(dataSource);
     EasyMock.replay(analysis);
     Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(String.format(
+        "No join clauses to build the cache key for data source [%s]",
+        dataSource
+    ));
     joinables.computeJoinDataSourceCacheKey(analysis);
   }
 
@@ -270,8 +278,9 @@ public class JoinablesTest
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
     EasyMock.replay(analysis);
     Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_2.isPresent());
 
-    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+    Assert.assertFalse(Arrays.equals(cacheKey_1.get(), cacheKey_2.get()));
   }
 
   @Test
@@ -293,31 +302,9 @@ public class JoinablesTest
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
     EasyMock.replay(analysis);
     Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_2.isPresent());
 
-    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
-  }
-
-  @Test
-  public void test_computeJoinDataSourceCacheKey_keyChangesWithPrefix()
-  {
-    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
-
-    PreJoinableClause clause_1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_1)).anyTimes();
-    EasyMock.replay(analysis);
-
-    Optional<byte[]> cacheKey_1 = joinables.computeJoinDataSourceCacheKey(analysis);
-    Assert.assertTrue(cacheKey_1.isPresent());
-    Assert.assertNotEquals(0, cacheKey_1.get().length);
-
-    PreJoinableClause clause_2 = makeGlobalPreJoinableClause("dataSource_1", "x == \"h.x\"", "h.");
-    EasyMock.reset(analysis);
-    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
-    EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
-
-    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+    Assert.assertFalse(Arrays.equals(cacheKey_1.get(), cacheKey_2.get()));
   }
 
   @Test
@@ -339,8 +326,9 @@ public class JoinablesTest
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
     EasyMock.replay(analysis);
     Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_2.isPresent());
 
-    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+    Assert.assertFalse(Arrays.equals(cacheKey_1.get(), cacheKey_2.get()));
   }
 
   @Test
@@ -362,8 +350,9 @@ public class JoinablesTest
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause_2)).anyTimes();
     EasyMock.replay(analysis);
     Optional<byte[]> cacheKey_2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey_2.isPresent());
 
-    Assert.assertNotEquals(cacheKey_1, cacheKey_2);
+    Assert.assertArrayEquals(cacheKey_1.get(), cacheKey_2.get());
   }
 
   @Test

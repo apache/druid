@@ -533,7 +533,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     /**
      * Adds the cache key prefix for join data sources. Return null if its a join but caching is not supported
-     * @return
      */
     @Nullable
     private byte[] computeQueryCacheKeyWithJoin()

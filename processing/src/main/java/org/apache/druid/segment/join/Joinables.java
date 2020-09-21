@@ -122,17 +122,16 @@ public class Joinables
    *  in the JOIN is not cacheable.
    *
    * @throws {@link IAE} if this operation is called on a non-join data source
-   * @param dataSourceAnalysis
-   * @return
+   * @param dataSourceAnalysis for the join datasource
+   * @return the optional cache key to be used as part of query cache key
    */
   public Optional<byte[]> computeJoinDataSourceCacheKey(
       final DataSourceAnalysis dataSourceAnalysis
   )
   {
-
     final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key");
+      throw new IAE("No join clauses to build the cache key for data source [%s]", dataSourceAnalysis.getDataSource());
     }
 
     final CacheKeyBuilder keyBuilder;
@@ -149,7 +148,6 @@ public class Joinables
         return Optional.empty();
       }
       keyBuilder.appendByteArray(bytes.get());
-      keyBuilder.appendString(clause.getPrefix());    //TODO - prefix shouldn't be required IMO
       keyBuilder.appendString(clause.getCondition().getOriginalExpression());
       keyBuilder.appendString(clause.getJoinType().name());
     }

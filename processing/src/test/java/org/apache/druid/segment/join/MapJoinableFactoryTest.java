@@ -29,7 +29,9 @@ import org.easymock.Mock;
 import org.easymock.MockType;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.Optional;
@@ -46,6 +48,8 @@ public class MapJoinableFactoryTest
   private JoinConditionAnalysis condition;
   @Mock
   private Joinable mockJoinable;
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private MapJoinableFactory target;
 
@@ -94,10 +98,10 @@ public class MapJoinableFactoryTest
     EasyMock.expect(noopJoinableFactory.computeJoinCacheKey(noopDataSource)).andReturn(expected);
     EasyMock.replay(noopJoinableFactory);
     Optional<byte[]> actual = target.computeJoinCacheKey(noopDataSource);
-    Assert.assertEquals(expected, actual);
+    Assert.assertSame(expected, actual);
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testBuildExceptionWhenTwoJoinableFactoryForSameDataSource()
   {
     JoinableFactory anotherNoopJoinableFactory = EasyMock.mock(MapJoinableFactory.class);
@@ -113,6 +117,11 @@ public class MapJoinableFactoryTest
     EasyMock.expect(noopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
     EasyMock.expect(anotherNoopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
     EasyMock.replay(noopJoinableFactory, anotherNoopJoinableFactory);
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage(String.format(
+        "Multiple joinable factories are valid for table[%s]",
+        noopDataSource
+    ));
     target.build(noopDataSource, condition);
   }
 

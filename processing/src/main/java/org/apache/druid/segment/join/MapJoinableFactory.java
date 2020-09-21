@@ -81,10 +81,6 @@ public class MapJoinableFactory implements JoinableFactory
    * Computes the given function assuming that only one joinable factory will return a non-empty result. If we get
    * results from two {@link JoinableFactory}, then throw an exception.
    *
-   * @param dataSource
-   * @param function
-   * @param <T>
-   * @return
    */
   private <T> Optional<T> getSingleResult(DataSource dataSource, Function<JoinableFactory, Optional<T>> function)
   {
