@@ -274,6 +274,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     final CountDownLatch loadRequestSignal = new CountDownLatch(1);
     final CountDownLatch segmentLoadedSignal = new CountDownLatch(1);
+    final CountDownLatch loadRequestRemoveSignal = new CountDownLatch(1);
 
     loadQueuePeon = new CuratorLoadQueuePeon(
         curator,
@@ -302,8 +303,15 @@ public class LoadQueuePeonTest extends CuratorTestBase
           @Override
           public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
           {
-            if (event.getType() == PathChildrenCacheEvent.Type.CHILD_ADDED) {
-              loadRequestSignal.countDown();
+            switch (event.getType()) {
+              case CHILD_ADDED:
+                loadRequestSignal.countDown();
+                break;
+              case CHILD_REMOVED:
+                loadRequestRemoveSignal.countDown();
+                break;
+              default:
+                // pass
             }
           }
         }
@@ -337,9 +345,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
     Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
     curator.delete().guaranteed().forPath(loadRequestPath);
-    while (null != curator.checkExists().forPath(loadRequestPath)) {
-      Thread.sleep(5);
-    }
+    Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestRemoveSignal));
     Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
     Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
   }
