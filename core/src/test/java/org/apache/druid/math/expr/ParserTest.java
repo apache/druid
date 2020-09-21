@@ -577,7 +577,7 @@ public class ParserTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    final Expr.BindingDetails deets = parsed.analyzeInputs();
+    final Expr.BindingAnalysis deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
     Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
@@ -586,7 +586,7 @@ public class ParserTest extends InitializedNullHandlingTest
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     final Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
-    final Expr.BindingDetails roundTripDeets = roundTrip.analyzeInputs();
+    final Expr.BindingAnalysis roundTripDeets = roundTrip.analyzeInputs();
     Assert.assertEquals(expression, identifiers, roundTripDeets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, roundTripDeets.getScalarVariables());
     Assert.assertEquals(expression, arrays, roundTripDeets.getArrayVariables());
@@ -600,7 +600,7 @@ public class ParserTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    Expr.BindingDetails deets = parsed.analyzeInputs();
+    Expr.BindingAnalysis deets = parsed.analyzeInputs();
     Parser.validateExpr(parsed, deets);
     final Expr transformed = Parser.applyUnappliedBindings(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
@@ -608,7 +608,7 @@ public class ParserTest extends InitializedNullHandlingTest
 
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     final Expr parsedRoundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
-    Expr.BindingDetails roundTripDeets = parsedRoundTrip.analyzeInputs();
+    Expr.BindingAnalysis roundTripDeets = parsedRoundTrip.analyzeInputs();
     Parser.validateExpr(parsedRoundTrip, roundTripDeets);
     final Expr transformedRoundTrip = Parser.applyUnappliedBindings(parsedRoundTrip, roundTripDeets, identifiers);
     Assert.assertEquals(expression, unapplied, parsedRoundTrip.toString());

@@ -83,6 +83,11 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-stats</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
@@ -172,7 +177,7 @@
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-protobuf-extensions</artifactId>
-      <version>0.20.0-SNAPSHOT</version>
+      <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

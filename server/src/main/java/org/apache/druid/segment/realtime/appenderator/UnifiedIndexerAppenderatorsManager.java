@@ -50,6 +50,8 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -158,7 +160,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     synchronized (this) {
@@ -178,7 +182,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           datasourceBundle.getWalker(),
           indexIO,
           wrapIndexMerger(indexMerger),
-          cache
+          cache,
+          rowIngestionMeters,
+          parseExceptionHandler
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -195,7 +201,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     synchronized (this) {
@@ -212,7 +220,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           dataSegmentPusher,
           objectMapper,
           indexIO,
-          wrapIndexMerger(indexMerger)
+          wrapIndexMerger(indexMerger),
+          rowIngestionMeters,
+          parseExceptionHandler
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;

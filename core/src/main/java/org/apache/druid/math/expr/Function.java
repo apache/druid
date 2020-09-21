@@ -36,9 +36,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BinaryOperator;
 import java.util.function.DoubleBinaryOperator;
@@ -103,6 +103,14 @@ public interface Function
    * Validate function arguments
    */
   void validateArguments(List<Expr> args);
+
+  /**
+   * Compute the output type of this function for a given set of argument expression inputs.
+   *
+   * @see Expr#getOutputType
+   */
+  @Nullable
+  ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args);
 
   /**
    * Base class for a single variable input {@link Function} implementation
@@ -180,6 +188,26 @@ public interface Function
     {
       return eval((long) param);
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inputTypes);
+    }
+  }
+
+  /**
+   * Many math functions always output a {@link Double} primitive, regardless of input type.
+   */
+  abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
+  {
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.DOUBLE;
+    }
   }
 
   /**
@@ -209,6 +237,26 @@ public interface Function
     protected ExprEval eval(double x, double y)
     {
       return eval((long) x, (long) y);
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.functionAutoTypeConversion(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+    }
+  }
+
+  /**
+   * Many math functions always output a {@link Double} primitive, regardless of input type.
+   */
+  abstract class DoubleBivariateMathFunction extends BivariateMathFunction
+  {
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.DOUBLE;
     }
   }
 
@@ -325,6 +373,100 @@ public interface Function
     abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
   }
 
+  abstract class ReduceFunction implements Function
+  {
+    private final DoubleBinaryOperator doubleReducer;
+    private final LongBinaryOperator longReducer;
+    private final BinaryOperator<String> stringReducer;
+
+    ReduceFunction(
+        DoubleBinaryOperator doubleReducer,
+        LongBinaryOperator longReducer,
+        BinaryOperator<String> stringReducer
+    )
+    {
+      this.doubleReducer = doubleReducer;
+      this.longReducer = longReducer;
+      this.stringReducer = stringReducer;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      // anything goes
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      ExprType outputType = ExprType.LONG;
+      for (Expr expr : args) {
+        outputType = ExprType.functionAutoTypeConversion(outputType, expr.getOutputType(inputTypes));
+      }
+      return outputType;
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.isEmpty()) {
+        return ExprEval.of(null);
+      }
+
+      // evaluate arguments and collect output type
+      List<ExprEval<?>> evals = new ArrayList<>();
+      ExprType outputType = ExprType.LONG;
+
+      for (Expr expr : args) {
+        ExprEval<?> exprEval = expr.eval(bindings);
+        ExprType exprType = exprEval.type();
+
+        if (isValidType(exprType)) {
+          outputType = ExprType.functionAutoTypeConversion(outputType, exprType);
+        }
+
+        if (exprEval.value() != null) {
+          evals.add(exprEval);
+        }
+      }
+
+      if (evals.isEmpty()) {
+        // The GREATEST/LEAST functions are not in the SQL standard. Emulate the behavior of postgres (return null if
+        // all expressions are null, otherwise skip null values) since it is used as a base for a wide number of
+        // databases. This also matches the behavior the the long/double greatest/least post aggregators. Some other
+        // databases (e.g., MySQL) return null if any expression is null.
+        // https://www.postgresql.org/docs/9.5/functions-conditional.html
+        // https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
+        return ExprEval.of(null);
+      }
+
+      switch (outputType) {
+        case DOUBLE:
+          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
+          return ExprEval.of(evals.stream().mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
+        case LONG:
+          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
+          return ExprEval.of(evals.stream().mapToLong(ExprEval::asLong).reduce(longReducer).getAsLong());
+        default:
+          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
+          return ExprEval.of(evals.stream().map(ExprEval::asString).reduce(stringReducer).get());
+      }
+    }
+
+    private boolean isValidType(ExprType exprType)
+    {
+      switch (exprType) {
+        case DOUBLE:
+        case LONG:
+        case STRING:
+          return true;
+        default:
+          throw new IAE("Function[%s] does not accept %s types", name(), exprType);
+      }
+    }
+  }
+
   // ------------------------------ implementations ------------------------------
 
   class ParseLong implements Function
@@ -341,6 +483,13 @@ public interface Function
       if (args.size() != 1 && args.size() != 2) {
         throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
 
     @Override
@@ -393,6 +542,13 @@ public interface Function
         throw new IAE("Function[%s] needs 0 argument", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.DOUBLE;
+    }
   }
 
   class Abs extends UnivariateMathFunction
@@ -416,7 +572,7 @@ public interface Function
     }
   }
 
-  class Acos extends UnivariateMathFunction
+  class Acos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -431,7 +587,7 @@ public interface Function
     }
   }
 
-  class Asin extends UnivariateMathFunction
+  class Asin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -446,7 +602,7 @@ public interface Function
     }
   }
 
-  class Atan extends UnivariateMathFunction
+  class Atan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -461,7 +617,7 @@ public interface Function
     }
   }
 
-  class Cbrt extends UnivariateMathFunction
+  class Cbrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -476,7 +632,7 @@ public interface Function
     }
   }
 
-  class Ceil extends UnivariateMathFunction
+  class Ceil extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -491,7 +647,7 @@ public interface Function
     }
   }
 
-  class Cos extends UnivariateMathFunction
+  class Cos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -506,7 +662,7 @@ public interface Function
     }
   }
 
-  class Cosh extends UnivariateMathFunction
+  class Cosh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -521,7 +677,7 @@ public interface Function
     }
   }
 
-  class Cot extends UnivariateMathFunction
+  class Cot extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -557,7 +713,7 @@ public interface Function
     }
   }
 
-  class Exp extends UnivariateMathFunction
+  class Exp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -572,7 +728,7 @@ public interface Function
     }
   }
 
-  class Expm1 extends UnivariateMathFunction
+  class Expm1 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -587,7 +743,7 @@ public interface Function
     }
   }
 
-  class Floor extends UnivariateMathFunction
+  class Floor extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -617,7 +773,7 @@ public interface Function
     }
   }
 
-  class Log extends UnivariateMathFunction
+  class Log extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -632,7 +788,7 @@ public interface Function
     }
   }
 
-  class Log10 extends UnivariateMathFunction
+  class Log10 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -647,7 +803,7 @@ public interface Function
     }
   }
 
-  class Log1p extends UnivariateMathFunction
+  class Log1p extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -662,7 +818,7 @@ public interface Function
     }
   }
 
-  class NextUp extends UnivariateMathFunction
+  class NextUp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -677,7 +833,7 @@ public interface Function
     }
   }
 
-  class Rint extends UnivariateMathFunction
+  class Rint extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -740,6 +896,13 @@ public interface Function
       }
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inputTypes);
+    }
+
     private ExprEval eval(ExprEval param)
     {
       return eval(param, 0);
@@ -773,7 +936,7 @@ public interface Function
     }
   }
 
-  class Signum extends UnivariateMathFunction
+  class Signum extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -788,7 +951,7 @@ public interface Function
     }
   }
 
-  class Sin extends UnivariateMathFunction
+  class Sin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -803,7 +966,7 @@ public interface Function
     }
   }
 
-  class Sinh extends UnivariateMathFunction
+  class Sinh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -818,7 +981,7 @@ public interface Function
     }
   }
 
-  class Sqrt extends UnivariateMathFunction
+  class Sqrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -833,7 +996,7 @@ public interface Function
     }
   }
 
-  class Tan extends UnivariateMathFunction
+  class Tan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -848,7 +1011,7 @@ public interface Function
     }
   }
 
-  class Tanh extends UnivariateMathFunction
+  class Tanh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -863,7 +1026,7 @@ public interface Function
     }
   }
 
-  class ToDegrees extends UnivariateMathFunction
+  class ToDegrees extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -878,7 +1041,7 @@ public interface Function
     }
   }
 
-  class ToRadians extends UnivariateMathFunction
+  class ToRadians extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -893,7 +1056,7 @@ public interface Function
     }
   }
 
-  class Ulp extends UnivariateMathFunction
+  class Ulp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -908,7 +1071,7 @@ public interface Function
     }
   }
 
-  class Atan2 extends BivariateMathFunction
+  class Atan2 extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -923,7 +1086,7 @@ public interface Function
     }
   }
 
-  class CopySign extends BivariateMathFunction
+  class CopySign extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -938,7 +1101,7 @@ public interface Function
     }
   }
 
-  class Hypot extends BivariateMathFunction
+  class Hypot extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -953,7 +1116,7 @@ public interface Function
     }
   }
 
-  class Remainder extends BivariateMathFunction
+  class Remainder extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1010,173 +1173,7 @@ public interface Function
     }
   }
 
-  class GreatestFunc extends ReduceFunc
-  {
-    public static final String NAME = "greatest";
-
-    public GreatestFunc()
-    {
-      super(
-          Math::max,
-          Math::max,
-          BinaryOperator.maxBy(Comparator.naturalOrder())
-      );
-    }
-
-    @Override
-    public String name()
-    {
-      return NAME;
-    }
-  }
-
-  class LeastFunc extends ReduceFunc
-  {
-    public static final String NAME = "least";
-
-    public LeastFunc()
-    {
-      super(
-          Math::min,
-          Math::min,
-          BinaryOperator.minBy(Comparator.naturalOrder())
-      );
-    }
-
-    @Override
-    public String name()
-    {
-      return NAME;
-    }
-  }
-
-  abstract class ReduceFunc implements Function
-  {
-    private final DoubleBinaryOperator doubleReducer;
-    private final LongBinaryOperator longReducer;
-    private final BinaryOperator<String> stringReducer;
-
-    ReduceFunc(
-        DoubleBinaryOperator doubleReducer,
-        LongBinaryOperator longReducer,
-        BinaryOperator<String> stringReducer
-    )
-    {
-      this.doubleReducer = doubleReducer;
-      this.longReducer = longReducer;
-      this.stringReducer = stringReducer;
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      // anything goes
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      if (args.isEmpty()) {
-        return ExprEval.of(null);
-      }
-
-      ExprAnalysis exprAnalysis = analyzeExprs(args, bindings);
-      if (exprAnalysis.exprEvals.isEmpty()) {
-        // The GREATEST/LEAST functions are not in the SQL standard. Emulate the behavior of postgres (return null if
-        // all expressions are null, otherwise skip null values) since it is used as a base for a wide number of
-        // databases. This also matches the behavior the the long/double greatest/least post aggregators. Some other
-        // databases (e.g., MySQL) return null if any expression is null.
-        // https://www.postgresql.org/docs/9.5/functions-conditional.html
-        // https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
-        return ExprEval.of(null);
-      }
-
-      Stream<ExprEval<?>> exprEvalStream = exprAnalysis.exprEvals.stream();
-      switch (exprAnalysis.comparisonType) {
-        case DOUBLE:
-          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(exprEvalStream.mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
-        case LONG:
-          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(exprEvalStream.mapToLong(ExprEval::asLong).reduce(longReducer).getAsLong());
-        default:
-          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(exprEvalStream.map(ExprEval::asString).reduce(stringReducer).get());
-      }
-    }
-
-    /**
-     * Determines which {@link ExprType} to use to compare non-null evaluated expressions.
-     *
-     * @param exprs    Expressions to analyze
-     * @param bindings Bindings for expressions
-     *
-     * @return Comparison type and non-null evaluated expressions.
-     */
-    private ExprAnalysis analyzeExprs(List<Expr> exprs, Expr.ObjectBinding bindings)
-    {
-      Set<ExprType> presentTypes = EnumSet.noneOf(ExprType.class);
-      List<ExprEval<?>> exprEvals = new ArrayList<>();
-
-      for (Expr expr : exprs) {
-        ExprEval<?> exprEval = expr.eval(bindings);
-        ExprType exprType = exprEval.type();
-
-        if (isValidType(exprType)) {
-          presentTypes.add(exprType);
-        }
-
-        if (exprEval.value() != null) {
-          exprEvals.add(exprEval);
-        }
-      }
-
-      ExprType comparisonType = getComparisionType(presentTypes);
-      return new ExprAnalysis(comparisonType, exprEvals);
-    }
-
-    private boolean isValidType(ExprType exprType)
-    {
-      switch (exprType) {
-        case DOUBLE:
-        case LONG:
-        case STRING:
-          return true;
-        default:
-          throw new IAE("Function[%s] does not accept %s types", name(), exprType);
-      }
-    }
-
-    /**
-     * Implements rules similar to: https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
-     *
-     * @see org.apache.druid.sql.calcite.expression.builtin.ReductionOperatorConversionHelper#TYPE_INFERENCE
-     */
-    private static ExprType getComparisionType(Set<ExprType> exprTypes)
-    {
-      if (exprTypes.contains(ExprType.STRING)) {
-        return ExprType.STRING;
-      } else if (exprTypes.contains(ExprType.DOUBLE)) {
-        return ExprType.DOUBLE;
-      } else {
-        return ExprType.LONG;
-      }
-    }
-
-    private static class ExprAnalysis
-    {
-      final ExprType comparisonType;
-      final List<ExprEval<?>> exprEvals;
-
-      ExprAnalysis(ExprType comparisonType, List<ExprEval<?>> exprEvals)
-      {
-        this.comparisonType = comparisonType;
-        this.exprEvals = exprEvals;
-      }
-    }
-  }
-
-  class NextAfter extends BivariateMathFunction
+  class NextAfter extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1191,7 +1188,7 @@ public interface Function
     }
   }
 
-  class Pow extends BivariateMathFunction
+  class Pow extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1214,106 +1211,17 @@ public interface Function
       return "scalb";
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.DOUBLE;
+    }
+
     @Override
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
       return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
-    }
-  }
-
-  class ConditionFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "if";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      ExprEval x = args.get(0).eval(bindings);
-      return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
-    }
-  }
-
-  /**
-   * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
-   */
-  class CaseSearchedFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "case_searched";
-    }
-
-    @Override
-    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
-    {
-      for (int i = 0; i < args.size(); i += 2) {
-        if (i == args.size() - 1) {
-          // ELSE else_result.
-          return args.get(i).eval(bindings);
-        } else if (args.get(i).eval(bindings).asBoolean()) {
-          // Matching WHEN boolean_expr THEN result
-          return args.get(i + 1).eval(bindings);
-        }
-      }
-
-      return ExprEval.of(null);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() < 2) {
-        throw new IAE("Function[%s] must have at least 2 arguments", name());
-      }
-    }
-  }
-
-  /**
-   * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
-   */
-  class CaseSimpleFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "case_simple";
-    }
-
-    @Override
-    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
-    {
-      for (int i = 1; i < args.size(); i += 2) {
-        if (i == args.size() - 1) {
-          // ELSE else_result.
-          return args.get(i).eval(bindings);
-        } else if (new BinEqExpr("==", args.get(0), args.get(i)).eval(bindings).asBoolean()) {
-          // Matching WHEN value THEN result
-          return args.get(i + 1).eval(bindings);
-        }
-      }
-
-      return ExprEval.of(null);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() < 3) {
-        throw new IAE("Function[%s] must have at least 3 arguments", name());
-      }
     }
   }
 
@@ -1376,68 +1284,176 @@ public interface Function
       // unknown cast, can't safely assume either way
       return Collections.emptySet();
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      // can only know cast output type if cast to argument is constant
+      if (args.get(1).isLiteral()) {
+        return ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+      }
+      return null;
+    }
   }
 
-  class TimestampFromEpochFunc implements Function
+  class GreatestFunc extends ReduceFunction
+  {
+    public static final String NAME = "greatest";
+
+    public GreatestFunc()
+    {
+      super(
+          Math::max,
+          Math::max,
+          BinaryOperator.maxBy(Comparator.naturalOrder())
+      );
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+  }
+
+  class LeastFunc extends ReduceFunction
+  {
+    public static final String NAME = "least";
+
+    public LeastFunc()
+    {
+      super(
+          Math::min,
+          Math::min,
+          BinaryOperator.minBy(Comparator.naturalOrder())
+      );
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+  }
+
+  class ConditionFunc implements Function
   {
     @Override
     public String name()
     {
-      return "timestamp";
+      return "if";
     }
 
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      ExprEval value = args.get(0).eval(bindings);
-      if (value.type() != ExprType.STRING) {
-        throw new IAE("first argument should be string type but got %s type", value.type());
-      }
-
-      DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
-      if (args.size() > 1) {
-        ExprEval format = args.get(1).eval(bindings);
-        if (format.type() != ExprType.STRING) {
-          throw new IAE("second argument should be string type but got %s type", format.type());
-        }
-        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
-      }
-      DateTime date;
-      try {
-        date = formatter.parse(value.asString());
-      }
-      catch (IllegalArgumentException e) {
-        throw new IAE(e, "invalid value %s", value.asString());
-      }
-      return toValue(date);
+      ExprEval x = args.get(0).eval(bindings);
+      return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
     }
 
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
 
-    protected ExprEval toValue(DateTime date)
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return ExprEval.of(date.getMillis());
+      // output type is defined by else
+      return args.get(2).getOutputType(inputTypes);
     }
   }
 
-  class UnixTimestampFunc extends TimestampFromEpochFunc
+  /**
+   * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
+   */
+  class CaseSearchedFunc implements Function
   {
     @Override
     public String name()
     {
-      return "unix_timestamp";
+      return "case_searched";
     }
 
     @Override
-    protected final ExprEval toValue(DateTime date)
+    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
-      return ExprEval.of(date.getMillis() / 1000);
+      for (int i = 0; i < args.size(); i += 2) {
+        if (i == args.size() - 1) {
+          // ELSE else_result.
+          return args.get(i).eval(bindings);
+        } else if (args.get(i).eval(bindings).asBoolean()) {
+          // Matching WHEN boolean_expr THEN result
+          return args.get(i + 1).eval(bindings);
+        }
+      }
+
+      return ExprEval.of(null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 2) {
+        throw new IAE("Function[%s] must have at least 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      // output type is defined by else
+      return args.get(args.size() - 1).getOutputType(inputTypes);
+    }
+  }
+
+  /**
+   * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
+   */
+  class CaseSimpleFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "case_simple";
+    }
+
+    @Override
+    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    {
+      for (int i = 1; i < args.size(); i += 2) {
+        if (i == args.size() - 1) {
+          // ELSE else_result.
+          return args.get(i).eval(bindings);
+        } else if (new BinEqExpr("==", args.get(0), args.get(i)).eval(bindings).asBoolean()) {
+          // Matching WHEN value THEN result
+          return args.get(i + 1).eval(bindings);
+        }
+      }
+
+      return ExprEval.of(null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 3) {
+        throw new IAE("Function[%s] must have at least 3 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      // output type is defined by else
+      return args.get(args.size() - 1).getOutputType(inputTypes);
     }
   }
 
@@ -1462,6 +1478,75 @@ public interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inputTypes);
+    }
+  }
+
+  class IsNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "isnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(expr.value() == null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+  }
+
+  class IsNotNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(expr.value() != null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
   }
 
@@ -1506,6 +1591,13 @@ public interface Function
     {
       // anything goes
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
   }
 
   class StrlenFunc implements Function
@@ -1529,6 +1621,13 @@ public interface Function
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
   }
 
@@ -1563,6 +1662,13 @@ public interface Function
       if (args.size() < 1) {
         throw new IAE("Function[%s] needs 1 or more arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
     }
   }
 
@@ -1601,6 +1707,13 @@ public interface Function
       if (args.size() < 2 || args.size() > 3) {
         throw new IAE("Function[%s] needs 2 or 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
   }
 
@@ -1645,6 +1758,13 @@ public interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
   }
 
   class RightFunc extends StringLongFunction
@@ -1653,6 +1773,13 @@ public interface Function
     public String name()
     {
       return "right";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
     }
 
     @Override
@@ -1678,6 +1805,13 @@ public interface Function
     public String name()
     {
       return "left";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
     }
 
     @Override
@@ -1723,6 +1857,13 @@ public interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
   }
 
   class LowerFunc implements Function
@@ -1749,6 +1890,13 @@ public interface Function
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
     }
   }
 
@@ -1777,6 +1925,13 @@ public interface Function
         throw new IAE("Function[%s] needs 1 argument", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
   }
 
   class ReverseFunc extends UnivariateFunction
@@ -1785,6 +1940,13 @@ public interface Function
     public String name()
     {
       return "reverse";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
     }
 
     @Override
@@ -1809,58 +1971,17 @@ public interface Function
       return "repeat";
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+
     @Override
     protected ExprEval eval(String x, int y)
     {
       return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
-    }
-  }
-
-  class IsNullFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "isnull";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() == null, ExprType.LONG);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-    }
-  }
-
-  class IsNotNullFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "notnull";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() != null, ExprType.LONG);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
     }
   }
 
@@ -1894,6 +2015,13 @@ public interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
   }
 
   class RpadFunc implements Function
@@ -1926,6 +2054,83 @@ public interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+  }
+
+  class TimestampFromEpochFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "timestamp";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      ExprEval value = args.get(0).eval(bindings);
+      if (value.type() != ExprType.STRING) {
+        throw new IAE("first argument should be string type but got %s type", value.type());
+      }
+
+      DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
+      if (args.size() > 1) {
+        ExprEval format = args.get(1).eval(bindings);
+        if (format.type() != ExprType.STRING) {
+          throw new IAE("second argument should be string type but got %s type", format.type());
+        }
+        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
+      }
+      DateTime date;
+      try {
+        date = formatter.parse(value.asString());
+      }
+      catch (IllegalArgumentException e) {
+        throw new IAE(e, "invalid value %s", value.asString());
+      }
+      return toValue(date);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+
+    protected ExprEval toValue(DateTime date)
+    {
+      return ExprEval.of(date.getMillis());
+    }
+  }
+
+  class UnixTimestampFunc extends TimestampFromEpochFunc
+  {
+    @Override
+    public String name()
+    {
+      return "unix_timestamp";
+    }
+
+    @Override
+    protected final ExprEval toValue(DateTime date)
+    {
+      return ExprEval.of(date.getMillis() / 1000);
+    }
   }
 
   class SubMonthFunc implements Function
@@ -1957,6 +2162,13 @@ public interface Function
       if (args.size() != 3) {
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
   }
 
@@ -2064,6 +2276,17 @@ public interface Function
         throw new IAE("Function[%s] needs at least 1 argument", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      ExprType type = ExprType.LONG;
+      for (Expr arg : args) {
+        type = ExprType.functionAutoTypeConversion(type, arg.getOutputType(inputTypes));
+      }
+      return ExprType.asArrayType(type);
+    }
   }
 
   class ArrayLengthFunction implements Function
@@ -2110,6 +2333,13 @@ public interface Function
       }
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
@@ -2131,6 +2361,13 @@ public interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING_ARRAY;
     }
 
     @Override
@@ -2167,6 +2404,13 @@ public interface Function
       return "array_to_string";
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
@@ -2187,6 +2431,13 @@ public interface Function
     public String name()
     {
       return "array_offset";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.elementType(args.get(0).getOutputType(inputTypes));
     }
 
     @Override
@@ -2210,6 +2461,13 @@ public interface Function
       return "array_ordinal";
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.elementType(args.get(0).getOutputType(inputTypes));
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
@@ -2229,6 +2487,13 @@ public interface Function
     public String name()
     {
       return "array_offset_of";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
 
     @Override
@@ -2260,6 +2525,13 @@ public interface Function
     public String name()
     {
       return "array_ordinal_of";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
     }
 
     @Override
@@ -2296,6 +2568,14 @@ public interface Function
     public boolean hasArrayOutput()
     {
       return true;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      ExprType arrayType = args.get(0).getOutputType(inputTypes);
+      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
     }
 
     @Override
@@ -2354,6 +2634,14 @@ public interface Function
       return true;
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      ExprType arrayType = args.get(0).getOutputType(inputTypes);
+      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
+    }
+
     @Override
     ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
@@ -2409,12 +2697,19 @@ public interface Function
       return true;
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+
     @Override
     ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
       final Object[] array1 = lhsExpr.asArray();
       final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.of(Arrays.asList(array1).containsAll(Arrays.asList(array2)), ExprType.LONG);
+      return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
     }
   }
 
@@ -2426,6 +2721,13 @@ public interface Function
       return "array_overlap";
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+
     @Override
     ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
@@ -2435,7 +2737,7 @@ public interface Function
       for (Object check : array1) {
         any |= array2.contains(check);
       }
-      return ExprEval.of(any, ExprType.LONG);
+      return ExprEval.ofLongBoolean(any);
     }
   }
 
@@ -2453,6 +2755,13 @@ public interface Function
       if (args.size() != 2 && args.size() != 3) {
         throw new IAE("Function[%s] needs 2 or 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inputTypes);
     }
 
     @Override
@@ -2532,6 +2841,14 @@ public interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      ExprType arrayType = args.get(1).getOutputType(inputTypes);
+      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
     }
 
     @Override

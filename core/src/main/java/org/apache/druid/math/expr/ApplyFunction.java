@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -75,6 +76,15 @@ public interface ApplyFunction
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
+   * Compute the output type of this function for a given lambda and the argument expressions which will be applied as
+   * its inputs.
+   *
+   * @see Expr#getOutputType
+   */
+  @Nullable
+  ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args);
+
+  /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
    * mapped to the values of an {@link IndexableMapLambdaObjectBinding} which is created from the outer
    * {@link Expr.ObjectBinding} and the values of the array {@link Expr} argument(s)
@@ -85,6 +95,13 @@ public interface ApplyFunction
     public boolean hasArrayOutput(LambdaExpr lambdaExpr)
     {
       return true;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    {
+      return ExprType.asArrayType(expr.getOutputType(new LambdaInputBindingTypes(inputTypes, expr, args)));
     }
 
     /**
@@ -274,7 +291,7 @@ public interface ApplyFunction
         accumulator = evaluated.value();
       }
       if (accumulator instanceof Boolean) {
-        return ExprEval.of((boolean) accumulator, ExprType.LONG);
+        return ExprEval.ofLongBoolean((boolean) accumulator);
       }
       return ExprEval.bestEffortOf(accumulator);
     }
@@ -282,8 +299,16 @@ public interface ApplyFunction
     @Override
     public boolean hasArrayOutput(LambdaExpr lambdaExpr)
     {
-      Expr.BindingDetails lambdaBindingDetails = lambdaExpr.analyzeInputs();
-      return lambdaBindingDetails.isOutputArray();
+      Expr.BindingAnalysis lambdaBindingAnalysis = lambdaExpr.analyzeInputs();
+      return lambdaBindingAnalysis.isOutputArray();
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    {
+      // output type is accumulator type, which is last argument
+      return args.get(args.size() - 1).getOutputType(inputTypes);
     }
   }
 
@@ -481,6 +506,14 @@ public interface ApplyFunction
       );
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    {
+      // output type is input array type
+      return args.get(0).getOutputType(inputTypes);
+    }
+
     private <T> Stream<T> filter(T[] array, LambdaExpr expr, SettableLambdaBinding binding)
     {
       return Arrays.stream(array).filter(s -> expr.eval(binding.withBinding(expr.getIdentifier(), s)).asBoolean());
@@ -501,7 +534,7 @@ public interface ApplyFunction
 
       final Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(false, ExprType.LONG);
+        return ExprEval.ofLongBoolean(false);
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
@@ -528,6 +561,13 @@ public interface ApplyFunction
       );
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+
     public abstract ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings);
   }
 
@@ -550,7 +590,7 @@ public interface ApplyFunction
     {
       boolean anyMatch = Arrays.stream(values)
                                .anyMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.of(anyMatch, ExprType.LONG);
+      return ExprEval.ofLongBoolean(anyMatch);
     }
   }
 
@@ -573,7 +613,7 @@ public interface ApplyFunction
     {
       boolean allMatch = Arrays.stream(values)
                                .allMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.of(allMatch, ExprType.LONG);
+      return ExprEval.ofLongBoolean(allMatch);
     }
   }
 
@@ -846,6 +886,40 @@ public interface ApplyFunction
       this.index = index;
       this.accumulatorValue = acc;
       return this;
+    }
+  }
+
+  /**
+   * Helper that can wrap another {@link Expr.InputBindingTypes} to use to supply the type information of a
+   * {@link LambdaExpr} when evaluating {@link ApplyFunctionExpr#getOutputType}. Lambda identifiers do not exist
+   * in the underlying {@link Expr.InputBindingTypes}, but can be created by mapping the lambda identifiers to the
+   * arguments that will be applied to them, to map the type information.
+   */
+  class LambdaInputBindingTypes implements Expr.InputBindingTypes
+  {
+    private final Object2IntMap<String> lambdaIdentifiers;
+    private final Expr.InputBindingTypes inputTypes;
+    private final List<Expr> args;
+
+    public LambdaInputBindingTypes(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    {
+      this.inputTypes = inputTypes;
+      this.args = args;
+      List<String> identifiers = expr.getIdentifiers();
+      this.lambdaIdentifiers = new Object2IntOpenHashMap<>(args.size());
+      for (int i = 0; i < args.size(); i++) {
+        lambdaIdentifiers.put(identifiers.get(i), i);
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getType(String name)
+    {
+      if (lambdaIdentifiers.containsKey(name)) {
+        return ExprType.elementType(args.get(lambdaIdentifiers.getInt(name)).getOutputType(inputTypes));
+      }
+      return inputTypes.getType(name);
     }
   }
 }

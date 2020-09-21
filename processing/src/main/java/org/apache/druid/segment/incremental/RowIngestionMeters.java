@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.stats;
+package org.apache.druid.segment.incremental;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 

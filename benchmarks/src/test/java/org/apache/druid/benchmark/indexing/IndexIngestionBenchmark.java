@@ -111,7 +111,6 @@ public class IndexIngestionBenchmark
                 .withRollup(rollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment * 2)
         .buildOnheap();
   }
