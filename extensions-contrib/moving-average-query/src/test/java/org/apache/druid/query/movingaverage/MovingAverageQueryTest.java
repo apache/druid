@@ -66,7 +66,6 @@ import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
@@ -382,7 +381,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         baseClient,
         null /* local client; unused in this test, so pass in null */,
         warehouse,
-        new Joinables(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())),
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         retryConfig,
         jsonMapper,
         serverConfig,
