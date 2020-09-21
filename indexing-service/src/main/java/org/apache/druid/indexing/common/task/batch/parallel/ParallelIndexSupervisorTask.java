@@ -33,8 +33,10 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.Counters;
@@ -95,6 +97,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -271,14 +274,30 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  PartialHashSegmentGenerateParallelIndexTaskRunner createPartialHashSegmentGenerateRunner(TaskToolbox toolbox)
+  PartialDimensionCardinalityParallelIndexTaskRunner createPartialDimensionCardinalityRunner(TaskToolbox toolbox)
+  {
+    return new PartialDimensionCardinalityParallelIndexTaskRunner(
+        toolbox,
+        getId(),
+        getGroupId(),
+        ingestionSchema,
+        getContext()
+    );
+  }
+
+  @VisibleForTesting
+  PartialHashSegmentGenerateParallelIndexTaskRunner createPartialHashSegmentGenerateRunner(
+      TaskToolbox toolbox,
+      Integer numShardsOverride
+  )
   {
     return new PartialHashSegmentGenerateParallelIndexTaskRunner(
         toolbox,
         getId(),
         getGroupId(),
         ingestionSchema,
-        getContext()
+        getContext(),
+        numShardsOverride
     );
   }
 
@@ -499,17 +518,62 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
-    // 1. Partial segment generation phase
-    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner
-        = createRunner(toolbox, this::createPartialHashSegmentGenerateRunner);
+    TaskState state;
 
-    TaskState state = runNextPhase(indexingRunner);
+    if (!(ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof HashedPartitionsSpec)) {
+      // only range and hash partitioning is supported for multiphase parallel ingestion, see runMultiPhaseParallel()
+      throw new ISE(
+          "forceGuaranteedRollup is set but partitionsSpec [%s] is not a ranged or hash partition spec.",
+          ingestionSchema.getTuningConfig().getPartitionsSpec()
+      );
+    }
+
+    final Integer numShardsOverride;
+    HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec();
+    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup() && partitionsSpec.getNumShards() == null) {
+      // 0. need to determine numShards by scanning the data
+      ParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport> cardinalityRunner =
+          createRunner(
+              toolbox,
+              this::createPartialDimensionCardinalityRunner
+          );
+
+      if (cardinalityRunner == null) {
+        throw new ISE("Could not create cardinality runner for hash partitioning.");
+      }
+
+      state = runNextPhase(cardinalityRunner);
+      if (state.isFailure()) {
+        return TaskStatus.failure(getId());
+      }
+
+      int effectiveMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
+                                       ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
+                                       : partitionsSpec.getMaxRowsPerSegment();
+      if (cardinalityRunner.getReports() == null) {
+        throw new ISE("Could not determine cardinalities for hash partitioning.");
+      }
+      numShardsOverride = determineNumShardsFromCardinalityReport(
+          cardinalityRunner.getReports().values(),
+          effectiveMaxRowsPerSegment
+      );
+    } else {
+      numShardsOverride = null;
+    }
+
+    // 1. Partial segment generation phase
+    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner =
+        createRunner(
+            toolbox,
+            f -> createPartialHashSegmentGenerateRunner(toolbox, numShardsOverride)
+        );
+
+    state = runNextPhase(indexingRunner);
     if (state.isFailure()) {
       return TaskStatus.failure(getId());
     }
 
     // 2. Partial segment merge phase
-
     // partition (interval, partitionId) -> partition locations
     Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> partitionToLocations =
         groupGenericPartitionLocationsPerPartition(indexingRunner.getReports());
@@ -580,6 +644,50 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     return TaskStatus.fromCode(getId(), mergeState);
+  }
+
+  @VisibleForTesting
+  public static int determineNumShardsFromCardinalityReport(
+      Collection<DimensionCardinalityReport> reports,
+      int maxRowsPerSegment
+  )
+  {
+    // aggregate all the sub-reports
+    Map<Interval, HyperLogLogCollector> finalCollectors = new HashMap<>();
+    reports.forEach(report -> {
+      Map<Interval, byte[]> intervalToCardinality = report.getIntervalToCardinalities();
+      for (Map.Entry<Interval, byte[]> entry : intervalToCardinality.entrySet()) {
+        HyperLogLogCollector hllCollector = finalCollectors.computeIfAbsent(
+            entry.getKey(),
+            (key) -> {
+              return HyperLogLogCollector.makeLatestCollector();
+            }
+        );
+        HyperLogLogCollector entryHll = HyperLogLogCollector.makeCollector(
+            ByteBuffer.wrap(entry.getValue())
+        );
+        hllCollector.fold(entryHll);
+      }
+    });
+
+    // determine the highest cardinality in any interval
+    long maxCardinality = Long.MIN_VALUE;
+    for (HyperLogLogCollector collector : finalCollectors.values()) {
+      maxCardinality = Math.max(maxCardinality, collector.estimateCardinalityRound());
+    }
+
+    // determine numShards based on maxRowsPerSegment and the highest per-interval cardinality
+    long numShards = maxCardinality / maxRowsPerSegment;
+    if (maxCardinality % maxRowsPerSegment != 0) {
+      // if there's a remainder add 1 so we stay under maxRowsPerSegment
+      numShards += 1;
+    }
+    try {
+      return Math.toIntExact(numShards);
+    }
+    catch (ArithmeticException ae) {
+      return Integer.MAX_VALUE;
+    }
   }
 
   private Map<Interval, PartitionBoundaries> determineAllRangePartitions(Collection<DimensionDistributionReport> reports)

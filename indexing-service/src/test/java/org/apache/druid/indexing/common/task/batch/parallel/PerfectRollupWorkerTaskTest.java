@@ -56,11 +56,8 @@ public class PerfectRollupWorkerTaskTest
   }
 
   @Test
-  public void failsWithInvalidPartitionsSpec()
+  public void succeedsWithUnspecifiedNumShards()
   {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("forceGuaranteedRollup is incompatible with partitionsSpec");
-
     new PerfectRollupWorkerTaskBuilder()
         .partitionsSpec(HashedPartitionsSpec.defaultSpec())
         .build();
