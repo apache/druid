@@ -47,6 +47,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -89,6 +90,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
@@ -272,7 +274,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
 
-  private final DataSegment publishedSegment1 = new DataSegment(
+  private final DataSegment publishedCompactedSegment1 = new DataSegment(
       "wikipedia1",
       Intervals.of("2007/2008"),
       "version1",
@@ -280,10 +282,14 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
       null,
+      new CompactionState(
+          new DynamicPartitionsSpec(null, null),
+          Collections.singletonMap("test", "map")
+      ),
       1,
       53000L
   );
-  private final DataSegment publishedSegment2 = new DataSegment(
+  private final DataSegment publishedCompactedSegment2 = new DataSegment(
       "wikipedia2",
       Intervals.of("2008/2009"),
       "version2",
@@ -291,16 +297,21 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
       null,
+      new CompactionState(
+          new DynamicPartitionsSpec(null, null),
+          Collections.singletonMap("test", "map")
+      ),
       1,
       83000L
   );
-  private final DataSegment publishedSegment3 = new DataSegment(
+  private final DataSegment publishedUncompactedSegment3 = new DataSegment(
       "wikipedia3",
       Intervals.of("2009/2010"),
       "version3",
       null,
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
+      null,
       null,
       1,
       47000L
@@ -495,7 +506,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(16, fields.size());
+    Assert.assertEquals(17, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -518,9 +529,9 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentWithOvershadowedStatus(publishedSegment1, true),
-        new SegmentWithOvershadowedStatus(publishedSegment2, false),
-        new SegmentWithOvershadowedStatus(publishedSegment3, false),
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),
+        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false),
         new SegmentWithOvershadowedStatus(segment1, true),
         new SegmentWithOvershadowedStatus(segment2, false)
     ));
@@ -576,7 +587,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         1L, //is_available
         0L, //is_realtime
-        1L //is_overshadowed
+        1L, //is_overshadowed
+        0L //is_compacted
     );
 
     verifyRow(
@@ -589,7 +601,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         1L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed,
+        0L //is_compacted
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -603,7 +616,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_published
         1L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        0L //is_compacted
     );
 
     verifyRow(
@@ -616,7 +630,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_published
         1L, //is_available
         1L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        0L //is_compacted
     );
 
     verifyRow(
@@ -629,10 +644,12 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_published
         1L, //is_available
         1L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        0L //is_compacted
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
+    // wikipedia segment 1 and 2 are compacted while 3 are not compacted
     verifyRow(
         rows.get(5),
         "wikipedia1_2007-01-01T00:00:00.000Z_2008-01-01T00:00:00.000Z_version1",
@@ -643,7 +660,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         0L, //is_available
         0L, //is_realtime
-        1L //is_overshadowed
+        1L, //is_overshadowed
+        1L //is_compacted
     );
 
     verifyRow(
@@ -656,7 +674,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         0L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        1L //is_compacted
     );
 
     verifyRow(
@@ -669,7 +688,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         0L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        0L //is_compacted
     );
 
     // Verify value types.
@@ -686,7 +706,8 @@ public class SystemSchemaTest extends CalciteTestBase
       long isPublished,
       long isAvailable,
       long isRealtime,
-      long isOvershadowed
+      long isOvershadowed,
+      long isCompacted
   )
   {
     Assert.assertEquals(segmentId, row[0].toString());
@@ -703,6 +724,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(isAvailable, row[10]);
     Assert.assertEquals(isRealtime, row[11]);
     Assert.assertEquals(isOvershadowed, row[12]);
+    Assert.assertEquals(isCompacted, row[16]);
   }
 
   @Test

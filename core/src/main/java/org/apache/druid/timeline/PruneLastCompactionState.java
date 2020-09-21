@@ -33,6 +33,8 @@ import java.lang.annotation.Target;
  *
  * - In auto compaction of the coordinator, "lastCompactionState" is used to determine whether the given
  *   segment needs further compaction or not.
+ * - In Metadata store information API of the coordinator, "lastCompactionState" is used to determine whether the
+ *   is compacted or not
  * - In parallel indexing, "lastCompactionState" should be serialized and deserialized properly when
  *   the sub tasks report the pushed segments to the supervisor task.
  */

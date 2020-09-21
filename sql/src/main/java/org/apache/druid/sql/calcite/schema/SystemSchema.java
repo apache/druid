@@ -126,6 +126,8 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
+  private static final long IS_COMPACTED_FALSE = 0L;
+  private static final long IS_COMPACTED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -145,6 +147,7 @@ public class SystemSchema extends AbstractSchema
       .add("shardSpec", ValueType.STRING)
       .add("dimensions", ValueType.STRING)
       .add("metrics", ValueType.STRING)
+      .add("is_compacted", ValueType.LONG)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -311,7 +314,8 @@ public class SystemSchema extends AbstractSchema
                 val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                 segment.getShardSpec(),
                 segment.getDimensions(),
-                segment.getMetrics()
+                segment.getMetrics(),
+                segment.getLastCompactionState() == null ? IS_COMPACTED_FALSE : IS_COMPACTED_TRUE
             };
           });
 
@@ -343,7 +347,8 @@ public class SystemSchema extends AbstractSchema
                 IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
                 val.getValue().getSegment().getShardSpec(),
                 val.getValue().getSegment().getDimensions(),
-                val.getValue().getSegment().getMetrics()
+                val.getValue().getSegment().getMetrics(),
+                IS_COMPACTED_FALSE // unpublished segments from realtime tasks cannot be compacted yet
             };
           });
 
