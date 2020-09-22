@@ -245,7 +245,7 @@ public class DetermineHashedPartitionsJobTest
   {
     DetermineHashedPartitionsJob determineHashedPartitionsJob = new DetermineHashedPartitionsJob(indexerConfig);
     determineHashedPartitionsJob.run();
-    @Nullable HashPartitionFunction expectedFunction = ((HashedPartitionsSpec) indexerConfig.getPartitionsSpec())
+    HashPartitionFunction expectedFunction = ((HashedPartitionsSpec) indexerConfig.getPartitionsSpec())
         .getPartitionFunction();
     Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
     Assert.assertEquals(

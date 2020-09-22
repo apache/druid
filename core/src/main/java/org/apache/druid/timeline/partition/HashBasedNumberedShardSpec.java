@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -73,7 +74,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       @JsonProperty("bucketId") @Nullable Integer bucketId, // nullable for backward compatibility
       @JsonProperty("numBuckets") @Nullable Integer numBuckets, // nullable for backward compatibility
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
-      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction,
+      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction, // nullable for backward compatibility
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -121,6 +122,11 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
+    // partitionFunction can be null when you read a shardSpec of a segment created in an old version of Druid.
+    // It can never be null for segments to create during ingestion.
+    if (partitionFunction == null) {
+      throw new ISE("Cannot create a hashPartitioner since partitionFunction is null");
+    }
     return new HashPartitioner(
         jsonMapper,
         partitionFunction,

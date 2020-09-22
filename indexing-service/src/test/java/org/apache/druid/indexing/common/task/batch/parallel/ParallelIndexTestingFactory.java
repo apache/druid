@@ -45,6 +45,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -105,7 +106,7 @@ class ParallelIndexTestingFactory
       PARTITION_ID,
       PARTITION_ID + 1,
       Collections.singletonList("dim"),
-      null,
+      HashPartitionFunction.MURMUR3_32_ABS,
       ParallelIndexTestingFactory.NESTED_OBJECT_MAPPER
   );
 

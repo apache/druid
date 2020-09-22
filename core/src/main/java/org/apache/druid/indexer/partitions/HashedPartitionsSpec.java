@@ -39,13 +39,13 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   static final String NUM_SHARDS = "numShards";
 
   private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
+  private static final HashPartitionFunction DEFAULT_HASH_FUNCTION = HashPartitionFunction.MURMUR3_32_ABS;
 
   @Nullable
   private final Integer maxRowsPerSegment;
   @Nullable
   private final Integer numShards;
   private final List<String> partitionDimensions;
-  @Nullable
   private final HashPartitionFunction partitionFunction;
 
   public static HashedPartitionsSpec defaultSpec()
@@ -88,7 +88,7 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
     Checks.checkAtMostOneNotNull(target, new Property<>(NUM_SHARDS, adjustedNumShards));
 
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
-    this.partitionFunction = partitionFunction;
+    this.partitionFunction = partitionFunction == null ? DEFAULT_HASH_FUNCTION : partitionFunction;
     this.numShards = adjustedNumShards;
 
     // Supply default for targetRowsPerSegment if needed
@@ -172,7 +172,6 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
     return partitionDimensions;
   }
 
-  @Nullable
   @JsonProperty
   public HashPartitionFunction getPartitionFunction()
   {

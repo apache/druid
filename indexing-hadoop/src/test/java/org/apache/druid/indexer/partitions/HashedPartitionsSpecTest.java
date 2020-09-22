@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,7 +43,7 @@ public class HashedPartitionsSpecTest
   {
     final HashedPartitionsSpec defaultSpec = HashedPartitionsSpec.defaultSpec();
     Assert.assertEquals(Collections.emptyList(), defaultSpec.getPartitionDimensions());
-    Assert.assertNull(defaultSpec.getPartitionFunction());
+    Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, defaultSpec.getPartitionFunction());
     Assert.assertNull(defaultSpec.getNumShards());
     Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, defaultSpec.getMaxRowsPerSegment().intValue());
   }

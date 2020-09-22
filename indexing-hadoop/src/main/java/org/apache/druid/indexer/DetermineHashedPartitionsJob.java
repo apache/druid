@@ -173,9 +173,14 @@ public class DetermineHashedPartitionsJob implements Jobby
       }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
       PartitionsSpec partitionsSpec = config.getPartitionsSpec();
-      HashPartitionFunction partitionFunction = partitionsSpec instanceof HashedPartitionsSpec
-                                                ? ((HashedPartitionsSpec) partitionsSpec).getPartitionFunction()
-                                                : null;
+      if (!(partitionsSpec instanceof HashedPartitionsSpec)) {
+        throw new ISE(
+            "%s is expected, but got %s",
+            HashedPartitionsSpec.class.getName(),
+            partitionsSpec.getClass().getName()
+        );
+      }
+      HashPartitionFunction partitionFunction = ((HashedPartitionsSpec) partitionsSpec).getPartitionFunction();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();

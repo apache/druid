@@ -45,7 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -141,7 +140,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         TaskState.SUCCESS,
         false
     );
-    assertHashedPartition(publishedSegments, null);
+    assertHashedPartition(publishedSegments);
   }
 
   @Test
@@ -152,7 +151,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         TaskState.SUCCESS,
         false
     );
-    assertHashedPartition(publishedSegments, HashPartitionFunction.MURMUR3_32_ABS);
+    assertHashedPartition(publishedSegments);
   }
 
   @Test
@@ -248,10 +247,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     }
   }
 
-  private void assertHashedPartition(
-      Set<DataSegment> publishedSegments,
-      @Nullable HashPartitionFunction expectedPartitionFunction
-  ) throws IOException
+  private void assertHashedPartition(Set<DataSegment> publishedSegments) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
@@ -263,9 +259,9 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       for (DataSegment segment : segmentsInInterval) {
         Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
         final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-        Assert.assertEquals(expectedPartitionFunction, shardSpec.getPartitionFunction());
+        Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
-        final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+        final int hash = shardSpec.getPartitionFunction().hash(
             HashBasedNumberedShardSpec.serializeGroupKey(
                 getObjectMapper(),
                 (List<Object>) results.get(0).getEvents()
@@ -275,7 +271,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         for (ScanResultValue value : results) {
           Assert.assertEquals(
               hash,
-              HashPartitionFunction.MURMUR3_32_ABS.hash(
+              shardSpec.getPartitionFunction().hash(
                   HashBasedNumberedShardSpec.serializeGroupKey(
                       getObjectMapper(),
                       (List<Object>) value.getEvents()

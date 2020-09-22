@@ -26,15 +26,11 @@ import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  * This class is used for hash partitioning during ingestion. The {@link ShardSpecLookup} returned from
  * {@link #createHashLookup} is used to determine what hash bucket the given input row will belong to.
- *
- * Note: this class must be used only for ingestion. For segment pruning at query time,
- * {@link HashBasedNumberedShardSpec#partitionFunction} should be used instead.
  */
 class HashPartitioner
 {
@@ -45,16 +41,14 @@ class HashPartitioner
 
   HashPartitioner(
       final ObjectMapper jsonMapper,
-      @Nullable final HashPartitionFunction hashPartitionFunction,
+      final HashPartitionFunction hashPartitionFunction,
       final List<String> partitionDimensions,
       final int numBuckets
   )
   {
-    this.jsonMapper = jsonMapper;
-    this.hashPartitionFunction = hashPartitionFunction == null
-                                 ? HashPartitionFunction.MURMUR3_32_ABS
-                                 : hashPartitionFunction;
-    this.partitionDimensions = partitionDimensions;
+    this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
+    this.hashPartitionFunction = Preconditions.checkNotNull(hashPartitionFunction, "hashPartitionFunction");
+    this.partitionDimensions = Preconditions.checkNotNull(partitionDimensions, "partitionDimensions");
     this.numBuckets = numBuckets;
   }
 

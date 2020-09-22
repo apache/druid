@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -41,7 +42,6 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
   private final int bucketId;
   private final int numBuckets;
   private final List<String> partitionDimensions;
-  @Nullable
   private final HashPartitionFunction partitionFunction;
   private final ObjectMapper jsonMapper;
 
@@ -51,7 +51,7 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numBuckets") int numBuckets,
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
-      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction,
+      @JsonProperty("partitionFunction") HashPartitionFunction partitionFunction,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -61,7 +61,7 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
     this.partitionDimensions = partitionDimensions == null
                                ? HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS
                                : partitionDimensions;
-    this.partitionFunction = partitionFunction;
+    this.partitionFunction = Preconditions.checkNotNull(partitionFunction, "partitionFunction");
     this.jsonMapper = jsonMapper;
   }
 
@@ -92,7 +92,6 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
   }
 
   @JsonProperty
-  @Nullable
   public HashPartitionFunction getPartitionFunction()
   {
     return partitionFunction;

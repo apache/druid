@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.hamcrest.Matchers;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -132,7 +133,14 @@ public class ParallelIndexSupervisorTaskTest
           false,
           "subTaskId",
           createInterval(id),
-          new BuildingHashBasedNumberedShardSpec(id, id, id + 1, null, null, new ObjectMapper())
+          new BuildingHashBasedNumberedShardSpec(
+              id,
+              id,
+              id + 1,
+              null,
+              HashPartitionFunction.MURMUR3_32_ABS,
+              new ObjectMapper()
+          )
       );
     }
 

@@ -43,7 +43,7 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numPartitions") int numBuckets,
-      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction
+      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction // nullable for backward compatibility
   )
   {
     this.partitionDimensions = partitionDimensions;

@@ -158,7 +158,7 @@ public class HashBasedNumberedShardSpecTest
   {
     return new HashPartitioner(
         objectMapper,
-        null,
+        HashPartitionFunction.MURMUR3_32_ABS,
         ImmutableList.of(),
         numBuckets
     )
@@ -216,7 +216,7 @@ public class HashBasedNumberedShardSpecTest
         ImmutableList.of(Collections.singletonList("v1")),
         new HashPartitioner(
             objectMapper,
-            null,
+            HashPartitionFunction.MURMUR3_32_ABS,
             partitionDimensions1,
             0 // not used
         ).extractKeys(time.getMillis(), inputRow)
@@ -230,7 +230,7 @@ public class HashBasedNumberedShardSpecTest
         // empty list when partitionDimensions is null
         new HashPartitioner(
             objectMapper,
-            null,
+            HashPartitionFunction.MURMUR3_32_ABS,
             ImmutableList.of(),
             0 // not used
         ).extractKeys(time.getMillis(), inputRow).toString()

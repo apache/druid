@@ -235,14 +235,20 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, segments.get(0).getShardSpec().getNumCorePartitions());
-    Assert.assertNull(((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, segments.get(1).getShardSpec().getNumCorePartitions());
-    Assert.assertNull(((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
+    );
   }
 
   @Test
@@ -486,7 +492,10 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertNull(((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
   }
 
   @Test
@@ -566,7 +575,7 @@ public class IndexTaskTest extends IngestionTestBase
       Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
       Assert.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-      Assert.assertNull(hashBasedNumberedShardSpec.getPartitionFunction());
+      Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
       final File segmentFile = segmentLoader.getSegmentFiles(segment);
 
