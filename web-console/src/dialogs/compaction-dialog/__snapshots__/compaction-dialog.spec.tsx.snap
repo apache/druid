@@ -55,9 +55,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig 1`] = `
             "label": "Partitioning type",
             "name": "tuningConfig.partitionsSpec.type",
             "suggestions": Array [
+              "dynamic",
               "hashed",
               "single_dim",
-              "dynamic",
             ],
             "type": "string",
           },
@@ -273,9 +273,9 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "label": "Partitioning type",
             "name": "tuningConfig.partitionsSpec.type",
             "suggestions": Array [
+              "dynamic",
               "hashed",
               "single_dim",
-              "dynamic",
             ],
             "type": "string",
           },
