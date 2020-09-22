@@ -231,8 +231,8 @@ public class AggregatorUtil
 
   public static VectorValueSelector makeVectorValueSelector(
       VectorColumnSelectorFactory columnSelectorFactory,
-      String fieldName,
-      String expression,
+      @Nullable String fieldName,
+      @Nullable String expression,
       Supplier<Expr> fieldExpression
   )
   {
