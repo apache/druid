@@ -116,7 +116,13 @@ public class VectorProcessors
       public void processIndex(String[] strings, long[] longs, boolean[] outputNulls, int i)
       {
         try {
-          longs[i] = Long.parseLong(strings[i], radix);
+          final String input = strings[i];
+          if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
+            // Strip leading 0x from hex strings.
+            longs[i] = Long.parseLong(input.substring(2), radix);
+          } else {
+            longs[i] = Long.parseLong(input, radix);
+          }
           outputNulls[i] = false;
         }
         catch (NumberFormatException e) {
