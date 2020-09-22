@@ -72,6 +72,7 @@ import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -755,6 +756,7 @@ public class AppenderatorImpl implements Appenderator
       final File mergedFile;
       final long mergeFinishTime;
       final long startTime = System.nanoTime();
+      final long mergeThreadCpuTime = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
       try {
@@ -776,8 +778,14 @@ public class AppenderatorImpl implements Appenderator
         );
 
         mergeFinishTime = System.nanoTime();
+        long mergeTime = (mergeFinishTime - startTime) / 100000;
 
-        log.debug("Segment[%s] built in %,dms.", identifier, (mergeFinishTime - startTime) / 1000000);
+        // emit merge metrics before publishing segment
+        metrics.incrementMergeCount(indexes.size());
+        metrics.incrementMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
+        metrics.incrementMergeTimeMillis(mergeTime);
+
+        log.debug("Segment[%s] built in %,dms.", identifier, mergeTime);
       }
       catch (Throwable t) {
         throw closer.rethrow(t);

@@ -162,6 +162,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|dataSource, taskId, taskType.|0 or very low|
 |`ingest/persists/failed`|Number of persists that failed.|dataSource, taskId, taskType.|0|
 |`ingest/handoff/failed`|Number of handoffs that failed.|dataSource, taskId, taskType.|0|
+|`ingest/merge/count`|Number of intermediate persists that have been merged into final segments that will be published.|dataSource, taskId, taskType.|Depends on configuration. Should be close to `ingest/persists/count`.|
 |`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/handoff/count`|Number of handoffs that happened.|dataSource, taskId, taskType.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|

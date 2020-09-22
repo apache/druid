@@ -448,6 +448,7 @@ public class RealtimePlumber implements Plumber
               }
 
               // emit merge metrics before publishing segment
+              metrics.incrementMergeCount(indexes.size());
               metrics.incrementMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
 
