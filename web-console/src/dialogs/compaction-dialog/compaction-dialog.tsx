@@ -16,17 +16,153 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { Button, ButtonGroup, Classes, Code, Dialog, FormGroup, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, ExternalLink, Field } from '../../components';
-import { getLink } from '../../links';
+import { AutoForm, Field, JsonInput } from '../../components';
+import { deepGet, deepSet } from '../../utils/object-change';
 
 import './compaction-dialog.scss';
 
 export const DEFAULT_MAX_ROWS_PER_SEGMENT = 5000000;
 
-const COMPACTION_CONFIG_FIELDS: Field<Record<string, any>>[] = [
+type Tabs = 'form' | 'json';
+
+type CompactionConfig = Record<string, any>;
+
+const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
+  {
+    name: 'skipOffsetFromLatest',
+    type: 'string',
+    defaultValue: 'P1D',
+    info: (
+      <p>
+        The offset for searching segments to be compacted. Strongly recommended to set for realtime
+        dataSources.
+      </p>
+    ),
+  },
+  {
+    name: 'tuningConfig.partitionsSpec.type',
+    label: 'Partitioning type',
+    type: 'string',
+    suggestions: ['dynamic', 'hashed', 'single_dim'],
+    info: (
+      <p>
+        For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on the
+        hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a single
+        dimension. For best-effort rollup, you should use dynamic.
+      </p>
+    ),
+  },
+  // partitionsSpec type: dynamic
+  {
+    name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
+    label: 'Max rows per segment',
+    type: 'number',
+    defaultValue: 5000000,
+    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
+    info: <>Determines how many rows are in each segment.</>,
+  },
+  {
+    name: 'tuningConfig.partitionsSpec.maxTotalRows',
+    label: 'Max total rows',
+    type: 'number',
+    defaultValue: 20000000,
+    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
+    info: <>Total number of rows in segments waiting for being pushed.</>,
+  },
+  // partitionsSpec type: hashed
+  {
+    name: 'tuningConfig.partitionsSpec.numShards',
+    label: 'Num shards',
+    type: 'number',
+    required: true, // ToDo: this will no longer be required soon
+    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
+    info: (
+      <>
+        Directly specify the number of shards to create. If this is specified and 'intervals' is
+        specified in the granularitySpec, the index task can skip the determine intervals/partitions
+        pass through the data. numShards cannot be specified if maxRowsPerSegment is set.
+      </>
+    ),
+  },
+  {
+    name: 'tuningConfig.partitionsSpec.partitionDimensions',
+    label: 'Partition dimensions',
+    type: 'string-array',
+    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
+    info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
+  },
+  // partitionsSpec type: single_dim
+  {
+    name: 'tuningConfig.partitionsSpec.partitionDimension',
+    label: 'Partition dimension',
+    type: 'string',
+    defined: (t: CompactionConfig) =>
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    required: true,
+    info: <p>The dimension to partition on.</p>,
+  },
+  {
+    name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
+    label: 'Target rows per segment',
+    type: 'number',
+    zeroMeansUndefined: true,
+    defined: (t: CompactionConfig) =>
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    required: (t: CompactionConfig) =>
+      !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
+    info: (
+      <p>
+        Target number of rows to include in a partition, should be a number that targets segments of
+        500MB~1GB.
+      </p>
+    ),
+  },
+  {
+    name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
+    label: 'Max rows per segment',
+    type: 'number',
+    zeroMeansUndefined: true,
+    defined: (t: CompactionConfig) =>
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    required: (t: CompactionConfig) =>
+      !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
+    info: <p>Maximum number of rows to include in a partition.</p>,
+  },
+  {
+    name: 'tuningConfig.partitionsSpec.assumeGrouped',
+    label: 'Assume grouped',
+    type: 'boolean',
+    defaultValue: false,
+    defined: (t: CompactionConfig) =>
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    info: (
+      <p>
+        Assume that input data has already been grouped on time and dimensions. Ingestion will run
+        faster, but may choose sub-optimal partitions if this assumption is violated.
+      </p>
+    ),
+  },
+  {
+    name: 'tuningConfig.maxNumConcurrentSubTasks',
+    label: 'Max num concurrent sub tasks',
+    type: 'number',
+    defaultValue: 1,
+    min: 1,
+    info: (
+      <>
+        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
+        worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this
+        value is set to 1, the supervisor task processes data ingestion on its own instead of
+        spawning worker tasks. If this value is set to too large, too many worker tasks can be
+        created which might block other ingestion.
+      </>
+    ),
+  },
   {
     name: 'inputSegmentSizeBytes',
     type: 'number',
@@ -42,75 +178,80 @@ const COMPACTION_CONFIG_FIELDS: Field<Record<string, any>>[] = [
     ),
   },
   {
-    name: 'skipOffsetFromLatest',
-    type: 'string',
-    defaultValue: 'P1D',
-    info: (
-      <p>
-        The offset for searching segments to be compacted. Strongly recommended to set for realtime
-        dataSources.
-      </p>
-    ),
-  },
-  {
-    name: 'maxRowsPerSegment',
+    name: 'tuningConfig.maxNumMergeTasks',
+    label: 'Max num merge tasks',
     type: 'number',
-    defaultValue: DEFAULT_MAX_ROWS_PER_SEGMENT,
-    info: <p>Determines how many rows are in each segment.</p>,
+    defaultValue: 1,
+    min: 1,
+    defined: (t: CompactionConfig) =>
+      ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),
+    info: <>Maximum number of merge tasks which can be run at the same time.</>,
   },
   {
-    name: 'taskContext',
-    type: 'json',
-    info: (
-      <p>
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/tasks.html#task-context`}>
-          Task context
-        </ExternalLink>{' '}
-        for compaction tasks.
-      </p>
-    ),
-  },
-  {
-    name: 'taskPriority',
+    name: 'tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask',
+    label: 'Max input segment bytes per task',
     type: 'number',
-    defaultValue: 25,
-    info: <p>Priority of the compaction task.</p>,
-  },
-  {
-    name: 'tuningConfig',
-    type: 'json',
+    defaultValue: 500000000,
+    min: 1000000,
+    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'segments'),
     info: (
-      <p>
-        <ExternalLink
-          href={`${getLink('DOCS')}/configuration/index.html#compact-task-tuningconfig`}
-        >
-          Tuning config
-        </ExternalLink>{' '}
-        for compaction tasks.
-      </p>
+      <>
+        Maximum number of bytes of input segments to process in a single task. If a single segment
+        is larger than this number, it will be processed by itself in a single task (input segments
+        are never split across tasks).
+      </>
     ),
   },
 ];
 
+function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
+  const partitionsSpecType =
+    deepGet(compactionConfig, 'tuningConfig.partitionsSpec.type') || 'dynamic';
+  switch (partitionsSpecType) {
+    // case 'dynamic': // Nothing to check for dynamic
+    case 'hashed':
+      if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.numShards')) {
+        return false;
+      }
+      break;
+
+    case 'single_dim':
+      if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.partitionDimension')) {
+        return false;
+      }
+      if (
+        !deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+        !deepGet(compactionConfig, 'tuningConfig.partitionsSpec.maxRowsPerSegment')
+      ) {
+        return false;
+      }
+      break;
+  }
+
+  return true;
+}
+
 export interface CompactionDialogProps {
   onClose: () => void;
-  onSave: (config: Record<string, any>) => void;
+  onSave: (compactionConfig: CompactionConfig) => void;
   onDelete: () => void;
   datasource: string;
-  compactionConfig?: Record<string, any>;
+  compactionConfig: CompactionConfig | undefined;
 }
 
 export const CompactionDialog = React.memo(function CompactionDialog(props: CompactionDialogProps) {
   const { datasource, compactionConfig, onSave, onClose, onDelete } = props;
 
-  const [currentConfig, setCurrentConfig] = useState<Record<string, any>>(
+  const [currentTab, setCurrentTab] = useState<Tabs>('form');
+  const [currentConfig, setCurrentConfig] = useState<CompactionConfig>(
     compactionConfig || {
       dataSource: datasource,
+      tuningConfig: { partitionsSpec: { type: 'dynamic' } },
     },
   );
 
   function handleSubmit() {
-    if (!currentConfig) return;
+    if (!validCompactionConfig(currentConfig)) return;
     onSave(currentConfig);
   }
 
@@ -122,25 +263,40 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
       canOutsideClickClose={false}
       title={`Compaction config: ${datasource}`}
     >
-      <AutoForm
-        fields={COMPACTION_CONFIG_FIELDS}
-        model={currentConfig}
-        onChange={m => setCurrentConfig(m)}
-      />
+      <FormGroup className="tabs">
+        <ButtonGroup fill>
+          <Button
+            text="Form"
+            active={currentTab === 'form'}
+            onClick={() => setCurrentTab('form')}
+          />
+          <Button
+            text="JSON"
+            active={currentTab === 'json'}
+            onClick={() => setCurrentTab('json')}
+          />
+        </ButtonGroup>
+      </FormGroup>
+      <div className="content">
+        {currentTab === 'form' ? (
+          <AutoForm
+            fields={COMPACTION_CONFIG_FIELDS}
+            model={currentConfig}
+            onChange={m => setCurrentConfig(m)}
+          />
+        ) : (
+          <JsonInput value={currentConfig} onChange={setCurrentConfig} height="100%" />
+        )}
+      </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            text="Delete"
-            intent={Intent.DANGER}
-            onClick={onDelete}
-            disabled={!compactionConfig}
-          />
+          {compactionConfig && <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />}
           <Button text="Close" onClick={onClose} />
           <Button
             text="Submit"
             intent={Intent.PRIMARY}
             onClick={handleSubmit}
-            disabled={!currentConfig}
+            disabled={!validCompactionConfig(currentConfig)}
           />
         </div>
       </div>

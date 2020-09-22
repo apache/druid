@@ -21,15 +21,28 @@ import React from 'react';
 
 import { CompactionDialog } from './compaction-dialog';
 
-describe('compaction dialog', () => {
-  it('matches snapshot', () => {
+describe('CompactionDialog', () => {
+  it('matches snapshot without compactionConfig', () => {
     const compactionDialog = shallow(
       <CompactionDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
-        datasource={'test'}
-        compactionConfig={{}}
+        datasource={'test1'}
+        compactionConfig={undefined}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with compactionConfig', () => {
+    const compactionDialog = shallow(
+      <CompactionDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource={'test1'}
+        compactionConfig={{ dataSource: 'test1' }}
       />,
     );
     expect(compactionDialog).toMatchSnapshot();
