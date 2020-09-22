@@ -47,7 +47,7 @@ import java.util.Optional;
  * @see org.apache.druid.query.QueryToolChest#resultArraySignature which returns signatures for query results
  * @see org.apache.druid.query.InlineDataSource#getRowSignature which returns signatures for inline datasources
  */
-public class RowSignature
+public class RowSignature implements ColumnInspector
 {
   private static final RowSignature EMPTY = new RowSignature(Collections.emptyList());
 
@@ -158,24 +158,6 @@ public class RowSignature
     return columnPositions.applyAsInt(columnName);
   }
 
-  public ColumnInspector asColumnInspector()
-  {
-    return new ColumnInspector()
-    {
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        return getColumnType(column).map(valueType -> {
-          if (valueType.isNumeric()) {
-            return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
-          }
-          return new ColumnCapabilitiesImpl().setType(valueType);
-        }).orElse(null);
-      }
-    };
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -208,6 +190,18 @@ public class RowSignature
       s.append(columnName).append(":").append(columnTypes.get(columnName));
     }
     return s.append("}").toString();
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return getColumnType(column).map(valueType -> {
+      if (valueType.isNumeric()) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+      }
+      return new ColumnCapabilitiesImpl().setType(valueType);
+    }).orElse(null);
   }
 
   public static class Builder

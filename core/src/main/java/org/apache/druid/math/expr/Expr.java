@@ -172,6 +172,11 @@ public interface Expr
     @Nullable
     ExprType getType(String name);
 
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     *
+     * There must be at least one expression with a computable numeric output type for this method to return true.
+     */
     default boolean areNumeric(List<Expr> args)
     {
       boolean numeric = args.size() > 0;
@@ -186,11 +191,19 @@ public interface Expr
       return numeric;
     }
 
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     *
+     * There must be at least one expression with a computable numeric output type for this method to return true.
+     */
     default boolean areNumeric(Expr... args)
     {
       return areNumeric(Arrays.asList(args));
     }
 
+    /**
+     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingTypes)} to a value of true
+     */
     default boolean canVectorize(List<Expr> args)
     {
       boolean canVectorize = true;
@@ -200,6 +213,9 @@ public interface Expr
       return canVectorize;
     }
 
+    /**
+     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingTypes)} to a value of true
+     */
     default boolean canVectorize(Expr... args)
     {
       return canVectorize(Arrays.asList(args));

@@ -134,4 +134,9 @@ public class VectorProcessors
 
     return (ExprVectorProcessor<T>) processor;
   }
+
+  private VectorProcessors()
+  {
+    // No instantiation
+  }
 }

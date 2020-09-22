@@ -247,14 +247,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    if (fieldName != null) {
-      final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-      return capabilities == null || ValueType.isNumeric(capabilities.getType());
-    }
-    if (expression != null) {
-      return fieldExpression.get().canVectorize(columnInspector);
-    }
-    return false;
+    return AggregatorUtil.canVectorize(columnInspector, fieldName, expression, fieldExpression);
   }
 
   protected abstract double nullValue();

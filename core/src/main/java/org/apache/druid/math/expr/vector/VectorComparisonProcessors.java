@@ -24,11 +24,6 @@ import org.apache.druid.math.expr.Expr;
 
 public class VectorComparisonProcessors
 {
-  private VectorComparisonProcessors()
-  {
-    // No instantiation
-  }
-
   public static <T> ExprVectorProcessor<T> equal(
       Expr.VectorInputBindingTypes inputTypes,
       Expr left,
@@ -393,5 +388,10 @@ public class VectorComparisonProcessors
           }
         }
     );
+  }
+
+  private VectorComparisonProcessors()
+  {
+    // No instantiation
   }
 }

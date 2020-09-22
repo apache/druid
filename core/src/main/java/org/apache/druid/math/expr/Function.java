@@ -117,11 +117,26 @@ public interface Function
   @Nullable
   ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args);
 
+  /**
+   * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
+   * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in
+   * batches to use with vectorized query engines.
+   *
+   * @see Expr#canVectorize(Expr.InputBindingTypes)
+   * @see ApplyFunction#canVectorize(Expr.InputBindingTypes, Expr, List)
+   */
   default boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
   {
     return false;
   }
 
+  /**
+   * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
+   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   *
+   * @see Expr#buildVectorized(Expr.VectorInputBindingTypes)
+   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingTypes, Expr, List)
+   */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
   {
     throw new UOE("%s is not vectorized", name());
@@ -547,7 +562,8 @@ public interface Function
         final int radix = args.size() == 1 ? 10 : ((Number) args.get(1).getLiteralValue()).intValue();
         return VectorProcessors.parseLong(inputTypes, args.get(0), radix);
       }
-      // not yet implemented, how did we get here
+      // only single argument and 2 argument where the radix is constant is currently implemented
+      // the canVectorize check should prevent this from happening, but explode just in case
       throw Exprs.cannotVectorize(this);
     }
   }

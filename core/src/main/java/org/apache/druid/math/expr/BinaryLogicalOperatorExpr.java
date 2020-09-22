@@ -70,6 +70,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
     }
     return implicitCast;
   }
+
   @Override
   public boolean canVectorize(InputBindingTypes inputTypes)
   {

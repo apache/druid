@@ -51,11 +51,26 @@ public interface ApplyFunction
    */
   String name();
 
+  /**
+   * Check if an apply function can be 'vectorized', for a given {@link LambdaExpr} and set of {@link Expr} inputs.
+   * If this method returns true, {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which
+   * can evaluate values in batches to use with vectorized query engines.
+   *
+   * @see Expr#canVectorize(Expr.InputBindingTypes)
+   * @see Function#canVectorize(Expr.InputBindingTypes, List)
+   */
   default boolean canVectorize(Expr.InputBindingTypes inputTypes, Expr lambda, List<Expr> args)
   {
     return false;
   }
 
+  /**
+   * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
+   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   *
+   * @see Expr#buildVectorized(Expr.VectorInputBindingTypes)
+   * @see Function#asVectorProcessor(Expr.VectorInputBindingTypes, List)
+   */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, Expr lambda, List<Expr> args)
   {
     throw new UOE("%s is not vectorized", name());
