@@ -115,9 +115,9 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        ImmutableMap.of(QueryContexts.SEGMENT_PRUNING_KEY, false)
+        ImmutableMap.of(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, false)
     );
-    Assert.assertFalse(QueryContexts.isSegmentPruningEnabled(query));
+    Assert.assertFalse(QueryContexts.isSecondaryPartitionPruningEnabled(query));
   }
 
   @Test
@@ -129,6 +129,6 @@ public class QueryContextsTest
         false,
         ImmutableMap.of()
     );
-    Assert.assertTrue(QueryContexts.isSegmentPruningEnabled(query));
+    Assert.assertTrue(QueryContexts.isSecondaryPartitionPruningEnabled(query));
   }
 }

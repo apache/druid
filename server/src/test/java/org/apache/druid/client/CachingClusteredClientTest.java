@@ -1760,7 +1760,7 @@ public class CachingClusteredClientTest
     );
 
     final Map<String, Object> context = new HashMap<>(CONTEXT);
-    context.put(QueryContexts.SEGMENT_PRUNING_KEY, enableSegmentPruning);
+    context.put(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, enableSegmentPruning);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .filters(filter)

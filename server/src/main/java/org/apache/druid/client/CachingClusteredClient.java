@@ -425,7 +425,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
-        if (QueryContexts.isSegmentPruningEnabled(query)) {
+        if (QueryContexts.isSecondaryPartitionPruningEnabled(query)) {
           filteredChunks = DimFilterUtils.filterShards(
               query.getFilter(),
               holder.getObject(),

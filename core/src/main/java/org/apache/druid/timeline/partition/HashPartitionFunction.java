@@ -26,8 +26,9 @@ import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * An enum of supported hash partition functions. This enum should be updated when we want to use a new function
- * for hash partitioning. This function is a part of {@link HashBasedNumberedShardSpec} which is stored
- * in the metadata store.
+ * for hash partitioning. All partition functions listed in this enum must be backwards-compatible as the hash
+ * function should apply to all segments in the same way no matter what Druid version was used to create those segments.
+ * This function is a part of {@link HashBasedNumberedShardSpec} which is stored in the metadata store.
  */
 public enum HashPartitionFunction
 {
