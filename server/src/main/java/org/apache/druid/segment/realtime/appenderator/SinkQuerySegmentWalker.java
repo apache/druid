@@ -174,6 +174,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
+    // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
                                             ? joinables.computeJoinDataSourceCacheKey(analysis)
                                             : Optional.of(StringUtils.EMPTY_BYTES);

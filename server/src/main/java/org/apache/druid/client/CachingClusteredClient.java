@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -279,6 +280,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final DataSourceAnalysis dataSourceAnalysis;
     private final List<Interval> intervals;
+    private final CacheKeyManager<T> cacheKeyManager;
 
     SpecificQueryRunnable(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
     {
@@ -299,6 +301,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
                                          .orElseGet(() -> query.getIntervals());
+      this.cacheKeyManager = new CacheKeyManager<>(
+          query,
+          strategy,
+          useCache,
+          populateCache,
+          dataSourceAnalysis,
+          joinables
+      );
     }
 
     private ImmutableMap<String, Object> makeDownstreamQueryContext()
@@ -349,12 +359,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       @Nullable
-      final byte[] queryCacheKey = computeQueryCacheKey();
+      final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable
         final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
         @Nullable
-        final String currentEtag = computeCurrentEtag(segmentServers, queryCacheKey);
+        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, queryCacheKey);
+        if (null != currentEtag) {
+          responseContext.put(Key.ETAG, currentEtag);
+        }
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return new ClusterQueryResult<>(Sequences.empty(), 0);
         }
@@ -487,65 +500,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         responseContext.add(ResponseContext.Key.UNCOVERED_INTERVALS, uncoveredIntervals);
         responseContext.add(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, uncoveredIntervalsOverflowed);
       }
-    }
-
-    @Nullable
-    private byte[] computeQueryCacheKey()
-    {
-      if ((!populateCache && !useCache) || isBySegment) { // explicit bySegment queries are never cached
-        return null;
-      }
-
-      return computeQueryCacheKeyWithJoin();
-    }
-
-    @Nullable
-    private String computeCurrentEtag(final Set<SegmentServerSelector> segments, @Nullable byte[] queryCacheKey)
-    {
-      Hasher hasher = Hashing.sha1().newHasher();
-      boolean hasOnlyHistoricalSegments = true;
-      for (SegmentServerSelector p : segments) {
-        if (!p.getServer().pick().getServer().isSegmentReplicationTarget()) {
-          hasOnlyHistoricalSegments = false;
-          break;
-        }
-        hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
-        // it is important to add the "query interval" as part ETag calculation
-        // to have result level cache work correctly for queries with different
-        // intervals covering the same set of segments
-        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
-      }
-
-      if (!hasOnlyHistoricalSegments) {
-        return null;
-      }
-
-      final byte[] queryCacheKeyFinal = (queryCacheKey == null) ? computeQueryCacheKeyWithJoin() : queryCacheKey;
-      if (queryCacheKeyFinal == null) {
-        return null;
-      }
-      hasher.putBytes(queryCacheKeyFinal);
-
-      String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
-      responseContext.put(Key.ETAG, currEtag);
-      return currEtag;
-    }
-
-    /**
-     * Adds the cache key prefix for join data sources. Return null if its a join but caching is not supported
-     */
-    @Nullable
-    private byte[] computeQueryCacheKeyWithJoin()
-    {
-      assert strategy != null;  // implies strategy != null
-      if (dataSourceAnalysis.isJoin()) {
-        byte[] joinDataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
-        if (null == joinDataSourceCacheKey) {
-          return null;    // A join operation that does not support caching
-        }
-        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
-      }
-      return strategy.computeCacheKey(query);
     }
 
     private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(
@@ -793,6 +747,104 @@ public class CachingClusteredClient implements QuerySegmentWalker
             );
           })
           .flatMerge(seq -> seq, query.getResultOrdering());
+    }
+  }
+
+  /**
+   * An inner class that is used solely for computing cache keys. Its a separate class to allow extensive unit testing
+   * of cache key generation.
+   */
+  @VisibleForTesting
+  static class CacheKeyManager<T>
+  {
+    private final Query<T> query;
+    private final CacheStrategy<T, Object, Query<T>> strategy;
+    private final DataSourceAnalysis dataSourceAnalysis;
+    private final Joinables joinables;
+    private final boolean isSegmentLevelCachingEnable;
+
+    CacheKeyManager(
+        final Query<T> query,
+        final CacheStrategy<T, Object, Query<T>> strategy,
+        final boolean useCache,
+        final boolean populateCache,
+        final DataSourceAnalysis dataSourceAnalysis,
+        final Joinables joinables
+    )
+    {
+
+      this.query = query;
+      this.strategy = strategy;
+      this.dataSourceAnalysis = dataSourceAnalysis;
+      this.joinables = joinables;
+      this.isSegmentLevelCachingEnable = ((populateCache || useCache)
+                                          && !QueryContexts.isBySegment(query));   // explicit bySegment queries are never cached
+
+    }
+
+    @Nullable
+    byte[] computeSegmentLevelQueryCacheKey()
+    {
+      if (isSegmentLevelCachingEnable) {
+        return computeQueryCacheKeyWithJoin();
+      }
+      return null;
+    }
+
+    /**
+     * It computes the ETAG which is used by {@link org.apache.druid.query.ResultLevelCachingQueryRunner} for
+     * result level caches. queryCacheKey can be null if segment level cache is not being used. However, ETAG
+     * is still computed since result level cache may still be on.
+     */
+    @Nullable
+    String computeResultLevelCachingEtag(
+        final Set<SegmentServerSelector> segments,
+        @Nullable byte[] queryCacheKey
+    )
+    {
+      Hasher hasher = Hashing.sha1().newHasher();
+      boolean hasOnlyHistoricalSegments = true;
+      for (SegmentServerSelector p : segments) {
+        if (!p.getServer().pick().getServer().isSegmentReplicationTarget()) {
+          hasOnlyHistoricalSegments = false;
+          break;
+        }
+        hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
+        // it is important to add the "query interval" as part ETag calculation
+        // to have result level cache work correctly for queries with different
+        // intervals covering the same set of segments
+        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
+      }
+
+      if (!hasOnlyHistoricalSegments) {
+        return null;
+      }
+
+      // query cache key can be null if segment level caching is disabled
+      final byte[] queryCacheKeyFinal = (queryCacheKey == null) ? computeQueryCacheKeyWithJoin() : queryCacheKey;
+      if (queryCacheKeyFinal == null) {
+        return null;
+      }
+      hasher.putBytes(queryCacheKeyFinal);
+      String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
+      return currEtag;
+    }
+
+    /**
+     * Adds the cache key prefix for join data sources. Return null if its a join but caching is not supported
+     */
+    @Nullable
+    private byte[] computeQueryCacheKeyWithJoin()
+    {
+      assert strategy != null;  // implies strategy != null
+      if (dataSourceAnalysis.isJoin()) {
+        byte[] joinDataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
+        if (null == joinDataSourceCacheKey) {
+          return null;    // A join operation that does not support caching
+        }
+        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+      }
+      return strategy.computeCacheKey(query);
     }
   }
 }

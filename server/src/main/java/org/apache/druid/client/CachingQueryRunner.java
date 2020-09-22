@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.primitives.Bytes;
 import org.apache.druid.client.cache.Cache;
@@ -82,19 +83,8 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
-    final boolean populateCache = CacheUtil.isPopulateSegmentCache(
-        query,
-        strategy,
-        cacheConfig,
-        CacheUtil.ServerType.DATA
-    ) && cacheKeyPrefix.isPresent();
-
-    final boolean useCache = CacheUtil.isUseSegmentCache(
-        query,
-        strategy,
-        cacheConfig,
-        CacheUtil.ServerType.DATA
-    ) && cacheKeyPrefix.isPresent();
+    final boolean populateCache = canPopulateCache(query, strategy);
+    final boolean useCache = canUseCache(query, strategy);
 
     final Cache.NamedKey key;
     if (useCache || populateCache) {
@@ -152,6 +142,34 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     } else {
       return base.run(queryPlus, responseContext);
     }
+  }
+
+  /**
+   * @return whether the segment level cache should be used or not
+   */
+  @VisibleForTesting
+  boolean canUseCache(Query<T> query, CacheStrategy strategy)
+  {
+    return CacheUtil.isUseSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    ) && cacheKeyPrefix.isPresent();
+  }
+
+  /**
+   * @return whether the segment level cache should be populated or not
+   */
+  @VisibleForTesting
+  boolean canPopulateCache(Query<T> query, CacheStrategy strategy)
+  {
+    return CacheUtil.isPopulateSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    ) && cacheKeyPrefix.isPresent();
   }
 
 }
