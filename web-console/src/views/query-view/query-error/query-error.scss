@@ -17,8 +17,11 @@
  */
 
 .query-error {
-  background: #232d35;
   padding: 20px 22px;
+
+  .bp3-dark & {
+    background: #232d35;
+  }
 
   .cursor-link,
   .more-or-less,

@@ -33,6 +33,18 @@
       left: 50%;
       transform: translate(-50%, -50%);
       height: 75px;
+
+      .letter {
+        fill: #000000;
+
+        .bp3-dark & {
+          fill: #ffffff;
+        }
+      }
+
+      .swirl {
+        fill: #2ceefb;
+      }
     }
   }
 

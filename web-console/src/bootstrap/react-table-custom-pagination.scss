@@ -19,18 +19,24 @@
 .ReactTable {
   .-pageJump {
     .bp3-input {
-      background-color: #374653;
       position: relative;
       top: -2px;
+
+      .bp3-dark & {
+        background-color: #374653;
+      }
     }
   }
 
   .-pageSizeOptions {
     .bp3-html-select select {
-      background-color: #394b59;
       width: 90px;
       position: relative;
       top: -2px;
+
+      .bp3-dark & {
+        background-color: #394b59;
+      }
     }
   }
 }

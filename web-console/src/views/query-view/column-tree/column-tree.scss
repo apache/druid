@@ -17,7 +17,9 @@
  */
 
 .column-tree {
-  background: #27313b;
+  .bp3-dark & {
+    background: #27313b;
+  }
 
   .schema-selector {
     position: absolute;
