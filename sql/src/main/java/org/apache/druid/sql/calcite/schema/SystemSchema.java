@@ -126,8 +126,6 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
-  private static final long IS_COMPACTED_FALSE = 0L;
-  private static final long IS_COMPACTED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -147,7 +145,7 @@ public class SystemSchema extends AbstractSchema
       .add("shardSpec", ValueType.STRING)
       .add("dimensions", ValueType.STRING)
       .add("metrics", ValueType.STRING)
-      .add("is_compacted", ValueType.LONG)
+      .add("last_compaction_state", ValueType.STRING)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -315,7 +313,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getShardSpec(),
                 segment.getDimensions(),
                 segment.getMetrics(),
-                segment.getLastCompactionState() == null ? IS_COMPACTED_FALSE : IS_COMPACTED_TRUE
+                segment.getLastCompactionState()
             };
           });
 
@@ -348,7 +346,7 @@ public class SystemSchema extends AbstractSchema
                 val.getValue().getSegment().getShardSpec(),
                 val.getValue().getSegment().getDimensions(),
                 val.getValue().getSegment().getMetrics(),
-                IS_COMPACTED_FALSE // unpublished segments from realtime tasks cannot be compacted yet
+                null // unpublished segments from realtime tasks will not be compacted yet
             };
           });
 

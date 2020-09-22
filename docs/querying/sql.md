@@ -1086,7 +1086,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |shardSpec|STRING|The toString of specific `ShardSpec`|
 |dimensions|STRING|The dimensions of the segment|
 |metrics|STRING|The metrics of the segment|
-|is_compacted|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment was compacted, and 0 if this segment was not compacted yet. Note that this does not imply that the segment was compacted with the current config in auto compaction and hence, the segment may still be picked up by auto compaction|
+|last_compaction_state|STRING|The configurations of the compaction task which created this segment. May be null if segment was not created by compaction task.|
 
 For example to retrieve all segments for datasource "wikipedia", use the query:
 

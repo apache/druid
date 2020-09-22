@@ -273,6 +273,10 @@ public class SystemSchemaTest extends CalciteTestBase
     );
   }
 
+  private final CompactionState expectedCompactionState = new CompactionState(
+      new DynamicPartitionsSpec(null, null),
+      Collections.singletonMap("test", "map")
+  );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(
       "wikipedia1",
@@ -282,10 +286,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
       null,
-      new CompactionState(
-          new DynamicPartitionsSpec(null, null),
-          Collections.singletonMap("test", "map")
-      ),
+      expectedCompactionState,
       1,
       53000L
   );
@@ -297,10 +298,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
       null,
-      new CompactionState(
-          new DynamicPartitionsSpec(null, null),
-          Collections.singletonMap("test", "map")
-      ),
+      expectedCompactionState,
       1,
       83000L
   );
@@ -588,7 +586,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         1L, //is_overshadowed
-        0L //is_compacted
+        null //is_compacted
     );
 
     verifyRow(
@@ -602,7 +600,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed,
-        0L //is_compacted
+        null //is_compacted
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -617,7 +615,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        0L //is_compacted
+        null //is_compacted
     );
 
     verifyRow(
@@ -631,7 +629,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         1L, //is_realtime
         0L, //is_overshadowed
-        0L //is_compacted
+        null //is_compacted
     );
 
     verifyRow(
@@ -645,7 +643,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         1L, //is_realtime
         0L, //is_overshadowed
-        0L //is_compacted
+        null //is_compacted
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
@@ -661,7 +659,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         1L, //is_overshadowed
-        1L //is_compacted
+        expectedCompactionState //is_compacted
     );
 
     verifyRow(
@@ -675,7 +673,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        1L //is_compacted
+        expectedCompactionState //is_compacted
     );
 
     verifyRow(
@@ -689,7 +687,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        0L //is_compacted
+        null //is_compacted
     );
 
     // Verify value types.
@@ -707,7 +705,7 @@ public class SystemSchemaTest extends CalciteTestBase
       long isAvailable,
       long isRealtime,
       long isOvershadowed,
-      long isCompacted
+      CompactionState compactionState
   )
   {
     Assert.assertEquals(segmentId, row[0].toString());
@@ -724,7 +722,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(isAvailable, row[10]);
     Assert.assertEquals(isRealtime, row[11]);
     Assert.assertEquals(isOvershadowed, row[12]);
-    Assert.assertEquals(isCompacted, row[16]);
+    Assert.assertEquals(compactionState, row[16]);
   }
 
   @Test
@@ -1293,6 +1291,8 @@ public class SystemSchemaTest extends CalciteTestBase
               expectedClass = SegmentId.class;
             } else if (signature.getColumnName(i).equals("shardSpec")) {
               expectedClass = ShardSpec.class;
+            } else if (signature.getColumnName(i).equals("last_compaction_state")) {
+              expectedClass = CompactionState.class;
             } else if (signature.getColumnName(i).equals("dimensions") || signature.getColumnName(i).equals("metrics")) {
               expectedClass = List.class;
             } else {
