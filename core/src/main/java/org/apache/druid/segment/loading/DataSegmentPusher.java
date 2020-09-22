@@ -125,6 +125,11 @@ public interface DataSegmentPusher
 
   static String getDefaultStorageDirWithExistingUniquePath(DataSegment segment, String uniquePath)
   {
+    Preconditions.checkArgument(
+        !(segment.getShardSpec() instanceof BucketNumberedShardSpec),
+        "Illegal shardSpec type[%s]",
+        segment.getShardSpec()
+    );
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
