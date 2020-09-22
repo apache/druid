@@ -35,7 +35,7 @@ public class DimensionCardinalityReport implements SubTaskReport
   private final String taskId;
 
   /**
-   * A map of intervals to byte arrays, representing {@link org.apache.druid.hll.HyperLogLogCollector} objects,
+   * A map of intervals to byte arrays, representing {@link HyperLogLogCollector} objects,
    * serialized using {@link HyperLogLogCollector#toByteArray()}.
    *
    * The collector is used to determine cardinality estimates for each interval.

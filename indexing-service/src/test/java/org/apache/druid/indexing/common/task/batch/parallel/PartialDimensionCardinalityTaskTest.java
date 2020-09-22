@@ -98,7 +98,7 @@ public class PartialDimensionCardinalityTaskTest
       exception.expect(IllegalArgumentException.class);
       exception.expectMessage("hashed partitionsSpec required");
 
-      PartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(null, 1, null, false);
+      PartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(null, 1, "a", false);
       ParallelIndexTuningConfig tuningConfig =
           new ParallelIndexTestingFactory.TuningConfigBuilder().partitionsSpec(partitionsSpec).build();
 
@@ -134,7 +134,7 @@ public class PartialDimensionCardinalityTaskTest
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
           .id(ParallelIndexTestingFactory.AUTOMATIC_ID)
           .build();
-      Assert.assertThat(task.getId(), Matchers.startsWith(PartialDimensionDistributionTask.TYPE));
+      Assert.assertThat(task.getId(), Matchers.startsWith(PartialDimensionCardinalityTask.TYPE));
     }
   }
 

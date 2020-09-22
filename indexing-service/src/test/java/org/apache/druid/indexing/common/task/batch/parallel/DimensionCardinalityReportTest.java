@@ -61,7 +61,7 @@ public class DimensionCardinalityReportTest
   @Test
   public void abidesEqualsContract()
   {
-    EqualsVerifier.forClass(DimensionDistributionReport.class)
+    EqualsVerifier.forClass(DimensionCardinalityReport.class)
                   .usingGetClass()
                   .verify();
   }
