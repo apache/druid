@@ -370,8 +370,20 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableMap.of()
   );
 
+  private final DiscoveryDruidNode coordinator2 = new DiscoveryDruidNode(
+      new DruidNode("s1", "localhost", false, 8082, null, true, false),
+      NodeRole.COORDINATOR,
+      ImmutableMap.of()
+  );
+
   private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
       new DruidNode("s2", "localhost", false, 8090, null, true, false),
+      NodeRole.OVERLORD,
+      ImmutableMap.of()
+  );
+
+  private final DiscoveryDruidNode overlord2 = new DiscoveryDruidNode(
+      new DruidNode("s2", "localhost", false, 8091, null, true, false),
       NodeRole.OVERLORD,
       ImmutableMap.of()
   );
@@ -708,12 +720,15 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testServersTable()
   {
-
+    DruidLeaderClient coordinatorClient = EasyMock.createMock(DruidLeaderClient.class);
+    DruidLeaderClient overlordClient = EasyMock.createMock(DruidLeaderClient.class);
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
                                                      .withConstructor(
                                                          druidNodeDiscoveryProvider,
                                                          serverInventoryView,
-                                                         authMapper
+                                                         authMapper,
+                                                         coordinatorClient,
+                                                         overlordClient
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
@@ -746,8 +761,8 @@ public class SystemSchemaTest extends CalciteTestBase
             .once();
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(peonNodeDiscovery).once();
 
-    EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator)).once();
-    EasyMock.expect(overlordNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(overlord)).once();
+    EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator, coordinator2)).once();
+    EasyMock.expect(overlordNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(overlord, overlord2)).once();
     EasyMock.expect(brokerNodeDiscovery.getAllNodes())
             .andReturn(ImmutableList.of(broker1, broker2, brokerWithBroadcastSegments))
             .once();
@@ -758,6 +773,14 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(mmNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(middleManager)).once();
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
+
+    // set leaders
+    EasyMock.expect(coordinatorClient.findCurrentLeader())
+            .andReturn(coordinator.getDruidNode().getUriToUse().toString())
+            .once();
+    EasyMock.expect(overlordClient.findCurrentLeader())
+            .andReturn(overlord.getDruidNode().getUriToUse().toString())
+            .once();
 
     final List<DruidServer> servers = new ArrayList<>();
     servers.add(mockDataServer(historical1.getDruidNode().getHostAndPortToUse(), 200L, 1000L, "tier"));
@@ -782,7 +805,9 @@ public class SystemSchemaTest extends CalciteTestBase
         historicalNodeDiscovery,
         mmNodeDiscovery,
         peonNodeDiscovery,
-        indexerNodeDiscovery
+        indexerNodeDiscovery,
+        coordinatorClient,
+        overlordClient
     );
 
     DataContext dataContext = new DataContext()
@@ -850,6 +875,8 @@ public class SystemSchemaTest extends CalciteTestBase
         createExpectedRow("lameHost:8083", "lameHost", 8083, -1, NodeRole.HISTORICAL, "tier", 0L, 1000L)
     );
     expectedRows.add(createExpectedRow("localhost:8080", "localhost", 8080, -1, NodeRole.PEON, "tier", 0L, 1000L));
+
+    // coordinator
     expectedRows.add(
         createExpectedRow(
             "localhost:8081",
@@ -857,11 +884,25 @@ public class SystemSchemaTest extends CalciteTestBase
             8081,
             -1,
             NodeRole.COORDINATOR,
+            "leader",
+            0L,
+            0L
+        )
+    );
+    expectedRows.add(
+        createExpectedRow(
+            "localhost:8082",
+            "localhost",
+            8082,
+            -1,
+            NodeRole.COORDINATOR,
             null,
             0L,
             0L
         )
     );
+
+    //broker
     expectedRows.add(
         createExpectedRow(
             "localhost:8082",
@@ -874,9 +915,13 @@ public class SystemSchemaTest extends CalciteTestBase
             0L
         )
     );
+
+    //historical
     expectedRows.add(
         createExpectedRow("localhost:8083", "localhost", 8083, -1, NodeRole.HISTORICAL, "tier", 200L, 1000L)
     );
+
+    //overlord
     expectedRows.add(
         createExpectedRow(
             "localhost:8090",
@@ -884,11 +929,25 @@ public class SystemSchemaTest extends CalciteTestBase
             8090,
             -1,
             NodeRole.OVERLORD,
+            "leader",
+            0L,
+            0L
+        )
+    );
+    expectedRows.add(
+        createExpectedRow(
+            "localhost:8091",
+            "localhost",
+            8091,
+            -1,
+            NodeRole.OVERLORD,
             null,
             0L,
             0L
         )
     );
+
+    //router
     expectedRows.add(
         createExpectedRow(
             "localhost:8888",
@@ -901,6 +960,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L
         )
     );
+
+    //middle manager
     expectedRows.add(
         createExpectedRow(
             "mmHost:8091",

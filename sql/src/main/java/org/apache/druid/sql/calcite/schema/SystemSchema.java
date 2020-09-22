@@ -85,6 +85,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -213,7 +215,11 @@ public class SystemSchema extends AbstractSchema
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider,
+                                        serverInventoryView,
+                                        authorizerMapper,
+                                        coordinatorDruidLeaderClient,
+                                        overlordDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
@@ -460,16 +466,22 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final InventoryView serverInventoryView;
+    private final DruidLeaderClient coordinatorDruidLeaderClient;
+    private final DruidLeaderClient overlordDruidLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         InventoryView serverInventoryView,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        DruidLeaderClient coordinatorDruidLeaderClient,
+        DruidLeaderClient overlordDruidLeaderClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
+      this.coordinatorDruidLeaderClient = coordinatorDruidLeaderClient;
+      this.overlordDruidLeaderClient = overlordDruidLeaderClient;
     }
 
     @Override
@@ -494,6 +506,9 @@ public class SystemSchema extends AbstractSchema
       );
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
+      final URL leaderCoordinator = getLeaderOfNodes(coordinatorDruidLeaderClient);
+      final URL leaderOverlord = getLeaderOfNodes(overlordDruidLeaderClient);
+
       final FluentIterable<Object[]> results = FluentIterable
           .from(() -> druidServers)
           .transform((DiscoveryDruidNode discoveryDruidNode) -> {
@@ -514,10 +529,47 @@ public class SystemSchema extends AbstractSchema
                 return buildRowForNonDataServer(discoveryDruidNode);
               }
             } else {
-              return buildRowForNonDataServer(discoveryDruidNode);
+              switch (discoveryDruidNode.getNodeRole()) {
+                case COORDINATOR:
+                  return buildRowForLeader(discoveryDruidNode, leaderCoordinator);
+                case OVERLORD:
+                  return buildRowForLeader(discoveryDruidNode, leaderOverlord);
+                default:
+                  return buildRowForNonDataServer(discoveryDruidNode);
+              }
             }
           });
       return Linq4j.asEnumerable(results);
+    }
+
+    private URL getLeaderOfNodes(DruidLeaderClient leaderClient)
+    {
+      try {
+        return new URL(leaderClient.findCurrentLeader());
+      }
+      catch (MalformedURLException | ISE ignored) {
+        return null;
+      }
+    }
+
+    /**
+     * Returns a row for nodes which have a leader.
+     * The leader of the nodes is marked in the 'tier' field
+     */
+    private static Object[] buildRowForLeader(DiscoveryDruidNode discoveryDruidNode, URL leader)
+    {
+      final DruidNode node = discoveryDruidNode.getDruidNode();
+      final boolean isLeader = node.getHost().equals(leader.getHost()) && node.getPortToUse() == leader.getPort();
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          isLeader ? "leader" : null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE
+      };
     }
 
     /**
