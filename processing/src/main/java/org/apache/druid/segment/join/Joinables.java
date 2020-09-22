@@ -61,11 +61,6 @@ public class Joinables
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
   }
 
-  public JoinableFactory getJoinableFactory()
-  {
-    return this.joinableFactory;
-  }
-
   /**
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.

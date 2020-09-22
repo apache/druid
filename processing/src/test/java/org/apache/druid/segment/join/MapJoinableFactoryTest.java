@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import java.util.Locale;
 import java.util.Optional;
 
 @RunWith(EasyMockRunner.class)
@@ -119,6 +120,7 @@ public class MapJoinableFactoryTest
     EasyMock.replay(noopJoinableFactory, anotherNoopJoinableFactory);
     expectedException.expect(ISE.class);
     expectedException.expectMessage(String.format(
+        Locale.getDefault(),
         "Multiple joinable factories are valid for table[%s]",
         noopDataSource
     ));

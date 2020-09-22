@@ -50,6 +50,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -208,6 +209,7 @@ public class JoinablesTest
 
     expectedException.expect(IAE.class);
     expectedException.expectMessage(String.format(
+        Locale.getDefault(),
         "No join clauses to build the cache key for data source [%s]",
         dataSource
     ));
