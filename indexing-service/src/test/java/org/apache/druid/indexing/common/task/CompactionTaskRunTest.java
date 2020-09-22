@@ -763,6 +763,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null
     );
 
+    // This is a regular index so we need to explicitly add this context to store the CompactionState
+    indexTask.addToContext(Tasks.STORE_COMPACTION_STATE_KEY, true);
+
     final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(indexTask);
 
     Assert.assertTrue(resultPair.lhs.isSuccess());

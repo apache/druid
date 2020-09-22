@@ -422,6 +422,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final Map<String, Object> newContext = new HashMap<>(getContext());
     newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    newContext.put(CompactSegments.STORE_COMPACTION_STATE_KEY, getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, true));
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, getPriority());
     return newContext;
