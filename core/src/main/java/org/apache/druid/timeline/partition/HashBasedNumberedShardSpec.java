@@ -123,7 +123,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
     // partitionFunction can be null when you read a shardSpec of a segment created in an old version of Druid.
-    // It can never be null for segments to create during ingestion.
+    // The current version of Druid will always specify a partitionFunction on newly created segments.
     if (partitionFunction == null) {
       throw new ISE("Cannot create a hashPartitioner since partitionFunction is null");
     }
