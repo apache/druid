@@ -559,7 +559,8 @@ public class SystemSchema extends AbstractSchema
     private static Object[] buildRowForLeader(DiscoveryDruidNode discoveryDruidNode, URL leader)
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      final boolean isLeader = node.getHost().equals(leader.getHost()) && node.getPortToUse() == leader.getPort();
+      final boolean isLeader = leader == null ?
+                               false : node.getPortToUse() == leader.getPort() && node.getHost().equals(leader.getHost());
       return new Object[]{
           node.getHostAndPortToUse(),
           node.getHost(),
