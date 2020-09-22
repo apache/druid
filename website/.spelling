@@ -362,8 +362,8 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
-segmentPruning
 servlet
 simple-client-sslcontext
 sharded
