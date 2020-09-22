@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -41,12 +40,11 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.vector.VectorCursor;
-import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectorsTest;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -63,8 +61,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -218,84 +214,6 @@ public class ExpressionVectorSelectorBenchmark
 
   private void checkSanity()
   {
-    final List<Object> results = new ArrayList<>(rowsPerSegment);
-    final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v",
-                expression,
-                ExprType.toValueType(outputType),
-                TestExprMacroTable.INSTANCE
-            )
-        )
-    );
-    VectorCursor cursor = new QueryableIndexStorageAdapter(index).makeVectorCursor(
-        null,
-        index.getDataInterval(),
-        virtualColumns,
-        false,
-        512,
-        null
-    );
-
-    VectorValueSelector selector = null;
-    VectorObjectSelector objectSelector = null;
-    if (outputType.isNumeric()) {
-      selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
-    } else {
-      objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector("v");
-    }
-    int rowCount = 0;
-    while (!cursor.isDone()) {
-      boolean[] nulls;
-      switch (outputType) {
-        case LONG:
-          nulls = selector.getNullVector();
-          long[] longs = selector.getLongVector();
-          for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-            results.add(nulls != null && nulls[i] ? null : longs[i]);
-          }
-          break;
-        case DOUBLE:
-          nulls = selector.getNullVector();
-          double[] doubles = selector.getDoubleVector();
-          for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-            results.add(nulls != null && nulls[i] ? null : doubles[i]);
-          }
-          break;
-        case STRING:
-          Object[] objects = objectSelector.getObjectVector();
-          for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++, rowCount++) {
-            results.add(objects[i]);
-          }
-          break;
-      }
-
-      cursor.advance();
-    }
-    closer.register(cursor);
-
-    Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
-        null,
-        index.getDataInterval(),
-        virtualColumns,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    int rowCountCursor = cursors
-        .map(nonVectorized -> {
-          final ColumnValueSelector nonSelector = nonVectorized.getColumnSelectorFactory().makeColumnValueSelector("v");
-          int rows = 0;
-          while (!nonVectorized.isDone()) {
-            Assert.assertEquals(StringUtils.format("Failed at row %s", rows), nonSelector.getObject(), results.get(rows));
-            rows++;
-            nonVectorized.advance();
-          }
-          return rows;
-        }).accumulate(0, (acc, in) -> acc + in);
-
-    Assert.assertTrue(rowCountCursor > 0);
+    ExpressionVectorSelectorsTest.sanityTestVectorizedExpressionSelectors(expression, outputType, index, closer, rowsPerSegment);
   }
 }

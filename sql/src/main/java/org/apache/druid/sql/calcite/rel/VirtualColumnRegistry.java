@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -136,9 +137,11 @@ public class VirtualColumnRegistry
     final RowSignature.Builder builder =
         RowSignature.builder().addAll(baseRowSignature);
 
+    ColumnInspector baseRowsInspector = builder.build().asColumnInspector();
+
     for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
       final String columnName = virtualColumn.getOutputName();
-      builder.add(columnName, virtualColumn.capabilities(columnName).getType());
+      builder.add(columnName, virtualColumn.capabilities(baseRowsInspector, columnName).getType());
     }
 
     return builder.build();

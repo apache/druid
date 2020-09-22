@@ -23,11 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -40,6 +37,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -49,7 +47,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -66,7 +63,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -225,7 +221,7 @@ public class SqlExpressionBenchmark
   private Closer closer = Closer.create();
 
   @Setup(Level.Trial)
-  public void setup() throws Exception
+  public void setup()
   {
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
@@ -267,7 +263,15 @@ public class SqlExpressionBenchmark
         CalciteTests.DRUID_SCHEMA_NAME
     );
 
-    checkSanity();
+    try {
+      SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          plannerFactory,
+          QUERIES.get(Integer.parseInt(query))
+      );
+    }
+    catch (Throwable ignored) {
+      // the show must go on
+    }
   }
 
   @TearDown(Level.Trial)
@@ -289,75 +293,6 @@ public class SqlExpressionBenchmark
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
-    }
-  }
-
-  public void checkSanity() throws Exception
-  {
-    final Map<String, Object> vector = ImmutableMap.of("vectorize", true);
-    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", false);
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
-
-    try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlanner(vector, ImmutableList.of(), authenticationResult);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlanner(nonvector, ImmutableList.of(), authenticationResult)
-    ) {
-      final PlannerResult vectorPlan = vectorPlanner.plan(QUERIES.get(Integer.parseInt(query)));
-      final PlannerResult nonVectorPlan = nonVectorPlanner.plan(QUERIES.get(Integer.parseInt(query)));
-      final Sequence<Object[]> vectorSequence = vectorPlan.run();
-      final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run();
-      Yielder<Object[]> vectorizedYielder = Yielders.each(vectorSequence);
-      Yielder<Object[]> nonVectorizedYielder = Yielders.each(nonVectorSequence);
-      int row = 0;
-      int misMatch = 0;
-      while (!vectorizedYielder.isDone() && !nonVectorizedYielder.isDone()) {
-        Object[] vectorGet = vectorizedYielder.get();
-        Object[] nonVectorizedGet = nonVectorizedYielder.get();
-
-        try {
-          if (vectorGet[0] instanceof Float || vectorGet[0] instanceof Double) {
-            Assert.assertArrayEquals(
-                StringUtils.format(
-                    "Double results differed at row %s (%s : %s)",
-                    row,
-                    Arrays.toString(nonVectorizedGet),
-                    Arrays.toString(vectorGet)
-                ),
-                Arrays.stream(nonVectorizedGet).mapToDouble(d -> (double) d).toArray(),
-                Arrays.stream(vectorGet).mapToDouble(d -> (double) d).toArray(),
-                0.01
-            );
-          } else {
-            Assert.assertArrayEquals(
-                StringUtils.format(
-                    "Results differed at row %s (%s : %s)",
-                    row,
-                    Arrays.toString(vectorGet),
-                    Arrays.toString(nonVectorizedGet)
-                ),
-                vectorGet,
-                nonVectorizedGet
-            );
-          }
-        }
-        catch (Throwable t) {
-          log.warn(t.getMessage());
-          misMatch++;
-        }
-        vectorizedYielder = vectorizedYielder.next(vectorGet);
-        nonVectorizedYielder = nonVectorizedYielder.next(nonVectorizedGet);
-        row++;
-      }
-      try {
-        Assert.assertEquals("Expected no mismatched results", 0, misMatch);
-        Assert.assertTrue(vectorizedYielder.isDone());
-        Assert.assertTrue(nonVectorizedYielder.isDone());
-      }
-      catch (Throwable t) {
-        // the show must go on
-        log.warn(t.getMessage());
-      }
     }
   }
 }

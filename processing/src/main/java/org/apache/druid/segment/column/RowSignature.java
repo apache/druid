@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -155,6 +156,24 @@ public class RowSignature
   public int indexOf(final String columnName)
   {
     return columnPositions.applyAsInt(columnName);
+  }
+
+  public ColumnInspector asColumnInspector()
+  {
+    return new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return getColumnType(column).map(valueType -> {
+          if (valueType.isNumeric()) {
+            return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+          }
+          return new ColumnCapabilitiesImpl().setType(valueType);
+        }).orElse(null);
+      }
+    };
   }
 
   @Override

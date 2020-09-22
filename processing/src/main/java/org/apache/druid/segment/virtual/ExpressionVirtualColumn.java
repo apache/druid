@@ -185,19 +185,26 @@ public class ExpressionVirtualColumn implements VirtualColumn
       }
       final ExprType inferredOutputType = plan.getOutputType();
       final ValueType valueType = ExprType.toValueType(inferredOutputType);
+
       if (valueType.isNumeric()) {
         // if float was explicitly specified preserve it, because it will currently never be the computed output type
         if (ValueType.FLOAT == outputType) {
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
         }
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ExprType.toValueType(inferredOutputType));
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+      }
+
+      // null constants can sometimes trip up the type inference to report STRING, so check if explicitly supplied
+      // output type is numeric and stick with that if so
+      if (outputType != null && outputType.isNumeric()) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(outputType);
       }
 
       // we don't have to check for unknown input here because output type is unable to be inferred if we don't know
       // the complete set of input types
       if (plan.any(ExpressionPlan.Trait.NON_SCALAR_OUTPUT, ExpressionPlan.Trait.NEEDS_APPLIED)) {
         // always a multi-value string since wider engine does not yet support array types
-        return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
+        return new ColumnCapabilitiesImpl().setType(ValueType.STRING).setHasMultipleValues(true);
       }
 
       // if we got here, lets call it single value string output

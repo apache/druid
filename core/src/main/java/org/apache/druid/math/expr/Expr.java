@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -187,16 +188,7 @@ public interface Expr
 
     default boolean areNumeric(Expr... args)
     {
-      boolean numeric = args.length > 0;
-      for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
-        if (argType == null) {
-          numeric = false;
-          break;
-        }
-        numeric &= argType.isNumeric();
-      }
-      return numeric;
+      return areNumeric(Arrays.asList(args));
     }
 
     default boolean canVectorize(List<Expr> args)
@@ -210,11 +202,7 @@ public interface Expr
 
     default boolean canVectorize(Expr... args)
     {
-      boolean canVectorize = true;
-      for (Expr arg : args) {
-        canVectorize &= arg.canVectorize(this);
-      }
-      return canVectorize;
+      return canVectorize(Arrays.asList(args));
     }
   }
 
