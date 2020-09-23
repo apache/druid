@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.Intervals;
@@ -71,38 +72,38 @@ public class DimensionCardinalityReportTest
   {
     List<DimensionCardinalityReport> reports = new ArrayList<>();
 
-    HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
-    collector1.add(IndexTask.HASH_FUNCTION.hashLong(1L).asBytes());
-    collector1.add(IndexTask.HASH_FUNCTION.hashLong(200L).asBytes());
+    HllSketch collector1 = DimensionCardinalityReport.createHllSketchForReport();
+    collector1.update(IndexTask.HASH_FUNCTION.hashLong(1L).asBytes());
+    collector1.update(IndexTask.HASH_FUNCTION.hashLong(200L).asBytes());
     DimensionCardinalityReport report1 = new DimensionCardinalityReport(
         "taskA",
         ImmutableMap.of(
             Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"),
-            collector1.toByteArray()
+            collector1.toCompactByteArray()
         )
     );
     reports.add(report1);
 
-    HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
-    collector2.add(IndexTask.HASH_FUNCTION.hashLong(1000L).asBytes());
-    collector2.add(IndexTask.HASH_FUNCTION.hashLong(30000L).asBytes());
+    HllSketch collector2 = DimensionCardinalityReport.createHllSketchForReport();
+    collector2.update(IndexTask.HASH_FUNCTION.hashLong(1000L).asBytes());
+    collector2.update(IndexTask.HASH_FUNCTION.hashLong(30000L).asBytes());
     DimensionCardinalityReport report2 = new DimensionCardinalityReport(
         "taskB",
         ImmutableMap.of(
             Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"),
-            collector2.toByteArray()
+            collector2.toCompactByteArray()
         )
     );
     reports.add(report2);
 
     // Separate interval with only 1 value
-    HyperLogLogCollector collector3 = HyperLogLogCollector.makeLatestCollector();
-    collector3.add(IndexTask.HASH_FUNCTION.hashLong(99000L).asBytes());
+    HllSketch collector3 = DimensionCardinalityReport.createHllSketchForReport();
+    collector3.update(IndexTask.HASH_FUNCTION.hashLong(99000L).asBytes());
     DimensionCardinalityReport report3 = new DimensionCardinalityReport(
         "taskC",
         ImmutableMap.of(
             Intervals.of("1970-01-02T00:00:00.000Z/1970-01-03T00:00:00.000Z"),
-            collector3.toByteArray()
+            collector3.toCompactByteArray()
         )
     );
     reports.add(report3);

@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -198,7 +198,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       List<String> partitionDimensions
   )
   {
-    Map<Interval, HyperLogLogCollector> intervalToCardinalities = new HashMap<>();
+    Map<Interval, HllSketch> intervalToCardinalities = new HashMap<>();
     while (inputRowIterator.hasNext()) {
       InputRow inputRow = inputRowIterator.next();
       if (inputRow == null) {
@@ -209,10 +209,10 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
       Interval interval = granularitySpec.bucketInterval(timestamp).get();
 
-      HyperLogLogCollector hllCollector = intervalToCardinalities.computeIfAbsent(
+      HllSketch hllSketch = intervalToCardinalities.computeIfAbsent(
           interval,
           (intervalKey) -> {
-            return HyperLogLogCollector.makeLatestCollector();
+            return DimensionCardinalityReport.createHllSketchForReport();
           }
       );
       List<Object> groupKey = HashBasedNumberedShardSpec.getGroupKey(
@@ -222,7 +222,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       );
 
       try {
-        hllCollector.add(
+        hllSketch.update(
             IndexTask.HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes()
         );
       }
@@ -233,8 +233,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
     // Serialize the collectors for sending to the supervisor task
     Map<Interval, byte[]> newMap = new HashMap<>();
-    for (Map.Entry<Interval, HyperLogLogCollector> entry : intervalToCardinalities.entrySet()) {
-      newMap.put(entry.getKey(), entry.getValue().toByteArray());
+    for (Map.Entry<Interval, HllSketch> entry : intervalToCardinalities.entrySet()) {
+      newMap.put(entry.getKey(), entry.getValue().toCompactByteArray());
     }
     return newMap;
   }

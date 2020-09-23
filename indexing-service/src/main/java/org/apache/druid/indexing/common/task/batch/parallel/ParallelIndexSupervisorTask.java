@@ -30,10 +30,12 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.Union;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -97,7 +99,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -532,6 +533,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec();
     if (partitionsSpec.getNumShards() == null) {
       // 0. need to determine numShards by scanning the data
+      LOG.info("numShards is unspecified, beginning %s phase.", PartialDimensionCardinalityTask.TYPE);
       ParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport> cardinalityRunner =
           createRunner(
               toolbox,
@@ -550,6 +552,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       int effectiveMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
                                        ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
                                        : partitionsSpec.getMaxRowsPerSegment();
+      LOG.info("effective maxRowsPerSegment is: " + effectiveMaxRowsPerSegment);
+
       if (cardinalityRunner.getReports() == null) {
         throw new ISE("Could not determine cardinalities for hash partitioning.");
       }
@@ -557,6 +561,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           cardinalityRunner.getReports().values(),
           effectiveMaxRowsPerSegment
       );
+
+      LOG.info("Automatically determined numShards: " + numShardsOverride);
     } else {
       numShardsOverride = null;
     }
@@ -653,28 +659,28 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     // aggregate all the sub-reports
-    Map<Interval, HyperLogLogCollector> finalCollectors = new HashMap<>();
+    Map<Interval, Union> finalCollectors = new HashMap<>();
     reports.forEach(report -> {
       Map<Interval, byte[]> intervalToCardinality = report.getIntervalToCardinalities();
       for (Map.Entry<Interval, byte[]> entry : intervalToCardinality.entrySet()) {
-        HyperLogLogCollector hllCollector = finalCollectors.computeIfAbsent(
+        Union union = finalCollectors.computeIfAbsent(
             entry.getKey(),
             (key) -> {
-              return HyperLogLogCollector.makeLatestCollector();
+              return new Union(DimensionCardinalityReport.HLL_SKETCH_LOG_K);
             }
         );
-        HyperLogLogCollector entryHll = HyperLogLogCollector.makeCollector(
-            ByteBuffer.wrap(entry.getValue())
-        );
-        hllCollector.fold(entryHll);
+        HllSketch entryHll = HllSketch.wrap(Memory.wrap(entry.getValue()));
+        union.update(entryHll);
       }
     });
 
     // determine the highest cardinality in any interval
     long maxCardinality = Long.MIN_VALUE;
-    for (HyperLogLogCollector collector : finalCollectors.values()) {
-      maxCardinality = Math.max(maxCardinality, collector.estimateCardinalityRound());
+    for (Union union : finalCollectors.values()) {
+      maxCardinality = Math.max(maxCardinality, (long) union.getEstimate());
     }
+
+    LOG.info("Estimated max cardinality: " + maxCardinality);
 
     // determine numShards based on maxRowsPerSegment and the highest per-interval cardinality
     long numShards = maxCardinality / maxRowsPerSegment;

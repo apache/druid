@@ -21,7 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.datasketches.hll.HllSketch;
 import org.joda.time.Interval;
 
 import java.util.Map;
@@ -29,14 +29,22 @@ import java.util.Objects;
 
 public class DimensionCardinalityReport implements SubTaskReport
 {
+  // We choose logK=11 because the following link shows that HllSketch with K=2048 has roughly the same
+  // serialized size as HyperLogLogCollector.
+  // http://datasketches.apache.org/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html
+  public static final int HLL_SKETCH_LOG_K = 11;
+
   static final String TYPE = "dimension_cardinality";
   private static final String PROP_CARDINALITIES = "cardinalities";
+
 
   private final String taskId;
 
   /**
-   * A map of intervals to byte arrays, representing {@link HyperLogLogCollector} objects,
-   * serialized using {@link HyperLogLogCollector#toByteArray()}.
+   * A map of intervals to byte arrays, representing {@link org.apache.datasketches.hll.HllSketch} objects,
+   * serialized using {@link HllSketch#toCompactByteArray()}.
+   *
+   * The HllSketch objects should be created with the HLL_SKETCH_LOG_K constant defined in this class.
    *
    * The collector is used to determine cardinality estimates for each interval.
    */
@@ -92,5 +100,10 @@ public class DimensionCardinalityReport implements SubTaskReport
   public int hashCode()
   {
     return Objects.hash(getTaskId(), getIntervalToCardinalities());
+  }
+
+  public static HllSketch createHllSketchForReport()
+  {
+    return new HllSketch(HLL_SKETCH_LOG_K);
   }
 }
