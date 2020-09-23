@@ -100,7 +100,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * Stores some configurations of the compaction task which created this segment.
    * This field is filled in the metadata store only when "storeCompactionState" is set true in the context of the
-   * compaction task which is false by default.
+   * task. True by default see {@link org.apache.druid.indexing.common.task.Tasks#DEFAULT_STORE_COMPACTION_STATE}.
    * Also, this field can be pruned in many Druid modules when this class is loaded from the metadata store.
    * See {@link PruneLastCompactionState} for details.
    */
