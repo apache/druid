@@ -24,9 +24,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +42,7 @@ public interface Expr
 {
   String NULL_LITERAL = "null";
   Joiner ARG_JOINER = Joiner.on(", ");
+
   /**
    * Indicates expression is a constant whose literal value can be extracted by {@link Expr#getLiteralValue()},
    * making evaluating with arguments and bindings unecessary
@@ -122,6 +125,7 @@ public interface Expr
    */
   Expr visit(Shuttle shuttle);
 
+
   /**
    * Examine the usage of {@link IdentifierExpr} children of an {@link Expr}, constructing a {@link BindingAnalysis}
    */
@@ -140,6 +144,25 @@ public interface Expr
   }
 
   /**
+   * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
+   * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
+   * to use with vectorized query engines.
+   */
+  default boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return false;
+  }
+
+  /**
+   * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
+   * query engines.
+   */
+  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    throw Exprs.cannotVectorize(this);
+  }
+
+  /**
    * Mechanism to supply input types for the bindings which will back {@link IdentifierExpr}, to use in the aid of
    * inferring the output type of an expression with {@link #getOutputType}. A null value means that either the binding
    * doesn't exist, or, that the type information is unavailable.
@@ -148,6 +171,63 @@ public interface Expr
   {
     @Nullable
     ExprType getType(String name);
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     *
+     * There must be at least one expression with a computable numeric output type for this method to return true.
+     */
+    default boolean areNumeric(List<Expr> args)
+    {
+      boolean numeric = args.size() > 0;
+      for (Expr arg : args) {
+        ExprType argType = arg.getOutputType(this);
+        if (argType == null) {
+          numeric = false;
+          break;
+        }
+        numeric &= argType.isNumeric();
+      }
+      return numeric;
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     *
+     * There must be at least one expression with a computable numeric output type for this method to return true.
+     */
+    default boolean areNumeric(Expr... args)
+    {
+      return areNumeric(Arrays.asList(args));
+    }
+
+    /**
+     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingTypes)} to a value of true
+     */
+    default boolean canVectorize(List<Expr> args)
+    {
+      boolean canVectorize = true;
+      for (Expr arg : args) {
+        canVectorize &= arg.canVectorize(this);
+      }
+      return canVectorize;
+    }
+
+    /**
+     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingTypes)} to a value of true
+     */
+    default boolean canVectorize(Expr... args)
+    {
+      return canVectorize(Arrays.asList(args));
+    }
+  }
+
+  /**
+   * {@link InputBindingTypes} + vectorizations stuff for {@link #buildVectorized}
+   */
+  interface VectorInputBindingTypes extends InputBindingTypes
+  {
+    int getMaxVectorSize();
   }
 
   /**
@@ -160,6 +240,23 @@ public interface Expr
      */
     @Nullable
     Object get(String name);
+  }
+
+  /**
+   * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
+   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * which exist
+   */
+  interface VectorInputBinding extends VectorInputBindingTypes
+  {
+    <T> T[] getObjectVector(String name);
+
+    long[] getLongVector(String name);
+    double[] getDoubleVector(String name);
+    @Nullable
+    boolean[] getNullVector(String name);
+
+    int getCurrentVectorSize();
   }
 
   /**

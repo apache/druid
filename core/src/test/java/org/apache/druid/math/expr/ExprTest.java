@@ -120,13 +120,13 @@ public class ExprTest
   @Test
   public void testEqualsContractForUnaryNotExpr()
   {
-    EqualsVerifier.forClass(UnaryNotExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(UnaryNotExpr.class).withIgnoredFields("op").usingGetClass().verify();
   }
 
   @Test
   public void testEqualsContractForUnaryMinusExpr()
   {
-    EqualsVerifier.forClass(UnaryMinusExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(UnaryMinusExpr.class).withIgnoredFields("op").usingGetClass().verify();
   }
 
   @Test

@@ -670,9 +670,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithVirtualColumn()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.DAY_GRAN)

@@ -315,6 +315,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return columnHolder.getCapabilities();
   }
 
+  public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
+  {
+    return new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
+      }
+    };
+  }
+
   @Override
   public Metadata getMetadata()
   {
