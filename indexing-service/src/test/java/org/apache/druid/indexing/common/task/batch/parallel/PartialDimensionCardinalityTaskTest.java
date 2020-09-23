@@ -22,11 +22,12 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
-import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -59,7 +60,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -270,10 +270,10 @@ public class PartialDimensionCardinalityTaskTest
 
       Assert.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
       Map<Interval, byte[]> intervalToCardinalities = report.getIntervalToCardinalities();
-      byte[] hllCollectorBytes = Iterables.getOnlyElement(intervalToCardinalities.values());
-      HyperLogLogCollector hllCollector = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(hllCollectorBytes));
-      Assert.assertNotNull(hllCollector);
-      Assert.assertEquals(1L, hllCollector.estimateCardinalityRound());
+      byte[] hllSketchBytes = Iterables.getOnlyElement(intervalToCardinalities.values());
+      HllSketch hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
+      Assert.assertNotNull(hllSketch);
+      Assert.assertEquals(1L, (long) hllSketch.getEstimate());
     }
 
     @Test
@@ -293,17 +293,17 @@ public class PartialDimensionCardinalityTaskTest
       Map<Interval, byte[]> intervalToCardinalities = report.getIntervalToCardinalities();
       Assert.assertEquals(2, intervalToCardinalities.size());
 
-      byte[] hllCollectorBytes;
-      HyperLogLogCollector hllCollector;
-      hllCollectorBytes = intervalToCardinalities.get(Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"));
-      hllCollector = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(hllCollectorBytes));
-      Assert.assertNotNull(hllCollector);
-      Assert.assertEquals(1L, hllCollector.estimateCardinalityRound());
+      byte[] hllSketchBytes;
+      HllSketch hllSketch;
+      hllSketchBytes = intervalToCardinalities.get(Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"));
+      hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
+      Assert.assertNotNull(hllSketch);
+      Assert.assertEquals(1L, (long) hllSketch.getEstimate());
 
-      hllCollectorBytes = intervalToCardinalities.get(Intervals.of("1970-01-02T00:00:00.000Z/1970-01-03T00:00:00.000Z"));
-      hllCollector = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(hllCollectorBytes));
-      Assert.assertNotNull(hllCollector);
-      Assert.assertEquals(2L, hllCollector.estimateCardinalityRound());
+      hllSketchBytes = intervalToCardinalities.get(Intervals.of("1970-01-02T00:00:00.000Z/1970-01-03T00:00:00.000Z"));
+      hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
+      Assert.assertNotNull(hllSketch);
+      Assert.assertEquals(2L, (long) hllSketch.getEstimate());
     }
 
     @Test
