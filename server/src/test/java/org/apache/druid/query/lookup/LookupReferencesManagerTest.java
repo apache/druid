@@ -163,6 +163,7 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isReady()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
 
@@ -205,6 +206,7 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isReady()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.close()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
     Map<String, Object> lookupMap = new HashMap<>();
@@ -238,6 +240,7 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isReady()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
 
@@ -299,10 +302,12 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactory lookupExtractorFactory1 = EasyMock.createNiceMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory1.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory1.isReady()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory1.destroy()).andReturn(true).once();
 
     LookupExtractorFactory lookupExtractorFactory2 = EasyMock.createNiceMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory2.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory2.isReady()).andReturn(true).once();
 
     EasyMock.replay(lookupExtractorFactory1, lookupExtractorFactory2);
     Map<String, Object> lookupMap = new HashMap<>();
@@ -535,6 +540,7 @@ public class LookupReferencesManagerTest
 
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isReady()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));

@@ -231,6 +231,13 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     }
   }
 
+  @Override
+  public boolean isReady()
+  {
+    final CacheScheduler.CacheState cacheState = entry.getCacheState();
+    return !(cacheState instanceof CacheScheduler.NoCache);
+  }
+
   @VisibleForTesting
   CacheScheduler getCacheScheduler()
   {
