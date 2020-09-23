@@ -33,14 +33,14 @@ function removeLocalTimezone(localDate: Date): Date {
 function parseInterval(interval: string): DateRange {
   const dates = interval.split('/');
   if (dates.length !== 2) {
-    return [undefined, undefined];
+    return [null, null];
   }
-  const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : undefined;
-  const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : undefined;
+  const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : null;
+  const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : null;
   // Must check if the start and end dates are within range
   return [
-    startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? undefined : startDate,
-    endDate && endDate.getFullYear() > CURRENT_YEAR ? undefined : endDate,
+    startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? null : startDate,
+    endDate && endDate.getFullYear() > CURRENT_YEAR ? null : endDate,
   ];
 }
 function stringifyDateRange(localRange: DateRange): string {
