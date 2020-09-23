@@ -124,7 +124,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 
                                     List<T> retVal = result.toList();
                                     if (retVal == null) {
-                                      throw new ISE("Got a null list of results! WTF?!");
+                                      throw new ISE("Got a null list of results");
                                     }
 
                                     return retVal;

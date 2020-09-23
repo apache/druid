@@ -70,7 +70,12 @@ export type IngestionComboType =
   | 'index_parallel:hdfs';
 
 // Some extra values that can be selected in the initial screen
-export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
+export type IngestionComboTypeWithExtra =
+  | IngestionComboType
+  | 'azure-event-hubs'
+  | 'hadoop'
+  | 'example'
+  | 'other';
 
 export function adjustIngestionSpec(spec: IngestionSpec) {
   const tuningConfig = deepGet(spec, 'spec.tuningConfig');
@@ -152,6 +157,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'hadoop':
       return 'HDFS';
+
+    case 'azure-event-hubs':
+      return 'Azure Event Hub';
 
     case 'example':
       return 'Example data';

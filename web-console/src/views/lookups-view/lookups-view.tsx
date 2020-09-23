@@ -35,7 +35,13 @@ import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
-import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
+import {
+  getDruidErrorMessage,
+  isLookupsUninitialized,
+  LocalStorageKeys,
+  QueryManager,
+  QueryState,
+} from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
@@ -45,20 +51,25 @@ const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', ACTION
 
 const DEFAULT_LOOKUP_TIER: string = '__default';
 
+export interface LookupEntriesAndTiers {
+  lookupEntries: any[];
+  tiers: string[];
+}
+
+export interface LookupEditInfo {
+  name: string;
+  tier: string;
+  version: string;
+  spec: LookupSpec;
+}
+
 export interface LookupsViewProps {}
 
 export interface LookupsViewState {
-  lookups?: any[];
-  loadingLookups: boolean;
-  lookupsError?: string;
-  lookupsUninitialized: boolean;
-  lookupEditDialogOpen: boolean;
-  lookupEditName: string;
-  lookupEditTier: string;
-  lookupEditVersion: string;
-  lookupEditSpec: LookupSpec;
+  lookupEntriesAndTiersState: QueryState<LookupEntriesAndTiers>;
+
+  lookupEdit?: LookupEditInfo;
   isEdit: boolean;
-  allLookupTiers: string[];
 
   deleteLookupName?: string;
   deleteLookupTier?: string;
@@ -70,21 +81,13 @@ export interface LookupsViewState {
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
-  private lookupsQueryManager: QueryManager<null, { lookupEntries: any[]; tiers: string[] }>;
+  private lookupsQueryManager: QueryManager<null, LookupEntriesAndTiers>;
 
   constructor(props: LookupsViewProps, context: any) {
     super(props, context);
     this.state = {
-      lookups: [],
-      loadingLookups: true,
-      lookupsUninitialized: false,
-      lookupEditDialogOpen: false,
-      lookupEditTier: '',
-      lookupEditName: '',
-      lookupEditVersion: '',
-      lookupEditSpec: { type: '' },
+      lookupEntriesAndTiersState: QueryState.INIT,
       isEdit: false,
-      allLookupTiers: [],
       actions: [],
 
       hiddenColumns: new LocalStorageBackedArray<string>(
@@ -118,13 +121,9 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           tiers,
         };
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: lookupEntriesAndTiersState => {
         this.setState({
-          lookups: result ? result.lookupEntries : undefined,
-          loadingLookups: loading,
-          lookupsError: error,
-          lookupsUninitialized: error === 'Request failed with status code 404',
-          allLookupTiers: result ? result.tiers : [],
+          lookupEntriesAndTiersState,
         });
       },
     });
@@ -152,61 +151,64 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   private async openLookupEditDialog(tier: string, id: string) {
-    const { lookups } = this.state;
-    if (!lookups) return;
+    const { lookupEntriesAndTiersState } = this.state;
+    const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
+    if (!lookupEntriesAndTiers) return;
 
-    const target: any = lookups.find((lookupEntry: any) => {
+    const target: any = lookupEntriesAndTiers.lookupEntries.find((lookupEntry: any) => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
     if (id === '') {
-      this.setState(prevState => ({
-        lookupEditName: '',
-        lookupEditTier: prevState.allLookupTiers[0],
-        lookupEditDialogOpen: true,
-        lookupEditSpec: { type: '' },
-        lookupEditVersion: new Date().toISOString(),
-        isEdit: false,
-      }));
+      this.setState(prevState => {
+        const { lookupEntriesAndTiersState } = prevState;
+        const loadingEntriesAndTiers = lookupEntriesAndTiersState.data;
+        return {
+          isEdit: false,
+          lookupEdit: {
+            name: '',
+            tier: loadingEntriesAndTiers ? loadingEntriesAndTiers.tiers[0] : '',
+            spec: { type: '' },
+            version: new Date().toISOString(),
+          },
+        };
+      });
     } else {
       this.setState({
-        lookupEditName: id,
-        lookupEditTier: tier,
-        lookupEditDialogOpen: true,
-        lookupEditSpec: target.spec,
-        lookupEditVersion: target.version,
         isEdit: true,
+        lookupEdit: {
+          name: id,
+          tier: tier,
+          spec: target.spec,
+          version: target.version,
+        },
       });
     }
   }
 
-  private handleChangeLookup = (field: string, value: string | LookupSpec) => {
-    this.setState({
-      [field]: value,
-    } as any);
+  private handleChangeLookup = (field: keyof LookupEditInfo, value: string | LookupSpec) => {
+    this.setState(state => ({
+      lookupEdit: Object.assign({}, state.lookupEdit, { [field]: value }),
+    }));
   };
 
   private async submitLookupEdit(updatelookupEditVersion: boolean) {
-    const {
-      lookupEditTier,
-      lookupEditName,
-      lookupEditSpec,
-      lookupEditVersion,
-      isEdit,
-    } = this.state;
-    const version = updatelookupEditVersion ? new Date().toISOString() : lookupEditVersion;
+    const { lookupEdit, isEdit } = this.state;
+    if (!lookupEdit) return;
+
+    const version = updatelookupEditVersion ? new Date().toISOString() : lookupEdit.version;
     let endpoint = '/druid/coordinator/v1/lookups/config';
-    const specJson: any = lookupEditSpec;
+    const specJson: any = lookupEdit.spec;
     let dataJson: any;
     if (isEdit) {
-      endpoint = `${endpoint}/${lookupEditTier}/${lookupEditName}`;
+      endpoint = `${endpoint}/${lookupEdit.tier}/${lookupEdit.name}`;
       dataJson = {
         version: version,
         lookupExtractorFactory: specJson,
       };
     } else {
       dataJson = {
-        [lookupEditTier]: {
-          [lookupEditName]: {
+        [lookupEdit.tier]: {
+          [lookupEdit.name]: {
             version: version,
             lookupExtractorFactory: specJson,
           },
@@ -216,7 +218,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     try {
       await axios.post(endpoint, dataJson);
       this.setState({
-        lookupEditDialogOpen: false,
+        lookupEdit: undefined,
       });
       this.lookupsQueryManager.rerunLastQuery();
     } catch (e) {
@@ -272,15 +274,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   renderLookupsTable() {
-    const {
-      lookups,
-      loadingLookups,
-      lookupsError,
-      lookupsUninitialized,
-      hiddenColumns,
-    } = this.state;
+    const { lookupEntriesAndTiersState, hiddenColumns } = this.state;
+    const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
+    const lookups = lookupEntriesAndTiers ? lookupEntriesAndTiers.lookupEntries : undefined;
 
-    if (lookupsUninitialized) {
+    if (isLookupsUninitialized(lookupEntriesAndTiersState.error)) {
       return (
         <div className="init-div">
           <Button
@@ -296,9 +294,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       <>
         <ReactTable
           data={lookups || []}
-          loading={loadingLookups}
+          loading={lookupEntriesAndTiersState.loading}
           noDataText={
-            !loadingLookups && lookups && !lookups.length ? 'No lookups' : lookupsError || ''
+            !lookupEntriesAndTiersState.loading && lookups && !lookups.length
+              ? 'No lookups'
+              : lookupEntriesAndTiersState.getErrorMessage() || ''
           }
           filterable
           columns={[
@@ -362,26 +362,21 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   renderLookupEditDialog() {
-    const {
-      lookupEditDialogOpen,
-      allLookupTiers,
-      lookupEditSpec,
-      lookupEditTier,
-      lookupEditName,
-      lookupEditVersion,
-      isEdit,
-    } = this.state;
-    if (!lookupEditDialogOpen) return;
+    const { lookupEdit, isEdit, lookupEntriesAndTiersState } = this.state;
+    if (!lookupEdit) return;
+    const allLookupTiers = lookupEntriesAndTiersState.data
+      ? lookupEntriesAndTiersState.data.tiers
+      : [];
 
     return (
       <LookupEditDialog
-        onClose={() => this.setState({ lookupEditDialogOpen: false })}
+        onClose={() => this.setState({ lookupEdit: undefined })}
         onSubmit={updateLookupVersion => this.submitLookupEdit(updateLookupVersion)}
         onChange={this.handleChangeLookup}
-        lookupSpec={lookupEditSpec}
-        lookupName={lookupEditName}
-        lookupTier={lookupEditTier}
-        lookupVersion={lookupEditVersion}
+        lookupSpec={lookupEdit.spec}
+        lookupName={lookupEdit.name}
+        lookupTier={lookupEdit.tier}
+        lookupVersion={lookupEdit.version}
         isEdit={isEdit}
         allLookupTiers={allLookupTiers}
       />
@@ -389,7 +384,12 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   render(): JSX.Element {
-    const { lookupsError, hiddenColumns, lookupTableActionDialogId, actions } = this.state;
+    const {
+      lookupEntriesAndTiersState,
+      hiddenColumns,
+      lookupTableActionDialogId,
+      actions,
+    } = this.state;
 
     return (
       <div className="lookups-view app-view">
@@ -398,7 +398,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             onRefresh={auto => this.lookupsQueryManager.rerunLastQuery(auto)}
             localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}
           />
-          {!lookupsError && (
+          {!lookupEntriesAndTiersState.isError() && (
             <Button
               icon={IconNames.PLUS}
               text="Add lookup"

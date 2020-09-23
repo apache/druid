@@ -43,8 +43,6 @@ import org.apache.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,6 +59,8 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -82,7 +82,7 @@ public class AvroStreamInputRowParserTest
   private static final float SOME_FLOAT_VALUE = 0.23555f;
   private static final int SOME_INT_VALUE = 1;
   private static final long SOME_LONG_VALUE = 679865987569912369L;
-  private static final DateTime DATE_TIME = new DateTime(2015, 10, 25, 19, 30, ISOChronology.getInstanceUTC());
+  private static final ZonedDateTime DATE_TIME = ZonedDateTime.of(2015, 10, 25, 19, 30, 0, 0, ZoneOffset.UTC);
   static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
       "nested",
@@ -355,7 +355,7 @@ public class AvroStreamInputRowParserTest
   public static SomeAvroDatum buildSomeAvroDatum()
   {
     return SomeAvroDatum.newBuilder()
-                        .setTimestamp(DATE_TIME.getMillis())
+                        .setTimestamp(DATE_TIME.toInstant().toEpochMilli())
                         .setEventType(EVENT_TYPE_VALUE)
                         .setId(ID_VALUE)
                         .setSomeOtherId(SOME_OTHER_ID_VALUE)

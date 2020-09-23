@@ -98,7 +98,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     // We check this already in SpillingGrouper to ensure that LimitedBufferHashGrouper is only used when there is
     // sufficient buffer capacity. If this error occurs, something went very wrong.
     if (!validateBufferCapacity(totalBuffer.capacity())) {
-      throw new IAE("WTF? Using LimitedBufferHashGrouper with insufficient buffer capacity.");
+      throw new IAE("LimitedBufferHashGrouper initialized with insufficient buffer capacity");
     }
 
     //only store offsets up to `limit` + 1 instead of up to # of buckets, we only keep the top results
@@ -375,10 +375,10 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
   public boolean validateBufferCapacity(int bufferCapacity)
   {
-    int numBucketsNeeded = (int) Math.ceil((limit + 1) / maxLoadFactor);
-    int targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
-    int heapSize = (limit + 1) * (Integer.BYTES);
-    int requiredSize = targetTableArenaSize + heapSize;
+    long numBucketsNeeded = (long) Math.ceil((limit + 1) / maxLoadFactor);
+    long targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
+    long heapSize = ((long) limit + 1) * (Integer.BYTES);
+    long requiredSize = targetTableArenaSize + heapSize;
 
     if (bufferCapacity < requiredSize) {
       log.debug(
@@ -485,7 +485,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
           final int newBucket = findBucket(true, maxBuckets, newTableBuffer, keyBuffer, keyHash);
 
           if (newBucket < 0) {
-            throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
+            throw new ISE("Couldn't find a bucket while resizing");
           }
 
           final int newBucketOffset = newBucket * bucketSizeWithHash;

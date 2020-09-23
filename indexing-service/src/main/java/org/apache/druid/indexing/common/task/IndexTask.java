@@ -38,7 +38,6 @@ import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -57,7 +56,6 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
@@ -65,11 +63,9 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
-import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -77,8 +73,9 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -101,7 +98,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -131,6 +127,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
@@ -158,9 +155,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private IngestionState ingestionState;
 
-  private final CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
+  @MonotonicNonNull
+  private ParseExceptionHandler determinePartitionsParseExceptionHandler;
 
-  private final CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
+  @MonotonicNonNull
+  private ParseExceptionHandler buildSegmentsParseExceptionHandler;
 
   @MonotonicNonNull
   private AuthorizerMapper authorizerMapper;
@@ -210,18 +209,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         context
     );
     this.ingestionSchema = ingestionSchema;
-    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
-      );
-
-      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
-      );
-    } else {
-      determinePartitionsSavedParseExceptions = null;
-      buildSegmentsSavedParseExceptions = null;
-    }
     this.ingestionState = IngestionState.NOT_STARTED;
   }
 
@@ -315,14 +302,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsDeterminePartitions) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions)
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(
+              determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+          )
       );
     }
 
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions)
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(
+              buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+          )
       );
     }
 
@@ -445,6 +436,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.authorizerMapper = toolbox.getAuthorizerMapper();
       this.determinePartitionsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
       this.buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+      this.determinePartitionsParseExceptionHandler = new ParseExceptionHandler(
+          determinePartitionsMeters,
+          ingestionSchema.getTuningConfig().isLogParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
+      this.buildSegmentsParseExceptionHandler = new ParseExceptionHandler(
+          buildSegmentsMeters,
+          ingestionSchema.getTuningConfig().isLogParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
 
       final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                          .getGranularitySpec()
@@ -527,9 +530,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsSavedParseExceptions);
+        determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+    );
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsSavedParseExceptions);
+        buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+    );
 
     if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
@@ -706,75 +711,54 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
-    final InputSourceReader inputSourceReader = ingestionSchema.getDataSchema().getTransformSpec().decorate(
-        inputSource.reader(
-            InputRowSchemas.fromDataSchema(ingestionSchema.getDataSchema()),
-            inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
-            tmpDir
-        )
-    );
+    final Predicate<InputRow> rowFilter = inputRow -> {
+      if (inputRow == null) {
+        return false;
+      }
+      if (determineIntervals) {
+        return true;
+      }
+      final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+      return optInterval.isPresent();
+    };
 
-    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
+    try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+        tmpDir,
+        ingestionSchema.getDataSchema(),
+        inputSource,
+        inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
+        rowFilter,
+        determinePartitionsMeters,
+        determinePartitionsParseExceptionHandler
+    )) {
       while (inputRowIterator.hasNext()) {
-        try {
-          final InputRow inputRow = inputRowIterator.next();
+        final InputRow inputRow = inputRowIterator.next();
 
-          // The null inputRow means the caller must skip this row.
-          if (inputRow == null) {
-            determinePartitionsMeters.incrementThrownAway();
-            continue;
-          }
-
-          final Interval interval;
-          if (determineIntervals) {
-            interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
-          } else {
-            if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
-              final String errorMsg = StringUtils.format(
-                  "Encountered row with timestamp that cannot be represented as a long: [%s]",
-                  inputRow
-              );
-              throw new ParseException(errorMsg);
-            }
-
-            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-            if (!optInterval.isPresent()) {
-              determinePartitionsMeters.incrementThrownAway();
-              continue;
-            }
-            interval = optInterval.get();
-          }
-
-          if (partitionsSpec.needsDeterminePartitions(false)) {
-            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
-
-            List<Object> groupKey = Rows.toGroupKey(
-                queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
-                inputRow
-            );
-            hllCollectors.get(interval).get()
-                         .add(HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
-          } else {
-            // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
-            // for the interval and don't instantiate a HLL collector
-            hllCollectors.putIfAbsent(interval, Optional.absent());
-          }
-          determinePartitionsMeters.incrementProcessed();
+        final Interval interval;
+        if (determineIntervals) {
+          interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+        } else {
+          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+          // this interval must exist since it passed the rowFilter
+          assert optInterval.isPresent();
+          interval = optInterval.get();
         }
-        catch (ParseException e) {
-          if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
-            log.error(e, "Encountered parse exception");
-          }
 
-          if (determinePartitionsSavedParseExceptions != null) {
-            determinePartitionsSavedParseExceptions.add(e);
-          }
+        if (partitionsSpec.needsDeterminePartitions(false)) {
+          hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
-          determinePartitionsMeters.incrementUnparseable();
-          if (determinePartitionsMeters.getUnparseable() > ingestionSchema.getTuningConfig().getMaxParseExceptions()) {
-            throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
-          }
+          List<Object> groupKey = Rows.toGroupKey(
+              queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+              inputRow
+          );
+          hllCollectors.get(interval).get()
+                       .add(HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+        } else {
+          // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
+          // for the interval and don't instantiate a HLL collector
+          hllCollectors.putIfAbsent(interval, Optional.absent());
         }
+        determinePartitionsMeters.incrementProcessed();
       }
     }
 
@@ -879,28 +863,26 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         buildSegmentsFireDepartmentMetrics,
         toolbox,
         dataSchema,
-        tuningConfig
+        tuningConfig,
+        buildSegmentsMeters,
+        buildSegmentsParseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final InputSourceProcessor inputSourceProcessor = new InputSourceProcessor(
-          buildSegmentsMeters,
-          buildSegmentsSavedParseExceptions,
-          tuningConfig.isLogParseExceptions(),
-          tuningConfig.getMaxParseExceptions(),
-          pushTimeout,
-          new DefaultIndexTaskInputRowIteratorBuilder()
-      );
-      inputSourceProcessor.process(
+      InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
           inputSource,
           inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
           tmpDir,
-          sequenceNameFunction
+          sequenceNameFunction,
+          new DefaultIndexTaskInputRowIteratorBuilder(),
+          buildSegmentsMeters,
+          buildSegmentsParseExceptionHandler,
+          pushTimeout
       );
 
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because

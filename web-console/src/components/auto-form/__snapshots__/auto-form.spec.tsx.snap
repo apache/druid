@@ -53,7 +53,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     key="testThree"
     label="Test three"
   >
-    <SuggestibleInput
+    <Memo(SuggestibleInput)
       disabled={false}
       onBlur={[Function]}
       onValueChange={[Function]}

@@ -129,7 +129,6 @@ public class IncrementalIndexRowTypeBenchmark
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(aggs)
         .setDeserializeComplexMetrics(false)
-        .setReportParseExceptions(false)
         .setMaxRowCount(MAX_ROWS)
         .buildOnheap();
   }

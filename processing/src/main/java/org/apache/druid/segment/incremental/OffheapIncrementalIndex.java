@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -77,14 +76,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
@@ -217,13 +215,14 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           getNumEntries().incrementAndGet();
         } else {
-          throw new ISE("WTF! we are in sychronized block.");
+          throw new ISE("Unexpected state: Concurrent fact addition.");
         }
       }
     }
 
     rowContainer.set(row);
 
+    final List<String> parseExceptionMessages = new ArrayList<>();
     for (int i = 0; i < getMetrics().length; i++) {
       final BufferAggregator agg = getAggs()[i];
 
@@ -233,16 +232,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (getReportParseExceptions()) {
-            throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
-          } else {
-            log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());
-          }
+          log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());
+          parseExceptionMessages.add(e.getMessage());
         }
       }
     }
     rowContainer.set(null);
-    return new AddToFactsResult(getNumEntries().get(), 0, new ArrayList<>());
+    return new AddToFactsResult(getNumEntries().get(), 0, parseExceptionMessages);
   }
 
   @Override
