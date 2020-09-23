@@ -116,7 +116,12 @@ public class RowBasedIndexBuilder
       }
 
       // Use a UniqueLongArrayIndex if the range of values is small enough.
-      if (range > 0 && (range < Math.max(INT_ARRAY_SMALL_SIZE_OK, INT_ARRAY_SPACE_SAVINGS_FACTOR * index.size()))) {
+      final long rangeThreshold = Math.max(
+          INT_ARRAY_SMALL_SIZE_OK,
+          Math.min(Integer.MAX_VALUE, INT_ARRAY_SPACE_SAVINGS_FACTOR * index.size())
+      );
+
+      if (range > 0 && range < rangeThreshold) {
         final int[] indexAsArray = new int[Ints.checkedCast(range)];
         Arrays.fill(indexAsArray, IndexedTable.Index.NOT_FOUND);
 
