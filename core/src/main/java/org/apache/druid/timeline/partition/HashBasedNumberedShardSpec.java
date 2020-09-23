@@ -159,7 +159,6 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     }
   }
 
-  @VisibleForTesting
   public static List<Object> getGroupKey(final List<String> partitionDimensions, final long timestamp, final InputRow inputRow)
   {
     if (partitionDimensions.isEmpty()) {

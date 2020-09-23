@@ -206,11 +206,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       }
 
       DateTime timestamp = inputRow.getTimestamp();
-
       //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
       Interval interval = granularitySpec.bucketInterval(timestamp).get();
-
-      LOG.info("TS: " + timestamp + " INTV: " + interval + " GSC: " + granularitySpec.getClass());
 
       HyperLogLogCollector hllCollector = intervalToCardinalities.computeIfAbsent(
           interval,
@@ -218,7 +215,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
             return HyperLogLogCollector.makeLatestCollector();
           }
       );
-
       List<Object> groupKey = HashBasedNumberedShardSpec.getGroupKey(
           partitionDimensions,
           interval.getStartMillis(),

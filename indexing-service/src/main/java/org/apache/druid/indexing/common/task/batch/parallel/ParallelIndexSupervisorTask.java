@@ -523,7 +523,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (!(ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof HashedPartitionsSpec)) {
       // only range and hash partitioning is supported for multiphase parallel ingestion, see runMultiPhaseParallel()
       throw new ISE(
-          "forceGuaranteedRollup is set but partitionsSpec [%s] is not a ranged or hash partition spec.",
+          "forceGuaranteedRollup is set but partitionsSpec [%s] is not a single_dim or hash partition spec.",
           ingestionSchema.getTuningConfig().getPartitionsSpec()
       );
     }
