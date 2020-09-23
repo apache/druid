@@ -530,7 +530,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     final Integer numShardsOverride;
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec();
-    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup() && partitionsSpec.getNumShards() == null) {
+    if (partitionsSpec.getNumShards() == null) {
       // 0. need to determine numShards by scanning the data
       ParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport> cardinalityRunner =
           createRunner(
