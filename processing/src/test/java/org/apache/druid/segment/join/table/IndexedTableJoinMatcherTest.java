@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.join.table;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.segment.ConstantDimensionSelector;
@@ -38,7 +38,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.IntFunction;
@@ -73,13 +72,13 @@ public class IndexedTableJoinMatcherTest
         Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN).when(dimensionSelector).getValueCardinality();
 
         IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(
-                ValueType.STRING,
-                IndexedTableJoinMatcherTest::createSingletonIntList
-            );
-        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+            dimensionSelector,
+            false
+        );
         // Test match should throw exception
-        dimensionProcessor.get();
+        dimensionProcessor.multiRowMatch();
       }
 
       @SuppressWarnings("ReturnValueIgnored")
@@ -92,13 +91,13 @@ public class IndexedTableJoinMatcherTest
         Mockito.doReturn(3).when(dimensionSelector).getValueCardinality();
 
         IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(
-                ValueType.STRING,
-                IndexedTableJoinMatcherTest::createSingletonIntList
-            );
-        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+            dimensionSelector,
+            false
+        );
         // Test match should throw exception
-        dimensionProcessor.get();
+        dimensionProcessor.multiRowMatch();
       }
 
       @Test
@@ -110,13 +109,13 @@ public class IndexedTableJoinMatcherTest
         Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN).when(dimensionSelector).getValueCardinality();
 
         IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(
-                ValueType.STRING,
-                IndexedTableJoinMatcherTest::createSingletonIntList
-            );
-        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
-        Assert.assertNotNull(dimensionProcessor.get());
-        Assert.assertFalse(dimensionProcessor.get().hasNext());
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+            dimensionSelector,
+            false
+        );
+        Assert.assertNotNull(dimensionProcessor.multiRowMatch());
+        Assert.assertFalse(dimensionProcessor.multiRowMatch().hasNext());
       }
 
       @Test
@@ -128,13 +127,13 @@ public class IndexedTableJoinMatcherTest
         Mockito.doReturn(0).when(dimensionSelector).getValueCardinality();
 
         IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(
-                ValueType.STRING,
-                IndexedTableJoinMatcherTest::createSingletonIntList
-            );
-        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
-        Assert.assertNotNull(dimensionProcessor.get());
-        Assert.assertFalse(dimensionProcessor.get().hasNext());
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+            dimensionSelector,
+            false
+        );
+        Assert.assertNotNull(dimensionProcessor.multiRowMatch());
+        Assert.assertFalse(dimensionProcessor.multiRowMatch().hasNext());
       }
 
       @Test
@@ -163,11 +162,11 @@ public class IndexedTableJoinMatcherTest
       private static Supplier<IntIterator> makeDimensionProcessor(int valueCardinality)
       {
         IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(
-                ValueType.STRING,
-                IndexedTableJoinMatcherTest::createSingletonIntList
-            );
-        return conditionMatcherFactory.makeDimensionProcessor(new TestDimensionSelector(KEY, valueCardinality), false);
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+        return conditionMatcherFactory.makeDimensionProcessor(
+            new TestDimensionSelector(KEY, valueCardinality),
+            false
+        )::multiRowMatch;
       }
 
       private static class TestDimensionSelector extends ConstantDimensionSelector
@@ -255,7 +254,7 @@ public class IndexedTableJoinMatcherTest
       counter = new AtomicLong(0);
       IntFunction<IntList> loader = key -> {
         counter.incrementAndGet();
-        return createSingletonIntList(key);
+        return IntLists.singleton(key);
       };
 
       target = new IndexedTableJoinMatcher.Int2IntListLookupTable(SIZE, loader);
@@ -265,7 +264,7 @@ public class IndexedTableJoinMatcherTest
     public void loadsValueIfAbsent()
     {
       int key = 1;
-      Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
 
@@ -273,8 +272,8 @@ public class IndexedTableJoinMatcherTest
     public void doesNotLoadIfPresent()
     {
       int key = 1;
-      Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
-      Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
   }
@@ -291,7 +290,7 @@ public class IndexedTableJoinMatcherTest
       counter = new AtomicLong(0);
       IntFunction<IntList> loader = key -> {
         counter.incrementAndGet();
-        return createSingletonIntList(key);
+        return IntLists.singleton(key);
       };
 
       target = new IndexedTableJoinMatcher.Int2IntListLruCache(SIZE, loader);
@@ -301,7 +300,7 @@ public class IndexedTableJoinMatcherTest
     public void loadsValueIfAbsent()
     {
       int key = 1;
-      Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
 
@@ -309,8 +308,8 @@ public class IndexedTableJoinMatcherTest
     public void doesNotLoadIfPresent()
     {
       int key = 1;
-      Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
-      Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
 
@@ -321,23 +320,43 @@ public class IndexedTableJoinMatcherTest
       int next = start + SIZE;
 
       for (int key = start; key < next; key++) {
-        Assert.assertEquals(createSingletonIntList(key), target.getAndLoadIfAbsent(key));
+        Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
       }
 
-      Assert.assertEquals(createSingletonIntList(next), target.getAndLoadIfAbsent(next));
+      Assert.assertEquals(IntLists.singleton(next), target.getAndLoadIfAbsent(next));
       Assert.assertNull(target.get(start));
 
       Assert.assertEquals(SIZE + 1, counter.longValue());
     }
   }
 
-  private static IntList createSingletonIntList(Object value)
+  private static IndexedTable.Index stringToLengthIndex()
   {
-    return createSingletonIntList(((String) value).length());
-  }
+    return new IndexedTable.Index()
+    {
+      @Override
+      public ValueType keyType()
+      {
+        return ValueType.STRING;
+      }
 
-  private static IntList createSingletonIntList(int value)
-  {
-    return new IntArrayList(Collections.singleton(value));
+      @Override
+      public boolean areKeysUnique()
+      {
+        return false;
+      }
+
+      @Override
+      public IntList find(Object key)
+      {
+        return IntLists.singleton(((String) key).length());
+      }
+
+      @Override
+      public int findUniqueLong(long key)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 }
