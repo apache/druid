@@ -77,7 +77,7 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.numShards',
     label: 'Num shards',
     type: 'number',
-    required: true, // ToDo: this will no longer be required soon
+    required: true, // ToDo: this will no longer be required after https://github.com/apache/druid/pull/10419 is merged
     defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
     info: (
       <>
@@ -110,7 +110,8 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
@@ -127,7 +128,8 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
@@ -210,6 +212,7 @@ function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
   switch (partitionsSpecType) {
     // case 'dynamic': // Nothing to check for dynamic
     case 'hashed':
+      // ToDo: this will no longer be required after https://github.com/apache/druid/pull/10419 is merged
       if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.numShards')) {
         return false;
       }
@@ -219,10 +222,13 @@ function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
       if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.partitionDimension')) {
         return false;
       }
-      if (
-        !deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
-        !deepGet(compactionConfig, 'tuningConfig.partitionsSpec.maxRowsPerSegment')
-      ) {
+      const hasTargetRowsPerSegment = Boolean(
+        deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
+      );
+      const hasMaxRowsPerSegment = Boolean(
+        deepGet(compactionConfig, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
+      );
+      if (hasTargetRowsPerSegment === hasMaxRowsPerSegment) {
         return false;
       }
       break;

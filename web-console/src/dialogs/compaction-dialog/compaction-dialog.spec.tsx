@@ -35,14 +35,49 @@ describe('CompactionDialog', () => {
     expect(compactionDialog).toMatchSnapshot();
   });
 
-  it('matches snapshot with compactionConfig', () => {
+  it('matches snapshot with compactionConfig (dynamic partitionsSpec)', () => {
     const compactionDialog = shallow(
       <CompactionDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
         datasource={'test1'}
-        compactionConfig={{ dataSource: 'test1' }}
+        compactionConfig={{
+          dataSource: 'test1',
+          tuningConfig: { partitionsSpec: { type: 'dynamic' } },
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with compactionConfig (hashed partitionsSpec)', () => {
+    const compactionDialog = shallow(
+      <CompactionDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource={'test1'}
+        compactionConfig={{
+          dataSource: 'test1',
+          tuningConfig: { partitionsSpec: { type: 'hashed' } },
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with compactionConfig (single_dim partitionsSpec)', () => {
+    const compactionDialog = shallow(
+      <CompactionDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource={'test1'}
+        compactionConfig={{
+          dataSource: 'test1',
+          tuningConfig: { partitionsSpec: { type: 'single_dim' } },
+        }}
       />,
     );
     expect(compactionDialog).toMatchSnapshot();
