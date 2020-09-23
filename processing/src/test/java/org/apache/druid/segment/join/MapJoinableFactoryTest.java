@@ -22,6 +22,7 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.InlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -34,7 +35,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import java.util.Locale;
 import java.util.Optional;
 
 @RunWith(EasyMockRunner.class)
@@ -96,9 +96,9 @@ public class MapJoinableFactoryTest
   public void testComputeJoinCacheKey()
   {
     Optional<byte[]> expected = Optional.of(new byte[]{1, 2, 3});
-    EasyMock.expect(noopJoinableFactory.computeJoinCacheKey(noopDataSource)).andReturn(expected);
+    EasyMock.expect(noopJoinableFactory.computeJoinCacheKey(noopDataSource, condition)).andReturn(expected);
     EasyMock.replay(noopJoinableFactory);
-    Optional<byte[]> actual = target.computeJoinCacheKey(noopDataSource);
+    Optional<byte[]> actual = target.computeJoinCacheKey(noopDataSource, condition);
     Assert.assertSame(expected, actual);
   }
 
@@ -119,8 +119,7 @@ public class MapJoinableFactoryTest
     EasyMock.expect(anotherNoopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
     EasyMock.replay(noopJoinableFactory, anotherNoopJoinableFactory);
     expectedException.expect(ISE.class);
-    expectedException.expectMessage(String.format(
-        Locale.getDefault(),
+    expectedException.expectMessage(StringUtils.format(
         "Multiple joinable factories are valid for table[%s]",
         noopDataSource
     ));

@@ -132,11 +132,7 @@ public class Joinables
     final CacheKeyBuilder keyBuilder;
     keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
     for (PreJoinableClause clause : clauses) {
-      if (!clause.getCondition().canHashJoin()) {
-        log.debug("skipping caching for join since [%s] does not support hash-join", clause.getCondition());
-        return Optional.empty();
-      }
-      Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource());
+      Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
       if (!bytes.isPresent()) {
         // Encountered a data source which didn't support cache yet
         log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());

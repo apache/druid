@@ -72,9 +72,9 @@ public class MapJoinableFactory implements JoinableFactory
   }
 
   @Override
-  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
   {
-    return getSingleResult(dataSource, factory -> factory.computeJoinCacheKey(dataSource));
+    return getSingleResult(dataSource, factory -> factory.computeJoinCacheKey(dataSource, condition));
   }
 
   /**

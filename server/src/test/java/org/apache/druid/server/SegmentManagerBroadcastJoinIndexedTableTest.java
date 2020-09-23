@@ -61,6 +61,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -81,6 +82,11 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
 {
   private static final String TABLE_NAME = "test";
   private static final String PREFIX = "j0";
+  private static final JoinConditionAnalysis JOIN_CONDITION_ANALYSIS = JoinConditionAnalysis.forExpression(
+      StringUtils.format("market == \"%s.market\"", PREFIX),
+      PREFIX,
+      ExprMacroTable.nil()
+  );
   private static final Set<String> KEY_COLUMNS =
       ImmutableSet.of("market", "longNumericNull", "doubleNumericNull", "floatNumericNull", "partial_null_column");
 
@@ -172,7 +178,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
-    Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(dataSource);
+    Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
     Assert.assertTrue(bytes.isPresent());
     assertSegmentIdEquals(segment.getId(), bytes.get());
 
@@ -183,7 +189,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
 
     Assert.assertFalse(maybeJoinable.isPresent());
 
-    bytes = joinableFactory.computeJoinCacheKey(dataSource);
+    bytes = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
     Assert.assertFalse(bytes.isPresent());
   }
 
@@ -223,7 +229,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
-    Optional<byte[]> cacheKey = joinableFactory.computeJoinCacheKey(dataSource);
+    Optional<byte[]> cacheKey = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
     Assert.assertTrue(cacheKey.isPresent());
     assertSegmentIdEquals(segment2.getId(), cacheKey.get());
 
@@ -247,7 +253,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
-    cacheKey = joinableFactory.computeJoinCacheKey(dataSource);
+    cacheKey = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
     Assert.assertTrue(cacheKey.isPresent());
     assertSegmentIdEquals(segment1.getId(), cacheKey.get());
   }
@@ -301,16 +307,19 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     makeJoinable(dataSource);
   }
 
+  @Test
+  public void emptyCacheKeyForUnsupportedCondition()
+  {
+    final DataSource dataSource = new GlobalTableDataSource(TABLE_NAME);
+    JoinConditionAnalysis condition = EasyMock.mock(JoinConditionAnalysis.class);
+    EasyMock.expect(condition.canHashJoin()).andReturn(false);
+    EasyMock.replay(condition);
+    Assert.assertNull(joinableFactory.build(dataSource, condition).orElse(null));
+  }
+
   private Optional<Joinable> makeJoinable(DataSource dataSource)
   {
-    return joinableFactory.build(
-        dataSource,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("market == \"%s.market\"", PREFIX),
-            PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
+    return joinableFactory.build(dataSource, JOIN_CONDITION_ANALYSIS);
   }
 
   private DataSegment createSegment(IncrementalIndex data, String interval, String version) throws IOException

@@ -50,7 +50,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -208,8 +207,7 @@ public class JoinablesTest
     Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
 
     expectedException.expect(IAE.class);
-    expectedException.expectMessage(String.format(
-        Locale.getDefault(),
+    expectedException.expectMessage(StringUtils.format(
         "No join clauses to build the cache key for data source [%s]",
         dataSource
     ));
@@ -445,9 +443,9 @@ public class JoinablesTest
   private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory
   {
     @Override
-    public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+    public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
     {
-      if (dataSource.isCacheable()) {
+      if (dataSource.isCacheable() && condition.canHashJoin()) {
         String tableName = Iterators.getOnlyElement(dataSource.getTableNames().iterator());
         return Optional.of(StringUtils.toUtf8(tableName));
       }

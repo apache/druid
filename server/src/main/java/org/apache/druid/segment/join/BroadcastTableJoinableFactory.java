@@ -63,8 +63,11 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
   }
 
   @Override
-  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
   {
+    if (!condition.canHashJoin()) {
+      return Optional.empty();
+    }
     return getOnlyIndexedTable(dataSource).filter(IndexedTable::isCacheable).map(IndexedTable::computeCacheKey);
   }
 

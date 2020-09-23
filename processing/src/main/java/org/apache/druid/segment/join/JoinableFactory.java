@@ -52,8 +52,9 @@ public interface JoinableFactory
    * which can be an expensive operation and can potentially be avoided if cached results can be used.
    *
    * @param dataSource the datasource to join on
+   * @param condition  the condition to join on
    */
-  default Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+  default Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
   {
     return Optional.empty();
   }
