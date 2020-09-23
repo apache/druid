@@ -28,6 +28,7 @@ import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.IntermediateRowParsingReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -146,7 +147,16 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
   {
-    return Collections.singletonList(MapInputRowParser.parse(timestampSpec, dimensionsSpec, intermediateRow));
+    return Collections.singletonList(
+        MapInputRowParser.parse(
+            new InputRowSchema(
+                timestampSpec,
+                dimensionsSpec,
+                columnsFilter
+            ),
+            intermediateRow
+        )
+    );
   }
 
   @Override
