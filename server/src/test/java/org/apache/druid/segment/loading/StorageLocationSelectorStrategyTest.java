@@ -274,7 +274,7 @@ public class StorageLocationSelectorStrategyTest
   @Test
   public void testDefaultSelectorStrategyConfig()
   {
-    //no druid.segmentCache.locationSelectorStrategy.type specified
+    //no druid.segmentCache.locationSelector.strategy specified, the default will be used
     final Properties props = new Properties();
     props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
 
@@ -289,7 +289,7 @@ public class StorageLocationSelectorStrategyTest
   {
     final Properties props = new Properties();
     props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
-    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "roundRobin");
+    props.setProperty("druid.segmentCache.locationSelector.strategy", "roundRobin");
 
     Injector injector = makeInjectorWithProperties(props);
     StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
@@ -304,7 +304,7 @@ public class StorageLocationSelectorStrategyTest
   {
     final Properties props = new Properties();
     props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
-    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "leastBytesUsed");
+    props.setProperty("druid.segmentCache.locationSelector.strategy", "leastBytesUsed");
 
     Injector injector = makeInjectorWithProperties(props);
     StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
@@ -319,7 +319,7 @@ public class StorageLocationSelectorStrategyTest
   {
     final Properties props = new Properties();
     props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
-    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "random");
+    props.setProperty("druid.segmentCache.locationSelector.strategy", "random");
 
     Injector injector = makeInjectorWithProperties(props);
     StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
@@ -333,7 +333,7 @@ public class StorageLocationSelectorStrategyTest
   public void testMostAvailableSizeSelectorStrategyConfig()
   {
     final Properties props = new Properties();
-    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "mostAvailableSize");
+    props.setProperty("druid.segmentCache.locationSelector.strategy", "mostAvailableSize");
     props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
 
     Injector injector = makeInjectorWithProperties(props);
@@ -362,7 +362,7 @@ public class StorageLocationSelectorStrategyTest
               binder.bind(Properties.class).toInstance(props);
 
               JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
-              JsonConfigProvider.bind(binder, "druid.segmentCache.locationSelectorStrategy", StorageLocationSelectorStrategy.class);
+              JsonConfigProvider.bind(binder, "druid.segmentCache.locationSelector", StorageLocationSelectorStrategy.class);
             }
 
             @Provides
