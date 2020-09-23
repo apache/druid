@@ -51,7 +51,7 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       <p>
         For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on the
         hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a single
-        dimension. For best-effort rollup, you should use dynamic.
+        dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
       </p>
     ),
   },
