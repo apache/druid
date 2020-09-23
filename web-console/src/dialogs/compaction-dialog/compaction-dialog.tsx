@@ -83,7 +83,7 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       <>
         Directly specify the number of shards to create. If this is specified and 'intervals' is
         specified in the granularitySpec, the index task can skip the determine intervals/partitions
-        pass through the data. numShards cannot be specified if maxRowsPerSegment is set.
+        pass through the data.
       </>
     ),
   },
