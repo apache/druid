@@ -411,6 +411,7 @@ vCPUs
 validator
 vectorizable
 vectorize
+vectorizeVirtualColumns
 versioning
 w.r.t.
 whitelist
