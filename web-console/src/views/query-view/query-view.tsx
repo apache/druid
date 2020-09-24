@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent, Switch, Tooltip } from '@blueprintjs/core';
+import { Code, Intent, Switch, Tooltip } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
@@ -295,9 +295,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   componentDidMount(): void {
+    const { liveQueryMode, queryString } = this.state;
+
     this.metadataQueryManager.runQuery(null);
 
-    if (this.state.liveQueryMode !== 'off') {
+    if (liveQueryMode !== 'off' && queryString) {
       this.handleRun();
     }
   }
@@ -521,6 +523,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
                 this.queryManager.cancelCurrent();
               }}
             />
+          )}
+          {queryResultState.isInit() && (
+            <div className="init-state">
+              <p>
+                Enter a query and click <Code>Run</Code>
+              </p>
+            </div>
           )}
         </div>
       </SplitterLayout>
