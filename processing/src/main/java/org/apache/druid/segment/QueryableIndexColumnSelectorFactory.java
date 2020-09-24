@@ -189,7 +189,10 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(columnName);
+      return virtualColumns.getColumnCapabilities(
+          baseColumnName -> QueryableIndexStorageAdapter.getColumnCapabilities(index, baseColumnName),
+          columnName
+      );
     }
 
     return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);

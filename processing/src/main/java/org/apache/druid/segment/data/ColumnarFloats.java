@@ -81,7 +81,7 @@ public interface ColumnarFloats extends Closeable
         @Override
         public double getDouble(int offset)
         {
-          return ColumnarFloats.this.get(offset);
+          return (double) ColumnarFloats.this.get(offset);
         }
 
         @Override

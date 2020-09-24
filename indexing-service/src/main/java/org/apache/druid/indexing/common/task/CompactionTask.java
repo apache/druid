@@ -126,6 +126,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   private static final String TYPE = "compact";
 
+  private static final boolean STORE_COMPACTION_STATE = true;
+
   static {
     Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
   }
@@ -422,6 +424,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final Map<String, Object> newContext = new HashMap<>(getContext());
     newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, getPriority());
     return newContext;
