@@ -5297,9 +5297,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnStringAsNumber() throws Exception
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE "
         + "dim1 = 10 OR "
@@ -5846,9 +5843,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGrouping() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  FLOOR(m1 / 2) * 2,\n"
@@ -5943,9 +5937,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingOnStringCastToNumber() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  FLOOR(CAST(dim1 AS FLOAT) / 2) * 2,\n"
@@ -9081,9 +9072,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloor() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
         ImmutableList.of(
@@ -9111,9 +9099,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorWithOrderBy() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT floor(CAST(dim1 AS float)) AS fl, COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float)) ORDER BY fl DESC",
         ImmutableList.of(
