@@ -131,8 +131,9 @@ import java.util.function.Predicate;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
+  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+
   private static final Logger log = new Logger(IndexTask.class);
-  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private static final String TYPE = "index";
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema)
@@ -599,7 +600,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (partitionsSpec.getType() == SecondaryPartitionType.HASH) {
         return PartialHashSegmentGenerateTask.createHashPartitionAnalysisFromPartitionsSpec(
             granularitySpec,
-            (HashedPartitionsSpec) partitionsSpec
+            (HashedPartitionsSpec) partitionsSpec,
+            null // not overriding numShards
         );
       } else if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
         return createLinearPartitionAnalysis(granularitySpec, (DynamicPartitionsSpec) partitionsSpec);

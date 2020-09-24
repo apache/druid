@@ -47,7 +47,7 @@ import java.util.Set;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
-  static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
+  public static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
 
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
 
@@ -159,8 +159,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     }
   }
 
-  @VisibleForTesting
-  static List<Object> getGroupKey(final List<String> partitionDimensions, final long timestamp, final InputRow inputRow)
+  public static List<Object> getGroupKey(final List<String> partitionDimensions, final long timestamp, final InputRow inputRow)
   {
     if (partitionDimensions.isEmpty()) {
       return Rows.toGroupKey(timestamp, inputRow);

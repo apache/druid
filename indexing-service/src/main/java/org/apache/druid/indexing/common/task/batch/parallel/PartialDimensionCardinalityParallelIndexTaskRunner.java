@@ -25,26 +25,29 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import java.util.Map;
 
 /**
- * {@link ParallelIndexTaskRunner} for the phase to create hash partitioned segments in multi-phase parallel indexing.
+ * {@link ParallelIndexTaskRunner} for the phase to determine cardinalities of dimension values in
+ * multi-phase parallel indexing.
  */
-class PartialHashSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
+class PartialDimensionCardinalityParallelIndexTaskRunner
+    extends InputSourceSplitParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport>
 {
-  private static final String PHASE_NAME = "partial segment generation";
+  private static final String PHASE_NAME = "partial dimension cardinality";
 
-  private Integer numShardsOverride;
-
-  PartialHashSegmentGenerateParallelIndexTaskRunner(
+  PartialDimensionCardinalityParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      Integer numShardsOverride
+      Map<String, Object> context
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context);
-    this.numShardsOverride = numShardsOverride;
+    super(
+        toolbox,
+        taskId,
+        groupId,
+        ingestionSchema,
+        context
+    );
   }
 
   @Override
@@ -54,7 +57,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
   }
 
   @Override
-  SubTaskSpec<PartialHashSegmentGenerateTask> createSubTaskSpec(
+  SubTaskSpec<PartialDimensionCardinalityTask> createSubTaskSpec(
       String id,
       String groupId,
       String supervisorTaskId,
@@ -63,7 +66,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
-    return new SubTaskSpec<PartialHashSegmentGenerateTask>(
+    return new SubTaskSpec<PartialDimensionCardinalityTask>(
         id,
         groupId,
         supervisorTaskId,
@@ -72,17 +75,17 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
     )
     {
       @Override
-      public PartialHashSegmentGenerateTask newSubTask(int numAttempts)
+      public PartialDimensionCardinalityTask newSubTask(int numAttempts)
       {
-        return new PartialHashSegmentGenerateTask(
+        return new PartialDimensionCardinalityTask(
             null,
-            groupId,
+            getGroupId(),
             null,
-            supervisorTaskId,
+            getSupervisorTaskId(),
             numAttempts,
             subTaskIngestionSpec,
-            context,
-            numShardsOverride
+            getContext(),
+            getToolbox().getJsonMapper()
         );
       }
     };
