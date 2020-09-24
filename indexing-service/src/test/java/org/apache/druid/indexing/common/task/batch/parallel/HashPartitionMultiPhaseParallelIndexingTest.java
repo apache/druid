@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -157,6 +158,17 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   }
 
   @Test
+  public void testRunWithHashPartitionFunction() throws Exception
+  {
+    final Set<DataSegment> publishedSegments = runTestTask(
+        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2"), HashPartitionFunction.MURMUR3_32_ABS),
+        TaskState.SUCCESS,
+        false
+    );
+    assertHashedPartition(publishedSegments, 2);
+  }
+
+  @Test
   public void testAppendLinearlyPartitionedSegmensToHashPartitionedDatasourceSuccessfullyAppend()
   {
     final Set<DataSegment> publishedSegments = new HashSet<>();
@@ -259,12 +271,27 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     for (List<DataSegment> segmentsInInterval : intervalToSegments.values()) {
       Assert.assertEquals(expectedNumSegments, segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
+        Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+        final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+        Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
-        final int hash = HashBasedNumberedShardSpec.hash(getObjectMapper(), (List<Object>) results.get(0).getEvents());
+        final int hash = shardSpec.getPartitionFunction().hash(
+            HashBasedNumberedShardSpec.serializeGroupKey(
+                getObjectMapper(),
+                (List<Object>) results.get(0).getEvents()
+            ),
+            shardSpec.getNumBuckets()
+        );
         for (ScanResultValue value : results) {
           Assert.assertEquals(
               hash,
-              HashBasedNumberedShardSpec.hash(getObjectMapper(), (List<Object>) value.getEvents())
+              shardSpec.getPartitionFunction().hash(
+                  HashBasedNumberedShardSpec.serializeGroupKey(
+                      getObjectMapper(),
+                      (List<Object>) value.getEvents()
+                  ),
+                  shardSpec.getNumBuckets()
+              )
           );
         }
       }

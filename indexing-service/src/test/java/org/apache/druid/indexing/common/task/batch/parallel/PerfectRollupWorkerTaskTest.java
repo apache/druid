@@ -88,6 +88,7 @@ public class PerfectRollupWorkerTaskTest
         1,
         null,
         null,
+        null,
         null
     );
 

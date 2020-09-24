@@ -44,6 +44,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitioner;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -194,7 +195,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     Map<Interval, HllSketch> intervalToCardinalities = new HashMap<>();
     while (inputRowIterator.hasNext()) {
       InputRow inputRow = inputRowIterator.next();
-      //noinspection ConstantConditions (null rows are filtered out by FilteringCloseableInputRowIterator
+      // null rows are filtered out by FilteringCloseableInputRowIterator
       DateTime timestamp = inputRow.getTimestamp();
       //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
       Interval interval = granularitySpec.bucketInterval(timestamp).get();
@@ -202,11 +203,9 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
       HllSketch hllSketch = intervalToCardinalities.computeIfAbsent(
           interval,
-          (intervalKey) -> {
-            return DimensionCardinalityReport.createHllSketchForReport();
-          }
+          (intervalKey) -> DimensionCardinalityReport.createHllSketchForReport()
       );
-      List<Object> groupKey = HashBasedNumberedShardSpec.getGroupKey(
+      List<Object> groupKey = HashPartitioner.extractKeys(
           partitionDimensions,
           queryGranularity.bucketStart(timestamp).getMillis(),
           inputRow
