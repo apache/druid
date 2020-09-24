@@ -44,6 +44,7 @@ import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -341,6 +342,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
+  @Nullable
   public Long getTotalTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
@@ -352,6 +354,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
+  @Nullable
   public Long getIdleTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
@@ -363,6 +366,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
+  @Nullable
   public Long getUsedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
@@ -374,6 +378,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
+  @Nullable
   public Long getLazyTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
@@ -385,6 +390,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
+  @Nullable
   public Long getBlacklistedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
