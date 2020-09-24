@@ -159,8 +159,8 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   public void testBivariateMathFunctions()
   {
     assertOutputType("div(y,y_)", inputTypes, ExprType.LONG);
-    assertOutputType("div(y,z_)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("div(z,z_)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("div(y,z_)", inputTypes, ExprType.LONG);
+    assertOutputType("div(z,z_)", inputTypes, ExprType.LONG);
 
     assertOutputType("max(y,y_)", inputTypes, ExprType.LONG);
     assertOutputType("max(y,z_)", inputTypes, ExprType.DOUBLE);
@@ -426,6 +426,39 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         ExprType.STRING_ARRAY,
         ExprType.doubleMathFunctionAutoTypeConversion(ExprType.STRING_ARRAY, ExprType.STRING_ARRAY)
+    );
+  }
+
+  @Test
+  public void testIntegerFunctionAutoConversion()
+  {
+    // nulls output nulls
+    Assert.assertNull(ExprType.integerMathFunctionAutoTypeConversion(ExprType.LONG, null));
+    Assert.assertNull(ExprType.integerMathFunctionAutoTypeConversion(null, ExprType.LONG));
+    Assert.assertNull(ExprType.integerMathFunctionAutoTypeConversion(ExprType.DOUBLE, null));
+    Assert.assertNull(ExprType.integerMathFunctionAutoTypeConversion(null, ExprType.DOUBLE));
+    Assert.assertNull(ExprType.integerMathFunctionAutoTypeConversion(ExprType.STRING, null));
+    Assert.assertNull(ExprType.integerMathFunctionAutoTypeConversion(null, ExprType.STRING));
+    // all numbers are longs
+    Assert.assertEquals(ExprType.LONG, ExprType.integerMathFunctionAutoTypeConversion(ExprType.LONG, ExprType.LONG));
+    Assert.assertEquals(ExprType.LONG, ExprType.integerMathFunctionAutoTypeConversion(ExprType.LONG, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.LONG, ExprType.integerMathFunctionAutoTypeConversion(ExprType.DOUBLE, ExprType.LONG));
+    Assert.assertEquals(ExprType.LONG, ExprType.integerMathFunctionAutoTypeConversion(ExprType.DOUBLE, ExprType.DOUBLE));
+    // any string makes become string
+    Assert.assertEquals(ExprType.STRING, ExprType.integerMathFunctionAutoTypeConversion(ExprType.LONG, ExprType.STRING));
+    Assert.assertEquals(ExprType.STRING, ExprType.integerMathFunctionAutoTypeConversion(ExprType.STRING, ExprType.LONG));
+    Assert.assertEquals(ExprType.STRING, ExprType.integerMathFunctionAutoTypeConversion(ExprType.DOUBLE, ExprType.STRING));
+    Assert.assertEquals(ExprType.STRING, ExprType.integerMathFunctionAutoTypeConversion(ExprType.STRING, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.STRING, ExprType.integerMathFunctionAutoTypeConversion(ExprType.STRING, ExprType.STRING));
+    // unless it is an array
+    Assert.assertEquals(ExprType.LONG_ARRAY, ExprType.integerMathFunctionAutoTypeConversion(ExprType.LONG_ARRAY, ExprType.LONG_ARRAY));
+    Assert.assertEquals(
+        ExprType.DOUBLE_ARRAY,
+        ExprType.integerMathFunctionAutoTypeConversion(ExprType.DOUBLE_ARRAY, ExprType.DOUBLE_ARRAY)
+    );
+    Assert.assertEquals(
+        ExprType.STRING_ARRAY,
+        ExprType.integerMathFunctionAutoTypeConversion(ExprType.STRING_ARRAY, ExprType.STRING_ARRAY)
     );
   }
 

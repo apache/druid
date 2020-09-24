@@ -1534,6 +1534,12 @@ public interface Function
     }
 
     @Override
+    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
+    }
+
+    @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.scalb(inputTypes, args.get(0), args.get(1));
