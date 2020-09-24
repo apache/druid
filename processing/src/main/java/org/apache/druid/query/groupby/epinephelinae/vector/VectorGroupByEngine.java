@@ -76,10 +76,18 @@ public class VectorGroupByEngine
     Function<String, ColumnCapabilities> capabilitiesFunction = name ->
         query.getVirtualColumns().getColumnCapabilitiesWithFallback(adapter, name);
 
+    final boolean adapterCanVectorize = adapter.canVectorize(filter, query.getVirtualColumns(), false);
+    final boolean virtualColumnsCanVectorize;
+    if (query.getVirtualColumns().getVirtualColumns().length > 0) {
+      virtualColumnsCanVectorize = QueryContexts.getVectorizeVirtualColumns(query).shouldVectorize(adapterCanVectorize);
+    } else {
+      virtualColumnsCanVectorize = true;
+    }
     return canVectorizeDimensions(capabilitiesFunction, query.getDimensions())
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
            && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
-           && adapter.canVectorize(filter, query.getVirtualColumns(), false);
+           && adapterCanVectorize
+           && virtualColumnsCanVectorize;
   }
 
   public static boolean canVectorizeDimensions(

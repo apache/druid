@@ -93,8 +93,16 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
+    final boolean adapterCanVectorize = adapter.canVectorize(filter, query.getVirtualColumns(), false);
+    final boolean virtualColumnsCanVectorize;
+    if (query.getVirtualColumns().getVirtualColumns().length > 0) {
+      virtualColumnsCanVectorize = QueryContexts.getVectorizeVirtualColumns(query).shouldVectorize(adapterCanVectorize);
+    } else {
+      virtualColumnsCanVectorize = true;
+    }
     final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
-        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
+        adapterCanVectorize
+        && virtualColumnsCanVectorize
         && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
     );
 

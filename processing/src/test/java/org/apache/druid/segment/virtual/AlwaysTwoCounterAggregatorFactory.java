@@ -59,13 +59,13 @@ public class AlwaysTwoCounterAggregatorFactory extends CountAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    throw new IllegalStateException("don't call this");
+    throw new IllegalStateException(AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    throw new IllegalStateException("don't call this");
+    throw new IllegalStateException(AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS);
   }
 
   @Override

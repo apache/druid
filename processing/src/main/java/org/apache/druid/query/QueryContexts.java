@@ -47,6 +47,7 @@ public class QueryContexts
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
   public static final String VECTORIZE_KEY = "vectorize";
+  public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
   public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
@@ -64,6 +65,7 @@ public class QueryContexts
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
+  public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
@@ -193,6 +195,16 @@ public class QueryContexts
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
     return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
+  }
+
+  public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query)
+  {
+    return getVectorizeVirtualColumns(query, QueryContexts.DEFAULT_VECTORIZE_VIRTUAL_COLUMN);
+  }
+
+  public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query, Vectorize defaultValue)
+  {
+    return parseEnum(query, VECTORIZE_VIRTUAL_COLUMNS_KEY, Vectorize.class, defaultValue);
   }
 
   public static <T> int getVectorSize(Query<T> query)
