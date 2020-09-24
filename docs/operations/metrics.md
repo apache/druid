@@ -189,8 +189,8 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
 |`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
 |`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
-|`taskSlot/lazy/count`|Number of lazy task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
-|`taskSlot/blacklisted/count`|Number of blacklisted task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
+|`taskSlot/lazy/count`|Number of total task slots in lazy marked middlemanagers and indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
+|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted middlemanagers and indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
 
 ## Coordination
 

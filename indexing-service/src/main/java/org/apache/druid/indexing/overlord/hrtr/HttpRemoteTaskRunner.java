@@ -1345,9 +1345,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
   {
-    synchronized (blackListedWorkers) {
-      return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
-    }
+    return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
   }
 
   /**

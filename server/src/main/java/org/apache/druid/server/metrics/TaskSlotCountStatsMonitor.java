@@ -30,7 +30,7 @@ public class TaskSlotCountStatsMonitor extends AbstractMonitor
 
   @Inject
   public TaskSlotCountStatsMonitor(
-          TaskSlotCountStatsProvider statsProvider
+      TaskSlotCountStatsProvider statsProvider
   )
   {
     this.statsProvider = statsProvider;
@@ -52,5 +52,4 @@ public class TaskSlotCountStatsMonitor extends AbstractMonitor
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     emitter.emit(builder.build(key, count));
   }
-
 }

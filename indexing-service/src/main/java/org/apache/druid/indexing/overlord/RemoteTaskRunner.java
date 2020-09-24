@@ -860,10 +860,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
   {
     return Maps.transformEntries(
-      Maps.filterEntries(zkWorkers,
-        input -> !lazyWorkers.containsKey(input.getKey()) &&
-                !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                !blackListedWorkers.contains(input.getValue())
+        Maps.filterEntries(
+            zkWorkers,
+            input -> !lazyWorkers.containsKey(input.getKey()) &&
+                     !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                     !blackListedWorkers.contains(input.getValue())
         ),
         (String key, ZkWorker value) -> value.toImmutable()
     );
