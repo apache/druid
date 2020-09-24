@@ -47,9 +47,11 @@ public class TaskSlotCountStatsMonitor extends AbstractMonitor
     return true;
   }
 
-  private void emit(ServiceEmitter emitter, String key, long count)
+  private void emit(ServiceEmitter emitter, String key, Long count)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    emitter.emit(builder.build(key, count));
+    if (count != null) {
+      emitter.emit(builder.build(key, count.longValue()));
+    }
   }
 }

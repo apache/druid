@@ -24,25 +24,25 @@ public interface TaskSlotCountStatsProvider
   /**
    * Return the number of total task slots during emission period.
    */
-  long getTotalTaskSlotCount();
+  Long getTotalTaskSlotCount();
 
   /**
    * Return the number of idle task slots during emission period.
    */
-  long getIdleTaskSlotCount();
+  Long getIdleTaskSlotCount();
 
   /**
    * Return the number of used task slots during emission period.
    */
-  long getUsedTaskSlotCount();
+  Long getUsedTaskSlotCount();
 
   /**
    * Return the total number of task slots in lazy marked middlemanagers and indexers during emission period.
    */
-  long getLazyTaskSlotCount();
+  Long getLazyTaskSlotCount();
 
   /**
    * Return the total number of task slots in blacklisted middlemanagers and indexers during emission period.
    */
-  long getBlacklistedTaskSlotCount();
+  Long getBlacklistedTaskSlotCount();
 }

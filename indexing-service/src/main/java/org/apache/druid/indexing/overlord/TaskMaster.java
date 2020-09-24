@@ -341,57 +341,57 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Long getTotalTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
       return taskRunner.get().getTotalTaskSlotCount();
     } else {
-      return 0;
+      return null;
     }
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Long getIdleTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
       return taskRunner.get().getIdleTaskSlotCount();
     } else {
-      return 0;
+      return null;
     }
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Long getUsedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
       return taskRunner.get().getUsedTaskSlotCount();
     } else {
-      return 0;
+      return null;
     }
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Long getLazyTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
       return taskRunner.get().getLazyTaskSlotCount();
     } else {
-      return 0;
+      return null;
     }
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Long getBlacklistedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
       return taskRunner.get().getBlacklistedTaskSlotCount();
     } else {
-      return 0;
+      return null;
     }
   }
 }

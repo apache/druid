@@ -34,31 +34,31 @@ public class TaskSlotCountStatsMonitorTest
     statsProvider = new TaskSlotCountStatsProvider()
     {
       @Override
-      public long getTotalTaskSlotCount()
+      public Long getTotalTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getIdleTaskSlotCount()
+      public Long getIdleTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getUsedTaskSlotCount()
+      public Long getUsedTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getLazyTaskSlotCount()
+      public Long getLazyTaskSlotCount()
       {
         return 1L;
       }
 
       @Override
-      public long getBlacklistedTaskSlotCount()
+      public Long getBlacklistedTaskSlotCount()
       {
         return 1L;
       }
