@@ -78,6 +78,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Avg. row size',
     'Replicated size',
     'Compaction',
+    'Compaction status',
     'Retention',
     ACTION_COLUMN_LABEL,
   ],
@@ -88,6 +89,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Total data size',
     'Segment size',
     'Compaction',
+    'Compaction status',
     'Retention',
     ACTION_COLUMN_LABEL,
   ],
@@ -131,9 +133,25 @@ function twoLines(line1: string, line2: string) {
   );
 }
 
+interface CompactionStatus {
+  dataSource: string;
+  scheduleStatus: string;
+  bytesAwaitingCompaction: number;
+  bytesCompacted: number;
+  bytesSkipped: number;
+  segmentCountAwaitingCompaction: number;
+  segmentCountCompacted: number;
+  segmentCountSkipped: number;
+  intervalCountAwaitingCompaction: number;
+  intervalCountCompacted: number;
+  intervalCountSkipped: number;
+}
+
 interface Datasource {
   datasource: string;
   rules: Rule[];
+  compaction: Record<string, any>;
+  compactionStatus: CompactionStatus;
   [key: string]: any;
 }
 
@@ -335,12 +353,19 @@ GROUP BY 1`;
           (c: any) => c.dataSource,
         );
 
+        const compactionStatusesResp = await axios.get('/druid/coordinator/v1/compaction/status');
+        const compactionStatuses = lookupBy(
+          compactionStatusesResp.data.latestStatus || [],
+          (c: any) => c.dataSource,
+        );
+
         const allDatasources = (datasources as any).concat(
           unused.map(d => ({ datasource: d, unused: true })),
         );
-        allDatasources.forEach((ds: any) => {
+        allDatasources.forEach((ds: Datasource) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];
+          ds.compactionStatus = compactionStatuses[ds.datasource];
         });
 
         return {
@@ -1028,6 +1053,31 @@ GROUP BY 1`;
                     <ActionIcon icon={IconNames.EDIT} />
                   </span>
                 );
+              },
+            },
+            {
+              Header: twoLines('Compaction', 'status'),
+              show:
+                capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction status'),
+              id: 'compactionStatus',
+              accessor: row => Boolean(row.compactionStatus),
+              filterable: false,
+              Cell: row => {
+                const compactionStatus: CompactionStatus = row.original.compactionStatus;
+                let text: string;
+                if (compactionStatus) {
+                  const progress =
+                    (compactionStatus.bytesCompacted /
+                      (compactionStatus.bytesAwaitingCompaction +
+                        compactionStatus.bytesCompacted)) *
+                    100;
+                  text = `${compactionStatus.scheduleStatus} (${progress.toFixed(
+                    2,
+                  )}%) [${formatBytes(compactionStatus.bytesAwaitingCompaction)}]`;
+                } else {
+                  text = 'Not enabled';
+                }
+                return text;
               },
             },
             {
