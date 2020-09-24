@@ -26,7 +26,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.hll.HllSketch;
-import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
@@ -36,9 +35,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -171,14 +168,9 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
             buildSegmentsMeters,
             parseExceptionHandler
         );
-        HandlingInputRowIterator iterator =
-            new DefaultIndexTaskInputRowIteratorBuilder()
-                .delegate(inputRowIterator)
-                .granularitySpec(granularitySpec)
-                .build()
     ) {
       Map<Interval, byte[]> cardinalities = determineCardinalities(
-          iterator,
+          inputRowIterator,
           granularitySpec,
           partitionDimensions
       );
@@ -193,7 +185,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   }
 
   private Map<Interval, byte[]> determineCardinalities(
-      HandlingInputRowIterator inputRowIterator,
+      CloseableIterator<InputRow> inputRowIterator,
       GranularitySpec granularitySpec,
       List<String> partitionDimensions
   )
@@ -201,10 +193,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     Map<Interval, HllSketch> intervalToCardinalities = new HashMap<>();
     while (inputRowIterator.hasNext()) {
       InputRow inputRow = inputRowIterator.next();
-      if (inputRow == null) {
-        continue;
-      }
-
+      //noinspection ConstantConditions (null rows are filtered out by FilteringCloseableInputRowIterator
       DateTime timestamp = inputRow.getTimestamp();
       //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
       Interval interval = granularitySpec.bucketInterval(timestamp).get();
@@ -223,7 +212,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
       try {
         hllSketch.update(
-            IndexTask.HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes()
+            jsonMapper.writeValueAsBytes(groupKey)
         );
       }
       catch (JsonProcessingException jpe) {

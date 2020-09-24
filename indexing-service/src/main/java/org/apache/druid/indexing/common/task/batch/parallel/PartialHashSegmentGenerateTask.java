@@ -114,12 +114,6 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    // If numShardsOverride is set, this indicates that we ran a cardinality scanning phase before this,
-    // so we already have the locks.
-    if (numShardsOverride != null) {
-      return true;
-    }
-
     return tryTimeChunkLock(
         taskActionClient,
         getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()

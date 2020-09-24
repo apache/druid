@@ -41,7 +41,7 @@ public class DimensionCardinalityReport implements SubTaskReport
   private final String taskId;
 
   /**
-   * A map of intervals to byte arrays, representing {@link org.apache.datasketches.hll.HllSketch} objects,
+   * A map of intervals to byte arrays, representing {@link HllSketch} objects,
    * serialized using {@link HllSketch#toCompactByteArray()}.
    *
    * The HllSketch objects should be created with the HLL_SKETCH_LOG_K constant defined in this class.

@@ -294,16 +294,17 @@ How the worker task creates segments is:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. This property and `targetRowsPerSegment` cannot both be set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|targetRowsPerSegment|A target row count for each partition. If `numShards` is left unspecified, the Parallel task will determine a partition count automatically such that each partition has a row count close to the target, assuming evenly distributed keys in the input data. A target per-segment row count of 5 million is used if both `numShards` and `targetRowsPerSegment` are null. |null (or 5,000,000 if both `numShards` and `targetRowsPerSegment` are null)|no|
 
 The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
-The task runs in up to 3 phases: `partial_dimension_cardinality`, `partial segment generation` and `partial segment merge`.
-- The `partial_dimension_cardinality` phase is an optional phase that only runs if `numShards` is not specified.
+The task runs in up to 3 phases: `partial dimension cardinality`, `partial segment generation` and `partial segment merge`.
+- The `partial dimension cardinality` phase is an optional phase that only runs if `numShards` is not specified.
 The Parallel task splits the input data and assigns them to worker tasks based on the split hint spec.
-Each worker task (type `partial_dimension_cardinality`) gathers estimates of partitioning dimensions cardinality for
+Each worker task (type `partial dimension cardinality`) gathers estimates of partitioning dimensions cardinality for
 each time chunk. The Parallel task will aggregate these estimates from the worker tasks and determine the highest
-cardinality across all of the time chunks in the input data, dividing this cardinality by `maxRowsPerSegment` to
+cardinality across all of the time chunks in the input data, dividing this cardinality by `targetRowsPerSegment` to
 automatically determine `numShards`.
 - In the `partial segment generation` phase, just like the Map phase in MapReduce,
 the Parallel task splits the input data based on the split hint spec

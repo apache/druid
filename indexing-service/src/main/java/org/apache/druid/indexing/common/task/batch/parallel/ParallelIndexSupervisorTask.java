@@ -675,7 +675,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     });
 
     // determine the highest cardinality in any interval
-    long maxCardinality = Long.MIN_VALUE;
+    long maxCardinality = 0;
     for (Union union : finalCollectors.values()) {
       maxCardinality = Math.max(maxCardinality, (long) union.getEstimate());
     }
@@ -692,7 +692,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return Math.toIntExact(numShards);
     }
     catch (ArithmeticException ae) {
-      return Integer.MAX_VALUE;
+      throw new ISE("Estimated numShards [%s] exceeds integer bounds.", numShards);
     }
   }
 
