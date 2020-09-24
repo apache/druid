@@ -303,7 +303,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     switch (segmentHolder.getType()) {
       case LOAD:
         // When load failed a segment will be removed from the segmentsToLoad twice and
-        // null value will be returned at the second time in which case queueSize may be negitive.
+        // null value will be returned at the second time in which case queueSize may be negative.
         // See https://github.com/apache/druid/pull/10362 for more details.
         if (null != segmentsToLoad.remove(segmentHolder.getSegment())) {
           queuedSize.addAndGet(-segmentHolder.getSegmentSize());
