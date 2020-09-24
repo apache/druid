@@ -76,6 +76,7 @@ public class VarianceAggregatorCollector
     if (other == null || other.count == 0) {
       return;
     }
+
     if (this.count == 0) {
       this.nvariance = other.nvariance;
       this.count = other.count;

@@ -3197,7 +3197,7 @@ name: Apache Hive
 license_category: binary
 module: extensions/druid-bloom-filter
 license_name: Apache License version 2.0
-version: 2.7.0
+version: 2.7.1
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
@@ -4040,7 +4040,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.5.6
+version: 1.5.10
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4058,6 +4058,20 @@ notices:
 
 ---
 
+name: ThreeTen
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: BSD-3-Clause License
+version: 1.5.0
+libraries:
+  - org.threeten: threeten-extra
+notices:
+  - threeten-extra: |
+      ThreeTen-Extra
+      Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos.
+
+---
+
 name: aircompressor
 license_category: binary
 module: extensions/druid-orc-extensions
@@ -4072,7 +4086,7 @@ name: Hive storage API
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.7.1
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
@@ -4707,7 +4721,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.9.11
+version: 0.9.15
 
 ---
 

@@ -56,6 +56,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final Integer numShardsOverride;
 
   @JsonCreator
   public PartialHashSegmentGenerateTask(
@@ -66,7 +67,8 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context
+      @JsonProperty("context") final Map<String, Object> context,
+      @Nullable @JsonProperty("numShardsOverride") final Integer numShardsOverride
   )
   {
     super(
@@ -82,6 +84,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
+    this.numShardsOverride = numShardsOverride;
   }
 
   @JsonProperty
@@ -130,7 +133,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
         getId(),
         granularitySpec,
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
-        createHashPartitionAnalysisFromPartitionsSpec(granularitySpec, partitionsSpec)
+        createHashPartitionAnalysisFromPartitionsSpec(granularitySpec, partitionsSpec, numShardsOverride)
     );
   }
 
@@ -165,13 +168,21 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
    */
   public static HashPartitionAnalysis createHashPartitionAnalysisFromPartitionsSpec(
       GranularitySpec granularitySpec,
-      @Nonnull HashedPartitionsSpec partitionsSpec
+      @Nonnull HashedPartitionsSpec partitionsSpec,
+      @Nullable Integer numShardsOverride
   )
   {
     final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
-    final int numBucketsPerInterval = partitionsSpec.getNumShards() == null
-                                      ? 1
-                                      : partitionsSpec.getNumShards();
+
+    final int numBucketsPerInterval;
+    if (numShardsOverride != null) {
+      numBucketsPerInterval = numShardsOverride;
+    } else {
+      numBucketsPerInterval = partitionsSpec.getNumShards() == null
+                              ? 1
+                              : partitionsSpec.getNumShards();
+    }
+
     final HashPartitionAnalysis partitionAnalysis = new HashPartitionAnalysis(partitionsSpec);
     intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));
     return partitionAnalysis;

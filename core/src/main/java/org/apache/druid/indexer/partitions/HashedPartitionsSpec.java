@@ -34,7 +34,7 @@ import java.util.Objects;
 
 public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 {
-  static final String NAME = "hashed";
+  public static final String NAME = "hashed";
   @VisibleForTesting
   static final String NUM_SHARDS = "numShards";
 
@@ -181,7 +181,7 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   @Override
   public String getForceGuaranteedRollupIncompatiblityReason()
   {
-    return getNumShards() == null ? NUM_SHARDS + " must be specified" : FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
+    return FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
   }
 
   @Override

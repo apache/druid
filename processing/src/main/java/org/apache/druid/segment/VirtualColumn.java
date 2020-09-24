@@ -235,16 +235,38 @@ public interface VirtualColumn extends Cacheable
   }
 
   /**
-   * Returns the capabilities of this virtual column, which includes a type that corresponds to the best
-   * performing base selector supertype (e. g. {@link BaseLongColumnValueSelector}) of the object, returned from
-   * {@link #makeColumnValueSelector(String, ColumnSelectorFactory)}. May vary based on columnName if this column uses
-   * dot notation.
+   * This method is deprecated in favor of {@link #capabilities(ColumnInspector, String)}, which should be used whenever
+   * possible and can support virtual column implementations that need to inspect other columns as inputs.
+   *
+   * This is a fallback implementation to return the capabilities of this virtual column, which includes a type that
+   * corresponds to the best performing base selector supertype (e. g. {@link BaseLongColumnValueSelector}) of the
+   * object, returned from {@link #makeColumnValueSelector(String, ColumnSelectorFactory)}. May vary based on columnName
+   * if this column uses dot notation.
    *
    * @param columnName the name this virtual column was referenced with
    *
    * @return capabilities, must not be null
    */
+  @Deprecated
   ColumnCapabilities capabilities(String columnName);
+
+  /**
+   * Return the {@link ColumnCapabilities} which best describe the optimal selector to read from this virtual column.
+   *
+   * The {@link ColumnInspector} (most likely corresponding to an underlying {@link ColumnSelectorFactory} of a query)
+   * allows the virtual column to consider this information if necessary to compute its output type details.
+   *
+   * Examples of this include the {@link ExpressionVirtualColumn}, which takes input from other columns and uses the
+   * {@link ColumnInspector} to infer the output type of expressions based on the types of the inputs.
+   *
+   * @param inspector column inspector to provide additional information of other available columns
+   * @param columnName the name this virtual column was referenced with
+   * @return capabilities, must not be null
+   */
+  default ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
+  {
+    return capabilities(columnName);
+  }
 
   /**
    * Returns a list of columns that this virtual column will access. This may include the

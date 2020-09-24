@@ -130,6 +130,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
+
+  // Expecte compaction state to exist after compaction as we store compaction state by default
   private static CompactionState DEFAULT_COMPACTION_STATE;
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
@@ -761,6 +763,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null
     );
 
+    // This is a regular index so we need to explicitly add this context to store the CompactionState
+    indexTask.addToContext(Tasks.STORE_COMPACTION_STATE_KEY, true);
+
     final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(indexTask);
 
     Assert.assertTrue(resultPair.lhs.isSuccess());
@@ -853,7 +858,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final TaskToolbox box = createTaskToolbox(objectMapper, task);
 
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
-    task.addToContext(Tasks.STORE_COMPACTION_STATE_KEY, true);
     if (task.isReady(box.getTaskActionClient())) {
       if (readyLatchToCountDown != null) {
         readyLatchToCountDown.countDown();

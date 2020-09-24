@@ -266,7 +266,10 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   public ColumnCapabilities getColumnCapabilities(final String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(columnName);
+      return virtualColumns.getColumnCapabilities(
+          baseColumnName -> QueryableIndexStorageAdapter.getColumnCapabilities(index, baseColumnName),
+          columnName
+      );
     }
     return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
   }

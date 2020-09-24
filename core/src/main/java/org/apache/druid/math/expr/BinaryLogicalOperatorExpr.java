@@ -20,6 +20,8 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -68,6 +70,18 @@ class BinLtExpr extends BinaryEvalOpExprBase
     }
     return implicitCast;
   }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorComparisonProcessors.lessThan(inputTypes, left, right);
+  }
 }
 
 class BinLeqExpr extends BinaryEvalOpExprBase
@@ -111,6 +125,18 @@ class BinLeqExpr extends BinaryEvalOpExprBase
       return ExprType.LONG;
     }
     return implicitCast;
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorComparisonProcessors.lessThanOrEqual(inputTypes, left, right);
   }
 }
 
@@ -156,6 +182,17 @@ class BinGtExpr extends BinaryEvalOpExprBase
     }
     return implicitCast;
   }
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorComparisonProcessors.greaterThan(inputTypes, left, right);
+  }
 }
 
 class BinGeqExpr extends BinaryEvalOpExprBase
@@ -200,6 +237,18 @@ class BinGeqExpr extends BinaryEvalOpExprBase
     }
     return implicitCast;
   }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorComparisonProcessors.greaterThanOrEqual(inputTypes, left, right);
+  }
 }
 
 class BinEqExpr extends BinaryEvalOpExprBase
@@ -243,6 +292,18 @@ class BinEqExpr extends BinaryEvalOpExprBase
     }
     return implicitCast;
   }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorComparisonProcessors.equal(inputTypes, left, right);
+  }
 }
 
 class BinNeqExpr extends BinaryEvalOpExprBase
@@ -285,6 +346,18 @@ class BinNeqExpr extends BinaryEvalOpExprBase
       return ExprType.LONG;
     }
     return implicitCast;
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorComparisonProcessors.notEqual(inputTypes, left, right);
   }
 }
 

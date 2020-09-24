@@ -45,6 +45,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -84,29 +85,37 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
+  @Parameterized.Parameters(
+      name = "lockGranularity={0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, numShards={3}"
+  )
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 1},
-        new Object[]{LockGranularity.SEGMENT, true, 2}
+        new Object[]{LockGranularity.TIME_CHUNK, false, 2, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 2, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 1, 2},
+        new Object[]{LockGranularity.SEGMENT, true, 2, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 2, null},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 1, null},
+        new Object[]{LockGranularity.SEGMENT, true, 2, null}
     );
   }
 
   private final int maxNumConcurrentSubTasks;
+  private final Integer numShards;
 
   private File inputDir;
 
   public HashPartitionMultiPhaseParallelIndexingTest(
       LockGranularity lockGranularity,
       boolean useInputFormatApi,
-      int maxNumConcurrentSubTasks
+      int maxNumConcurrentSubTasks,
+      @Nullable Integer numShards
   )
   {
     super(lockGranularity, useInputFormatApi);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
+    this.numShards = numShards;
   }
 
   @Before
@@ -136,11 +145,16 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   public void testRun() throws Exception
   {
     final Set<DataSegment> publishedSegments = runTestTask(
-        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+        new HashedPartitionsSpec(null, numShards, ImmutableList.of("dim1", "dim2")),
         TaskState.SUCCESS,
         false
     );
-    assertHashedPartition(publishedSegments);
+
+    // we don't specify maxRowsPerSegment so it defaults to DEFAULT_MAX_ROWS_PER_SEGMENT,
+    // which is 5 million, so assume that there will only be 1 shard if numShards is not set.
+    int expectedSegmentCount = numShards != null ? numShards : 1;
+
+    assertHashedPartition(publishedSegments, expectedSegmentCount);
   }
 
   @Test
@@ -151,7 +165,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         TaskState.SUCCESS,
         false
     );
-    assertHashedPartition(publishedSegments);
+    assertHashedPartition(publishedSegments, 2);
   }
 
   @Test
@@ -160,7 +174,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     final Set<DataSegment> publishedSegments = new HashSet<>();
     publishedSegments.addAll(
         runTestTask(
-            new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+            new HashedPartitionsSpec(null, numShards, ImmutableList.of("dim1", "dim2")),
             TaskState.SUCCESS,
             false
         )
@@ -247,7 +261,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     }
   }
 
-  private void assertHashedPartition(Set<DataSegment> publishedSegments) throws IOException
+  private void assertHashedPartition(Set<DataSegment> publishedSegments, int expectedNumSegments) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
@@ -255,7 +269,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     );
     final File tempSegmentDir = temporaryFolder.newFolder();
     for (List<DataSegment> segmentsInInterval : intervalToSegments.values()) {
-      Assert.assertEquals(2, segmentsInInterval.size());
+      Assert.assertEquals(expectedNumSegments, segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
         Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
         final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();

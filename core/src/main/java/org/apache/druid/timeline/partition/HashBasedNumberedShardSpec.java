@@ -42,7 +42,7 @@ import java.util.Set;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
-  static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
+  public static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
 
   private final int bucketId;
 

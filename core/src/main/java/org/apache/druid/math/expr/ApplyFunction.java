@@ -27,6 +27,8 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -48,6 +50,31 @@ public interface ApplyFunction
    * Name of the function
    */
   String name();
+
+  /**
+   * Check if an apply function can be 'vectorized', for a given {@link LambdaExpr} and set of {@link Expr} inputs.
+   * If this method returns true, {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which
+   * can evaluate values in batches to use with vectorized query engines.
+   *
+   * @see Expr#canVectorize(Expr.InputBindingTypes)
+   * @see Function#canVectorize(Expr.InputBindingTypes, List)
+   */
+  default boolean canVectorize(Expr.InputBindingTypes inputTypes, Expr lambda, List<Expr> args)
+  {
+    return false;
+  }
+
+  /**
+   * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
+   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   *
+   * @see Expr#buildVectorized(Expr.VectorInputBindingTypes)
+   * @see Function#asVectorProcessor(Expr.VectorInputBindingTypes, List)
+   */
+  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, Expr lambda, List<Expr> args)
+  {
+    throw new UOE("%s is not vectorized", name());
+  }
 
   /**
    * Apply {@link LambdaExpr} to argument list of {@link Expr} given a set of outer {@link Expr.ObjectBinding}. These

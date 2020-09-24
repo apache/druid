@@ -34,6 +34,8 @@ import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-d
 import { copyAndAlert, prettyPrintSql } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
+import { ColumnRenameInput } from './column-rename-input/column-rename-input';
+
 import './query-output.scss';
 
 function isComparable(x: unknown): boolean {
@@ -59,9 +61,10 @@ export interface QueryOutputProps {
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult } = props;
+  const { queryResult, onQueryChange, runeMode } = props;
   const parsedQuery = queryResult ? queryResult.sqlQuery : undefined;
-  const [showValue, setShowValue] = useState();
+  const [showValue, setShowValue] = useState<string>();
+  const [renamingColumn, setRenamingColumn] = useState<number>(-1);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
@@ -73,7 +76,6 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
   }
 
   function getHeaderMenu(header: string, headerIndex: number) {
-    const { onQueryChange, runeMode } = props;
     const ref = SqlRef.column(header);
     const prettyRef = prettyPrintSql(ref);
 
@@ -143,6 +145,16 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             },
           });
         }
+      }
+
+      if (!parsedQuery.hasStarInSelect()) {
+        basicActions.push({
+          icon: IconNames.EDIT,
+          title: `Rename column`,
+          onAction: () => {
+            setRenamingColumn(headerIndex);
+          },
+        });
       }
 
       basicActions.push({
@@ -291,7 +303,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     }
   }
 
-  function getHeaderClassName(header: string) {
+  function getHeaderClassName(header: string, i: number) {
     if (!parsedQuery) return;
 
     const className = [];
@@ -304,7 +316,29 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       className.push('aggregate-header');
     }
 
+    if (i === renamingColumn) {
+      className.push('renaming');
+    }
+
     return className.join(' ');
+  }
+
+  function renameColumnTo(renameTo: string | undefined) {
+    setRenamingColumn(-1);
+    if (renameTo && parsedQuery) {
+      if (parsedQuery.hasStarInSelect()) return;
+      const selectExpression = parsedQuery.selectExpressions.get(renamingColumn);
+      if (!selectExpression) return;
+      onQueryChange(
+        parsedQuery.changeSelectExpressions(
+          parsedQuery.selectExpressions.change(
+            renamingColumn,
+            selectExpression.changeAliasName(renameTo),
+          ),
+        ),
+        true,
+      );
+    }
   }
 
   return (
@@ -316,17 +350,22 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         columns={(queryResult ? queryResult.header : []).map((column, i) => {
           const h = column.name;
           return {
-            Header: () => {
-              return (
-                <Popover className={'clickable-cell'} content={getHeaderMenu(h, i)}>
-                  <div>
-                    {h}
-                    {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} iconSize={14} />}
-                  </div>
-                </Popover>
-              );
-            },
-            headerClassName: getHeaderClassName(h),
+            Header:
+              i === renamingColumn && parsedQuery
+                ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
+                : () => {
+                    return (
+                      <Popover className={'clickable-cell'} content={getHeaderMenu(h, i)}>
+                        <div>
+                          {h}
+                          {hasFilterOnHeader(h, i) && (
+                            <Icon icon={IconNames.FILTER} iconSize={14} />
+                          )}
+                        </div>
+                      </Popover>
+                    );
+                  },
+            headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
             Cell: row => {
               const value = row.value;

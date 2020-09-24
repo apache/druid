@@ -32,7 +32,7 @@ import java.util.List;
  * This class is used for hash partitioning during ingestion. The {@link ShardSpecLookup} returned from
  * {@link #createHashLookup} is used to determine what hash bucket the given input row will belong to.
  */
-class HashPartitioner
+public class HashPartitioner
 {
   private final ObjectMapper jsonMapper;
   private final HashPartitionFunction hashPartitionFunction;
@@ -82,6 +82,15 @@ class HashPartitioner
    */
   @VisibleForTesting
   List<Object> extractKeys(final long timestamp, final InputRow inputRow)
+  {
+    return extractKeys(partitionDimensions, timestamp, inputRow);
+  }
+
+  public static List<Object> extractKeys(
+      final List<String> partitionDimensions,
+      final long timestamp,
+      final InputRow inputRow
+  )
   {
     if (partitionDimensions.isEmpty()) {
       return Rows.toGroupKey(timestamp, inputRow);
