@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -197,6 +198,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       DateTime timestamp = inputRow.getTimestamp();
       //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
       Interval interval = granularitySpec.bucketInterval(timestamp).get();
+      Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
       HllSketch hllSketch = intervalToCardinalities.computeIfAbsent(
           interval,
@@ -206,7 +208,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       );
       List<Object> groupKey = HashBasedNumberedShardSpec.getGroupKey(
           partitionDimensions,
-          interval.getStartMillis(),
+          queryGranularity.bucketStart(timestamp).getMillis(),
           inputRow
       );
 

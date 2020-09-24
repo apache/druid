@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestHelper;
@@ -279,10 +280,13 @@ public class PartialDimensionCardinalityTaskTest
     @Test
     public void sendsCorrectReportWithMultipleIntervalsInData()
     {
+      // Segment granularity is DAY, query granularity is HOUR
       InputSource inlineInputSource = new InlineInputSource(
-          ParallelIndexTestingFactory.createRow(1, "a") + "\n" +
-          ParallelIndexTestingFactory.createRow(100000000, "b") + "\n" +
-          ParallelIndexTestingFactory.createRow(100000002, "c")
+          ParallelIndexTestingFactory.createRow(DateTimes.of("1970-01-01T00:00:00.001Z").getMillis(), "a") + "\n" +
+          ParallelIndexTestingFactory.createRow(DateTimes.of("1970-01-02T03:46:40.000Z").getMillis(), "b") + "\n" +
+          ParallelIndexTestingFactory.createRow(DateTimes.of("1970-01-02T03:46:40.000Z").getMillis(), "c") + "\n" +
+          ParallelIndexTestingFactory.createRow(DateTimes.of("1970-01-02T04:02:40.000Z").getMillis(), "b") + "\n" +
+          ParallelIndexTestingFactory.createRow(DateTimes.of("1970-01-02T05:19:10.000Z").getMillis(), "b")
       );
       PartialDimensionCardinalityTaskBuilder taskBuilder = new PartialDimensionCardinalityTaskBuilder()
           .inputSource(inlineInputSource);
@@ -303,7 +307,7 @@ public class PartialDimensionCardinalityTaskTest
       hllSketchBytes = intervalToCardinalities.get(Intervals.of("1970-01-02T00:00:00.000Z/1970-01-03T00:00:00.000Z"));
       hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
       Assert.assertNotNull(hllSketch);
-      Assert.assertEquals(2L, (long) hllSketch.getEstimate());
+      Assert.assertEquals(4L, (long) hllSketch.getEstimate());
     }
 
     @Test
@@ -347,7 +351,7 @@ public class PartialDimensionCardinalityTaskTest
             .withGranularitySpec(
                 new UniformGranularitySpec(
                     Granularities.DAY,
-                    Granularities.DAY,
+                    Granularities.HOUR,
                     ImmutableList.of(Intervals.of("1970-01-01T00:00:00Z/P10D"))
                 )
             );
