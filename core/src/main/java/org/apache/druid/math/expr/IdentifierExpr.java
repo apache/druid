@@ -132,12 +132,6 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);

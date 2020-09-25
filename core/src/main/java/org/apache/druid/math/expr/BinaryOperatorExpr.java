@@ -47,14 +47,6 @@ abstract class BinaryOpExprBase implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    left.visit(visitor);
-    right.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     Expr newLeft = left.visit(shuttle);

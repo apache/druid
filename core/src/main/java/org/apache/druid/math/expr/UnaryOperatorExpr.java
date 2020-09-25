@@ -46,13 +46,6 @@ abstract class UnaryExpr implements Expr
   abstract UnaryExpr copy(Expr expr);
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    expr.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     Expr newExpr = expr.visit(shuttle);

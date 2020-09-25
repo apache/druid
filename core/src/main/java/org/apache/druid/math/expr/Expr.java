@@ -113,12 +113,6 @@ public interface Expr
   String stringify();
 
   /**
-   * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
-   * ensuring the {@link Visitor} can visit all of its {@link Expr} children before visiting itself
-   */
-  void visit(Visitor visitor);
-
-  /**
    * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}. Each {@link Expr} is responsible for
    * ensuring the {@link Shuttle} can visit all of its {@link Expr} children, as well as updating its children
    * {@link Expr} with the results from the {@link Shuttle}, before finally visiting an updated form of itself.
@@ -252,7 +246,9 @@ public interface Expr
     <T> T[] getObjectVector(String name);
 
     long[] getLongVector(String name);
+
     double[] getDoubleVector(String name);
+
     @Nullable
     boolean[] getNullVector(String name);
 
