@@ -18,6 +18,8 @@
 
 import * as playwright from 'playwright-core';
 
+import { clickButton } from '../../util/playwright';
+import { setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 import { CompactionConfig } from './compaction';
@@ -79,10 +81,14 @@ export class DatasourcesOverview {
     await this.openEditActions(datasourceName);
 
     await this.page.click('"Edit compaction configuration"');
-    await this.setInput('Skip offset from latest', compactionConfig.skipOffsetFromLatest);
+    await setLabeledInput(
+      this.page,
+      'Skip offset from latest',
+      compactionConfig.skipOffsetFromLatest,
+    );
     await compactionConfig.partitionsSpec.apply(this.page);
 
-    await this.clickButton('Submit');
+    await clickButton(this.page, 'Submit');
   }
 
   private async openEditActions(datasourceName: string): Promise<void> {
@@ -95,15 +101,5 @@ export class DatasourcesOverview {
     const editActions = await this.page.$$('span[icon=wrench]');
     editActions[index].click();
     await this.page.waitFor(5000);
-  }
-
-  private async setInput(label: string, value: string) {
-    const input = await this.page.$(`//*[text()="${label}"]/following-sibling::div//input`);
-    await input!.fill('');
-    await input!.type(value);
-  }
-
-  private async clickButton(text: string) {
-    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
   }
 }

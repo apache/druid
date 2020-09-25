@@ -18,17 +18,36 @@
 
 import * as playwright from 'playwright-core';
 
-import { clickButton } from '../../../util/playwright';
+import { setLabeledInput } from '../../../util/playwright';
+
+import { clickApplyButton } from './data-connector';
+import { DataConnector } from './data-connector';
 
 /**
- * Connector for data loader input data.
+ * Reindexing connector for data loader input data.
  */
-export interface DataConnector {
+export class ReindexDataConnector implements DataConnector {
   readonly name: string;
   readonly needParse: boolean;
-  connect(): Promise<void>;
+  private page: playwright.Page;
+
+  constructor(page: playwright.Page, props: ReindexDataConnectorProps) {
+    Object.assign(this, props);
+    this.name = 'Reindex from Druid';
+    this.needParse = false;
+    this.page = page;
+  }
+
+  async connect() {
+    await setLabeledInput(this.page, 'Datasource', this.datasourceName);
+    await setLabeledInput(this.page, 'Interval', this.interval);
+    await clickApplyButton(this.page);
+  }
 }
 
-export async function clickApplyButton(page: playwright.Page): Promise<void> {
-  await clickButton(page, 'Apply');
+interface ReindexDataConnectorProps {
+  readonly datasourceName: string;
+  readonly interval: string;
 }
+
+export interface ReindexDataConnector extends ReindexDataConnectorProps {}
