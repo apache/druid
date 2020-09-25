@@ -73,10 +73,10 @@ public class ExprListenerImpl extends ExprBaseListener
     int opCode = ((TerminalNode) ctx.getChild(0)).getSymbol().getType();
     switch (opCode) {
       case ExprParser.MINUS:
-        nodes.put(ctx, new UnaryMinusExpr((Expr) nodes.get(ctx.getChild(1))));
+        nodes.put(ctx, new UnaryMinusExpr(ctx.getChild(0).getText(), (Expr) nodes.get(ctx.getChild(1))));
         break;
       case ExprParser.NOT:
-        nodes.put(ctx, new UnaryNotExpr((Expr) nodes.get(ctx.getChild(1))));
+        nodes.put(ctx, new UnaryNotExpr(ctx.getChild(0).getText(), (Expr) nodes.get(ctx.getChild(1))));
         break;
       default:
         throw new RE("Unrecognized unary operator %s", ctx.getChild(0).getText());

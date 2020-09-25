@@ -316,13 +316,14 @@ ORDER BY "rank" DESC, "service" DESC`;
         columns={[
           {
             Header: 'Service',
+            show: hiddenColumns.exists('Service'),
             accessor: 'service',
             width: 300,
             Aggregated: () => '',
-            show: hiddenColumns.exists('Service'),
           },
           {
             Header: 'Type',
+            show: hiddenColumns.exists('Type'),
             accessor: 'service_type',
             width: 150,
             Cell: row => {
@@ -339,10 +340,10 @@ ORDER BY "rank" DESC, "service" DESC`;
                 </a>
               );
             },
-            show: hiddenColumns.exists('Type'),
           },
           {
             Header: 'Tier',
+            show: hiddenColumns.exists('Tier'),
             id: 'tier',
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
@@ -359,16 +360,16 @@ ORDER BY "rank" DESC, "service" DESC`;
                 </a>
               );
             },
-            show: hiddenColumns.exists('Tier'),
           },
           {
             Header: 'Host',
+            show: hiddenColumns.exists('Host'),
             accessor: 'host',
             Aggregated: () => '',
-            show: hiddenColumns.exists('Host'),
           },
           {
             Header: 'Port',
+            show: hiddenColumns.exists('Port'),
             id: 'port',
             accessor: row => {
               const ports: string[] = [];
@@ -381,10 +382,10 @@ ORDER BY "rank" DESC, "service" DESC`;
               return ports.join(', ') || 'No port';
             },
             Aggregated: () => '',
-            show: hiddenColumns.exists('Port'),
           },
           {
             Header: 'Curr size',
+            show: hiddenColumns.exists('Curr size'),
             id: 'curr_size',
             width: 100,
             filterable: false,
@@ -400,10 +401,10 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
-            show: hiddenColumns.exists('Curr size'),
           },
           {
             Header: 'Max size',
+            show: hiddenColumns.exists('Max size'),
             id: 'max_size',
             width: 100,
             filterable: false,
@@ -419,10 +420,10 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
-            show: hiddenColumns.exists('Max size'),
           },
           {
             Header: 'Usage',
+            show: hiddenColumns.exists('Usage'),
             id: 'usage',
             width: 100,
             filterable: false,
@@ -479,10 +480,10 @@ ORDER BY "rank" DESC, "service" DESC`;
                   return '';
               }
             },
-            show: hiddenColumns.exists('Usage'),
           },
           {
             Header: 'Detail',
+            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
             id: 'queue',
             width: 400,
             filterable: false,
@@ -542,10 +543,10 @@ ORDER BY "rank" DESC, "service" DESC`;
                 segmentsToDropSize,
               );
             },
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
+            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
@@ -556,7 +557,6 @@ ORDER BY "rank" DESC, "service" DESC`;
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
       />

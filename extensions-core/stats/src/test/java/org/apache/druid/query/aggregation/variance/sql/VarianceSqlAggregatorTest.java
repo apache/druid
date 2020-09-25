@@ -285,16 +285,16 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
-        .dataSource(CalciteTests.DATASOURCE3)
-        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-        .granularity(Granularities.ALL)
-        .aggregators(
-            ImmutableList.of(
-              new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
-              new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
-              new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
-            )
-        )
+              .dataSource(CalciteTests.DATASOURCE3)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(
+                  ImmutableList.of(
+                      new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
+                      new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
+                      new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
+                  )
+              )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
@@ -335,22 +335,22 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             holder1.getVariance(false),
             holder2.getVariance(false).floatValue(),
             holder3.getVariance(false).longValue(),
-        }
+            }
     );
     assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
-        .dataSource(CalciteTests.DATASOURCE3)
-        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-        .granularity(Granularities.ALL)
-        .aggregators(
-            ImmutableList.of(
-              new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
-              new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
-              new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
-            )
-        )
+              .dataSource(CalciteTests.DATASOURCE3)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(
+                  ImmutableList.of(
+                      new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
+                      new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
+                      new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
+                  )
+              )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
@@ -391,28 +391,29 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             Math.sqrt(holder1.getVariance(true)),
             (float) Math.sqrt(holder2.getVariance(true)),
             (long) Math.sqrt(holder3.getVariance(true)),
-        }
+            }
     );
     assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
-        .dataSource(CalciteTests.DATASOURCE3)
-        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-        .granularity(Granularities.ALL)
-        .aggregators(
-            ImmutableList.of(
-              new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
-              new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
-              new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
-            )
-        )
-        .postAggregators(
-            ImmutableList.of(
-            new StandardDeviationPostAggregator("a0", "a0:agg", "population"),
-            new StandardDeviationPostAggregator("a1", "a1:agg", "population"),
-            new StandardDeviationPostAggregator("a2", "a2:agg", "population"))
-        )
+              .dataSource(CalciteTests.DATASOURCE3)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(
+                  ImmutableList.of(
+                      new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
+                      new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
+                      new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
+                  )
+              )
+              .postAggregators(
+                  ImmutableList.of(
+                      new StandardDeviationPostAggregator("a0", "a0:agg", "population"),
+                      new StandardDeviationPostAggregator("a1", "a1:agg", "population"),
+                      new StandardDeviationPostAggregator("a2", "a2:agg", "population")
+                  )
+              )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
@@ -453,7 +454,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             Math.sqrt(holder1.getVariance(false)),
             (float) Math.sqrt(holder2.getVariance(false)),
             (long) Math.sqrt(holder3.getVariance(false)),
-        }
+            }
     );
     assertResultsEquals(expectedResults, results);
 
@@ -464,9 +465,9 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .aggregators(
                   ImmutableList.of(
-                    new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
-                    new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
-                    new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
+                      new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
+                      new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
+                      new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
                   )
               )
               .postAggregators(
@@ -514,7 +515,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             Math.sqrt(holder1.getVariance(false)),
             (float) Math.sqrt(holder2.getVariance(false)),
             (long) Math.sqrt(holder3.getVariance(false)),
-        }
+            }
     );
     assertResultsEquals(expectedResults, results);
 
@@ -530,9 +531,9 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
               )
               .aggregators(
                   ImmutableList.of(
-                    new VarianceAggregatorFactory("a0:agg", "v0", "sample", "double"),
-                    new VarianceAggregatorFactory("a1:agg", "v1", "sample", "float"),
-                    new VarianceAggregatorFactory("a2:agg", "v2", "sample", "long")
+                      new VarianceAggregatorFactory("a0:agg", "v0", "sample", "double"),
+                      new VarianceAggregatorFactory("a1:agg", "v1", "sample", "float"),
+                      new VarianceAggregatorFactory("a2:agg", "v2", "sample", "long")
                   )
               )
               .postAggregators(
@@ -560,41 +561,41 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             authenticationResult
         ).toList();
     List<Object[]> expectedResults = NullHandling.sqlCompatible()
-        ? ImmutableList.of(
-        new Object[] {"a", 0f},
-        new Object[] {null, 0f},
-        new Object[] {"", 0f},
-        new Object[] {"abc", null}
+                                     ? ImmutableList.of(
+        new Object[]{"a", 0f},
+        new Object[]{null, 0f},
+        new Object[]{"", 0f},
+        new Object[]{"abc", null}
     ) : ImmutableList.of(
-        new Object[] {"a", 0.5f},
-        new Object[] {"", 0.0033333334f},
-        new Object[] {"abc", 0f}
+        new Object[]{"a", 0.5f},
+        new Object[]{"", 0.0033333334f},
+        new Object[]{"abc", 0f}
     );
     assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         GroupByQuery.builder()
-              .setDataSource(CalciteTests.DATASOURCE3)
-              .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .setGranularity(Granularities.ALL)
-              .setDimensions(new DefaultDimensionSpec("dim2", "_d0"))
-              .setAggregatorSpecs(
-                    new VarianceAggregatorFactory("a0:agg", "f1", "sample", "float")
-              )
-              .setLimitSpec(
-                  DefaultLimitSpec
-                      .builder()
-                      .orderBy(
-                          new OrderByColumnSpec(
-                              "a0:agg",
-                              OrderByColumnSpec.Direction.DESCENDING,
-                              StringComparators.NUMERIC
-                          )
-                      )
-                      .build()
-              )
-              .setContext(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-              .build(),
+                    .setDataSource(CalciteTests.DATASOURCE3)
+                    .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("dim2", "_d0"))
+                    .setAggregatorSpecs(
+                        new VarianceAggregatorFactory("a0:agg", "f1", "sample", "float")
+                    )
+                    .setLimitSpec(
+                        DefaultLimitSpec
+                            .builder()
+                            .orderBy(
+                                new OrderByColumnSpec(
+                                    "a0:agg",
+                                    OrderByColumnSpec.Direction.DESCENDING,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                            .build()
+                    )
+                    .setContext(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                    .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
   }
@@ -622,7 +623,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                                       Arrays.asList(
                                           QueryRunnerTestHelper.ROWS_COUNT,
                                           QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          new VarianceAggregatorFactory("variance", "index")
+                                          new VarianceAggregatorFactory("variance", "index", null, null)
                                       )
                                   )
                                   .descending(true)
@@ -648,9 +649,18 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
   {
     Assert.assertEquals(expectedResults.size(), results.size());
     for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+      Object[] expectedResult = expectedResults.get(i);
+      Object[] result = results.get(i);
+      Assert.assertEquals(expectedResult.length, result.length);
+      for (int j = 0; j < expectedResult.length; j++) {
+        if (expectedResult[j] instanceof Float) {
+          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 1e-10);
+        } else if (expectedResult[j] instanceof Double) {
+          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 1e-10);
+        } else {
+          Assert.assertEquals(expectedResult[j], result[j]);
+        }
+      }
     }
   }
-
-
 }

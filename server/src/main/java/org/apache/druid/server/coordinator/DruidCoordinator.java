@@ -367,6 +367,17 @@ public class DruidCoordinator
     return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
+  @Nullable
+  public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
+  {
+    return compactSegments.getAutoCompactionSnapshot(dataSource);
+  }
+
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
+  {
+    return compactSegments.getAutoCompactionSnapshot();
+  }
+
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
     return CoordinatorDynamicConfig.current(configManager);
@@ -589,7 +600,11 @@ public class DruidCoordinator
       }
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
-        ScheduledExecutors.scheduleWithFixedDelay(
+        // CompactSegmentsDuty can takes a non trival amount of time to complete.
+        // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
+        // config.getCoordinatorIndexingPeriod() period. Note that cautious should be taken
+        // if setting config.getCoordinatorIndexingPeriod() lower than the default value.
+        ScheduledExecutors.scheduleAtFixedRate(
             exec,
             config.getCoordinatorStartDelay(),
             dutiesRunnable.rhs,
@@ -657,8 +672,9 @@ public class DruidCoordinator
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());
-    duties.addAll(makeCompactSegmentsDuty());
     duties.addAll(indexingServiceDuties);
+    // CompactSegmentsDuty should be the last duty as it can take a long time to complete
+    duties.addAll(makeCompactSegmentsDuty());
 
     log.debug(
         "Done making indexing service duties %s",

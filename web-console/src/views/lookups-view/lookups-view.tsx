@@ -47,9 +47,19 @@ import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array'
 
 import './lookups-view.scss';
 
-const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', ACTION_COLUMN_LABEL];
+const tableColumns: string[] = [
+  'Lookup name',
+  'Lookup tier',
+  'Type',
+  'Version',
+  ACTION_COLUMN_LABEL,
+];
 
 const DEFAULT_LOOKUP_TIER: string = '__default';
+
+function tierNameCompare(a: string, b: string) {
+  return a.localeCompare(b);
+}
 
 export interface LookupEntriesAndTiers {
   lookupEntries: any[];
@@ -99,7 +109,9 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       processQuery: async () => {
         const tiersResp = await Api.get('/druid/coordinator/v1/lookups/config?discover=true');
         const tiers =
-          tiersResp.data && tiersResp.data.length > 0 ? tiersResp.data : [DEFAULT_LOOKUP_TIER];
+          tiersResp.data && tiersResp.data.length > 0
+            ? tiersResp.data.sort(tierNameCompare)
+            : [DEFAULT_LOOKUP_TIER];
 
         const lookupEntries: {}[] = [];
         const lookupResp = await Api.get('/druid/coordinator/v1/lookups/config/all');
@@ -185,10 +197,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private handleChangeLookup = (field: string, value: string | LookupSpec) => {
-    this.setState({
-      [field]: value,
-    } as any);
+  private handleChangeLookup = (field: keyof LookupEditInfo, value: string | LookupSpec) => {
+    this.setState(state => ({
+      lookupEdit: Object.assign({}, state.lookupEdit, { [field]: value }),
+    }));
   };
 
   private async submitLookupEdit(updatelookupEditVersion: boolean) {
@@ -304,34 +316,35 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           columns={[
             {
               Header: 'Lookup name',
+              show: hiddenColumns.exists('Lookup name'),
               id: 'lookup_name',
               accessor: 'id',
               filterable: true,
-              show: hiddenColumns.exists('Lookup name'),
             },
             {
-              Header: 'Tier',
+              Header: 'Lookup tier',
+              show: hiddenColumns.exists('Lookup tier'),
               id: 'tier',
               accessor: 'tier',
               filterable: true,
-              show: hiddenColumns.exists('Tier'),
             },
             {
               Header: 'Type',
+              show: hiddenColumns.exists('Type'),
               id: 'type',
               accessor: 'spec.type',
               filterable: true,
-              show: hiddenColumns.exists('Type'),
             },
             {
               Header: 'Version',
+              show: hiddenColumns.exists('Version'),
               id: 'version',
               accessor: 'version',
               filterable: true,
-              show: hiddenColumns.exists('Version'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
+              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
               id: ACTION_COLUMN_ID,
               width: ACTION_COLUMN_WIDTH,
               accessor: (row: any) => ({ id: row.id, tier: row.tier }),
@@ -352,7 +365,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                   />
                 );
               },
-              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}

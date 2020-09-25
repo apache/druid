@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -74,6 +75,18 @@ class LambdaExpr implements Expr
   public Expr getExpr()
   {
     return expr;
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return expr.canVectorize(inputTypes);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return expr.buildVectorized(inputTypes);
   }
 
   @Override
@@ -168,6 +181,18 @@ class FunctionExpr implements Expr
   public ExprEval eval(ObjectBinding bindings)
   {
     return function.apply(args, bindings);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return function.canVectorize(inputTypes, args);
+  }
+
+  @Override
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return function.asVectorProcessor(inputTypes, args);
   }
 
   @Override
@@ -286,6 +311,20 @@ class ApplyFunctionExpr implements Expr
   public ExprEval eval(ObjectBinding bindings)
   {
     return function.apply(lambdaExpr, argsExpr, bindings);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return function.canVectorize(inputTypes, lambdaExpr, argsExpr) &&
+           lambdaExpr.canVectorize(inputTypes) &&
+           argsExpr.stream().allMatch(expr -> expr.canVectorize(inputTypes));
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return function.asVectorProcessor(inputTypes, lambdaExpr, argsExpr);
   }
 
   @Override
