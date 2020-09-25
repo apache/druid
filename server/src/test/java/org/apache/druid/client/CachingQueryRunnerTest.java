@@ -206,7 +206,6 @@ public class CachingQueryRunnerTest
   @Test
   public void testNullCacheKeyPrefix()
   {
-
     Query query = new TopNQueryBuilder()
         .dataSource("ds")
         .dimension("top_dim")
@@ -223,6 +222,30 @@ public class CachingQueryRunnerTest
     CachingQueryRunner queryRunner = makeCachingQueryRunner(null, cache, toolchest, Sequences.empty());
     Assert.assertFalse(queryRunner.canPopulateCache(query, toolchest.getCacheStrategy(query)));
     Assert.assertFalse(queryRunner.canUseCache(query, toolchest.getCacheStrategy(query)));
+    queryRunner.run(QueryPlus.wrap(query));
+    EasyMock.verifyUnexpectedCalls(cache);
+  }
+
+  @Test
+  public void testNullStrategy()
+  {
+    Query query = new TopNQueryBuilder()
+        .dataSource("ds")
+        .dimension("top_dim")
+        .metric("imps")
+        .threshold(3)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(AGGS)
+        .granularity(Granularities.ALL)
+        .build();
+
+    QueryToolChest toolchest = EasyMock.mock(QueryToolChest.class);
+    Cache cache = EasyMock.mock(Cache.class);
+    EasyMock.expect(toolchest.getCacheStrategy(query)).andReturn(null);
+    EasyMock.replay(cache, toolchest);
+    CachingQueryRunner queryRunner = makeCachingQueryRunner(new byte[0], cache, toolchest, Sequences.empty());
+    Assert.assertFalse(queryRunner.canPopulateCache(query, null));
+    Assert.assertFalse(queryRunner.canUseCache(query, null));
     queryRunner.run(QueryPlus.wrap(query));
     EasyMock.verifyUnexpectedCalls(cache);
   }

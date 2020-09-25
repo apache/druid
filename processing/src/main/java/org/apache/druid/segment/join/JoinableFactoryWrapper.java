@@ -27,7 +27,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -36,8 +35,6 @@ import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nullable;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,17 +43,15 @@ import java.util.function.Function;
 /**
  * A wrapper class over {@link JoinableFactory} for working with {@link Joinable} related classes.
  */
-public class Joinables
+public class JoinableFactoryWrapper
 {
-  private static final Comparator<String> DESCENDING_LENGTH_STRING_COMPARATOR = (s1, s2) ->
-      Integer.compare(s2.length(), s1.length());
 
   private static final byte JOIN_OPERATION = 0x1;
-  private static final Logger log = new Logger(Joinables.class);
+  private static final Logger log = new Logger(JoinableFactoryWrapper.class);
 
   private final JoinableFactory joinableFactory;
 
-  public Joinables(final JoinableFactory joinableFactory)
+  public JoinableFactoryWrapper(final JoinableFactory joinableFactory)
   {
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
   }
@@ -111,14 +106,14 @@ public class Joinables
    * Compute a cache key prefix for data sources that participate in the RHS of a join. This key prefix
    * can be used in segment level cache or result level cache. The function can return following wrapped in an
    * Optional
-   *  - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
-   *  join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
-   *  - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
-   *  in the JOIN is not cacheable.
+   * - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
+   * join condition expression, join type and cache key returned by joinable factory for each {@link PreJoinableClause}
+   * - NULL - There is a join but caching is not possible. It may happen if one of the participating datasource
+   * in the JOIN is not cacheable.
    *
-   * @throws {@link IAE} if this operation is called on a non-join data source
    * @param dataSourceAnalysis for the join datasource
    * @return the optional cache key to be used as part of query cache key
+   * @throws {@link IAE} if this operation is called on a non-join data source
    */
   public Optional<byte[]> computeJoinDataSourceCacheKey(
       final DataSourceAnalysis dataSourceAnalysis
@@ -140,58 +135,10 @@ public class Joinables
       }
       keyBuilder.appendByteArray(bytes.get());
       keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getPrefix());
       keyBuilder.appendString(clause.getJoinType().name());
     }
     return Optional.of(keyBuilder.build());
   }
 
-  /**
-   * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
-   * returns it. Otherwise, throws an exception.
-   */
-  public static String validatePrefix(@Nullable final String prefix)
-  {
-    if (prefix == null || prefix.isEmpty()) {
-      throw new IAE("Join clause cannot have null or empty prefix");
-    } else if (isPrefixedBy(ColumnHolder.TIME_COLUMN_NAME, prefix) || ColumnHolder.TIME_COLUMN_NAME.equals(prefix)) {
-      throw new IAE(
-          "Join clause cannot have prefix[%s], since it would shadow %s",
-          prefix,
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    } else {
-      return prefix;
-    }
-  }
-
-  public static boolean isPrefixedBy(final String columnName, final String prefix)
-  {
-    return columnName.length() > prefix.length() && columnName.startsWith(prefix);
-  }
-
-  /**
-   * Check if any prefixes in the provided list duplicate or shadow each other.
-   *
-   * @param prefixes A mutable list containing the prefixes to check. This list will be sorted by descending
-   *                 string length.
-   */
-  public static void checkPrefixesForDuplicatesAndShadowing(
-      final List<String> prefixes
-  )
-  {
-    // this is a naive approach that assumes we'll typically handle only a small number of prefixes
-    prefixes.sort(DESCENDING_LENGTH_STRING_COMPARATOR);
-    for (int i = 0; i < prefixes.size(); i++) {
-      String prefix = prefixes.get(i);
-      for (int k = i + 1; k < prefixes.size(); k++) {
-        String otherPrefix = prefixes.get(k);
-        if (prefix.equals(otherPrefix)) {
-          throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix);
-        }
-        if (isPrefixedBy(prefix, otherPrefix)) {
-          throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix, otherPrefix);
-        }
-      }
-    }
-  }
 }

@@ -26,7 +26,7 @@ import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -54,7 +54,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   @Mock
   private Query<Object> query;
   @Mock
-  private Joinables joinables;
+  private JoinableFactoryWrapper joinableFactoryWrapper;
   @Mock
   private DataSourceAnalysis dataSourceAnalysis;
 
@@ -159,7 +159,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void testComputeEtag_joinWithUnsupportedCaching()
   {
     expect(dataSourceAnalysis.isJoin()).andReturn(true);
-    expect(joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.empty());
+    expect(joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.empty());
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
@@ -174,7 +174,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void testComputeEtag_joinWithSupportedCaching()
   {
     expect(dataSourceAnalysis.isJoin()).andReturn(true).anyTimes();
-    expect(joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(JOIN_KEY));
+    expect(joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(JOIN_KEY));
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
@@ -184,9 +184,9 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     String actual1 = keyManager.computeResultLevelCachingEtag(selectors, null);
     Assert.assertNotNull(actual1);
 
-    reset(joinables);
-    expect(joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(new byte[]{9}));
-    replay(joinables);
+    reset(joinableFactoryWrapper);
+    expect(joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(new byte[]{9}));
+    replay(joinableFactoryWrapper);
     selectors = ImmutableSet.of(
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
@@ -223,7 +223,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         false,
         false,
         dataSourceAnalysis,
-        joinables
+        joinableFactoryWrapper
     );
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
         makeHistoricalServerSelector(1),
@@ -247,7 +247,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   public void testSegmentQueryCacheKey_joinWithUnsupportedCaching()
   {
     expect(dataSourceAnalysis.isJoin()).andReturn(true);
-    expect(joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.empty());
+    expect(joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.empty());
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     byte[] cacheKey = keyManager.computeSegmentLevelQueryCacheKey();
@@ -259,7 +259,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   {
 
     expect(dataSourceAnalysis.isJoin()).andReturn(true);
-    expect(joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(JOIN_KEY));
+    expect(joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(JOIN_KEY));
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     byte[] cacheKey = keyManager.computeSegmentLevelQueryCacheKey();
@@ -286,7 +286,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         false,
         false,
         dataSourceAnalysis,
-        joinables
+        joinableFactoryWrapper
     ).computeSegmentLevelQueryCacheKey());
   }
 
@@ -298,7 +298,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         true,
         true,
         dataSourceAnalysis,
-        joinables
+        joinableFactoryWrapper
     );
   }
 

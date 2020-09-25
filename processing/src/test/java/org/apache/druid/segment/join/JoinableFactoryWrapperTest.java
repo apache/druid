@@ -37,7 +37,6 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.easymock.EasyMock;
@@ -54,7 +53,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class JoinablesTest
+public class JoinableFactoryWrapperTest
 {
   private static final JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
       QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
@@ -63,60 +62,16 @@ public class JoinablesTest
       QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
   );
 
-  private static final Joinables NOOP_JOINABLES = new Joinables(NoopJoinableFactory.INSTANCE);
+  private static final JoinableFactoryWrapper NOOP_JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(
+      NoopJoinableFactory.INSTANCE);
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void test_validatePrefix_null()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Join clause cannot have null or empty prefix");
-
-    Joinables.validatePrefix(null);
-  }
-
-  @Test
-  public void test_validatePrefix_empty()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Join clause cannot have null or empty prefix");
-
-    Joinables.validatePrefix("");
-  }
-
-  @Test
-  public void test_validatePrefix_underscore()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Join clause cannot have prefix[_]");
-
-    Joinables.validatePrefix("_");
-  }
-
-  @Test
-  public void test_validatePrefix_timeColumn()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Join clause cannot have prefix[__time]");
-
-    Joinables.validatePrefix(ColumnHolder.TIME_COLUMN_NAME);
-  }
-
-  @Test
-  public void test_isPrefixedBy()
-  {
-    Assert.assertTrue(Joinables.isPrefixedBy("foo", ""));
-    Assert.assertTrue(Joinables.isPrefixedBy("foo", "f"));
-    Assert.assertTrue(Joinables.isPrefixedBy("foo", "fo"));
-    Assert.assertFalse(Joinables.isPrefixedBy("foo", "foo"));
-  }
-
-  @Test
   public void test_createSegmentMapFn_noClauses()
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = NOOP_JOINABLES.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = NOOP_JOINABLE_FACTORY_WRAPPER.createSegmentMapFn(
         ImmutableList.of(),
         new AtomicLong(),
         null
@@ -139,7 +94,7 @@ public class JoinablesTest
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("dataSource is not joinable");
 
-    final Function<SegmentReference, SegmentReference> ignored = NOOP_JOINABLES.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> ignored = NOOP_JOINABLE_FACTORY_WRAPPER.createSegmentMapFn(
         ImmutableList.of(clause),
         new AtomicLong(),
         null
@@ -162,7 +117,7 @@ public class JoinablesTest
         conditionAnalysis
     );
 
-    Joinables joinables = new Joinables(new JoinableFactory()
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactory()
     {
       @Override
       public boolean isDirectlyJoinable(DataSource dataSource)
@@ -182,7 +137,7 @@ public class JoinablesTest
         }
       }
     });
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         ImmutableList.of(clause),
         new AtomicLong(),
         new TestQuery(
@@ -204,14 +159,14 @@ public class JoinablesTest
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.emptyList());
     EasyMock.expect(analysis.getDataSource()).andReturn(dataSource);
     EasyMock.replay(analysis);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
 
     expectedException.expect(IAE.class);
     expectedException.expectMessage(StringUtils.format(
         "No join clauses to build the cache key for data source [%s]",
         dataSource
     ));
-    joinables.computeJoinDataSourceCacheKey(analysis);
+    joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
   }
 
   @Test
@@ -223,8 +178,8 @@ public class JoinablesTest
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause1, clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinables.computeJoinDataSourceCacheKey(analysis);
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
+    Optional<byte[]> cacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
 
     Assert.assertFalse(cacheKey.isPresent());
   }
@@ -238,8 +193,8 @@ public class JoinablesTest
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause1, clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinables.computeJoinDataSourceCacheKey(analysis);
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
+    Optional<byte[]> cacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
 
     Assert.assertFalse(cacheKey.isPresent());
   }
@@ -253,8 +208,8 @@ public class JoinablesTest
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Arrays.asList(clause1, clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
-    Optional<byte[]> cacheKey = joinables.computeJoinDataSourceCacheKey(analysis);
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
+    Optional<byte[]> cacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
 
     Assert.assertTrue(cacheKey.isPresent());
   }
@@ -263,13 +218,13 @@ public class JoinablesTest
   public void test_computeJoinDataSourceCacheKey_keyChangesWithExpression()
   {
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
 
     PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "y == \"j.y\"", "j.");
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
     EasyMock.replay(analysis);
 
-    Optional<byte[]> cacheKey1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey1.isPresent());
     Assert.assertNotEquals(0, cacheKey1.get().length);
 
@@ -277,7 +232,7 @@ public class JoinablesTest
     EasyMock.reset(analysis);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey2.isPresent());
 
     Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
@@ -287,13 +242,13 @@ public class JoinablesTest
   public void test_computeJoinDataSourceCacheKey_keyChangesWithJoinType()
   {
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
 
     PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.", JoinType.LEFT);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
     EasyMock.replay(analysis);
 
-    Optional<byte[]> cacheKey1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey1.isPresent());
     Assert.assertNotEquals(0, cacheKey1.get().length);
 
@@ -301,7 +256,31 @@ public class JoinablesTest
     EasyMock.reset(analysis);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey2.isPresent());
+
+    Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
+  }
+
+  @Test
+  public void test_computeJoinDataSourceCacheKey_keyChangesWithPrefix()
+  {
+    DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
+
+    PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "abc == xyz", "ab");
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
+    EasyMock.replay(analysis);
+
+    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
+    Assert.assertTrue(cacheKey1.isPresent());
+    Assert.assertNotEquals(0, cacheKey1.get().length);
+
+    PreJoinableClause clause2 = makeGlobalPreJoinableClause("dataSource_1", "abc == xyz", "xy");
+    EasyMock.reset(analysis);
+    EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
+    EasyMock.replay(analysis);
+    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey2.isPresent());
 
     Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
@@ -311,13 +290,13 @@ public class JoinablesTest
   public void test_computeJoinDataSourceCacheKey_keyChangesWithJoinable()
   {
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
 
     PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
     EasyMock.replay(analysis);
 
-    Optional<byte[]> cacheKey1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey1.isPresent());
     Assert.assertNotEquals(0, cacheKey1.get().length);
 
@@ -325,7 +304,7 @@ public class JoinablesTest
     EasyMock.reset(analysis);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey2.isPresent());
 
     Assert.assertFalse(Arrays.equals(cacheKey1.get(), cacheKey2.get()));
@@ -335,13 +314,13 @@ public class JoinablesTest
   public void test_computeJoinDataSourceCacheKey_sameKeyForSameJoin()
   {
     DataSourceAnalysis analysis = EasyMock.mock(DataSourceAnalysis.class);
-    Joinables joinables = new Joinables(new JoinableFactoryWithCacheKey());
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
 
     PreJoinableClause clause1 = makeGlobalPreJoinableClause("dataSource_1", "x == \"j.x\"", "j.");
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause1)).anyTimes();
     EasyMock.replay(analysis);
 
-    Optional<byte[]> cacheKey1 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey1 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey1.isPresent());
     Assert.assertNotEquals(0, cacheKey1.get().length);
 
@@ -349,7 +328,7 @@ public class JoinablesTest
     EasyMock.reset(analysis);
     EasyMock.expect(analysis.getPreJoinableClauses()).andReturn(Collections.singletonList(clause2)).anyTimes();
     EasyMock.replay(analysis);
-    Optional<byte[]> cacheKey2 = joinables.computeJoinDataSourceCacheKey(analysis);
+    Optional<byte[]> cacheKey2 = joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis);
     Assert.assertTrue(cacheKey2.isPresent());
 
     Assert.assertArrayEquals(cacheKey1.get(), cacheKey2.get());
@@ -368,7 +347,7 @@ public class JoinablesTest
         "BA"
     );
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    JoinPrefixUtils.checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 
   @Test
@@ -383,7 +362,7 @@ public class JoinablesTest
         "ABCD"
     );
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    JoinPrefixUtils.checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 
   @Test
@@ -401,7 +380,7 @@ public class JoinablesTest
         "ABC.DEF"
     );
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    JoinPrefixUtils.checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 
   private PreJoinableClause makeGlobalPreJoinableClause(String tableName, String expression, String prefix)

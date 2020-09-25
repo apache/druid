@@ -37,7 +37,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -57,7 +57,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 {
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final SegmentWrangler segmentWrangler;
-  private final Joinables joinables;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
 
@@ -72,7 +72,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   {
     this.conglomerate = conglomerate;
     this.segmentWrangler = segmentWrangler;
-    this.joinables = new Joinables(joinableFactory);
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.scheduler = scheduler;
     this.emitter = emitter;
   }
@@ -94,7 +94,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         cpuAccumulator,
         analysis.getBaseQuery().orElse(query)

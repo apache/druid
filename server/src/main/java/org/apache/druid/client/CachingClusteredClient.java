@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -73,7 +74,7 @@ import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -124,7 +125,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final DruidProcessingConfig processingConfig;
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
-  private final Joinables joinables;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
 
   @Inject
   public CachingClusteredClient(
@@ -151,7 +152,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.processingConfig = processingConfig;
     this.pool = pool;
     this.scheduler = scheduler;
-    this.joinables = new Joinables(joinableFactory);
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -307,7 +308,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           useCache,
           populateCache,
           dataSourceAnalysis,
-          joinables
+          joinableFactoryWrapper
       );
     }
 
@@ -760,7 +761,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
     private final DataSourceAnalysis dataSourceAnalysis;
-    private final Joinables joinables;
+    private final JoinableFactoryWrapper joinableFactoryWrapper;
     private final boolean isSegmentLevelCachingEnable;
 
     CacheKeyManager(
@@ -769,14 +770,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final boolean useCache,
         final boolean populateCache,
         final DataSourceAnalysis dataSourceAnalysis,
-        final Joinables joinables
+        final JoinableFactoryWrapper joinableFactoryWrapper
     )
     {
 
       this.query = query;
       this.strategy = strategy;
       this.dataSourceAnalysis = dataSourceAnalysis;
-      this.joinables = joinables;
+      this.joinableFactoryWrapper = joinableFactoryWrapper;
       this.isSegmentLevelCachingEnable = ((populateCache || useCache)
                                           && !QueryContexts.isBySegment(query));   // explicit bySegment queries are never cached
 
@@ -836,9 +837,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @Nullable
     private byte[] computeQueryCacheKeyWithJoin()
     {
-      assert strategy != null;  // implies strategy != null
+      Preconditions.checkNotNull(strategy, "strategy cannot be null");
       if (dataSourceAnalysis.isJoin()) {
-        byte[] joinDataSourceCacheKey = joinables.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
+        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
         if (null == joinDataSourceCacheKey) {
           return null;    // A join operation that does not support caching
         }

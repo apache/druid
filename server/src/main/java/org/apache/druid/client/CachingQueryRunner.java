@@ -145,7 +145,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   /**
-   * @return whether the segment level cache should be used or not
+   * @return whether the segment level cache should be used or not. False if strategy is null
    */
   @VisibleForTesting
   boolean canUseCache(Query<T> query, CacheStrategy strategy)
@@ -159,7 +159,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   /**
-   * @return whether the segment level cache should be populated or not
+   * @return whether the segment level cache should be populated or not. False if strategy is null
    */
   @VisibleForTesting
   boolean canPopulateCache(Query<T> query, CacheStrategy strategy)
