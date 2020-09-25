@@ -37,12 +37,7 @@ import {
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import {
-  AsyncActionDialog,
-  CompactionDialog,
-  DEFAULT_MAX_ROWS_PER_SEGMENT,
-  RetentionDialog,
-} from '../../dialogs';
+import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -51,6 +46,7 @@ import {
   formatBytes,
   formatInteger,
   formatMegabytes,
+  formatPercent,
   getDruidErrorMessage,
   LocalStorageKeys,
   lookupBy,
@@ -78,7 +74,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Avg. row size',
     'Replicated size',
     'Compaction',
-    'Compaction status',
+    '% Compacted',
     'Retention',
     ACTION_COLUMN_LABEL,
   ],
@@ -89,7 +85,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Total data size',
     'Segment size',
     'Compaction',
-    'Compaction status',
+    '% Compacted',
     'Retention',
     ACTION_COLUMN_LABEL,
   ],
@@ -133,6 +129,12 @@ function twoLines(line1: string, line2: string) {
   );
 }
 
+function progress(done: number, awaiting: number): number {
+  const d = done + awaiting;
+  if (!d) return 0;
+  return done / d;
+}
+
 interface CompactionStatus {
   dataSource: string;
   scheduleStatus: string;
@@ -145,6 +147,20 @@ interface CompactionStatus {
   intervalCountAwaitingCompaction: number;
   intervalCountCompacted: number;
   intervalCountSkipped: number;
+}
+
+function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
+  return (
+    !compactionStatus.bytesAwaitingCompaction &&
+    !compactionStatus.bytesCompacted &&
+    !compactionStatus.bytesSkipped &&
+    !compactionStatus.segmentCountAwaitingCompaction &&
+    !compactionStatus.segmentCountCompacted &&
+    !compactionStatus.segmentCountSkipped &&
+    !compactionStatus.intervalCountAwaitingCompaction &&
+    !compactionStatus.intervalCountCompacted &&
+    !compactionStatus.intervalCountSkipped
+  );
 }
 
 interface Datasource {
@@ -208,6 +224,7 @@ export interface DatasourcesViewState {
   datasourceToMarkSegmentsByIntervalIn?: string;
   useUnuseAction: 'use' | 'unuse';
   useUnuseInterval: string;
+  showForceCompact: boolean;
   hiddenColumns: LocalStorageBackedArray<string>;
   showChart: boolean;
   chartWidth: number;
@@ -277,6 +294,7 @@ GROUP BY 1`;
       showUnused: false,
       useUnuseAction: 'unuse',
       useUnuseInterval: '',
+      showForceCompact: false,
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
@@ -560,7 +578,18 @@ GROUP BY 1`;
     const { goToQuery, capabilities } = this.props;
 
     return (
-      <MoreButton>
+      <MoreButton
+        altExtra={
+          <MenuItem
+            icon={IconNames.COMPRESSED}
+            text="Force compaction run (debug)"
+            intent={Intent.DANGER}
+            onClick={() => {
+              this.setState({ showForceCompact: true });
+            }}
+          />
+        }
+      >
         {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
@@ -574,6 +603,31 @@ GROUP BY 1`;
           onClick={this.editDefaultRules}
         />
       </MoreButton>
+    );
+  }
+
+  renderForceCompactAction() {
+    const { showForceCompact } = this.state;
+    if (!showForceCompact) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/coordinator/v1/compaction/compact`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Force compaction run"
+        successText="Out of band compaction run has been initiated"
+        failText="Could not force compaction"
+        intent={Intent.DANGER}
+        onClose={() => {
+          this.setState({ showForceCompact: false });
+        }}
+      >
+        <p>Are you sure you want to force a compaction run?</p>
+        <p>This functionality only exists for debugging and testing reasons.</p>
+        <p>If you are running it in production you are doing something wrong.</p>
+      </AsyncActionDialog>
     );
   }
 
@@ -1022,18 +1076,17 @@ GROUP BY 1`;
             {
               Header: 'Compaction',
               show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
-              id: 'compaction',
-              accessor: row => Boolean(row.compaction),
+              id: 'compactionStatus',
+              accessor: row => Boolean(row.compactionStatus),
               filterable: false,
               Cell: row => {
                 const { compaction } = row.original;
+                const compactionStatus: CompactionStatus = row.original.compactionStatus;
                 let text: string;
-                if (compaction) {
-                  if (compaction.maxRowsPerSegment == null) {
-                    text = `Target: Default (${formatInteger(DEFAULT_MAX_ROWS_PER_SEGMENT)})`;
-                  } else {
-                    text = `Target: ${formatInteger(compaction.maxRowsPerSegment)}`;
-                  }
+                if (compactionStatus) {
+                  text = `${compactionStatus.scheduleStatus} [${formatBytes(
+                    compactionStatus.bytesAwaitingCompaction,
+                  )}]`;
                 } else {
                   text = 'Not enabled';
                 }
@@ -1056,28 +1109,41 @@ GROUP BY 1`;
               },
             },
             {
-              Header: twoLines('Compaction', 'status'),
-              show:
-                capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction status'),
-              id: 'compactionStatus',
-              accessor: row => Boolean(row.compactionStatus),
+              Header: twoLines('% Compacted', 'bytes / segments / intervals'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('% Compacted'),
+              id: 'percentCompacted',
+              width: 180,
+              accessor: ({ compactionStatus }) =>
+                compactionStatus && compactionStatus.bytesCompacted
+                  ? compactionStatus.bytesCompacted /
+                    (compactionStatus.bytesAwaitingCompaction + compactionStatus.bytesCompacted)
+                  : 0,
               filterable: false,
-              Cell: row => {
-                const compactionStatus: CompactionStatus = row.original.compactionStatus;
-                let text: string;
-                if (compactionStatus) {
-                  const progress =
-                    (compactionStatus.bytesCompacted /
-                      (compactionStatus.bytesAwaitingCompaction +
-                        compactionStatus.bytesCompacted)) *
-                    100;
-                  text = `${compactionStatus.scheduleStatus} (${progress.toFixed(
-                    2,
-                  )}%) [${formatBytes(compactionStatus.bytesAwaitingCompaction)}]`;
-                } else {
-                  text = 'Not enabled';
+              Cell: ({ original }) => {
+                const { compactionStatus } = original;
+
+                if (!compactionStatus || zeroCompactionStatus(compactionStatus)) {
+                  return '-';
                 }
-                return text;
+
+                const percentBytes = progress(
+                  compactionStatus.bytesCompacted,
+                  compactionStatus.bytesAwaitingCompaction,
+                );
+
+                const percentSegments = progress(
+                  compactionStatus.segmentCountCompacted,
+                  compactionStatus.segmentCountAwaitingCompaction,
+                );
+
+                const percentIntervals = progress(
+                  compactionStatus.intervalCountCompacted,
+                  compactionStatus.intervalCountAwaitingCompaction,
+                );
+
+                return `${formatPercent(percentBytes)} ${formatPercent(
+                  percentSegments,
+                )} ${formatPercent(percentIntervals)}`;
               },
             },
             {
@@ -1151,6 +1217,7 @@ GROUP BY 1`;
         {this.renderKillAction()}
         {this.renderRetentionDialog()}
         {this.renderCompactionDialog()}
+        {this.renderForceCompactAction()}
       </>
     );
   }

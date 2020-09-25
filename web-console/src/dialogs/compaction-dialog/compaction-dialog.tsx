@@ -24,8 +24,6 @@ import { deepGet, deepSet } from '../../utils/object-change';
 
 import './compaction-dialog.scss';
 
-export const DEFAULT_MAX_ROWS_PER_SEGMENT = 5000000;
-
 type Tabs = 'form' | 'json';
 
 type CompactionConfig = Record<string, any>;
