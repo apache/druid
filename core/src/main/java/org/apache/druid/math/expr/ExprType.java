@@ -197,7 +197,7 @@ public enum ExprType
     }
 
     // otherwise a decimal or integer number
-    return doubleNumericAutoTypeConversion(type, other);
+    return numericAutoTypeConversion(type, other);
   }
 
   /**
@@ -226,7 +226,7 @@ public enum ExprType
       return STRING;
     }
 
-    return doubleNumericAutoTypeConversion(type, other);
+    return numericAutoTypeConversion(type, other);
   }
 
   /**
@@ -260,10 +260,10 @@ public enum ExprType
   }
 
   /**
-   * If both types are {@link #LONG}, returns {@link #LONG}, else {@link #DOUBLE}
+   * Default best effort numeric type conversion. If both types are {@link #LONG}, returns {@link #LONG}, else
+   * {@link #DOUBLE}
    */
-  @Nullable
-  public static ExprType doubleNumericAutoTypeConversion(ExprType type, ExprType other)
+  public static ExprType numericAutoTypeConversion(ExprType type, ExprType other)
   {
     // all numbers win over longs
     if (LONG.equals(type) && LONG.equals(other)) {
