@@ -256,18 +256,6 @@ public interface Expr
   }
 
   /**
-   * Mechanism to inspect an {@link Expr}, implementing a {@link Visitor} allows visiting all children of an
-   * {@link Expr}
-   */
-  interface Visitor
-  {
-    /**
-     * Provide the {@link Visitor} with an {@link Expr} to inspect
-     */
-    void visit(Expr expr);
-  }
-
-  /**
    * Mechanism to rewrite an {@link Expr}, implementing a {@link Shuttle} allows visiting all children of an
    * {@link Expr}, and replacing them as desired.
    */
