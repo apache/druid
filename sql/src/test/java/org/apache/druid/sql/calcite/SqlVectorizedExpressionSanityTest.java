@@ -45,9 +45,9 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.AfterClass;
@@ -64,7 +64,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTest
+public class SqlVectorizedExpressionSanityTest extends CalciteTestBase
 {
   private static final Logger log = new Logger(SqlVectorizedExpressionSanityTest.class);
 
@@ -165,8 +165,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException, RelConversionException, SqlParseException
   {
-    final Map<String, Object> vector = ImmutableMap.of("vectorize", true);
-    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", false);
+    final Map<String, Object> vector = ImmutableMap.of("vectorize", "force");
+    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", "false");
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
 

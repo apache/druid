@@ -10651,6 +10651,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expect(UnsupportedOperationException.class);
     }
 
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
+
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
