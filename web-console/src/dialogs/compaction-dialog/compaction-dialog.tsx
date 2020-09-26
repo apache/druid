@@ -33,6 +33,7 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'skipOffsetFromLatest',
     type: 'string',
     defaultValue: 'P1D',
+    suggestions: ['PT0H', 'PT1H', 'P1D', 'P3D'],
     info: (
       <p>
         The offset for searching segments to be compacted. Strongly recommended to set for realtime

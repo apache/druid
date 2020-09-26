@@ -75,6 +75,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Replicated size',
     'Compaction',
     '% Compacted',
+    'Left to be compacted',
     'Retention',
     ACTION_COLUMN_LABEL,
   ],
@@ -86,6 +87,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment size',
     'Compaction',
     '% Compacted',
+    'Left to be compacted',
     'Retention',
     ACTION_COLUMN_LABEL,
   ],
@@ -105,10 +107,10 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
   const loadDrop: string[] = [];
   if (segmentsToLoad) {
-    loadDrop.push(`${segmentsToLoad} segments to load`);
+    loadDrop.push(`${pluralIfNeeded(segmentsToLoad, 'segment')} to load`);
   }
   if (segmentsToDrop) {
-    loadDrop.push(`${segmentsToDrop} segments to drop`);
+    loadDrop.push(`${pluralIfNeeded(segmentsToDrop, 'segment')} to drop`);
   }
   return loadDrop.join(', ') || 'No segments to load/drop';
 }
@@ -118,6 +120,7 @@ const formatSegmentSize = formatMegabytes;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
+const formatLeftToBeCompacted = formatBytes;
 
 function twoLines(line1: string, line2: string) {
   return (
@@ -134,6 +137,12 @@ function progress(done: number, awaiting: number): number {
   if (!d) return 0;
   return done / d;
 }
+
+function capitalizeFirst(str: string): string {
+  return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+const PERCENT_BRACES = ['100.00%'];
 
 interface CompactionStatus {
   dataSource: string;
@@ -163,11 +172,30 @@ function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
   );
 }
 
+type CompactionConfig = Record<string, any>;
+
+function formatCompactionConfigAndStatus(
+  compactionConfig: CompactionConfig | undefined,
+  compactionStatus: CompactionStatus | undefined,
+) {
+  if (compactionStatus) {
+    if (compactionStatus.bytesAwaitingCompaction === 0 && !zeroCompactionStatus(compactionStatus)) {
+      return 'Fully compacted';
+    } else {
+      return capitalizeFirst(compactionStatus.scheduleStatus);
+    }
+  } else if (compactionConfig) {
+    return 'Awaiting first run';
+  } else {
+    return 'Not enabled';
+  }
+}
+
 interface Datasource {
   datasource: string;
   rules: Rule[];
-  compaction: Record<string, any>;
-  compactionStatus: CompactionStatus;
+  compactionConfig?: CompactionConfig;
+  compactionStatus?: CompactionStatus;
   [key: string]: any;
 }
 
@@ -198,7 +226,7 @@ interface RetentionDialogOpenOn {
 
 interface CompactionDialogOpenOn {
   datasource: string;
-  compactionConfig: Record<string, any>;
+  compactionConfig: CompactionConfig;
 }
 
 export interface DatasourcesViewProps {
@@ -264,7 +292,7 @@ export class DatasourcesView extends React.PureComponent<
 FROM sys.segments
 GROUP BY 1`;
 
-  static formatRules(rules: any[]): string {
+  static formatRules(rules: Rule[]): string {
     if (rules.length === 0) {
       return 'No rules';
     } else if (rules.length <= 2) {
@@ -350,7 +378,7 @@ GROUP BY 1`;
           };
         }
 
-        const seen = countBy(datasources, (x: any) => x.datasource);
+        const seen = countBy(datasources, x => x.datasource);
 
         let unused: string[] = [];
         if (this.state.showUnused) {
@@ -365,16 +393,16 @@ GROUP BY 1`;
         const rulesResp = await axios.get('/druid/coordinator/v1/rules');
         const rules = rulesResp.data;
 
-        const compactionResp = await axios.get('/druid/coordinator/v1/config/compaction');
-        const compaction = lookupBy(
-          compactionResp.data.compactionConfigs,
-          (c: any) => c.dataSource,
+        const compactionConfigsResp = await axios.get('/druid/coordinator/v1/config/compaction');
+        const compactionConfigs = lookupBy(
+          compactionConfigsResp.data.compactionConfigs || [],
+          (c: CompactionConfig) => c.dataSource,
         );
 
         const compactionStatusesResp = await axios.get('/druid/coordinator/v1/compaction/status');
         const compactionStatuses = lookupBy(
           compactionStatusesResp.data.latestStatus || [],
-          (c: any) => c.dataSource,
+          (c: CompactionStatus) => c.dataSource,
         );
 
         const allDatasources = (datasources as any).concat(
@@ -382,7 +410,7 @@ GROUP BY 1`;
         );
         allDatasources.forEach((ds: Datasource) => {
           ds.rules = rules[ds.datasource] || [];
-          ds.compaction = compaction[ds.datasource];
+          ds.compactionConfig = compactionConfigs[ds.datasource];
           ds.compactionStatus = compactionStatuses[ds.datasource];
         });
 
@@ -631,7 +659,7 @@ GROUP BY 1`;
     );
   }
 
-  private saveRules = async (datasource: string, rules: any[], comment: string) => {
+  private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
       await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
         headers: {
@@ -721,8 +749,8 @@ GROUP BY 1`;
   getDatasourceActions(
     datasource: string,
     unused: boolean,
-    rules: any[],
-    compactionConfig: Record<string, any>,
+    rules: Rule[],
+    compactionConfig: CompactionConfig,
   ): BasicAction[] {
     const { goToQuery, goToTask, capabilities } = this.props;
 
@@ -900,6 +928,12 @@ GROUP BY 1`;
 
     const replicatedSizeValues = datasources.map(d => formatReplicatedSize(d.replicated_size));
 
+    const leftToBeCompactedValues = datasources.map(d =>
+      d.compactionStatus
+        ? formatLeftToBeCompacted(d.compactionStatus.bytesAwaitingCompaction)
+        : '-',
+    );
+
     return (
       <>
         <ReactTable
@@ -921,8 +955,7 @@ GROUP BY 1`;
               show: hiddenColumns.exists('Datasource name'),
               accessor: 'datasource',
               width: 150,
-              Cell: row => {
-                const value = row.value;
+              Cell: ({ value }) => {
                 return (
                   <a
                     onClick={() => {
@@ -941,14 +974,15 @@ GROUP BY 1`;
               show: hiddenColumns.exists('Availability'),
               id: 'availability',
               filterable: false,
+              minWidth: 200,
               accessor: row => {
                 return {
                   num_available: row.num_available_segments,
                   num_total: row.num_segments,
                 };
               },
-              Cell: row => {
-                const { datasource, num_available_segments, num_segments, unused } = row.original;
+              Cell: ({ original }) => {
+                const { datasource, num_available_segments, num_segments, unused } = original;
 
                 if (unused) {
                   return (
@@ -1006,8 +1040,9 @@ GROUP BY 1`;
               id: 'load-drop',
               accessor: 'num_segments_to_load',
               filterable: false,
-              Cell: row => {
-                const { num_segments_to_load, num_segments_to_drop } = row.original;
+              minWidth: 100,
+              Cell: ({ original }) => {
+                const { num_segments_to_load, num_segments_to_drop } = original;
                 return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
               },
             },
@@ -1017,8 +1052,8 @@ GROUP BY 1`;
               accessor: 'total_data_size',
               filterable: false,
               width: 100,
-              Cell: row => (
-                <BracedText text={formatTotalDataSize(row.value)} braces={totalDataSizeValues} />
+              Cell: ({ value }) => (
+                <BracedText text={formatTotalDataSize(value)} braces={totalDataSizeValues} />
               ),
             },
             {
@@ -1026,18 +1061,18 @@ GROUP BY 1`;
               show: hiddenColumns.exists('Segment size'),
               accessor: 'avg_segment_size',
               filterable: false,
-              width: 200,
-              Cell: row => (
+              width: 150,
+              Cell: ({ value, original }) => (
                 <>
                   <BracedText
-                    text={formatSegmentSize(row.original.min_segment_size)}
+                    text={formatSegmentSize(original.min_segment_size)}
                     braces={minSegmentSizeValues}
                   />{' '}
                   &nbsp;{' '}
-                  <BracedText text={formatSegmentSize(row.value)} braces={avgSegmentSizeValues} />{' '}
+                  <BracedText text={formatSegmentSize(value)} braces={avgSegmentSizeValues} />{' '}
                   &nbsp;{' '}
                   <BracedText
-                    text={formatSegmentSize(row.original.max_segment_size)}
+                    text={formatSegmentSize(original.max_segment_size)}
                     braces={maxSegmentSizeValues}
                   />
                 </>
@@ -1049,8 +1084,8 @@ GROUP BY 1`;
               accessor: 'total_rows',
               filterable: false,
               width: 100,
-              Cell: row => (
-                <BracedText text={formatTotalRows(row.value)} braces={totalRowsValues} />
+              Cell: ({ value }) => (
+                <BracedText text={formatTotalRows(value)} braces={totalRowsValues} />
               ),
             },
             {
@@ -1059,8 +1094,8 @@ GROUP BY 1`;
               accessor: 'avg_row_size',
               filterable: false,
               width: 100,
-              Cell: row => (
-                <BracedText text={formatAvgRowSize(row.value)} braces={avgRowSizeValues} />
+              Cell: ({ value }) => (
+                <BracedText text={formatAvgRowSize(value)} braces={avgRowSizeValues} />
               ),
             },
             {
@@ -1069,8 +1104,8 @@ GROUP BY 1`;
               accessor: 'replicated_size',
               filterable: false,
               width: 100,
-              Cell: row => (
-                <BracedText text={formatReplicatedSize(row.value)} braces={replicatedSizeValues} />
+              Cell: ({ value }) => (
+                <BracedText text={formatReplicatedSize(value)} braces={replicatedSizeValues} />
               ),
             },
             {
@@ -1079,30 +1114,22 @@ GROUP BY 1`;
               id: 'compactionStatus',
               accessor: row => Boolean(row.compactionStatus),
               filterable: false,
-              Cell: row => {
-                const { compaction } = row.original;
-                const compactionStatus: CompactionStatus = row.original.compactionStatus;
-                let text: string;
-                if (compactionStatus) {
-                  text = `${compactionStatus.scheduleStatus} [${formatBytes(
-                    compactionStatus.bytesAwaitingCompaction,
-                  )}]`;
-                } else {
-                  text = 'Not enabled';
-                }
+              width: 150,
+              Cell: ({ original }) => {
+                const { datasource, compactionConfig, compactionStatus } = original;
                 return (
                   <span
                     className="clickable-cell"
                     onClick={() =>
                       this.setState({
                         compactionDialogOpenOn: {
-                          datasource: row.original.datasource,
-                          compactionConfig: compaction,
+                          datasource,
+                          compactionConfig,
                         },
                       })
                     }
                   >
-                    {text}&nbsp;
+                    {formatCompactionConfigAndStatus(compactionConfig, compactionStatus)}&nbsp;
                     <ActionIcon icon={IconNames.EDIT} />
                   </span>
                 );
@@ -1112,7 +1139,7 @@ GROUP BY 1`;
               Header: twoLines('% Compacted', 'bytes / segments / intervals'),
               show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('% Compacted'),
               id: 'percentCompacted',
-              width: 180,
+              width: 200,
               accessor: ({ compactionStatus }) =>
                 compactionStatus && compactionStatus.bytesCompacted
                   ? compactionStatus.bytesCompacted /
@@ -1123,27 +1150,72 @@ GROUP BY 1`;
                 const { compactionStatus } = original;
 
                 if (!compactionStatus || zeroCompactionStatus(compactionStatus)) {
-                  return '-';
+                  return (
+                    <>
+                      <BracedText text="-" braces={PERCENT_BRACES} /> &nbsp;{' '}
+                      <BracedText text="-" braces={PERCENT_BRACES} /> &nbsp;{' '}
+                      <BracedText text="-" braces={PERCENT_BRACES} />
+                    </>
+                  );
                 }
 
-                const percentBytes = progress(
-                  compactionStatus.bytesCompacted,
-                  compactionStatus.bytesAwaitingCompaction,
+                return (
+                  <>
+                    <BracedText
+                      text={formatPercent(
+                        progress(
+                          compactionStatus.bytesCompacted,
+                          compactionStatus.bytesAwaitingCompaction,
+                        ),
+                      )}
+                      braces={PERCENT_BRACES}
+                    />{' '}
+                    &nbsp;{' '}
+                    <BracedText
+                      text={formatPercent(
+                        progress(
+                          compactionStatus.segmentCountCompacted,
+                          compactionStatus.segmentCountAwaitingCompaction,
+                        ),
+                      )}
+                      braces={PERCENT_BRACES}
+                    />{' '}
+                    &nbsp;{' '}
+                    <BracedText
+                      text={formatPercent(
+                        progress(
+                          compactionStatus.intervalCountCompacted,
+                          compactionStatus.intervalCountAwaitingCompaction,
+                        ),
+                      )}
+                      braces={PERCENT_BRACES}
+                    />
+                  </>
                 );
+              },
+            },
+            {
+              Header: twoLines('Left to be', 'compacted'),
+              show:
+                capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Left to be compacted'),
+              id: 'leftToBeCompacted',
+              width: 100,
+              accessor: ({ compactionStatus }) =>
+                (compactionStatus && compactionStatus.bytesAwaitingCompaction) || 0,
+              filterable: false,
+              Cell: ({ original }) => {
+                const { compactionStatus } = original;
 
-                const percentSegments = progress(
-                  compactionStatus.segmentCountCompacted,
-                  compactionStatus.segmentCountAwaitingCompaction,
+                if (!compactionStatus) {
+                  return <BracedText text="-" braces={leftToBeCompactedValues} />;
+                }
+
+                return (
+                  <BracedText
+                    text={formatLeftToBeCompacted(compactionStatus.bytesAwaitingCompaction)}
+                    braces={leftToBeCompactedValues}
+                  />
                 );
-
-                const percentIntervals = progress(
-                  compactionStatus.intervalCountCompacted,
-                  compactionStatus.intervalCountAwaitingCompaction,
-                );
-
-                return `${formatPercent(percentBytes)} ${formatPercent(
-                  percentSegments,
-                )} ${formatPercent(percentIntervals)}`;
               },
             },
             {
@@ -1152,28 +1224,25 @@ GROUP BY 1`;
               id: 'retention',
               accessor: row => row.rules.length,
               filterable: false,
-              Cell: row => {
-                const { rules } = row.original;
-                let text: string;
-                if (rules.length === 0) {
-                  text = 'Cluster default: ' + DatasourcesView.formatRules(defaultRules);
-                } else {
-                  text = DatasourcesView.formatRules(rules);
-                }
-
+              minWidth: 100,
+              Cell: ({ original }) => {
+                const { datasource, rules } = original;
                 return (
                   <span
                     onClick={() =>
                       this.setState({
                         retentionDialogOpenOn: {
-                          datasource: row.original.datasource,
-                          rules: row.original.rules,
+                          datasource,
+                          rules,
                         },
                       })
                     }
                     className="clickable-cell"
                   >
-                    {text}&nbsp;
+                    {rules.length
+                      ? DatasourcesView.formatRules(rules)
+                      : `Cluster default: ${DatasourcesView.formatRules(defaultRules)}`}
+                    &nbsp;
                     <ActionIcon icon={IconNames.EDIT} />
                   </span>
                 );
@@ -1186,9 +1255,8 @@ GROUP BY 1`;
               id: ACTION_COLUMN_ID,
               width: ACTION_COLUMN_WIDTH,
               filterable: false,
-              Cell: row => {
-                const datasource = row.value;
-                const { unused, rules, compaction } = row.original;
+              Cell: ({ value: datasource, original }) => {
+                const { unused, rules, compaction } = original;
                 const datasourceActions = this.getDatasourceActions(
                   datasource,
                   unused,

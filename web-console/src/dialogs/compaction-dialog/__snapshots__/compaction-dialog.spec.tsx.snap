@@ -38,6 +38,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -265,6 +271,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -492,6 +504,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -719,6 +737,12 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
