@@ -16,4 +16,12 @@
  * limitations under the License.
  */
 
+import path from 'path';
+
 export const UNIFIED_CONSOLE_URL = 'http://localhost:8888/unified-console.html';
+export const COORDINATOR_URL = 'http://localhost:8081';
+
+const UTIL_DIR = __dirname;
+const E2E_TEST_DIR = path.dirname(UTIL_DIR);
+const WEB_CONSOLE_DIR = path.dirname(E2E_TEST_DIR);
+export const DRUID_DIR = path.dirname(WEB_CONSOLE_DIR);

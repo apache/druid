@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.data.input.InputRow;
 
 import java.util.List;
 import java.util.Map;
@@ -55,9 +54,6 @@ public interface ShardSpec
 {
   @JsonIgnore
   <T> PartitionChunk<T> createChunk(T obj);
-
-  @JsonIgnore
-  boolean isInChunk(long timestamp, InputRow inputRow);
 
   /**
    * Returns the partition ID of this segment.
