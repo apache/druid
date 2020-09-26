@@ -21,9 +21,12 @@ package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.java.util.metrics.MonitorScheduler;
+
+import java.util.Optional;
 
 public class ShuffleModule implements Module
 {
@@ -31,9 +34,27 @@ public class ShuffleModule implements Module
   public void configure(Binder binder)
   {
     Jerseys.addResource(binder, ShuffleResource.class);
+  }
 
-    binder.bind(ShuffleMetrics.class).in(LazySingleton.class);
-    binder.bind(ShuffleMonitor.class).in(LazySingleton.class);
-    MetricsModule.register(binder, ShuffleMonitor.class);
+  /**
+   * {@link ShuffleMetrics} is used in {@link ShuffleResource} and {@link ShuffleMonitor} to collect metrics
+   * and report them, respectively. Unlike ShuffleResource, ShuffleMonitor can be created via a user config
+   * ({@link org.apache.druid.server.metrics.MonitorsConfig}) in potentially any node types, where it is not
+   * possible to create ShuffleMetrics. This method checks the {@link MonitorScheduler} if ShuffleMonitor is
+   * registered on it, and sets the proper ShuffleMetrics.
+   */
+  @Provides
+  @LazySingleton
+  public Optional<ShuffleMetrics> getShuffleMetrics(MonitorScheduler monitorScheduler)
+  {
+    // ShuffleMonitor cannot be registered dynamically, but can only via the static configuration (MonitorsConfig).
+    // As a result, it is safe to check only one time if it is registered in MonitorScheduler.
+    final Optional<ShuffleMonitor> maybeMonitor = monitorScheduler.findMonitor(ShuffleMonitor.class);
+    if (maybeMonitor.isPresent()) {
+      final ShuffleMetrics metrics = new ShuffleMetrics();
+      maybeMonitor.get().setShuffleMetrics(metrics);
+      return Optional.of(metrics);
+    }
+    return Optional.empty();
   }
 }

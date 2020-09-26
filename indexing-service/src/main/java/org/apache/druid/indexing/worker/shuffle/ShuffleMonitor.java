@@ -19,41 +19,56 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import com.google.inject.Inject;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Map;
 
 public class ShuffleMonitor extends AbstractMonitor
 {
   private static final String SUPERVISOR_TASK_ID_DIMENSION = "supervisorTaskId";
-  private static final String SHUFFLE_BYTES_KEY = "shuffle/bytes";
-  private static final String SHUFFLE_REQUESTS_KEY = "shuffle/requests";
+  private static final String SHUFFLE_BYTES_KEY = "ingest/shuffle/bytes";
+  private static final String SHUFFLE_REQUESTS_KEY = "ingest/shuffle/requests";
 
-  private final ShuffleMetrics shuffleMetrics;
+  /**
+   * ShuffleMonitor can be instantiated in any node types if it is defined in
+   * {@link org.apache.druid.server.metrics.MonitorsConfig}. Since {@link ShuffleMetrics} is defined
+   * in the `indexing-service` module, some node types (such as broker) would fail to create it
+   * if they don't have required dependencies. To avoid this problem, this variable is lazily initialized
+   * only in the node types which has the {@link ShuffleModule}.
+   */
+  @MonotonicNonNull
+  private ShuffleMetrics shuffleMetrics;
 
-  @Inject
-  public ShuffleMonitor(ShuffleMetrics shuffleMetrics)
+  public void setShuffleMetrics(ShuffleMetrics shuffleMetrics)
   {
     this.shuffleMetrics = shuffleMetrics;
+  }
+
+  @Nullable
+  public ShuffleMetrics getShuffleMetrics()
+  {
+    return shuffleMetrics;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
-    snapshot.forEach((supervisorTaskId, perDatasourceShuffleMetrics) -> {
-      final Builder metricBuilder = ServiceMetricEvent
-          .builder()
-          .setDimension(SUPERVISOR_TASK_ID_DIMENSION, supervisorTaskId);
-      emitter.emit(metricBuilder.build(SHUFFLE_BYTES_KEY, perDatasourceShuffleMetrics.getShuffleBytes()));
-      emitter.emit(metricBuilder.build(SHUFFLE_REQUESTS_KEY, perDatasourceShuffleMetrics.getShuffleRequests()));
-    });
-
+    if (shuffleMetrics != null) {
+      final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
+      snapshot.forEach((supervisorTaskId, perDatasourceShuffleMetrics) -> {
+        final Builder metricBuilder = ServiceMetricEvent
+            .builder()
+            .setDimension(SUPERVISOR_TASK_ID_DIMENSION, supervisorTaskId);
+        emitter.emit(metricBuilder.build(SHUFFLE_BYTES_KEY, perDatasourceShuffleMetrics.getShuffleBytes()));
+        emitter.emit(metricBuilder.build(SHUFFLE_REQUESTS_KEY, perDatasourceShuffleMetrics.getShuffleRequests()));
+      });
+    }
     return true;
   }
 }

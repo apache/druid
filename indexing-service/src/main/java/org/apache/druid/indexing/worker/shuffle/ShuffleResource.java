@@ -41,6 +41,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * HTTP endpoints for shuffle system. The MiddleManager and Indexer use this resource to serve intermediary shuffle
@@ -59,10 +60,10 @@ public class ShuffleResource
   private static final Logger log = new Logger(ShuffleResource.class);
 
   private final IntermediaryDataManager intermediaryDataManager;
-  private final ShuffleMetrics shuffleMetrics;
+  private final Optional<ShuffleMetrics> shuffleMetrics;
 
   @Inject
-  public ShuffleResource(IntermediaryDataManager intermediaryDataManager, ShuffleMetrics shuffleMetrics)
+  public ShuffleResource(IntermediaryDataManager intermediaryDataManager, Optional<ShuffleMetrics> shuffleMetrics)
   {
     this.intermediaryDataManager = intermediaryDataManager;
     this.shuffleMetrics = shuffleMetrics;
@@ -97,7 +98,7 @@ public class ShuffleResource
       );
       return Response.status(Status.NOT_FOUND).entity(errorMessage).build();
     } else {
-      shuffleMetrics.shuffleRequested(supervisorTaskId, partitionFile.length());
+      shuffleMetrics.ifPresent(metrics -> metrics.shuffleRequested(supervisorTaskId, partitionFile.length()));
       return Response.ok(
           (StreamingOutput) output -> {
             try (final FileInputStream fileInputStream = new FileInputStream(partitionFile)) {

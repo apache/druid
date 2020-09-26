@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class ShuffleResourceTest
@@ -110,7 +111,7 @@ public class ShuffleResourceTest
     };
     intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     shuffleMetrics = new ShuffleMetrics();
-    shuffleResource = new ShuffleResource(intermediaryDataManager, shuffleMetrics);
+    shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }
 
   @Test
@@ -180,7 +181,7 @@ public class ShuffleResourceTest
     exceptionThrowingManager.deletePartitions(EasyMock.anyString());
     EasyMock.expectLastCall().andThrow(new IOException("test"));
     EasyMock.replay(exceptionThrowingManager);
-    final ShuffleResource shuffleResource = new ShuffleResource(exceptionThrowingManager, shuffleMetrics);
+    final ShuffleResource shuffleResource = new ShuffleResource(exceptionThrowingManager, Optional.of(shuffleMetrics));
 
     final Response response = shuffleResource.deletePartitions("supervisorTask");
     Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
