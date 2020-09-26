@@ -33,6 +33,7 @@ import { UNIFIED_CONSOLE_URL } from './util/druid';
 import { createBrowserNormal as createBrowser } from './util/playwright';
 import { createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
+import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
 
@@ -41,6 +42,7 @@ describe('Tutorial: Loading a file', () => {
   let page: playwright.Page;
 
   beforeAll(async () => {
+    await waitTillWebConsoleReady();
     browser = await createBrowser();
   });
 
