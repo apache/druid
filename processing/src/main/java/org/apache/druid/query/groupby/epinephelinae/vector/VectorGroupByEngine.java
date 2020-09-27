@@ -110,7 +110,7 @@ public class VectorGroupByEngine
                        columnCapabilities.isDictionaryEncoded().isTrue() &&
                        columnCapabilities.areDictionaryValuesUnique().isTrue();
               }
-              return columnCapabilities.hasMultipleValues().isFalse();
+              return columnCapabilities.hasMultipleValues().isFalse() && columnCapabilities.hasNulls().isFalse();
             });
   }
 
