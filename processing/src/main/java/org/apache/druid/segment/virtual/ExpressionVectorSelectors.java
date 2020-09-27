@@ -23,8 +23,11 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.ConstantVectorSelectors;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -38,6 +41,22 @@ public class ExpressionVectorSelectors
     // No instantiation.
   }
 
+  public static SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
+      VectorColumnSelectorFactory factory,
+      Expr expression
+  )
+  {
+    final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
+    Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
+    // only constant expressions are currently supported, nothing else should get here
+
+    if (plan.isConstant()) {
+      String constant = plan.getExpression().eval(ExprUtils.nilBindings()).asString();
+      return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getVectorSizeInspector(), constant);
+    }
+    throw new IllegalStateException("Only constant expressions currently support dimension selectors");
+  }
+
   public static VectorValueSelector makeVectorValueSelector(
       VectorColumnSelectorFactory factory,
       Expr expression
@@ -45,6 +64,13 @@ public class ExpressionVectorSelectors
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
     Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
+
+    if (plan.isConstant()) {
+      return ConstantVectorSelectors.vectorValueSelector(
+          factory.getVectorSizeInspector(),
+          (Number) plan.getExpression().eval(ExprUtils.nilBindings()).value()
+      );
+    }
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
     final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
     return new ExpressionVectorValueSelector(processor, bindings);
@@ -57,6 +83,14 @@ public class ExpressionVectorSelectors
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
     Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
+
+    if (plan.isConstant()) {
+      return ConstantVectorSelectors.vectorObjectSelector(
+          factory.getVectorSizeInspector(),
+          plan.getExpression().eval(ExprUtils.nilBindings()).value()
+      );
+    }
+
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
     final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
     return new ExpressionVectorObjectSelector(processor, bindings);
