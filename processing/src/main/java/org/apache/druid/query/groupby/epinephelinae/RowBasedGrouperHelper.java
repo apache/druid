@@ -833,6 +833,7 @@ public class RowBasedGrouperHelper
 
     private Comparator<Grouper.Entry<RowBasedKey>> objectComparatorWithAggs()
     {
+      // use the actual sort order from the limitspec if pushing down to merge partial results correctly
       final int dimCount = dimensions.size();
       final List<Boolean> needsReverses = new ArrayList<>();
       final List<Boolean> aggFlags = new ArrayList<>();
@@ -841,27 +842,25 @@ public class RowBasedGrouperHelper
       final List<ValueType> fieldValueTypes = new ArrayList<>();
       final Set<Integer> orderByIndices = new HashSet<>();
 
-      if (limitSpec != null) {
-        for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
-          final boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
-          int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
-          if (dimIndex >= 0) {
-            fieldIndices.add(dimIndex);
-            orderByIndices.add(dimIndex);
+      for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
+        final boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
+        int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
+        if (dimIndex >= 0) {
+          fieldIndices.add(dimIndex);
+          orderByIndices.add(dimIndex);
+          needsReverses.add(needsReverse);
+          aggFlags.add(false);
+          final ValueType type = dimensions.get(dimIndex).getOutputType();
+          fieldValueTypes.add(type);
+          comparators.add(orderSpec.getDimensionComparator());
+        } else {
+          int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
+          if (aggIndex >= 0) {
+            fieldIndices.add(aggIndex);
             needsReverses.add(needsReverse);
-            aggFlags.add(false);
-            final ValueType type = dimensions.get(dimIndex).getOutputType();
-            fieldValueTypes.add(type);
+            aggFlags.add(true);
+            fieldValueTypes.add(aggregatorFactories[aggIndex].getType());
             comparators.add(orderSpec.getDimensionComparator());
-          } else {
-            int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
-            if (aggIndex >= 0) {
-              fieldIndices.add(aggIndex);
-              needsReverses.add(needsReverse);
-              aggFlags.add(true);
-              fieldValueTypes.add(aggregatorFactories[aggIndex].getType());
-              comparators.add(orderSpec.getDimensionComparator());
-            }
           }
         }
       }
