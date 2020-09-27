@@ -171,6 +171,11 @@ public enum ExprType
 
   /**
    * Given 2 'input' types, choose the most appropriate combined type, if possible
+   *
+   * arrays must be the same type
+   * if both types are {@link #STRING}, the output type will be preserved as string
+   * if both types are {@link #LONG}, the output type will be preserved as long
+   *
    */
   @Nullable
   public static ExprType operatorAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
@@ -191,14 +196,19 @@ public enum ExprType
       return STRING;
     }
 
+    // otherwise a decimal or integer number
     return numericAutoTypeConversion(type, other);
   }
 
   /**
    * Given 2 'input' types, choose the most appropriate combined type, if possible
+   *
+   * arrays must be the same type
+   * if either type is {@link #STRING}, the output type will be preserved as string
+   * if both types are {@link #LONG}, the output type will be preserved as long, otherwise {@link #DOUBLE}
    */
   @Nullable
-  public static ExprType functionAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExprType doubleMathFunctionAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
   {
     if (type == null || other == null) {
       // cannot auto conversion unknown types
@@ -219,7 +229,40 @@ public enum ExprType
     return numericAutoTypeConversion(type, other);
   }
 
+  /**
+   * Given 2 'input' types, choose the most appropriate combined type, if possible
+   *
+   * arrays must be the same type
+   * if either type is {@link #STRING}, the output type will be preserved as string
+   * any number will be coerced to {@link #LONG}
+   */
   @Nullable
+  public static ExprType integerMathFunctionAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
+  {
+    if (type == null || other == null) {
+      // cannot auto conversion unknown types
+      return null;
+    }
+    // arrays cannot be auto converted
+    if (isArray(type) || isArray(other)) {
+      if (!type.equals(other)) {
+        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+      }
+      return type;
+    }
+    // if either argument is a string, type becomes a string
+    if (STRING.equals(type) || STRING.equals(other)) {
+      return STRING;
+    }
+
+    // any number is long
+    return LONG;
+  }
+
+  /**
+   * Default best effort numeric type conversion. If both types are {@link #LONG}, returns {@link #LONG}, else
+   * {@link #DOUBLE}
+   */
   public static ExprType numericAutoTypeConversion(ExprType type, ExprType other)
   {
     // all numbers win over longs

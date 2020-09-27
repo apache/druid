@@ -36,8 +36,15 @@ public class BuildingHashBasedNumberedShardSpecTest
   public void testConvert()
   {
     Assert.assertEquals(
-        new HashBasedNumberedShardSpec(5, 10, 5, 12, ImmutableList.of("dim"), mapper),
-        new BuildingHashBasedNumberedShardSpec(5, 5, 12, ImmutableList.of("dim"), mapper).convert(10)
+        new HashBasedNumberedShardSpec(5, 10, 5, 12, ImmutableList.of("dim"), HashPartitionFunction.MURMUR3_32_ABS, mapper),
+        new BuildingHashBasedNumberedShardSpec(
+            5,
+            5,
+            12,
+            ImmutableList.of("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
+            mapper
+        ).convert(10)
     );
   }
 
@@ -46,8 +53,14 @@ public class BuildingHashBasedNumberedShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
-        new BuildingHashBasedNumberedShardSpec(5, 5, 12, ImmutableList.of("dim"), mapper)
-            .createChunk("test")
+        new BuildingHashBasedNumberedShardSpec(
+            5,
+            5,
+            12,
+            ImmutableList.of("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
+            mapper
+        ).createChunk("test")
     );
   }
 
@@ -63,6 +76,7 @@ public class BuildingHashBasedNumberedShardSpecTest
         5,
         12,
         ImmutableList.of("dim"),
+        HashPartitionFunction.MURMUR3_32_ABS,
         mapper
     );
     final String json = mapper.writeValueAsString(original);

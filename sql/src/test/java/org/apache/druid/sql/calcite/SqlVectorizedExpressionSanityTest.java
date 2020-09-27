@@ -25,6 +25,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -41,6 +42,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -68,7 +70,18 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
 {
   private static final Logger log = new Logger(SqlVectorizedExpressionSanityTest.class);
 
-  private static final List<String> QUERIES = ImmutableList.of(
+  // cannot vectorize grouping on numeric expressions in group by v2 in sql compatible null handling mode
+  private static final List<String> QUERIES = NullHandling.sqlCompatible() ? ImmutableList.of(
+      "SELECT SUM(long1 * long2) FROM foo",
+      "SELECT SUM((long1 * long2) / double1) FROM foo",
+      "SELECT SUM(float3 + ((long1 * long4)/double1)) FROM foo",
+      "SELECT SUM(long5 - (float3 + ((long1 * long4)/double1))) FROM foo",
+      "SELECT cos(double2) FROM foo",
+      "SELECT SUM(-long4) FROM foo",
+      "SELECT SUM(PARSE_LONG(string1)) FROM foo",
+      "SELECT SUM(PARSE_LONG(string3)) FROM foo",
+      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
+  ) : ImmutableList.of(
       "SELECT SUM(long1 * long2) FROM foo",
       "SELECT SUM((long1 * long2) / double1) FROM foo",
       "SELECT SUM(float3 + ((long1 * long4)/double1)) FROM foo",
@@ -97,6 +110,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @BeforeClass
   public static void setupClass()
   {
+    Calcites.setSystemProperties();
     CLOSER = Closer.create();
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
@@ -165,8 +179,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException, RelConversionException, SqlParseException
   {
-    final Map<String, Object> vector = ImmutableMap.of("vectorize", true);
-    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", false);
+    final Map<String, Object> vector = ImmutableMap.of("vectorize", "force");
+    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", "false");
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
 

@@ -99,6 +99,17 @@ $nav-width: 250px;
         width: 100%;
         height: 100%;
       }
+
+      .init-state {
+        background: #232d35;
+        text-align: center;
+
+        p {
+          position: relative;
+          top: 38%;
+          font-size: 14px;
+        }
+      }
     }
   }
 

@@ -121,6 +121,7 @@ public class CompactSegmentsTest
                 bucketId,
                 numBuckets,
                 ImmutableList.of("dim"),
+                null,
                 JSON_MAPPER
             )
         },
