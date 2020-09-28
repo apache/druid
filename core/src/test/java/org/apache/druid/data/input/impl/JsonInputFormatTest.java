@@ -69,7 +69,7 @@ public class JsonInputFormatTest
               new ObjectMapper(),
               new ObjectMapper()
               )
-              .withIgnoredFields("objectMapper")
+              .withIgnoredFields("objectMapper", "lineSplittable")
               .verify();
   }
 }
