@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -45,6 +47,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       final SingleValueDimensionVectorSelector selector
   )
   {
+    Preconditions.checkArgument(ValueType.STRING == capabilities.getType());
     return new SingleValueStringGroupByVectorColumnSelector(selector);
   }
 
@@ -54,6 +57,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       final MultiValueDimensionVectorSelector selector
   )
   {
+    Preconditions.checkArgument(ValueType.STRING == capabilities.getType());
     throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
   }
 
