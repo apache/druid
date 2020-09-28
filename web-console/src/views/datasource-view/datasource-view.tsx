@@ -42,8 +42,11 @@ import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-acti
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
+  CompactionConfig,
+  CompactionStatus,
   countBy,
   formatBytes,
+  formatCompactionConfigAndStatus,
   formatInteger,
   formatMegabytes,
   formatPercent,
@@ -54,6 +57,7 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  zeroCompactionStatus,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
@@ -138,58 +142,7 @@ function progress(done: number, awaiting: number): number {
   return done / d;
 }
 
-function capitalizeFirst(str: string): string {
-  return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
-}
-
 const PERCENT_BRACES = ['100.00%'];
-
-interface CompactionStatus {
-  dataSource: string;
-  scheduleStatus: string;
-  bytesAwaitingCompaction: number;
-  bytesCompacted: number;
-  bytesSkipped: number;
-  segmentCountAwaitingCompaction: number;
-  segmentCountCompacted: number;
-  segmentCountSkipped: number;
-  intervalCountAwaitingCompaction: number;
-  intervalCountCompacted: number;
-  intervalCountSkipped: number;
-}
-
-function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
-  return (
-    !compactionStatus.bytesAwaitingCompaction &&
-    !compactionStatus.bytesCompacted &&
-    !compactionStatus.bytesSkipped &&
-    !compactionStatus.segmentCountAwaitingCompaction &&
-    !compactionStatus.segmentCountCompacted &&
-    !compactionStatus.segmentCountSkipped &&
-    !compactionStatus.intervalCountAwaitingCompaction &&
-    !compactionStatus.intervalCountCompacted &&
-    !compactionStatus.intervalCountSkipped
-  );
-}
-
-type CompactionConfig = Record<string, any>;
-
-function formatCompactionConfigAndStatus(
-  compactionConfig: CompactionConfig | undefined,
-  compactionStatus: CompactionStatus | undefined,
-) {
-  if (compactionStatus) {
-    if (compactionStatus.bytesAwaitingCompaction === 0 && !zeroCompactionStatus(compactionStatus)) {
-      return 'Fully compacted';
-    } else {
-      return capitalizeFirst(compactionStatus.scheduleStatus);
-    }
-  } else if (compactionConfig) {
-    return 'Awaiting first run';
-  } else {
-    return 'Not enabled';
-  }
-}
 
 interface Datasource {
   datasource: string;

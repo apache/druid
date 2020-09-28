@@ -24,3 +24,4 @@ export * from './query-manager';
 export * from './query-cursor';
 export * from './local-storage-keys';
 export * from './column-metadata';
+export * from './compaction';
