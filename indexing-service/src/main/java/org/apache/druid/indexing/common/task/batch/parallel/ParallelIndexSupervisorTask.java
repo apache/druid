@@ -466,13 +466,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
   }
 
+  public static boolean isParallelMode(InputSource inputSource, @Nullable ParallelIndexTuningConfig tuningConfig)
+  {
+    if (null == tuningConfig) {
+      return false;
+    }
+    boolean useRangePartitions = tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    // Range partitioning is not implemented for runSequential() (but hash partitioning is)
+    int minRequiredNumConcurrentSubTasks = useRangePartitions ? 1 : 2;
+    return inputSource.isSplittable() && tuningConfig.getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+  }
+
   private boolean isParallelMode()
   {
-    // Range partitioning is not implemented for runSequential() (but hash partitioning is)
-    int minRequiredNumConcurrentSubTasks = useRangePartitions() ? 1 : 2;
-
-    return baseInputSource.isSplittable()
-           && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+    return isParallelMode(baseInputSource, ingestionSchema.getTuningConfig());
   }
 
   private boolean useRangePartitions()

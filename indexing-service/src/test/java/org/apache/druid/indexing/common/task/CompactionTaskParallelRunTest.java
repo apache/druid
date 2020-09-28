@@ -220,6 +220,37 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
+  public void testRunParallelWithRangePartitioningWithSingleTask()
+  {
+    // Range partitioning is not supported with segment lock yet
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+    runIndexTask(null, true);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        getSegmentLoaderFactory(),
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .tuningConfig(newTuningConfig(new SingleDimensionPartitionsSpec(7, null, "dim", false), 1, true))
+        .build();
+
+    final Set<DataSegment> compactedSegments = runTask(compactionTask);
+    final CompactionState expectedState = new CompactionState(
+        new SingleDimensionPartitionsSpec(7, null, "dim", false),
+        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
+    );
+    for (DataSegment segment : compactedSegments) {
+      // Expecte compaction state to exist as store compaction state by default
+      Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+      Assert.assertEquals(expectedState, segment.getLastCompactionState());
+    }
+  }
+
+  @Test
   public void testRunCompactionStateNotStoreIfContextSetToFalse()
   {
     runIndexTask(null, true);

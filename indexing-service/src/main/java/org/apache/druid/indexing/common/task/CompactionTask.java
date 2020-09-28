@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -361,9 +362,13 @@ public class CompactionTask extends AbstractBatchIndexTask
           // a new Appenderator on its own instead. As a result, they should use different sequence names to allocate
           // new segmentIds properly. See IndexerSQLMetadataStorageCoordinator.allocatePendingSegments() for details.
           // In this case, we use different fake IDs for each created index task.
-          final String subtaskId = tuningConfig == null || tuningConfig.getMaxNumConcurrentSubTasks() == 1
-                                   ? createIndexTaskSpecId(i)
-                                   : getId();
+          ParallelIndexIngestionSpec ingestionSpec = ingestionSpecs.get(i);
+          InputSource inputSource = ingestionSpec.getIOConfig().getNonNullInputSource(
+              ingestionSpec.getDataSchema().getParser()
+          );
+          final String subtaskId = ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig)
+                                   ? getId()
+                                   : createIndexTaskSpecId(i);
           return newTask(subtaskId, ingestionSpecs.get(i));
         })
         .collect(Collectors.toList());
