@@ -345,6 +345,16 @@ libraries:
 
 ---
 
+name: CronScheduler
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.1
+libraries:
+  - io.timeandspace: cron-scheduler
+
+---
+
 name: LMAX Disruptor
 license_category: binary
 module: java-core
