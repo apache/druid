@@ -378,7 +378,11 @@ public class VectorizedVirtualColumnTest
   {
     cannotVectorize();
     testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        new ColumnCapabilitiesImpl()
+            .setType(ValueType.STRING)
+            .setDictionaryEncoded(true)
+            .setDictionaryValuesUnique(true)
+            .setHasMultipleValues(false),
         CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
         false
     );
