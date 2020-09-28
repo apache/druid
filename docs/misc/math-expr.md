@@ -223,7 +223,7 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* comparison operators: `=`, `!=`, >`, `>=`, `<`, `<=` are supported for numeric types
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
 * other: `parse_long` is supported for numeric and string types
