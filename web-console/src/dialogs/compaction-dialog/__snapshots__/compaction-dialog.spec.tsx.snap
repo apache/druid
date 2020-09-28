@@ -442,7 +442,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
         text="Close"
       />
       <Blueprint3.Button
-        disabled={true}
+        disabled={false}
         intent="primary"
         onClick={[Function]}
         text="Submit"
