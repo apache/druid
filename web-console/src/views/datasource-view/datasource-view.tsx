@@ -142,7 +142,7 @@ function progress(done: number, awaiting: number): number {
   return done / d;
 }
 
-const PERCENT_BRACES = ['100.00%'];
+const PERCENT_BRACES = [formatPercent(1)];
 
 interface Datasource {
   datasource: string;
