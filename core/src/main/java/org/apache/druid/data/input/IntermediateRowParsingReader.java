@@ -19,10 +19,13 @@
 
 package org.apache.druid.data.input;
 
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -96,23 +99,35 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
     return intermediateRowIterator().map(row -> {
-      final Map<String, Object> rawColumns;
+
+      final List<Map<String, Object>> rawColumnsList;
       try {
-        rawColumns = toMap(row);
+        rawColumnsList = toMap(row);
       }
       catch (Exception e) {
-        return InputRowListPlusRawValues.of(null, new ParseException(e, "Unable to parse row [%s] into JSON", row));
+        return Collections.singletonList(InputRowListPlusRawValues.of(null,
+                                                                      new ParseException(e, "Unable to parse row [%s] into JSON", row)));
       }
+
+      List<InputRow> rows;
       try {
-        return InputRowListPlusRawValues.of(parseInputRows(row), rawColumns);
+        rows = parseInputRows(row);
       }
       catch (ParseException e) {
-        return InputRowListPlusRawValues.of(rawColumns, e);
+        return Collections.singletonList(InputRowListPlusRawValues.of(rawColumnsList.isEmpty() ? null : rawColumnsList.get(0), e));
       }
       catch (IOException e) {
-        return InputRowListPlusRawValues.of(rawColumns, new ParseException(e, "Unable to parse row [%s] into inputRow", row));
+        return Collections.singletonList(InputRowListPlusRawValues.of(rawColumnsList.isEmpty() ? null : rawColumnsList.get(0),
+                                                                      new ParseException(e, "Unable to parse row [%s] into inputRow", row)));
       }
-    });
+
+      List<InputRowListPlusRawValues> list = new ArrayList<InputRowListPlusRawValues>();
+      for (int i = 0; i < Math.min(rows.size(), rawColumnsList.size()); i++) {
+        list.add(InputRowListPlusRawValues.of(rows.get(i), rawColumnsList.get(i)));
+      }
+      return list;
+
+    }).flatMap(list -> CloseableIterators.withEmptyBaggage(list.iterator()));
   }
 
   /**
@@ -123,7 +138,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
 
   /**
    * Parses the given intermediate row into a list of {@link InputRow}s.
-   * This should return a non-empty list.
+   * This should return a non-empty list
    *
    * @throws ParseException if it cannot parse the given intermediateRow properly
    */
@@ -132,6 +147,43 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   /**
    * Converts the given intermediate row into a {@link Map}. The returned JSON will be used by InputSourceSampler.
    * Implementations can use any method to convert the given row into a Map.
+   *
+   * This should return a non-empty list with the same size of the list returned by {@link #parseInputRows}
    */
-  protected abstract Map<String, Object> toMap(T intermediateRow) throws IOException;
+  protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
+
+  private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
+  {
+    private final Exception exception;
+
+    private boolean thrown = false;
+
+    private ExceptionThrowingIterator(Exception exception)
+    {
+      this.exception = exception;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return !thrown;
+    }
+
+    @Override
+    public InputRow next()
+    {
+      thrown = true;
+      if (exception instanceof RuntimeException) {
+        throw (RuntimeException) exception;
+      } else {
+        throw new RuntimeException(exception);
+      }
+    }
+
+    @Override
+    public void close()
+    {
+      // do nothing
+    }
+  }
 }

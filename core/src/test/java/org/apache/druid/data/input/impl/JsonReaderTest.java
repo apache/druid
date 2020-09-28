@@ -31,14 +31,20 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Collections;
 
 public class JsonReaderTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testParseMultipleRows() throws IOException
   {
@@ -208,32 +214,17 @@ public class JsonReaderTest
         null
     );
 
-    // the 2nd line is ill-formed, it stops to iterate to the 3rd line.
-    // So in total, only 1 lines has been parsed
-    final int numExpectedIterations = 1;
+    //expect a ParseException on the following `next` call on iterator
+    expectedException.expect(ParseException.class);
+
+    // the 2nd line is ill-formed, so the parse of this text chunk aborts
+    final int numExpectedIterations = 0;
 
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       int numActualIterations = 0;
       while (iterator.hasNext()) {
-
-        try {
-          final InputRow row = iterator.next();
-
-          final String msgId = String.valueOf(++numActualIterations);
-          Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
-
-          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        }
-        catch (Exception e) {
-          //ignore the exception when parsing the 2nd
-        }
+        iterator.next();
+        ++numActualIterations;
       }
 
       Assert.assertEquals(numExpectedIterations, numActualIterations);

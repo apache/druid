@@ -72,10 +72,10 @@ public class JsonLineReader extends TextReader
   }
 
   @Override
-  public Map<String, Object> toMap(String intermediateRow) throws IOException
+  public List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
     //noinspection unchecked
-    return mapper.readValue(intermediateRow, Map.class);
+    return Collections.singletonList(mapper.readValue(intermediateRow, Map.class));
   }
 
   @Override
