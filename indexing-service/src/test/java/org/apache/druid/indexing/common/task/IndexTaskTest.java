@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -50,8 +49,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -72,6 +69,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -87,6 +86,7 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -235,12 +235,20 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, segments.get(0).getShardSpec().getNumCorePartitions());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, segments.get(1).getShardSpec().getNumCorePartitions());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
+    );
   }
 
   @Test
@@ -484,6 +492,52 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
+  }
+
+  @Test
+  public void testNumShardsAndHashPartitionFunctionProvided() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            null,
+            null,
+            createTuningConfigWithPartitionsSpec(
+                new HashedPartitionsSpec(null, 1, null, HashPartitionFunction.MURMUR3_32_ABS), true
+            ),
+            false
+        ),
+        null
+    );
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
   }
 
   @Test
@@ -520,6 +574,8 @@ public class IndexTaskTest extends IngestionTestBase
       Assert.assertEquals("test", segment.getDataSource());
       Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
       Assert.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+      final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+      Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
       final File segmentFile = segmentLoader.getSegmentFiles(segment);
 
@@ -540,17 +596,15 @@ public class IndexTaskTest extends IngestionTestBase
           .map(cursor -> {
             final DimensionSelector selector = cursor.getColumnSelectorFactory()
                                                      .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-            try {
-              final int hash = HashBasedNumberedShardSpec.hash(
-                  jsonMapper,
-                  Collections.singletonList(selector.getObject())
-              );
-              cursor.advance();
-              return hash;
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
+            final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+                HashBasedNumberedShardSpec.serializeGroupKey(
+                    jsonMapper,
+                    Collections.singletonList(selector.getObject())
+                ),
+                hashBasedNumberedShardSpec.getNumBuckets()
+            );
+            cursor.advance();
+            return hash;
           })
           .toList();
 
@@ -1030,7 +1084,7 @@ public class IndexTaskTest extends IngestionTestBase
         RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
-        Collections.singletonList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
+        Collections.singletonList("Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1}")
     );
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
@@ -1151,19 +1205,19 @@ public class IndexTaskTest extends IngestionTestBase
         RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=4.0, val=notnumber}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [Unable to parse value[notnumber] for field[val],]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=notnumber, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to float,]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,]",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         )
     );
 
@@ -1281,9 +1335,9 @@ public class IndexTaskTest extends IngestionTestBase
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         )
     );
 
@@ -1399,9 +1453,9 @@ public class IndexTaskTest extends IngestionTestBase
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         new ArrayList<>()
@@ -1554,7 +1608,7 @@ public class IndexTaskTest extends IngestionTestBase
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
         Collections.singletonList(
-            "Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
+            "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
@@ -1697,7 +1751,7 @@ public class IndexTaskTest extends IngestionTestBase
     // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
     Assert.assertThat(
         status.getErrorMsg(),
-        CoreMatchers.containsString("Max parse exceptions exceeded")
+        CoreMatchers.containsString("Max parse exceptions")
     );
   }
 

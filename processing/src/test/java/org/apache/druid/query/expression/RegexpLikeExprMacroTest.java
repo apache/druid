@@ -22,7 +22,6 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,7 +52,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_like(a, 'f.o')", Parser.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.of(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -63,7 +62,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_like(a, 'f.x')", Parser.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.of(false, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(false).value(),
         result.value()
     );
   }
@@ -77,7 +76,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval("regexp_like(a, null)", Parser.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.of(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -87,7 +86,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_like(a, '')", Parser.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.of(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -101,7 +100,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval("regexp_like(a, null)", Parser.withMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
-        ExprEval.of(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -111,7 +110,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_like(a, '')", Parser.withMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
-        ExprEval.of(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -125,7 +124,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval("regexp_like(a, null)", Parser.withSuppliers(ImmutableMap.of("a", () -> null)));
     Assert.assertEquals(
-        ExprEval.of(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -135,7 +134,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_like(a, '')", Parser.withSuppliers(ImmutableMap.of("a", () -> null)));
     Assert.assertEquals(
-        ExprEval.of(NullHandling.replaceWithDefault(), ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(NullHandling.replaceWithDefault()).value(),
         result.value()
     );
   }

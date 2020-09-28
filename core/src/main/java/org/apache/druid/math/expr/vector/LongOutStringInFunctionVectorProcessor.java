@@ -17,9 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.stats;
+package org.apache.druid.math.expr.vector;
 
-public interface RowIngestionMetersFactory
+import org.apache.druid.math.expr.ExprType;
+
+/**
+ * specialized {@link UnivariateFunctionVectorObjectProcessor} for processing (String[]) -> long[]
+ */
+public abstract class LongOutStringInFunctionVectorProcessor
+    extends UnivariateFunctionVectorObjectProcessor<String[], long[]>
 {
-  RowIngestionMeters createRowIngestionMeters();
+  public LongOutStringInFunctionVectorProcessor(ExprVectorProcessor<String[]> processor, int maxVectorSize)
+  {
+    super(processor, maxVectorSize, new long[maxVectorSize]);
+  }
+
+  @Override
+  public ExprType getOutputType()
+  {
+    return ExprType.LONG;
+  }
+
+  @Override
+  public final ExprEvalVector<long[]> asEval()
+  {
+    return new ExprEvalLongVector(outValues, outNulls);
+  }
 }

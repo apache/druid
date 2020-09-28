@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -77,6 +78,18 @@ class LambdaExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return expr.canVectorize(inputTypes);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return expr.buildVectorized(inputTypes);
+  }
+
+  @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return expr.eval(bindings);
@@ -105,11 +118,17 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
-    BindingDetails bodyDetails = expr.analyzeInputs();
+    BindingAnalysis bodyDetails = expr.analyzeInputs();
     return bodyDetails.removeLambdaArguments(lambdaArgs);
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return expr.getOutputType(inputTypes);
   }
 
   @Override
@@ -165,6 +184,18 @@ class FunctionExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return function.canVectorize(inputTypes, args);
+  }
+
+  @Override
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return function.asVectorProcessor(inputTypes, args);
+  }
+
+  @Override
   public String stringify()
   {
     return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
@@ -187,9 +218,9 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    BindingDetails accumulator = new BindingDetails();
+    BindingAnalysis accumulator = new BindingAnalysis();
 
     for (Expr arg : args) {
       accumulator = accumulator.with(arg);
@@ -198,6 +229,12 @@ class FunctionExpr implements Expr
                       .withArrayArguments(function.getArrayInputs(args))
                       .withArrayInputs(function.hasArrayInputs())
                       .withArrayOutput(function.hasArrayOutput());
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return function.getOutputType(inputTypes, args);
   }
 
   @Override
@@ -232,9 +269,9 @@ class ApplyFunctionExpr implements Expr
   final String name;
   final LambdaExpr lambdaExpr;
   final ImmutableList<Expr> argsExpr;
-  final BindingDetails bindingDetails;
-  final BindingDetails lambdaBindingDetails;
-  final ImmutableList<BindingDetails> argsBindingDetails;
+  final BindingAnalysis bindingAnalysis;
+  final BindingAnalysis lambdaBindingAnalysis;
+  final ImmutableList<BindingAnalysis> argsBindingAnalyses;
 
   ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
@@ -247,21 +284,21 @@ class ApplyFunctionExpr implements Expr
 
     // apply function expressions are examined during expression selector creation, so precompute and cache the
     // binding details of children
-    ImmutableList.Builder<BindingDetails> argBindingDetailsBuilder = ImmutableList.builder();
-    BindingDetails accumulator = new BindingDetails();
+    ImmutableList.Builder<BindingAnalysis> argBindingDetailsBuilder = ImmutableList.builder();
+    BindingAnalysis accumulator = new BindingAnalysis();
     for (Expr arg : argsExpr) {
-      BindingDetails argDetails = arg.analyzeInputs();
+      BindingAnalysis argDetails = arg.analyzeInputs();
       argBindingDetailsBuilder.add(argDetails);
       accumulator = accumulator.with(argDetails);
     }
 
-    lambdaBindingDetails = lambdaExpr.analyzeInputs();
+    lambdaBindingAnalysis = lambdaExpr.analyzeInputs();
 
-    bindingDetails = accumulator.with(lambdaBindingDetails)
-                                .withArrayArguments(function.getArrayInputs(argsExpr))
-                                .withArrayInputs(true)
-                                .withArrayOutput(function.hasArrayOutput(lambdaExpr));
-    argsBindingDetails = argBindingDetailsBuilder.build();
+    bindingAnalysis = accumulator.with(lambdaBindingAnalysis)
+                                 .withArrayArguments(function.getArrayInputs(argsExpr))
+                                 .withArrayInputs(true)
+                                 .withArrayOutput(function.hasArrayOutput(lambdaExpr));
+    argsBindingAnalyses = argBindingDetailsBuilder.build();
   }
 
   @Override
@@ -274,6 +311,20 @@ class ApplyFunctionExpr implements Expr
   public ExprEval eval(ObjectBinding bindings)
   {
     return function.apply(lambdaExpr, argsExpr, bindings);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return function.canVectorize(inputTypes, lambdaExpr, argsExpr) &&
+           lambdaExpr.canVectorize(inputTypes) &&
+           argsExpr.stream().allMatch(expr -> expr.canVectorize(inputTypes));
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return function.asVectorProcessor(inputTypes, lambdaExpr, argsExpr);
   }
 
   @Override
@@ -306,9 +357,16 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    return bindingDetails;
+    return bindingAnalysis;
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return function.getOutputType(inputTypes, lambdaExpr, argsExpr);
   }
 
   @Override

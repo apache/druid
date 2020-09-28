@@ -39,7 +39,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-@Test(groups = {TestNGGroup.OTHER_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
+@Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITCompactionTaskTest extends AbstractIndexerTest
 {

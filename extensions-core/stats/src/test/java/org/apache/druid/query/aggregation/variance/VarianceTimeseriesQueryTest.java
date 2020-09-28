@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -46,31 +47,32 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    // Use TimeseriesQueryRunnerTest's constructorFeeder, but remove vectorized tests, since this aggregator
-    // can't vectorize yet.
     return StreamSupport.stream(TimeseriesQueryRunnerTest.constructorFeeder().spliterator(), false)
-                        .filter(constructor -> !((boolean) constructor[2]) /* !vectorize */)
-                        .map(constructor -> new Object[]{constructor[0], constructor[1], constructor[3]})
+                        .map(constructor -> new Object[]{constructor[0], constructor[1], constructor[2], constructor[3]})
                         .collect(Collectors.toList());
   }
 
   private final QueryRunner runner;
   private final boolean descending;
+  private final Druids.TimeseriesQueryBuilder queryBuilder;
 
   public VarianceTimeseriesQueryTest(
       QueryRunner runner,
       boolean descending,
+      boolean vectorize,
       List<AggregatorFactory> aggregatorFactories
   )
   {
     this.runner = runner;
     this.descending = descending;
+    this.queryBuilder = Druids.newTimeseriesQueryBuilder()
+                              .context(ImmutableMap.of("vectorize", vectorize ? "force" : "false"));
   }
 
   @Test
   public void testTimeseriesWithNullFilterOnNonExistentDimension()
   {
-    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+    TimeseriesQuery query = queryBuilder
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.DAY_GRAN)
                                   .filters("bobby", null)

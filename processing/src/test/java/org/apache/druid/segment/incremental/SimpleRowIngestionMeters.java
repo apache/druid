@@ -17,53 +17,74 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.stats;
+package org.apache.druid.segment.incremental;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 
-public class RowIngestionMetersTotals
+public class SimpleRowIngestionMeters implements RowIngestionMeters
 {
-  private final long processed;
-  private final long processedWithError;
-  private final long thrownAway;
-  private final long unparseable;
+  private long processed;
+  private long processedWithError;
+  private long unparseable;
+  private long thrownAway;
 
-  @JsonCreator
-  public RowIngestionMetersTotals(
-      @JsonProperty("processed") long processed,
-      @JsonProperty("processedWithError") long processedWithError,
-      @JsonProperty("thrownAway") long thrownAway,
-      @JsonProperty("unparseable") long unparseable
-  )
-  {
-    this.processed = processed;
-    this.processedWithError = processedWithError;
-    this.thrownAway = thrownAway;
-    this.unparseable = unparseable;
-  }
-
-  @JsonProperty
+  @Override
   public long getProcessed()
   {
     return processed;
   }
 
-  @JsonProperty
+  @Override
+  public void incrementProcessed()
+  {
+    processed++;
+  }
+
+  @Override
   public long getProcessedWithError()
   {
     return processedWithError;
   }
 
-  @JsonProperty
+  @Override
+  public void incrementProcessedWithError()
+  {
+    processedWithError++;
+  }
+
+  @Override
+  public long getUnparseable()
+  {
+    return unparseable;
+  }
+
+  @Override
+  public void incrementUnparseable()
+  {
+    unparseable++;
+  }
+
+  @Override
   public long getThrownAway()
   {
     return thrownAway;
   }
 
-  @JsonProperty
-  public long getUnparseable()
+  @Override
+  public void incrementThrownAway()
   {
-    return unparseable;
+    thrownAway++;
+  }
+
+  @Override
+  public RowIngestionMetersTotals getTotals()
+  {
+    return new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable);
+  }
+
+  @Override
+  public Map<String, Object> getMovingAverages()
+  {
+    throw new UnsupportedOperationException();
   }
 }

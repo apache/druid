@@ -57,6 +57,8 @@ exports.SQL_EXPRESSION_PARTS = [
   'AND',
   'NOT',
   'IN',
+  'ANY',
+  'SOME',
   'IS',
   'TO',
   'BETWEEN',

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -74,6 +75,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         {new HashedPartitionsSpec(3, null, null)},
         {new HashedPartitionsSpec(null, 3, ImmutableList.of("page"))},
         {new HashedPartitionsSpec(null, 3, ImmutableList.of("page", "user"))},
+        {new HashedPartitionsSpec(null, 3, ImmutableList.of("page"), HashPartitionFunction.MURMUR3_32_ABS)},
         {new SingleDimensionPartitionsSpec(1000, null, null, false)},
         {new SingleDimensionPartitionsSpec(1000, null, "page", false)},
         {new SingleDimensionPartitionsSpec(1000, null, null, true)},

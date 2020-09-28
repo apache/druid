@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +47,7 @@ public class GenericPartitionStatTest
             ParallelIndexTestingFactory.PARTITION_ID,
             ParallelIndexTestingFactory.PARTITION_ID + 1,
             Collections.singletonList("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
             new ObjectMapper()
         ),
         ParallelIndexTestingFactory.NUM_ROWS,

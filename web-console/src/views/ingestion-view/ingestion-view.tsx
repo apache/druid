@@ -52,6 +52,7 @@ import {
   localStorageSet,
   queryDruidSql,
   QueryManager,
+  QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Capabilities } from '../../utils/capabilities';
@@ -113,9 +114,7 @@ export interface IngestionViewProps {
 }
 
 export interface IngestionViewState {
-  supervisorsLoading: boolean;
-  supervisors?: SupervisorQueryResultRow[];
-  supervisorsError?: string;
+  supervisorsState: QueryState<SupervisorQueryResultRow[]>;
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
@@ -126,9 +125,7 @@ export interface IngestionViewState {
   showSuspendAllSupervisors: boolean;
   showTerminateAllSupervisors: boolean;
 
-  tasksLoading: boolean;
-  tasks?: TaskQueryResultRow[];
-  tasksError?: string;
+  tasksState: QueryState<TaskQueryResultRow[]>;
 
   taskFilter: Filter[];
   supervisorFilter: Filter[];
@@ -223,14 +220,13 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
 
     this.state = {
-      supervisorsLoading: true,
-      supervisors: [],
+      supervisorsState: QueryState.INIT,
 
       showResumeAllSupervisors: false,
       showSuspendAllSupervisors: false,
       showTerminateAllSupervisors: false,
 
-      tasksLoading: true,
+      tasksState: QueryState.INIT,
       taskFilter: taskFilter,
       supervisorFilter: supervisorFilter,
 
@@ -274,11 +270,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           throw new Error(`must have SQL or overlord access`);
         }
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: supervisorsState => {
         this.setState({
-          supervisors: result,
-          supervisorsLoading: loading,
-          supervisorsError: error,
+          supervisorsState,
         });
       },
     });
@@ -296,11 +290,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           throw new Error(`must have SQL or overlord access`);
         }
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: tasksState => {
         this.setState({
-          tasks: result,
-          tasksLoading: loading,
-          tasksError: error,
+          tasksState,
         });
       },
     });
@@ -559,23 +551,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderSupervisorTable() {
-    const {
-      supervisors,
-      supervisorsLoading,
-      supervisorsError,
-      hiddenSupervisorColumns,
-      taskFilter,
-      supervisorFilter,
-    } = this.state;
+    const { supervisorsState, hiddenSupervisorColumns, taskFilter, supervisorFilter } = this.state;
+
     return (
       <>
         <ReactTable
-          data={supervisors || []}
-          loading={supervisorsLoading}
+          data={supervisorsState.data || []}
+          loading={supervisorsState.loading}
           noDataText={
-            !supervisorsLoading && supervisors && !supervisors.length
-              ? 'No supervisors'
-              : supervisorsError || ''
+            supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
           }
           filtered={supervisorFilter}
           onFilteredChange={filtered => {
@@ -722,9 +706,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   renderTaskTable() {
     const { goToMiddleManager } = this.props;
     const {
-      tasks,
-      tasksLoading,
-      tasksError,
+      tasksState,
       taskFilter,
       groupTasksBy,
       hiddenTaskColumns,
@@ -733,9 +715,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <ReactTable
-          data={tasks || []}
-          loading={tasksLoading}
-          noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : tasksError || ''}
+          data={tasksState.data || []}
+          loading={tasksState.loading}
+          noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {

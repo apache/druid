@@ -375,10 +375,10 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
   public boolean validateBufferCapacity(int bufferCapacity)
   {
-    int numBucketsNeeded = (int) Math.ceil((limit + 1) / maxLoadFactor);
-    int targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
-    int heapSize = (limit + 1) * (Integer.BYTES);
-    int requiredSize = targetTableArenaSize + heapSize;
+    long numBucketsNeeded = (long) Math.ceil((limit + 1) / maxLoadFactor);
+    long targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
+    long heapSize = ((long) limit + 1) * (Integer.BYTES);
+    long requiredSize = targetTableArenaSize + heapSize;
 
     if (bufferCapacity < requiredSize) {
       log.debug(

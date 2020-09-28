@@ -42,6 +42,8 @@ import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -55,6 +57,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class VectorGroupByEngine
@@ -70,22 +73,45 @@ public class VectorGroupByEngine
       @Nullable final Filter filter
   )
   {
-    // Multi-value dimensions are not yet supported.
-    //
-    // Two notes here about how we're handling this check:
-    //   1) After multi-value dimensions are supported, we could alter "GroupByQueryEngineV2.isAllSingleValueDims"
-    //      to accept a ColumnSelectorFactory, which makes more sense than using a StorageAdapter (see #8013).
-    //   2) Technically using StorageAdapter here is bad since it only looks at real columns, but they might
-    //      be shadowed by virtual columns (again, see #8013). But it's fine for now since adapter.canVectorize
-    //      always returns false if there are any virtual columns.
-    //
-    // This situation should sort itself out pretty well once this engine supports multi-valued columns. Then we
-    // won't have to worry about having this all-single-value-dims check here.
+    Function<String, ColumnCapabilities> capabilitiesFunction = name ->
+        query.getVirtualColumns().getColumnCapabilitiesWithFallback(adapter, name);
 
-    return GroupByQueryEngineV2.isAllSingleValueDims(adapter::getColumnCapabilities, query.getDimensions(), true)
+    return canVectorizeDimensions(capabilitiesFunction, query.getDimensions())
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
            && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);
+  }
+
+  public static boolean canVectorizeDimensions(
+      final Function<String, ColumnCapabilities> capabilitiesFunction,
+      final List<DimensionSpec> dimensions
+  )
+  {
+    return dimensions
+        .stream()
+        .allMatch(
+            dimension -> {
+              if (dimension.mustDecorate()) {
+                // group by on multi value dimensions are not currently supported
+                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+                // To be safe, we must return false here.
+                return false;
+              }
+
+              // Now check column capabilities.
+              final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
+              // null here currently means the column does not exist, nil columns can be vectorized
+              if (columnCapabilities == null) {
+                return true;
+              }
+              // strings must be single valued, dictionary encoded, and have unique dictionary entries
+              if (ValueType.STRING.equals(columnCapabilities.getType())) {
+                return columnCapabilities.hasMultipleValues().isFalse() &&
+                       columnCapabilities.isDictionaryEncoded().isTrue() &&
+                       columnCapabilities.areDictionaryValuesUnique().isTrue();
+              }
+              return columnCapabilities.hasMultipleValues().isFalse() && columnCapabilities.hasNulls().isFalse();
+            });
   }
 
   public static Sequence<ResultRow> process(

@@ -33,7 +33,7 @@ import './query-plan-dialog.scss';
 
 export interface QueryPlanDialogProps {
   explainResult?: BasicQueryExplanation | SemiJoinQueryExplanation | string;
-  explainError?: string;
+  explainError?: Error;
   onClose: () => void;
   setQueryString: (queryString: string) => void;
 }
@@ -45,7 +45,7 @@ export const QueryPlanDialog = React.memo(function QueryPlanDialog(props: QueryP
   let queryString: string | undefined;
 
   if (explainError) {
-    content = <div>{explainError}</div>;
+    content = <div>{explainError.message}</div>;
   } else if (!explainResult) {
     content = <div />;
   } else if ((explainResult as BasicQueryExplanation).query) {

@@ -418,7 +418,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     {
       rows.computeIfAbsent(identifier, k -> new ArrayList<>()).add(row);
       numRows++;
-      return new AppenderatorAddResult(identifier, numRows, false, null);
+      return new AppenderatorAddResult(identifier, numRows, false);
     }
 
     @Override

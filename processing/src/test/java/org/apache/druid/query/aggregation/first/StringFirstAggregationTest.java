@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -62,6 +63,7 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
+    NullHandling.initializeForTests();
     stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
     combiningAggFactory = stringFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
@@ -175,24 +177,23 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testStringFirstAggregateCombiner()
   {
-    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(strings);
+    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(pairs);
 
     AggregateCombiner stringFirstAggregateCombiner =
         combiningAggFactory.makeAggregateCombiner();
 
     stringFirstAggregateCombiner.reset(columnSelector);
 
-    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+    Assert.assertEquals(pairs[0], stringFirstAggregateCombiner.getObject());
 
     columnSelector.increment();
     stringFirstAggregateCombiner.fold(columnSelector);
 
-    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+    Assert.assertEquals(pairs[0], stringFirstAggregateCombiner.getObject());
 
     stringFirstAggregateCombiner.reset(columnSelector);
 
-    Assert.assertEquals(strings[1], stringFirstAggregateCombiner.getObject());
+    Assert.assertEquals(pairs[1], stringFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(
