@@ -64,6 +64,8 @@ public class VectorizedVirtualColumnTest
   private static final Map<String, Object> CONTEXT_USE_DEFAULTS = ImmutableMap.of();
   private static final Map<String, Object> CONTEXT_VECTORIZE_FORCE = ImmutableMap.of(
       QueryContexts.VECTORIZE_KEY,
+      "force",
+      QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
       "force"
   );
   private static final Map<String, Object> CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE = ImmutableMap.of(
@@ -308,7 +310,7 @@ public class VectorizedVirtualColumnTest
     testTimeseries(
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
         CONTEXT_USE_DEFAULTS,
-        false
+        true
     );
   }
 

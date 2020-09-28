@@ -623,10 +623,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       queryLogHook.clearRecordedQueries();
 
       final Map<String, Object> theQueryContext = new HashMap<>(queryContext);
-      theQueryContext.put("vectorize", vectorize);
+      theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
+      theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
 
       if (!"false".equals(vectorize)) {
-        theQueryContext.put("vectorSize", 2); // Small vector size to ensure we use more than one.
+        theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
       }
 
       final List<Query> theQueries = new ArrayList<>();
