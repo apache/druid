@@ -64,7 +64,7 @@ import java.util.stream.Collectors;
 
 public class IndexedTableJoinMatcher implements JoinMatcher
 {
-  private static final int NO_CONDITION_MATCH = -1;
+  static final int NO_CONDITION_MATCH = -1;
   private static final int UNINITIALIZED_CURRENT_ROW = -1;
 
   // Key column type to use when the actual key type is unknown.
@@ -190,12 +190,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     if (singleRowMatching) {
       if (conditionMatchers.size() == 1) {
-        currentRow = conditionMatchers.get(0).singleRowMatch();
+        currentRow = conditionMatchers.get(0).matchSingleRow();
       } else {
-        currentRow = conditionMatchers.get(0).singleRowMatch();
+        currentRow = conditionMatchers.get(0).matchSingleRow();
 
         for (int i = 1; i < conditionMatchers.size(); i++) {
-          if (currentRow != conditionMatchers.get(i).singleRowMatch()) {
+          if (currentRow != conditionMatchers.get(i).matchSingleRow()) {
             currentRow = UNINITIALIZED_CURRENT_ROW;
             break;
           }
@@ -203,10 +203,10 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       }
     } else {
       if (conditionMatchers.size() == 1) {
-        currentIterator = conditionMatchers.get(0).multiRowMatch();
+        currentIterator = conditionMatchers.get(0).match();
       } else {
         for (int i = 0; i < conditionMatchers.size(); i++) {
-          final IntIterator rows = conditionMatchers.get(i).multiRowMatch();
+          final IntIterator rows = conditionMatchers.get(i).match();
           if (rows.hasNext()) {
             currentMatchedRows[i] = rows;
           } else {
@@ -316,13 +316,20 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
   interface ConditionMatcher
   {
-    default int singleRowMatch()
+    /**
+     * Returns the first row that matches the current cursor position, or {@link #NO_CONDITION_MATCH} if nothing
+     * matches.
+     */
+    default int matchSingleRow()
     {
-      final IntIterator it = multiRowMatch();
+      final IntIterator it = match();
       return it.hasNext() ? it.nextInt() : NO_CONDITION_MATCH;
     }
 
-    IntIterator multiRowMatch();
+    /**
+     * Returns an iterator for the row numbers that match the current cursor position.
+     */
+    IntIterator match();
   }
 
   /**
@@ -453,13 +460,13 @@ public class IndexedTableJoinMatcher implements JoinMatcher
         return new ConditionMatcher()
         {
           @Override
-          public int singleRowMatch()
+          public int matchSingleRow()
           {
             return index.findUniqueLong(selector.getLong());
           }
 
           @Override
-          public IntIterator multiRowMatch()
+          public IntIterator match()
           {
             return index.find(selector.getLong()).iterator();
           }
@@ -468,13 +475,13 @@ public class IndexedTableJoinMatcher implements JoinMatcher
         return new ConditionMatcher()
         {
           @Override
-          public int singleRowMatch()
+          public int matchSingleRow()
           {
             return selector.isNull() ? NO_CONDITION_MATCH : index.findUniqueLong(selector.getLong());
           }
 
           @Override
-          public IntIterator multiRowMatch()
+          public IntIterator match()
           {
             return selector.isNull() ? IntIterators.EMPTY_ITERATOR : index.find(selector.getLong()).iterator();
           }
@@ -488,13 +495,13 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       return new ConditionMatcher()
       {
         @Override
-        public int singleRowMatch()
+        public int matchSingleRow()
         {
           return NO_CONDITION_MATCH;
         }
 
         @Override
-        public IntIterator multiRowMatch()
+        public IntIterator match()
         {
           return IntIterators.EMPTY_ITERATOR;
         }

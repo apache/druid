@@ -48,6 +48,7 @@ public class RowBasedIndexBuilder
   private static final long INT_ARRAY_SMALL_SIZE_OK = 250_000;
 
   private int currentRow = 0;
+  private int nullKeys = 0;
   private final ValueType keyType;
   private final Map<Object, IntList> index;
 
@@ -74,7 +75,7 @@ public class RowBasedIndexBuilder
    * wrong type, because the builder keeps an internal row-number counter. The builder will handle both nulls and
    * mismatched types, so callers do not need to worry about this.
    */
-  public void add(@Nullable final Object key)
+  public RowBasedIndexBuilder add(@Nullable final Object key)
   {
     final Object castKey = DimensionHandlerUtils.convertObjectToType(key, keyType);
 
@@ -90,9 +91,13 @@ public class RowBasedIndexBuilder
       if (keyType == ValueType.LONG && (long) castKey > maxLongKey) {
         maxLongKey = (long) castKey;
       }
+    } else {
+      nullKeys++;
     }
 
     currentRow++;
+
+    return this;
   }
 
   /**
@@ -100,7 +105,7 @@ public class RowBasedIndexBuilder
    */
   public IndexedTable.Index build()
   {
-    final boolean keysUnique = index.size() == currentRow;
+    final boolean keysUnique = index.size() == currentRow - nullKeys;
 
     if (keyType == ValueType.LONG && keysUnique && index.size() > 0) {
       // May be a good candidate for UniqueLongArrayIndex. Check the range of values as compared to min and max.

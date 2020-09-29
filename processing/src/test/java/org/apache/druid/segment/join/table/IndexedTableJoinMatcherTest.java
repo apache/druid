@@ -19,7 +19,8 @@
 
 package org.apache.druid.segment.join.table;
 
-import it.unimi.dsi.fastutil.ints.IntIterator;
+import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.common.config.NullHandling;
@@ -31,8 +32,10 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -41,7 +44,6 @@ import org.mockito.MockitoAnnotations;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.IntFunction;
-import java.util.function.Supplier;
 
 @RunWith(Enclosed.class)
 public class IndexedTableJoinMatcherTest
@@ -53,6 +55,9 @@ public class IndexedTableJoinMatcherTest
   {
     public static class MakeDimensionProcessorTest
     {
+      @Rule
+      public ExpectedException expectedException = ExpectedException.none();
+
       @Mock
       private DimensionSelector dimensionSelector;
 
@@ -62,8 +67,7 @@ public class IndexedTableJoinMatcherTest
         NullHandling.initializeForTests();
       }
 
-      @SuppressWarnings("ReturnValueIgnored")
-      @Test(expected = QueryUnsupportedException.class)
+      @Test
       public void testMatchMultiValuedRowCardinalityUnknownShouldThrowException()
       {
         MockitoAnnotations.initMocks(this);
@@ -77,12 +81,13 @@ public class IndexedTableJoinMatcherTest
             dimensionSelector,
             false
         );
+
         // Test match should throw exception
-        dimensionProcessor.multiRowMatch();
+        expectedException.expect(QueryUnsupportedException.class);
+        dimensionProcessor.match();
       }
 
-      @SuppressWarnings("ReturnValueIgnored")
-      @Test(expected = QueryUnsupportedException.class)
+      @Test
       public void testMatchMultiValuedRowCardinalityKnownShouldThrowException()
       {
         MockitoAnnotations.initMocks(this);
@@ -96,8 +101,10 @@ public class IndexedTableJoinMatcherTest
             dimensionSelector,
             false
         );
+
         // Test match should throw exception
-        dimensionProcessor.multiRowMatch();
+        expectedException.expect(QueryUnsupportedException.class);
+        dimensionProcessor.match();
       }
 
       @Test
@@ -114,8 +121,11 @@ public class IndexedTableJoinMatcherTest
             dimensionSelector,
             false
         );
-        Assert.assertNotNull(dimensionProcessor.multiRowMatch());
-        Assert.assertFalse(dimensionProcessor.multiRowMatch().hasNext());
+
+        Assert.assertNotNull(dimensionProcessor.match());
+        Assert.assertFalse(dimensionProcessor.match().hasNext());
+
+        Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
       }
 
       @Test
@@ -132,41 +142,51 @@ public class IndexedTableJoinMatcherTest
             dimensionSelector,
             false
         );
-        Assert.assertNotNull(dimensionProcessor.multiRowMatch());
-        Assert.assertFalse(dimensionProcessor.multiRowMatch().hasNext());
+
+        Assert.assertNotNull(dimensionProcessor.match());
+        Assert.assertFalse(dimensionProcessor.match().hasNext());
+
+        Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
       }
 
       @Test
       public void getsCorrectResultWhenSelectorCardinalityUnknown()
       {
-        Supplier<IntIterator> target = makeDimensionProcessor(DimensionDictionarySelector.CARDINALITY_UNKNOWN);
-        Assert.assertEquals(KEY.length(), target.get().nextInt());
+        IndexedTableJoinMatcher.ConditionMatcher target =
+            makeConditionMatcher(DimensionDictionarySelector.CARDINALITY_UNKNOWN);
+
+        Assert.assertEquals(ImmutableList.of(KEY.length()), new IntArrayList(target.match()));
+        Assert.assertEquals(KEY.length(), target.matchSingleRow());
       }
 
       @Test
       public void getsCorrectResultWhenSelectorCardinalityLow()
       {
         int lowCardinality = IndexedTableJoinMatcher.ConditionMatcherFactory.CACHE_MAX_SIZE / 10;
-        Supplier<IntIterator> target = makeDimensionProcessor(lowCardinality);
-        Assert.assertEquals(KEY.length(), target.get().nextInt());
+        IndexedTableJoinMatcher.ConditionMatcher target = makeConditionMatcher(lowCardinality);
+
+        Assert.assertEquals(ImmutableList.of(KEY.length()), new IntArrayList(target.match()));
+        Assert.assertEquals(KEY.length(), target.matchSingleRow());
       }
 
       @Test
       public void getsCorrectResultWhenSelectorCardinalityHigh()
       {
         int highCardinality = IndexedTableJoinMatcher.ConditionMatcherFactory.CACHE_MAX_SIZE / 10;
-        Supplier<IntIterator> target = makeDimensionProcessor(highCardinality);
-        Assert.assertEquals(KEY.length(), target.get().nextInt());
+        IndexedTableJoinMatcher.ConditionMatcher target = makeConditionMatcher(highCardinality);
+
+        Assert.assertEquals(ImmutableList.of(KEY.length()), new IntArrayList(target.match()));
+        Assert.assertEquals(KEY.length(), target.matchSingleRow());
       }
 
-      private static Supplier<IntIterator> makeDimensionProcessor(int valueCardinality)
+      private static IndexedTableJoinMatcher.ConditionMatcher makeConditionMatcher(int valueCardinality)
       {
         IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
             new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
         return conditionMatcherFactory.makeDimensionProcessor(
             new TestDimensionSelector(KEY, valueCardinality),
             false
-        )::multiRowMatch;
+        );
       }
 
       private static class TestDimensionSelector extends ConstantDimensionSelector
