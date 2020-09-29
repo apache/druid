@@ -366,11 +366,18 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
 
   private void assertSegmentIdEquals(SegmentId id, byte[] bytes)
   {
+    // Call byteBuffer.get to skip the type keys
     ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+    byteBuffer.get(); // skip the cache key prefix
+    byteBuffer.get();
     long start = byteBuffer.getLong();
+    byteBuffer.get();
     long end = byteBuffer.getLong();
+    byteBuffer.get();
     String version = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getVersion()));
+    byteBuffer.get();
     String dataSource = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getDataSource()));
+    byteBuffer.get();
     int partition = byteBuffer.getInt();
     Assert.assertEquals(id, SegmentId.of(dataSource, Intervals.utc(start, end), version, partition));
   }

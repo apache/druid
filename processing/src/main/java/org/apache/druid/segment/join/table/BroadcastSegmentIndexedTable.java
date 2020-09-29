@@ -23,12 +23,12 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -51,7 +51,6 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +62,7 @@ import java.util.stream.Collectors;
 public class BroadcastSegmentIndexedTable implements IndexedTable
 {
   private static final Logger LOG = new Logger(BroadcastSegmentIndexedTable.class);
+  private static final byte CACHE_PREFIX = 0x01;
 
   private final QueryableIndexSegment segment;
   private final QueryableIndexStorageAdapter adapter;
@@ -248,16 +248,14 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   public byte[] computeCacheKey()
   {
     SegmentId segmentId = segment.getId();
-    byte[] versionBytes = StringUtils.toUtf8(segmentId.getVersion());
-    byte[] dataSourceBytes = StringUtils.toUtf8(segmentId.getDataSource());
-    return ByteBuffer
-                           .allocate(16 + versionBytes.length + dataSourceBytes.length + 4)
-                           .putLong(segmentId.getInterval().getStartMillis())
-                           .putLong(segmentId.getInterval().getEndMillis())
-                           .put(versionBytes)
-                           .put(dataSourceBytes)
-                           .putInt(segmentId.getPartitionNum())
-                           .array();
+    CacheKeyBuilder keyBuilder = new CacheKeyBuilder(CACHE_PREFIX);
+    return keyBuilder
+        .appendLong(segmentId.getInterval().getStartMillis())
+        .appendLong(segmentId.getInterval().getEndMillis())
+        .appendString(segmentId.getVersion())
+        .appendString(segmentId.getDataSource())
+        .appendInt(segmentId.getPartitionNum())
+        .build();
   }
 
   @Override

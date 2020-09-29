@@ -20,7 +20,6 @@
 package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.Bytes;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
@@ -36,6 +35,7 @@ import org.easymock.Mock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -155,6 +155,8 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     Assert.assertEquals(actual1, actual2);
   }
 
+  // Disabled due to https://github.com/apache/druid/issues/10444
+  @Ignore
   @Test
   public void testComputeEtag_joinWithUnsupportedCaching()
   {
@@ -170,6 +172,8 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     Assert.assertNull(actual);
   }
 
+  // Checks ETAG is null for a join [due to https://github.com/apache/druid/issues/10444]. Ideally it should check
+  // that ETAG changes as the join cache key changes.
   @Test
   public void testComputeEtag_joinWithSupportedCaching()
   {
@@ -182,18 +186,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1)
     );
     String actual1 = keyManager.computeResultLevelCachingEtag(selectors, null);
-    Assert.assertNotNull(actual1);
-
-    reset(joinableFactoryWrapper);
-    expect(joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)).andReturn(Optional.of(new byte[]{9}));
-    replay(joinableFactoryWrapper);
-    selectors = ImmutableSet.of(
-        makeHistoricalServerSelector(1),
-        makeHistoricalServerSelector(1)
-    );
-    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, null);
-    Assert.assertNotNull(actual2);
-    Assert.assertNotEquals(actual1, actual2);
+    Assert.assertNull(actual1);
   }
 
   @Test
@@ -243,6 +236,8 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     Assert.assertArrayEquals(QUERY_CACHE_KEY, cacheKey);
   }
 
+  // Disabled due to https://github.com/apache/druid/issues/10444
+  @Ignore
   @Test
   public void testSegmentQueryCacheKey_joinWithUnsupportedCaching()
   {
@@ -254,6 +249,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     Assert.assertNull(cacheKey);
   }
 
+  // Checks cache key is null for a join [due to https://github.com/apache/druid/issues/10444]
   @Test
   public void testSegmentQueryCacheKey_joinWithSupportedCaching()
   {
@@ -263,7 +259,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     byte[] cacheKey = keyManager.computeSegmentLevelQueryCacheKey();
-    Assert.assertArrayEquals(Bytes.concat(JOIN_KEY, QUERY_CACHE_KEY), cacheKey);
+    Assert.assertNull(cacheKey);
   }
 
   @Test

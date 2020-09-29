@@ -31,7 +31,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Bytes;
 import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -839,11 +838,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
       if (dataSourceAnalysis.isJoin()) {
-        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
+        return null; // Broker join caching disabled - https://github.com/apache/druid/issues/10444
+       /* byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
         if (null == joinDataSourceCacheKey) {
           return null;    // A join operation that does not support caching
         }
-        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));*/
       }
       return strategy.computeCacheKey(query);
     }
