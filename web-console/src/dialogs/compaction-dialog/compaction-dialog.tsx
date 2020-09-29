@@ -24,8 +24,6 @@ import { deepGet, deepSet } from '../../utils/object-change';
 
 import './compaction-dialog.scss';
 
-export const DEFAULT_MAX_ROWS_PER_SEGMENT = 5000000;
-
 type Tabs = 'form' | 'json';
 
 type CompactionConfig = Record<string, any>;
@@ -35,6 +33,7 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'skipOffsetFromLatest',
     type: 'string',
     defaultValue: 'P1D',
+    suggestions: ['PT0H', 'PT1H', 'P1D', 'P3D'],
     info: (
       <p>
         The offset for searching segments to be compacted. Strongly recommended to set for realtime

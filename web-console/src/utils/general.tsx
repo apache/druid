@@ -231,6 +231,10 @@ export function formatMegabytes(n: number): string {
   return numeral(n / 1048576).format('0,0.0');
 }
 
+export function formatPercent(n: number): string {
+  return (n * 100).toFixed(2) + '%';
+}
+
 function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
