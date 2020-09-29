@@ -308,6 +308,11 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           this.fieldChange(field, v);
         }}
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
+        intent={
+          AutoForm.evaluateFunctor(field.required, model, false) && modelValue == null
+            ? AutoForm.REQUIRED_INTENT
+            : undefined
+        }
       />
     );
   }
