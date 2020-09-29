@@ -134,8 +134,8 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   public void testStreamTaskLogWithPositiveOffset() throws Exception
   {
     final String testLog = "hello this is a log";
-    final String expectedLog = testLog.substring(5);
     final int offset = 5;
+    final String expectedLog = testLog.substring(offset);
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
