@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { selectSuggestibleInput } from '../../../util/playwright';
 import { getLabeledInput } from '../../../util/playwright';

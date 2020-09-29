@@ -19,7 +19,8 @@
 import { execSync } from 'child_process';
 import path from 'path';
 
-export const UNIFIED_CONSOLE_URL = 'http://localhost:8888/unified-console.html';
+const UNIFIED_CONSOLE_PORT = process.env['DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT'] || '8888';
+export const UNIFIED_CONSOLE_URL = `http://localhost:${UNIFIED_CONSOLE_PORT}/unified-console.html`;
 export const COORDINATOR_URL = 'http://localhost:8081';
 
 const UTIL_DIR = __dirname;
