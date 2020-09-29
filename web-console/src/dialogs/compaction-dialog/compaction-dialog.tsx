@@ -77,7 +77,6 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.numShards',
     label: 'Num shards',
     type: 'number',
-    required: true, // ToDo: this will no longer be required after https://github.com/apache/druid/pull/10419 is merged
     defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
     info: (
       <>
@@ -211,13 +210,7 @@ function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
     deepGet(compactionConfig, 'tuningConfig.partitionsSpec.type') || 'dynamic';
   switch (partitionsSpecType) {
     // case 'dynamic': // Nothing to check for dynamic
-    case 'hashed':
-      // ToDo: this will no longer be required after https://github.com/apache/druid/pull/10419 is merged
-      if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.numShards')) {
-        return false;
-      }
-      break;
-
+    // case 'hashed': // Nothing to check for hashed
     case 'single_dim':
       if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.partitionDimension')) {
         return false;

@@ -92,7 +92,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
@@ -319,7 +318,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
@@ -444,7 +442,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
         text="Close"
       />
       <Blueprint3.Button
-        disabled={true}
+        disabled={false}
         intent="primary"
         onClick={[Function]}
         text="Submit"
@@ -546,7 +544,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
@@ -773,7 +770,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {

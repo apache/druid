@@ -37,7 +37,9 @@ export class CompactionHashPartitionsSpec implements CompactionPartitionsSpec {
 
   async apply(page: playwright.Page): Promise<void> {
     await setInput(page, PARTITIONING_TYPE, this.type);
-    await setInput(page, 'Num shards', String(this.numShards));
+    if (this.numShards != null) {
+      await setInput(page, 'Num shards', String(this.numShards));
+    }
   }
 }
 
@@ -48,7 +50,7 @@ async function setInput(page: playwright.Page, label: string, value: string): Pr
 }
 
 interface CompactionHashPartitionsSpecProps {
-  readonly numShards: number;
+  readonly numShards: number | null;
 }
 
 export interface CompactionHashPartitionsSpec extends CompactionHashPartitionsSpecProps {}

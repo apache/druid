@@ -2114,10 +2114,6 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 
   if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
-    case 'hashed':
-      if (!deepGet(tuningConfig, 'partitionsSpec.numShards')) return true;
-      break;
-
     case 'single_dim':
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
       const hasTargetRowsPerSegment = Boolean(
@@ -2190,7 +2186,6 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Num shards',
           type: 'number',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
-          required: true,
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
