@@ -1014,6 +1014,7 @@ public class CalciteTests
           throw new UnsupportedOperationException();
         }
     );
+    druidLeaderClient.start();
 
     return new SystemSchema(
         druidSchema,
