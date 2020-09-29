@@ -100,6 +100,11 @@ public class ExpressionPlan
     this.unappliedInputs = unappliedInputs;
   }
 
+  public boolean isConstant()
+  {
+    return analysis.getRequiredBindings().isEmpty();
+  }
+
   public Expr getExpression()
   {
     return expression;
