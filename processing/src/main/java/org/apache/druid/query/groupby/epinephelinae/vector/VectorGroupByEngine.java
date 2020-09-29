@@ -19,12 +19,14 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
@@ -216,7 +218,8 @@ public class VectorGroupByEngine
     );
   }
 
-  private static class VectorGroupByEngineIterator implements CloseableIterator<ResultRow>
+  @VisibleForTesting
+  static class VectorGroupByEngineIterator implements CloseableIterator<ResultRow>
   {
     private final GroupByQuery query;
     private final GroupByQueryConfig querySpecificConfig;
@@ -227,6 +230,7 @@ public class VectorGroupByEngine
     private final DateTime fudgeTimestamp;
     private final int keySize;
     private final WritableMemory keySpace;
+    private final VectorGrouper vectorGrouper;
 
     @Nullable
     private final VectorCursorGranularizer granulizer;
@@ -262,6 +266,7 @@ public class VectorGroupByEngine
       this.fudgeTimestamp = fudgeTimestamp;
       this.keySize = selectors.stream().mapToInt(GroupByVectorColumnSelector::getGroupingKeySize).sum();
       this.keySpace = WritableMemory.allocate(keySize * cursor.getMaxVectorSize());
+      this.vectorGrouper = makeGrouper();
       this.granulizer = VectorCursorGranularizer.create(storageAdapter, cursor, query.getGranularity(), queryInterval);
 
       if (granulizer != null) {
@@ -276,7 +281,7 @@ public class VectorGroupByEngine
     @Override
     public ResultRow next()
     {
-      if (delegate == null || !delegate.hasNext()) {
+      if (!hasNext()) {
         throw new NoSuchElementException();
       }
 
@@ -295,6 +300,7 @@ public class VectorGroupByEngine
           while (delegate == null || !delegate.hasNext()) {
             if (delegate != null) {
               delegate.close();
+              vectorGrouper.reset();
             }
 
             delegate = initNewDelegate();
@@ -307,16 +313,19 @@ public class VectorGroupByEngine
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
-      cursor.close();
-
+      Closer closer = Closer.create();
+      closer.register(vectorGrouper);
       if (delegate != null) {
-        delegate.close();
+        closer.register(delegate);
       }
+      closer.register(cursor);
+      closer.close();
     }
 
-    private VectorGrouper makeGrouper()
+    @VisibleForTesting
+    VectorGrouper makeGrouper()
     {
       final VectorGrouper grouper;
 
@@ -359,7 +368,6 @@ public class VectorGroupByEngine
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;
-      final VectorGrouper vectorGrouper = makeGrouper();
 
       final DateTime timestamp = fudgeTimestamp != null
                                  ? fudgeTimestamp
@@ -455,7 +463,7 @@ public class VectorGroupByEngine
 
             return resultRow;
           },
-          vectorGrouper
+          () -> {} // Grouper will be closed when VectorGroupByEngineIterator is closed.
       );
     }
   }

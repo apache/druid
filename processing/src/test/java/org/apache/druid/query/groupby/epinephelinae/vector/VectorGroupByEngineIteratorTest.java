@@ -19,31 +19,39 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
+import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.VectorGroupByEngineIterator;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class VectorGroupByEngineTest extends InitializedNullHandlingTest
+public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
 {
   @Test
-  public void testProcessCreateNewGrouperWhenDelegateIsCreated()
+  public void testCreateOneGrouperAndCloseItWhenClose() throws IOException
   {
     final Interval interval = TestIndex.DATA_INTERVAL;
-    final AggregatorFactory factory = Mockito.spy(new DoubleSumAggregatorFactory("index", "index"));
+    final AggregatorFactory factory = new DoubleSumAggregatorFactory("index", "index");
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -52,20 +60,44 @@ public class VectorGroupByEngineTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("market", null, null))
         .setAggregatorSpecs(factory)
         .build();
-    final StorageAdapter storageAdapter = Mockito.spy(new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex()));
+    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
     final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
-
-    final Sequence<ResultRow> sequence = VectorGroupByEngine.process(
-        query,
-        storageAdapter,
-        byteBuffer,
-        null,
-        null,
+    final VectorCursor cursor = storageAdapter.makeVectorCursor(
+        Filters.toFilter(query.getDimFilter()),
         interval,
-        new GroupByQueryConfig()
+        query.getVirtualColumns(),
+        false,
+        QueryContexts.getVectorSize(query),
+        null
     );
-    sequence.toList();
-    // GroupByQueryEngineV2.getCardinalityForArrayAggregation() should be called whenever it creates a new grouper.
-    Mockito.verify(storageAdapter, Mockito.times(94)).getDimensionCardinality("market");
+    final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
+        dimensionSpec ->
+            DimensionHandlerUtils.makeVectorProcessor(
+                dimensionSpec,
+                GroupByVectorColumnProcessorFactory.instance(),
+                cursor.getColumnSelectorFactory()
+            )
+    ).collect(Collectors.toList());
+    final MutableObject<VectorGrouper> grouperCaptor = new MutableObject<>();
+    final VectorGroupByEngineIterator iterator = new VectorGroupByEngineIterator(
+        query,
+        new GroupByQueryConfig(),
+        storageAdapter,
+        cursor,
+        interval,
+        dimensions,
+        byteBuffer,
+        null
+    )
+    {
+      @Override
+      VectorGrouper makeGrouper()
+      {
+        grouperCaptor.setValue(Mockito.spy(super.makeGrouper()));
+        return grouperCaptor.getValue();
+      }
+    };
+    iterator.close();
+    Mockito.verify(grouperCaptor.getValue()).close();
   }
 }
