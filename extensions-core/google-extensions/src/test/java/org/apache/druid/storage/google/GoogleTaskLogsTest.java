@@ -135,16 +135,16 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   {
     final String testLog = "hello this is a log";
     final String expectedLog = testLog.substring(5);
-
+    final int offset = 5;
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, 5))
+    EasyMock.expect(storage.get(BUCKET, logPath, offset))
             .andReturn(new ByteArrayInputStream(StringUtils.toUtf8(expectedLog)));
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, 5);
+    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, offset);
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
