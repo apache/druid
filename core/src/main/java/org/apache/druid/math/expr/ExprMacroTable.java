@@ -112,13 +112,6 @@ public class ExprMacroTable
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      arg.visit(visitor);
-      visitor.visit(this);
-    }
-
-    @Override
     public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
@@ -182,15 +175,6 @@ public class ExprMacroTable
           name,
           Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
       );
-    }
-
-    @Override
-    public void visit(final Visitor visitor)
-    {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
     }
 
     @Override
