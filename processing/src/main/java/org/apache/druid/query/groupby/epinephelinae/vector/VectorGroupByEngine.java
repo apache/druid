@@ -227,7 +227,6 @@ public class VectorGroupByEngine
     private final DateTime fudgeTimestamp;
     private final int keySize;
     private final WritableMemory keySpace;
-    private final VectorGrouper vectorGrouper;
 
     @Nullable
     private final VectorCursorGranularizer granulizer;
@@ -263,7 +262,6 @@ public class VectorGroupByEngine
       this.fudgeTimestamp = fudgeTimestamp;
       this.keySize = selectors.stream().mapToInt(GroupByVectorColumnSelector::getGroupingKeySize).sum();
       this.keySpace = WritableMemory.allocate(keySize * cursor.getMaxVectorSize());
-      this.vectorGrouper = makeGrouper();
       this.granulizer = VectorCursorGranularizer.create(storageAdapter, cursor, query.getGranularity(), queryInterval);
 
       if (granulizer != null) {
@@ -297,7 +295,6 @@ public class VectorGroupByEngine
           while (delegate == null || !delegate.hasNext()) {
             if (delegate != null) {
               delegate.close();
-              vectorGrouper.reset();
             }
 
             delegate = initNewDelegate();
@@ -307,12 +304,6 @@ public class VectorGroupByEngine
           return false;
         }
       }
-    }
-
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -368,6 +359,7 @@ public class VectorGroupByEngine
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;
+      final VectorGrouper vectorGrouper = makeGrouper();
 
       final DateTime timestamp = fudgeTimestamp != null
                                  ? fudgeTimestamp
