@@ -33,10 +33,6 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <properties>
-        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
