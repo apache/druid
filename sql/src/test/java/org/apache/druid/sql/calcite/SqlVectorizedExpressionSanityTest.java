@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -179,8 +180,14 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException, RelConversionException, SqlParseException
   {
-    final Map<String, Object> vector = ImmutableMap.of("vectorize", "force");
-    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", "false");
+    final Map<String, Object> vector = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, "force",
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "force"
+    );
+    final Map<String, Object> nonvector = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, "false",
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
+    );
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
 

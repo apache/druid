@@ -220,7 +220,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     // vector cursors can't iterate backwards yet
-    return virtualColumns.canVectorize(this) && !descending;
+    return !descending;
   }
 
   @Override

@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -239,7 +240,12 @@ public class FilteredAggregatorBenchmark
     );
 
     final QueryPlus<T> queryToRun = QueryPlus.wrap(
-        query.withOverriddenContext(ImmutableMap.of("vectorize", vectorize))
+        query.withOverriddenContext(
+            ImmutableMap.of(
+                QueryContexts.VECTORIZE_KEY, vectorize,
+                QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+            )
+        )
     );
     Sequence<T> queryResult = theRunner.run(queryToRun, ResponseContext.createEmpty());
     return queryResult.toList();
