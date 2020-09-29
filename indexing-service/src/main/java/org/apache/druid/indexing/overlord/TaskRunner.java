@@ -121,4 +121,17 @@ public interface TaskRunner
    * @return ScalingStats if the runner has an underlying resource which can scale, Optional.absent() otherwise
    */
   Optional<ScalingStats> getScalingStats();
+
+  /**
+   * APIs useful for emitting statistics for @TaskSlotCountStatsMonitor
+  */
+  long getTotalTaskSlotCount();
+
+  long getIdleTaskSlotCount();
+
+  long getUsedTaskSlotCount();
+
+  long getLazyTaskSlotCount();
+
+  long getBlacklistedTaskSlotCount();
 }

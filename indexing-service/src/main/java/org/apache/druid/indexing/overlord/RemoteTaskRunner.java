@@ -823,17 +823,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         synchronized (workersWithUnacknowledgedTask) {
           immutableZkWorker = strategy.findWorkerForTask(
               config,
-              ImmutableMap.copyOf(
-                  Maps.transformEntries(
-                      Maps.filterEntries(
-                          zkWorkers,
-                          input -> !lazyWorkers.containsKey(input.getKey()) &&
-                                   !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                                   !blackListedWorkers.contains(input.getValue())
-                      ),
-                      (String key, ZkWorker value) -> value.toImmutable()
-                  )
-              ),
+              ImmutableMap.copyOf(getWorkersEligibleToRunTasks()),
               task
           );
 
@@ -865,6 +855,19 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
       }
     }
+  }
+
+  Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
+  {
+    return Maps.transformEntries(
+        Maps.filterEntries(
+            zkWorkers,
+            input -> !lazyWorkers.containsKey(input.getKey()) &&
+                     !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                     !blackListedWorkers.contains(input.getValue())
+        ),
+        (String key, ZkWorker value) -> value.toImmutable()
+    );
   }
 
   /**
@@ -1433,5 +1436,60 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   Map<String, String> getWorkersWithUnacknowledgedTask()
   {
     return workersWithUnacknowledgedTask;
+  }
+
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    long totalPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalPeons;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    long totalIdlePeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
+      totalIdlePeons += worker.getAvailableCapacity();
+    }
+
+    return totalIdlePeons;
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    long totalUsedPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalUsedPeons += worker.getCurrCapacityUsed();
+    }
+
+    return totalUsedPeons;
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    long totalLazyPeons = 0;
+    for (Worker worker : getLazyWorkers()) {
+      totalLazyPeons += worker.getCapacity();
+    }
+
+    return totalLazyPeons;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    long totalBlacklistedPeons = 0;
+    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+      totalBlacklistedPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalBlacklistedPeons;
   }
 }

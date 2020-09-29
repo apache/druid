@@ -1192,6 +1192,7 @@ RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
+TaskSlotCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
