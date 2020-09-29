@@ -22,6 +22,7 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -41,11 +42,22 @@ import java.util.stream.Collectors;
  * Basic multi-value dimension selector for an {@link org.apache.druid.math.expr.Expr} evaluating
  * {@link ColumnValueSelector}.
  */
-public class MultiValueExpressionDimensionSelector implements DimensionSelector
+public class ExpressionMultiValueDimensionSelector implements DimensionSelector
 {
-  private final ColumnValueSelector<ExprEval> baseSelector;
+  public static ExpressionMultiValueDimensionSelector fromValueSelector(
+      ColumnValueSelector<ExprEval> baseSelector,
+      @Nullable ExtractionFn extractionFn
+  )
+  {
+    if (extractionFn != null) {
+      return new ExtractionMultiValueDimensionSelector(baseSelector, extractionFn);
+    }
+    return new ExpressionMultiValueDimensionSelector(baseSelector);
+  }
 
-  public MultiValueExpressionDimensionSelector(ColumnValueSelector<ExprEval> baseSelector)
+  protected final ColumnValueSelector<ExprEval> baseSelector;
+
+  public ExpressionMultiValueDimensionSelector(ColumnValueSelector<ExprEval> baseSelector)
   {
     this.baseSelector = baseSelector;
   }
@@ -195,5 +207,51 @@ public class MultiValueExpressionDimensionSelector implements DimensionSelector
   public Class<?> classOfObject()
   {
     return Object.class;
+  }
+
+  /**
+   * expressions + extractions
+   */
+  static class ExtractionMultiValueDimensionSelector extends ExpressionMultiValueDimensionSelector
+  {
+    private final ExtractionFn extractionFn;
+
+    private ExtractionMultiValueDimensionSelector(ColumnValueSelector<ExprEval> baseSelector, ExtractionFn extractionFn)
+    {
+      super(baseSelector);
+      this.extractionFn = extractionFn;
+    }
+
+    @Override
+    String getValue(ExprEval evaluated)
+    {
+      assert !evaluated.isArray();
+      return extractionFn.apply(NullHandling.emptyToNullIfNeeded(evaluated.asString()));
+    }
+
+    @Override
+    List<String> getArray(ExprEval evaluated)
+    {
+      assert evaluated.isArray();
+      return Arrays.stream(evaluated.asStringArray())
+                   .map(x -> extractionFn.apply(NullHandling.emptyToNullIfNeeded(x)))
+                   .collect(Collectors.toList());
+    }
+
+    @Override
+    String getArrayValue(ExprEval evaluated, int i)
+    {
+      assert evaluated.isArray();
+      String[] stringArray = evaluated.asStringArray();
+      assert i < stringArray.length;
+      return extractionFn.apply(NullHandling.emptyToNullIfNeeded(stringArray[i]));
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("baseSelector", baseSelector);
+      inspector.visit("extractionFn", extractionFn);
+    }
   }
 }

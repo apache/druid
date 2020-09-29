@@ -32,15 +32,19 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
 {
   private static final String PHASE_NAME = "partial segment generation";
 
+  private Integer numShardsOverride;
+
   PartialHashSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      Integer numShardsOverride
   )
   {
     super(toolbox, taskId, groupId, ingestionSchema, context);
+    this.numShardsOverride = numShardsOverride;
   }
 
   @Override
@@ -77,7 +81,8 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             supervisorTaskId,
             numAttempts,
             subTaskIngestionSpec,
-            context
+            context,
+            numShardsOverride
         );
       }
     };

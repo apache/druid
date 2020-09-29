@@ -55,6 +55,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -489,7 +490,15 @@ public class BatchDeltaIngestionTest
             INTERVAL_FULL.getStartMillis(),
             ImmutableList.of(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(0, 1, 0, 1, null, HadoopDruidIndexerConfig.JSON_MAPPER),
+                    new HashBasedNumberedShardSpec(
+                        0,
+                        1,
+                        0,
+                        1,
+                        null,
+                        HashPartitionFunction.MURMUR3_32_ABS,
+                        HadoopDruidIndexerConfig.JSON_MAPPER
+                    ),
                     0
                 )
             )

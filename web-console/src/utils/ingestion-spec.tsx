@@ -2114,16 +2114,15 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 
   if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
-    case 'hashed':
-      if (!deepGet(tuningConfig, 'partitionsSpec.numShards')) return true;
-      break;
-
     case 'single_dim':
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
-      if (
-        !deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment') &&
-        !deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment')
-      ) {
+      const hasTargetRowsPerSegment = Boolean(
+        deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
+      );
+      const hasMaxRowsPerSegment = Boolean(
+        deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment'),
+      );
+      if (hasTargetRowsPerSegment === hasMaxRowsPerSegment) {
         return true;
       }
   }
@@ -2160,7 +2159,7 @@ export function getPartitionRelatedTuningSpecFormFields(
             <p>
               For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
               the hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a
-              single dimension. For best-effort rollup, you should use dynamic.
+              single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
         },
@@ -2187,13 +2186,11 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Num shards',
           type: 'number',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
-          required: true,
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
               is specified in the granularitySpec, the index task can skip the determine
-              intervals/partitions pass through the data. numShards cannot be specified if
-              maxRowsPerSegment is set.
+              intervals/partitions pass through the data.
             </>
           ),
         },
@@ -2218,7 +2215,9 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Target rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
+            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
           required: (t: TuningConfig) =>
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
             !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
@@ -2234,7 +2233,9 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Max rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
           required: (t: TuningConfig) =>
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
             !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),

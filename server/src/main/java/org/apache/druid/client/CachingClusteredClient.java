@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
@@ -423,12 +424,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-        final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
-            query.getFilter(),
-            holder.getObject(),
-            partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
-            dimensionRangeCache
-        );
+        final Set<PartitionChunk<ServerSelector>> filteredChunks;
+        if (QueryContexts.isSecondaryPartitionPruningEnabled(query)) {
+          filteredChunks = DimFilterUtils.filterShards(
+              query.getFilter(),
+              holder.getObject(),
+              partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
+              dimensionRangeCache
+          );
+        } else {
+          filteredChunks = Sets.newHashSet(holder.getObject());
+        }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           final SegmentDescriptor segment = new SegmentDescriptor(

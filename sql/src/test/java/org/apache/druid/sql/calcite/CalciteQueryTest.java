@@ -5297,9 +5297,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnStringAsNumber() throws Exception
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE "
         + "dim1 = 10 OR "
@@ -5846,9 +5843,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGrouping() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT\n"
         + "  FLOOR(m1 / 2) * 2,\n"
@@ -5895,9 +5893,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingUsingCastToLong() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT\n"
         + "  CAST(m1 AS BIGINT) / 2 * 2,\n"
@@ -5946,9 +5945,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingOnStringCastToNumber() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT\n"
         + "  FLOOR(CAST(dim1 AS FLOAT) / 2) * 2,\n"
@@ -6636,9 +6636,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumOfString() throws Exception
   {
-    // Cannot vectorize due to expressions in aggregators.
-    cannotVectorize();
-
     testQuery(
         "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -6696,9 +6693,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT\n"
         + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR),\n"
@@ -9090,9 +9088,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloor() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // grouping on numeric columns with null values is not yet supported
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
         ImmutableList.of(
@@ -9120,9 +9119,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorWithOrderBy() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // grouping on numeric columns with null values is not yet supported
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT floor(CAST(dim1 AS float)) AS fl, COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float)) ORDER BY fl DESC",
         ImmutableList.of(
@@ -9174,9 +9174,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT floor(__time TO year), dim2, COUNT(*)"
         + " FROM druid.foo"
@@ -11415,9 +11416,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesUsingTimeFloorWithTimestampAdd() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
@@ -11927,11 +11929,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesWithLimitAndOffset() throws Exception
   {
-    // Cannot vectorize due to expressions.
-    cannotVectorize();
-
     // Timeseries cannot handle offsets, so the query morphs into a groupBy.
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT gran, SUM(cnt)\n"
         + "FROM (\n"
@@ -11996,9 +11998,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByTimeAndOtherDimension() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
@@ -15922,8 +15925,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRepeatedIdenticalVirtualExpressionGrouping() throws Exception
   {
-    cannotVectorize();
-
+    // cannot vectorize due to unknown nulls in numeric column
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
     final String query = "SELECT \n"
                          + "\tCASE dim1 WHEN NULL THEN FALSE ELSE TRUE END AS col_a,\n"
                          + "\tCASE dim2 WHEN NULL THEN FALSE ELSE TRUE END AS col_b\n"

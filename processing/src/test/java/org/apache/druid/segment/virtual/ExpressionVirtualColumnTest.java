@@ -366,7 +366,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         SCALE_LIST_SELF_EXPLICIT.makeDimensionSelector(spec, factory);
 
     Assert.assertTrue(selectorImplicit instanceof SingleStringInputDimensionSelector);
-    Assert.assertTrue(selectorExplicit instanceof MultiValueExpressionDimensionSelector);
+    Assert.assertTrue(selectorExplicit instanceof ExpressionMultiValueDimensionSelector);
   }
 
   @Test

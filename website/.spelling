@@ -306,6 +306,7 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
 partitionsSpec
 performant
 plaintext
@@ -361,6 +362,7 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
 servlet
 simple-client-sslcontext
@@ -1498,6 +1500,7 @@ is_overshadowed
 is_published
 is_realtime
 java.sql.Types
+last_compaction_state
 max_size
 num_replicas
 num_rows

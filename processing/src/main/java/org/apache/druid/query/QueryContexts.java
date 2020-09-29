@@ -57,6 +57,7 @@ public class QueryContexts
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
   public static final String USE_CACHE_KEY = "useCache";
+  public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -74,6 +75,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
+  public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -278,6 +280,10 @@ public class QueryContexts
     return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
+  public static <T> boolean isSecondaryPartitionPruningEnabled(Query<T> query)
+  {
+    return parseBoolean(query, SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
+  }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
