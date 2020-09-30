@@ -471,20 +471,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (null == tuningConfig) {
       return false;
     }
-    boolean useRangePartitions = tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    boolean useRangePartitions = useRangePartitions(tuningConfig);
     // Range partitioning is not implemented for runSequential() (but hash partitioning is)
     int minRequiredNumConcurrentSubTasks = useRangePartitions ? 1 : 2;
     return inputSource.isSplittable() && tuningConfig.getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
   }
 
+  private static boolean useRangePartitions(ParallelIndexTuningConfig tuningConfig)
+  {
+    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+  }
+
   private boolean isParallelMode()
   {
     return isParallelMode(baseInputSource, ingestionSchema.getTuningConfig());
-  }
-
-  private boolean useRangePartitions()
-  {
-    return ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
   }
 
   /**
@@ -519,7 +519,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private TaskStatus runMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
-    return useRangePartitions()
+    return useRangePartitions(ingestionSchema.getTuningConfig())
            ? runRangePartitionMultiPhaseParallel(toolbox)
            : runHashPartitionMultiPhaseParallel(toolbox);
   }

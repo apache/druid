@@ -369,7 +369,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           final String subtaskId = ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig)
                                    ? getId()
                                    : createIndexTaskSpecId(i);
-          return newTask(subtaskId, ingestionSpecs.get(i));
+          return newTask(subtaskId, ingestionSpec);
         })
         .collect(Collectors.toList());
 
