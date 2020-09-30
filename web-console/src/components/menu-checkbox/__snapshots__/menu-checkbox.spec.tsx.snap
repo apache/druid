@@ -1,18 +1,67 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`menu checkbox matches snapshot 1`] = `
+exports[`MenuCheckbox matches snapshot checked 1`] = `
 <li
-  class="menu-checkbox"
+  class=""
 >
-  <label
-    class="bp3-control bp3-checkbox"
+  <a
+    class="bp3-menu-item menu-checkbox"
   >
-    <input
-      type="checkbox"
-    />
     <span
-      class="bp3-control-indicator"
-    />
-  </label>
+      class="bp3-icon bp3-icon-tick"
+      icon="tick"
+    >
+      <svg
+        data-icon="tick"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <desc>
+          tick
+        </desc>
+        <path
+          d="M14 3c-.28 0-.53.11-.71.29L6 10.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l8-8A1.003 1.003 0 0014 3z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
+    <div
+      class="bp3-text-overflow-ellipsis bp3-fill"
+    >
+      hello
+    </div>
+  </a>
+</li>
+`;
+
+exports[`MenuCheckbox matches snapshot unchecked 1`] = `
+<li
+  class=""
+>
+  <a
+    class="bp3-menu-item menu-checkbox"
+  >
+    <span
+      class="bp3-icon bp3-icon-blank"
+      icon="blank"
+    >
+      <svg
+        data-icon="blank"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <desc>
+          blank
+        </desc>
+      </svg>
+    </span>
+    <div
+      class="bp3-text-overflow-ellipsis bp3-fill"
+    >
+      hello
+    </div>
+  </a>
 </li>
 `;
