@@ -689,7 +689,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           });
         }}
       >
-        <img src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)} />
+        <img
+          src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)}
+          alt={`Ingestion tile for ${comboType}`}
+        />
         <p>{getIngestionTitle(comboType)}</p>
       </Card>
     );
