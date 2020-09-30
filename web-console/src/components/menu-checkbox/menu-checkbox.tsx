@@ -32,7 +32,7 @@ export function MenuCheckbox(props: MenuCheckboxProps) {
   return (
     <MenuItem
       className="menu-checkbox"
-      icon={checked ? IconNames.TICK : IconNames.BLANK}
+      icon={checked ? IconNames.TICK_CIRCLE : IconNames.CIRCLE}
       text={text}
       onClick={onChange}
       shouldDismissPopover={false}
