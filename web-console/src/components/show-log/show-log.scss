@@ -37,6 +37,7 @@
   }
 
   .main-area {
+    position: relative;
     height: calc(100% - 40px);
 
     textarea {
