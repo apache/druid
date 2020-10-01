@@ -525,7 +525,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable()
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
         new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),
