@@ -88,7 +88,7 @@
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-compute</artifactId>
-      <version>v1-rev214-1.25.0</version>
+      <version>${com.google.apis.compute.version}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
