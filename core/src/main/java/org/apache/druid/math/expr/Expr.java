@@ -53,6 +53,12 @@ public interface Expr
     return false;
   }
 
+  default boolean isNullLiteral()
+  {
+    // Overridden by things that are null literals.
+    return false;
+  }
+
   /**
    * Returns the value of expr if expr is a literal, or throws an exception otherwise.
    *

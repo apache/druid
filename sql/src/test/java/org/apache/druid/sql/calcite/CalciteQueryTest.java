@@ -14684,7 +14684,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.LONG_ARRAY))
+                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.STRING))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -14698,6 +14698,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByArrayFromCase() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT CASE WHEN dim4 = 'a' THEN ARRAY['foo','bar','baz'] END as mv_value, count(1) from numfoo GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0"))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 3L},
+            new Object[]{"bar", 3L},
+            new Object[]{"baz", 3L},
+            new Object[]{"foo", 3L}
+        )
+    );
+  }
+
+  @Test
   public void testSelectNonConstantArrayExpressionFromTable() throws Exception
   {
     testQuery(
@@ -14706,7 +14732,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING_ARRAY))
+                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)

@@ -142,12 +142,15 @@ public class Calcites
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       SqlTypeName componentType = type.getComponentType().getSqlTypeName();
       if (isDoubleType(componentType)) {
-        return ValueType.DOUBLE_ARRAY;
+        // in the future return ValueType.DOUBLE_ARRAY;
+        return ValueType.STRING;
       }
       if (isLongType(componentType)) {
-        return ValueType.LONG_ARRAY;
+        // in the future we will return ValueType.LONG_ARRAY;
+        return ValueType.STRING;
       }
-      return ValueType.STRING_ARRAY;
+      // in the future we will return ValueType.STRING_ARRAY;
+      return ValueType.STRING;
     } else {
       return null;
     }
@@ -175,7 +178,8 @@ public class Calcites
   {
     if (ValueType.isNumeric(valueType)) {
       return StringComparators.NUMERIC;
-    } else if (ValueType.STRING == valueType) {
+    } else if (ValueType.STRING == valueType || ValueType.isArray(valueType)) {
+      // arrays currently are considered strings... don't ask
       return StringComparators.LEXICOGRAPHIC;
     } else {
       throw new ISE("Unrecognized valueType[%s]", valueType);

@@ -423,6 +423,9 @@ public final class DimensionHandlerUtils
       case DOUBLE:
         return convertObjectToDouble(obj, reportParseExceptions);
       case STRING:
+      case STRING_ARRAY:
+      case DOUBLE_ARRAY:
+      case LONG_ARRAY:
         return convertObjectToString(obj);
       default:
         throw new IAE("Type[%s] is not supported for dimensions!", type);

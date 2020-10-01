@@ -307,11 +307,17 @@ public class QueryMaker
         coercedValue = value.getClass().getName();
       }
     } else if (sqlType == SqlTypeName.ARRAY) {
-      try {
-        coercedValue = jsonMapper.writeValueAsString(value);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
+      if (value == null || value instanceof String) {
+        coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
+      } else if (value instanceof NlsString) {
+        coercedValue = ((NlsString) value).getValue();
+      } else {
+        try {
+          coercedValue = jsonMapper.writeValueAsString(value);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
     } else {
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
