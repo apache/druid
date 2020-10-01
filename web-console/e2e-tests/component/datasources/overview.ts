@@ -19,8 +19,10 @@
 import * as playwright from 'playwright-core';
 
 import { clickButton } from '../../util/playwright';
+import { getLabeledInput } from '../../util/playwright';
 import { setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
+import { readPartitionSpec } from '../load-data/config/partition';
 
 import { CompactionConfig } from './compaction';
 import { Datasource } from './datasource';
@@ -41,6 +43,9 @@ enum DatasourceColumn {
   RETENTION,
   ACTIONS,
 }
+
+const EDIT_COMPACTION_CONFIGURATION = 'Edit compaction configuration';
+const SKIP_OFFSET_FROM_LATEST = 'Skip offset from latest';
 
 /**
  * Represents datasource overview tab.
@@ -80,15 +85,26 @@ export class DatasourcesOverview {
   ): Promise<void> {
     await this.openEditActions(datasourceName);
 
-    await this.page.click('"Edit compaction configuration"');
+    await this.page.click(`"${EDIT_COMPACTION_CONFIGURATION}"`);
     await setLabeledInput(
       this.page,
-      'Skip offset from latest',
+      SKIP_OFFSET_FROM_LATEST,
       compactionConfig.skipOffsetFromLatest,
     );
     await compactionConfig.partitionsSpec.apply(this.page);
 
     await clickButton(this.page, 'Submit');
+  }
+
+  async getCompactionConfiguration(datasourceName: string): Promise<CompactionConfig> {
+    await this.openEditActions(datasourceName);
+
+    await this.page.click(`"${EDIT_COMPACTION_CONFIGURATION}"`);
+    const skipOffsetFromLatest = await getLabeledInput(this.page, SKIP_OFFSET_FROM_LATEST);
+    const partitionsSpec = await readPartitionSpec(this.page);
+
+    await clickButton(this.page, 'Close');
+    return new CompactionConfig({ skipOffsetFromLatest, partitionsSpec: partitionsSpec! });
   }
 
   private async openEditActions(datasourceName: string): Promise<void> {
@@ -100,6 +116,6 @@ export class DatasourcesOverview {
 
     const editActions = await this.page.$$('span[icon=wrench]');
     editActions[index].click();
-    await this.page.waitFor(5000);
+    await this.page.waitFor('ul.bp3-menu');
   }
 }

@@ -1209,12 +1209,12 @@ GROUP BY 1`;
               width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: ({ value: datasource, original }) => {
-                const { unused, rules, compaction } = original;
+                const { unused, rules, compactionConfig } = original;
                 const datasourceActions = this.getDatasourceActions(
                   datasource,
                   unused,
                   rules,
-                  compaction,
+                  compactionConfig,
                 );
                 return (
                   <ActionCell
