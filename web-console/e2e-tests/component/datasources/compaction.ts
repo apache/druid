@@ -16,44 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
-
-/* tslint:disable max-classes-per-file */
-
-const PARTITIONING_TYPE = 'Partitioning type';
-
-interface CompactionPartitionsSpec {
-  readonly type: string;
-  apply(page: playwright.Page): Promise<void>;
-}
-
-export class CompactionHashPartitionsSpec implements CompactionPartitionsSpec {
-  readonly type: string;
-
-  constructor(props: CompactionHashPartitionsSpecProps) {
-    Object.assign(this, props);
-    this.type = 'hashed';
-  }
-
-  async apply(page: playwright.Page): Promise<void> {
-    await setInput(page, PARTITIONING_TYPE, this.type);
-    if (this.numShards != null) {
-      await setInput(page, 'Num shards', String(this.numShards));
-    }
-  }
-}
-
-async function setInput(page: playwright.Page, label: string, value: string): Promise<void> {
-  const input = await page.$(`//*[text()="${label}"]/following-sibling::div//input`);
-  await input!.fill('');
-  await input!.type(value);
-}
-
-interface CompactionHashPartitionsSpecProps {
-  readonly numShards: number | null;
-}
-
-export interface CompactionHashPartitionsSpec extends CompactionHashPartitionsSpecProps {}
+import { PartitionsSpec } from '../load-data/config/partition';
 
 /**
  * Datasource compaction configuration
@@ -66,7 +29,7 @@ export class CompactionConfig {
 
 interface CompactionConfigProps {
   readonly skipOffsetFromLatest: string;
-  readonly partitionsSpec: CompactionPartitionsSpec;
+  readonly partitionsSpec: PartitionsSpec;
 }
 
 export interface CompactionConfig extends CompactionConfigProps {}

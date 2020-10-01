@@ -18,6 +18,11 @@
 
 import * as playwright from 'playwright-core';
 
+import { clickButton } from '../../util/playwright';
+import { clickLabeledButton } from '../../util/playwright';
+import { setLabeledInput } from '../../util/playwright';
+import { setLabeledTextarea } from '../../util/playwright';
+
 import { ConfigureSchemaConfig } from './config/configure-schema';
 import { PartitionConfig } from './config/partition';
 import { PublishConfig } from './config/publish';
@@ -41,8 +46,10 @@ export class DataLoader {
     await this.page.goto(this.baseUrl);
     await this.start();
     await this.connect(this.connector, this.connectValidator);
-    await this.parseData();
-    await this.parseTime();
+    if (this.connector.needParse) {
+      await this.parseData();
+      await this.parseTime();
+    }
     await this.transform();
     await this.filter();
     await this.configureSchema(this.configureSchemaConfig);
@@ -54,13 +61,14 @@ export class DataLoader {
 
   private async start() {
     await this.page.click(`"${this.connector.name}"`);
-    await this.clickButton('Connect data');
+    await clickButton(this.page, 'Connect data');
   }
 
   private async connect(connector: DataConnector, validator: (preview: string) => void) {
     await connector.connect();
     await this.validateConnect(validator);
-    await this.clickButton('Next: Parse data');
+    const next = this.connector.needParse ? 'Parse data' : 'Transform';
+    await clickButton(this.page, `Next: ${next}`);
   }
 
   private async validateConnect(validator: (preview: string) => void) {
@@ -72,28 +80,28 @@ export class DataLoader {
 
   private async parseData() {
     await this.page.waitFor('.parse-data-table');
-    await this.clickButton('Next: Parse time');
+    await clickButton(this.page, 'Next: Parse time');
   }
 
   private async parseTime() {
     await this.page.waitFor('.parse-time-table');
-    await this.clickButton('Next: Transform');
+    await clickButton(this.page, 'Next: Transform');
   }
 
   private async transform() {
     await this.page.waitFor('.transform-table');
-    await this.clickButton('Next: Filter');
+    await clickButton(this.page, 'Next: Filter');
   }
 
   private async filter() {
     await this.page.waitFor('.filter-table');
-    await this.clickButton('Next: Configure schema');
+    await clickButton(this.page, 'Next: Configure schema');
   }
 
   private async configureSchema(configureSchemaConfig: ConfigureSchemaConfig) {
     await this.page.waitFor('.schema-table');
     await this.applyConfigureSchemaConfig(configureSchemaConfig);
-    await this.clickButton('Next: Partition');
+    await clickButton(this.page, 'Next: Partition');
   }
 
   private async applyConfigureSchemaConfig(configureSchemaConfig: ConfigureSchemaConfig) {
@@ -103,7 +111,7 @@ export class DataLoader {
       await rollup!.click();
       const confirmationDialogSelector = '//*[contains(@class,"bp3-alert-body")]';
       await this.page.waitFor(confirmationDialogSelector);
-      await this.clickButton('Yes');
+      await clickButton(this.page, 'Yes');
       const statusMessageSelector = '.recipe-toaster';
       await this.page.waitFor(statusMessageSelector);
       await this.page.click(`${statusMessageSelector} button`);
@@ -113,48 +121,44 @@ export class DataLoader {
   private async partition(partitionConfig: PartitionConfig) {
     await this.page.waitFor('div.load-data-view.partition');
     await this.applyPartitionConfig(partitionConfig);
-    await this.clickButton('Next: Tune');
+    await clickButton(this.page, 'Next: Tune');
   }
 
   private async applyPartitionConfig(partitionConfig: PartitionConfig) {
-    const segmentGranularity = await this.page.$(
-      '//*[text()="Segment granularity"]/following-sibling::div//input',
-    );
-    await this.setInput(segmentGranularity!, partitionConfig.segmentGranularity);
+    await setLabeledInput(this.page, 'Segment granularity', partitionConfig.segmentGranularity);
+    if (partitionConfig.forceGuaranteedRollup) {
+      await clickLabeledButton(
+        this.page,
+        'Force guaranteed rollup',
+        partitionConfig.forceGuaranteedRollupText,
+      );
+      await setLabeledTextarea(this.page, 'Time intervals', partitionConfig.timeIntervals!);
+    }
+    if (partitionConfig.partitionsSpec != null) {
+      await partitionConfig.partitionsSpec.apply(this.page);
+    }
   }
 
   private async tune() {
     await this.page.waitFor('div.load-data-view.tuning');
-    await this.clickButton('Next: Publish');
+    await clickButton(this.page, 'Next: Publish');
   }
 
   private async publish(publishConfig: PublishConfig) {
     await this.page.waitFor('div.load-data-view.publish');
     await this.applyPublishConfig(publishConfig);
-    await this.clickButton('Edit spec');
+    await clickButton(this.page, 'Edit spec');
   }
 
   private async applyPublishConfig(publishConfig: PublishConfig) {
     if (publishConfig.datasourceName != null) {
-      const datasourceName = await this.page.$(
-        '//*[text()="Datasource name"]/following-sibling::div//input',
-      );
-      await this.setInput(datasourceName!, publishConfig.datasourceName);
+      await setLabeledInput(this.page, 'Datasource name', publishConfig.datasourceName);
     }
   }
 
   private async editSpec() {
     await this.page.waitFor('div.load-data-view.spec');
-    await this.clickButton('Submit');
-  }
-
-  private async clickButton(text: string) {
-    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
-  }
-
-  private async setInput(input: playwright.ElementHandle<Element>, value: string) {
-    await input.fill('');
-    await input.type(value);
+    await clickButton(this.page, 'Submit');
   }
 }
 

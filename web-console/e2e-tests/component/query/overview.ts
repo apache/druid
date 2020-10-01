@@ -18,6 +18,8 @@
 
 import * as playwright from 'playwright-core';
 
+import { clickButton } from '../../util/playwright';
+import { setInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -37,19 +39,10 @@ export class QueryOverview {
     await this.page.reload({ waitUntil: 'networkidle0' });
 
     const input = await this.page.$('div.query-input textarea');
-    await this.setInput(input!, query);
-    await this.clickButton('Run');
+    await setInput(input!, query);
+    await clickButton(this.page, 'Run');
     await this.page.waitFor('div.query-info');
 
     return await extractTable(this.page, 'div.query-output div.rt-tr-group', 'div.rt-td');
-  }
-
-  private async setInput(input: playwright.ElementHandle<Element>, value: string) {
-    await input.fill('');
-    await input.type(value);
-  }
-
-  private async clickButton(text: string) {
-    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
   }
 }
