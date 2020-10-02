@@ -315,10 +315,10 @@ public class SystemSchema extends AbstractSchema
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
-                  jsonMapper.writeValueAsString(segment.getShardSpec()),
-                  jsonMapper.writeValueAsString(segment.getDimensions()),
-                  jsonMapper.writeValueAsString(segment.getMetrics()),
-                  jsonMapper.writeValueAsString(segment.getLastCompactionState())
+                  segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
+                  segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
+                  segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
+                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
               };
             } catch (JsonProcessingException e) {
               throw new RuntimeException(e);
@@ -354,11 +354,10 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().isRealtime(),
                   IS_OVERSHADOWED_FALSE,
                   // there is an assumption here that unpublished segments are never overshadowed
-                  jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
-                  jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
-                  jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
-                  null
-                  // unpublished segments from realtime tasks will not be compacted yet
+                  val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
+                  val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
+                  val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
+                  null // unpublished segments from realtime tasks will not be compacted yet
               };
             } catch (JsonProcessingException e) {
               throw new RuntimeException(e);
