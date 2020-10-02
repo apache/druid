@@ -19,6 +19,7 @@
 import * as playwright from 'playwright-core';
 
 import { selectSuggestibleInput } from '../../../util/playwright';
+import { getLabeledInput } from '../../../util/playwright';
 import { setLabeledInput } from '../../../util/playwright';
 
 /* tslint:disable max-classes-per-file */
@@ -40,20 +41,47 @@ export interface PartitionsSpec {
   apply(page: playwright.Page): Promise<void>;
 }
 
+export async function readPartitionSpec(page: playwright.Page): Promise<PartitionsSpec | null> {
+  const type = await getLabeledInput(page, PARTITIONING_TYPE);
+  switch (type) {
+    case HashedPartitionsSpec.TYPE:
+      return HashedPartitionsSpec.read(page);
+    case SingleDimPartitionsSpec.TYPE:
+      return SingleDimPartitionsSpec.read(page);
+  }
+  return null;
+}
+
 export class HashedPartitionsSpec implements PartitionsSpec {
+  public static TYPE = 'hashed';
+  private static NUM_SHARDS = 'Num shards';
+
   readonly type: string;
+
+  static async read(page: playwright.Page): Promise<HashedPartitionsSpec> {
+    const numShards = await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS);
+    return new HashedPartitionsSpec({ numShards });
+  }
 
   constructor(props: HashedPartitionsSpecProps) {
     Object.assign(this, props);
-    this.type = 'hashed';
+    this.type = HashedPartitionsSpec.TYPE;
   }
 
   async apply(page: playwright.Page): Promise<void> {
     await setLabeledInput(page, PARTITIONING_TYPE, this.type);
     if (this.numShards != null) {
-      await setLabeledInput(page, 'Num shards', String(this.numShards));
+      await setLabeledInput(page, HashedPartitionsSpec.NUM_SHARDS, String(this.numShards));
     }
   }
+}
+
+async function getLabeledInputAsNumber(
+  page: playwright.Page,
+  label: string,
+): Promise<number | null> {
+  const valueString = await getLabeledInput(page, label);
+  return valueString === '' ? null : Number(valueString);
 }
 
 interface HashedPartitionsSpecProps {
@@ -63,21 +91,58 @@ interface HashedPartitionsSpecProps {
 export interface HashedPartitionsSpec extends HashedPartitionsSpecProps {}
 
 export class SingleDimPartitionsSpec implements PartitionsSpec {
+  public static TYPE = 'single_dim';
+  private static PARTITION_DIMENSION = 'Partition dimension';
+  private static TARGET_ROWS_PER_SEGMENT = 'Target rows per segment';
+  private static MAX_ROWS_PER_SEGMENT = 'Max rows per segment';
+
   readonly type: string;
+
+  static async read(page: playwright.Page): Promise<SingleDimPartitionsSpec> {
+    const partitionDimension = await getLabeledInput(
+      page,
+      SingleDimPartitionsSpec.PARTITION_DIMENSION,
+    );
+    const targetRowsPerSegment = await getLabeledInputAsNumber(
+      page,
+      SingleDimPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+    );
+    const maxRowsPerSegment = await getLabeledInputAsNumber(
+      page,
+      SingleDimPartitionsSpec.MAX_ROWS_PER_SEGMENT,
+    );
+    return new SingleDimPartitionsSpec({
+      partitionDimension,
+      targetRowsPerSegment,
+      maxRowsPerSegment,
+    });
+  }
 
   constructor(props: SingleDimPartitionsSpecProps) {
     Object.assign(this, props);
-    this.type = 'single_dim';
+    this.type = SingleDimPartitionsSpec.TYPE;
   }
 
   async apply(page: playwright.Page): Promise<void> {
     await selectSuggestibleInput(page, PARTITIONING_TYPE, this.type);
-    await setLabeledInput(page, 'Partition dimension', this.partitionDimension);
+    await setLabeledInput(
+      page,
+      SingleDimPartitionsSpec.PARTITION_DIMENSION,
+      this.partitionDimension,
+    );
     if (this.targetRowsPerSegment) {
-      await setLabeledInput(page, 'Target rows per segment', String(this.targetRowsPerSegment));
+      await setLabeledInput(
+        page,
+        SingleDimPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+        String(this.targetRowsPerSegment),
+      );
     }
     if (this.maxRowsPerSegment) {
-      await setLabeledInput(page, 'Max rows per segment', String(this.maxRowsPerSegment));
+      await setLabeledInput(
+        page,
+        SingleDimPartitionsSpec.MAX_ROWS_PER_SEGMENT,
+        String(this.maxRowsPerSegment),
+      );
     }
   }
 }

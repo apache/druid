@@ -126,6 +126,11 @@ async function configureCompaction(
 ) {
   const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
   await datasourcesOverview.setCompactionConfiguration(datasourceName, compactionConfig);
+
+  const savedCompactionConfig = await datasourcesOverview.getCompactionConfiguration(
+    datasourceName,
+  );
+  expect(savedCompactionConfig).toEqual(compactionConfig);
 }
 
 async function triggerCompaction() {
