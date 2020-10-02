@@ -16,24 +16,25 @@
  * limitations under the License.
  */
 
-.lookup-edit-dialog {
-  &.bp3-dialog {
-    height: 80vh;
-    width: 600px;
-  }
+import { Button, ButtonGroup, FormGroup } from '@blueprintjs/core';
+import React from 'react';
 
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 15px 5px 5px 15px;
-    flex: 1;
-    overflow: auto;
-  }
+export type FormJsonTabs = 'form' | 'json';
 
-  .ace-solarized-dark {
-    background-color: #232c35;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
-  }
+export interface FormJsonSelectorProps {
+  tab: FormJsonTabs;
+  onChange: (tab: FormJsonTabs) => void;
 }
+
+export const FormJsonSelector = React.memo(function FormJsonSelector(props: FormJsonSelectorProps) {
+  const { tab, onChange } = props;
+
+  return (
+    <FormGroup className="form-json-selector">
+      <ButtonGroup fill>
+        <Button text="Form" active={tab === 'form'} onClick={() => onChange('form')} />
+        <Button text="JSON" active={tab === 'json'} onClick={() => onChange('json')} />
+      </ButtonGroup>
+    </FormGroup>
+  );
+});

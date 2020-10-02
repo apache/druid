@@ -893,9 +893,10 @@ GROUP BY 1`;
           data={datasources}
           loading={datasourcesAndDefaultRulesState.loading}
           noDataText={
-            !datasourcesAndDefaultRulesState.loading && datasources && !datasources.length
+            datasourcesAndDefaultRulesState.getErrorMessage() ||
+            (!datasourcesAndDefaultRulesState.loading && datasources && !datasources.length
               ? 'No datasources'
-              : datasourcesAndDefaultRulesState.getErrorMessage() || ''
+              : '')
           }
           filterable
           filtered={datasourceFilter}
