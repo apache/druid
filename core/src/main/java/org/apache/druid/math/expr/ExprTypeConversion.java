@@ -27,6 +27,10 @@ import java.util.List;
 public class ExprTypeConversion
 {
 
+  /**
+   * Infer the output type of a list of possible 'conditional' expression outputs (where any of these could be the
+   * output expression if the corresponding case matching expression evaluates to true)
+   */
   static ExprType conditional(Expr.InputBindingTypes inputTypes, List<Expr> args)
   {
     ExprType type = null;
@@ -41,11 +45,6 @@ public class ExprTypeConversion
       }
     }
     return type;
-  }
-
-  private ExprTypeConversion()
-  {
-    // no instantiation
   }
 
   /**
@@ -151,5 +150,10 @@ public class ExprTypeConversion
     }
     // floats vs doubles would be handled here, but we currently only support doubles...
     return ExprType.DOUBLE;
+  }
+
+  private ExprTypeConversion()
+  {
+    // no instantiation
   }
 }
