@@ -320,7 +320,8 @@ public class SystemSchema extends AbstractSchema
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
                   segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
               };
-            } catch (JsonProcessingException e) {
+            }
+            catch (JsonProcessingException e) {
               throw new RuntimeException(e);
             }
           });
@@ -359,7 +360,8 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
                   null // unpublished segments from realtime tasks will not be compacted yet
               };
-            } catch (JsonProcessingException e) {
+            }
+            catch (JsonProcessingException e) {
               throw new RuntimeException(e);
             }
           });
