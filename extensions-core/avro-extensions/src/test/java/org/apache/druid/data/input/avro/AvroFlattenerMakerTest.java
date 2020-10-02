@@ -23,6 +23,8 @@ import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.junit.Assert;
 import org.junit.Test;
+import java.util.Collections;
+import java.util.List;
 
 public class AvroFlattenerMakerTest
 {
@@ -194,6 +196,22 @@ public class AvroFlattenerMakerTest
     Assert.assertEquals(
         record.getSomeRecordArray(),
         flattener.makeJsonPathExtractor("$.someRecordArray").apply(record)
+    );
+
+    Assert.assertEquals(
+        record.getSomeRecordArray().get(0).getNestedString(),
+        flattener.makeJsonPathExtractor("$.someRecordArray[0].nestedString").apply(record)
+    );
+
+    Assert.assertEquals(
+        record.getSomeRecordArray(),
+        flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString)]").apply(record)
+    );
+
+    List<String> nestedStringArray = Collections.singletonList(record.getSomeRecordArray().get(0).getNestedString().toString());
+    Assert.assertEquals(
+        nestedStringArray,
+        flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString=='string in record')].nestedString").apply(record)
     );
   }
 
