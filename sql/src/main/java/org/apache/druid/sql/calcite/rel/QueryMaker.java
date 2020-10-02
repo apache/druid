@@ -307,7 +307,7 @@ public class QueryMaker
         coercedValue = value.getClass().getName();
       }
     } else if (sqlType == SqlTypeName.ARRAY) {
-      if (value == null || value instanceof String) {
+      if (value instanceof String) {
         coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
       } else if (value instanceof NlsString) {
         coercedValue = ((NlsString) value).getValue();
