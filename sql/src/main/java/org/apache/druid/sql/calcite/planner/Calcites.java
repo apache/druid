@@ -178,8 +178,7 @@ public class Calcites
   {
     if (ValueType.isNumeric(valueType)) {
       return StringComparators.NUMERIC;
-    } else if (ValueType.STRING == valueType || ValueType.isArray(valueType)) {
-      // arrays currently are considered strings... don't ask
+    } else if (ValueType.STRING == valueType) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       throw new ISE("Unrecognized valueType[%s]", valueType);
