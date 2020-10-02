@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
 import path from 'path';
 import * as playwright from 'playwright-core';
 
@@ -25,7 +24,6 @@ import { Datasource } from './component/datasources/datasource';
 import { DatasourcesOverview } from './component/datasources/overview';
 import { HashedPartitionsSpec } from './component/load-data/config/partition';
 import { saveScreenshotIfError } from './util/debug';
-import { COORDINATOR_URL } from './util/druid';
 import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
 import { UNIFIED_CONSOLE_URL } from './util/druid';
 import { runIndexTask } from './util/druid';
@@ -77,7 +75,7 @@ describe('Auto-compaction', () => {
       // need several iterations if several time chunks need compaction
       let currNumSegment = uncompactedNumSegment;
       await retryIfJestAssertionError(async () => {
-        await triggerCompaction();
+        await triggerCompaction(page);
         currNumSegment = await waitForCompaction(page, datasourceName, currNumSegment);
 
         const compactedNumSegment = 2;
@@ -127,15 +125,18 @@ async function configureCompaction(
   const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
   await datasourcesOverview.setCompactionConfiguration(datasourceName, compactionConfig);
 
-  const savedCompactionConfig = await datasourcesOverview.getCompactionConfiguration(
-    datasourceName,
-  );
-  expect(savedCompactionConfig).toEqual(compactionConfig);
+  // Saving the compaction config is not instantaneous
+  await retryIfJestAssertionError(async () => {
+    const savedCompactionConfig = await datasourcesOverview.getCompactionConfiguration(
+      datasourceName,
+    );
+    expect(savedCompactionConfig).toEqual(compactionConfig);
+  });
 }
 
-async function triggerCompaction() {
-  const res = await axios.post(`${COORDINATOR_URL}/druid/coordinator/v1/compaction/compact`);
-  expect(res.status).toBe(200);
+async function triggerCompaction(page: playwright.Page) {
+  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
+  await datasourcesOverview.triggerCompaction();
 }
 
 async function waitForCompaction(
