@@ -48,3 +48,69 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   await page.setViewportSize({ width: WIDTH, height: HEIGHT });
   return page;
 }
+
+export async function getLabeledInput(page: playwright.Page, label: string): Promise<string> {
+  return await page.$eval(
+    `//*[text()="${label}"]/following-sibling::div//input`,
+    el => (el as HTMLInputElement).value,
+  );
+}
+
+export async function setLabeledInput(
+  page: playwright.Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  return setLabeledElement(page, 'input', label, value);
+}
+
+export async function setLabeledTextarea(
+  page: playwright.Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  return setLabeledElement(page, 'textarea', label, value);
+}
+
+async function setLabeledElement(
+  page: playwright.Page,
+  type: string,
+  label: string,
+  value: string,
+): Promise<void> {
+  const element = await page.$(`//*[text()="${label}"]/following-sibling::div//${type}`);
+  await setInput(element!, value);
+}
+
+export async function setInput(
+  input: playwright.ElementHandle<Element>,
+  value: string,
+): Promise<void> {
+  await input.fill('');
+  await input.type(value);
+}
+
+function buttonSelector(text: string) {
+  return `//button/*[contains(text(),"${text}")]`;
+}
+
+export async function clickButton(page: playwright.Page, text: string): Promise<void> {
+  await page.click(buttonSelector(text));
+}
+
+export async function clickLabeledButton(
+  page: playwright.Page,
+  label: string,
+  text: string,
+): Promise<void> {
+  await page.click(`//*[text()="${label}"]/following-sibling::div${buttonSelector(text)}`);
+}
+
+export async function selectSuggestibleInput(
+  page: playwright.Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  await page.click(`//*[text()="${label}"]/following-sibling::div//button`);
+  await page.click(`"${value}"`);
+}

@@ -17,19 +17,18 @@
  */
 
 import axios from 'axios';
-import { execSync } from 'child_process';
 import path from 'path';
 import * as playwright from 'playwright-core';
-import { v4 as uuid } from 'uuid';
 
 import { CompactionConfig } from './component/datasources/compaction';
-import { CompactionHashPartitionsSpec } from './component/datasources/compaction';
 import { Datasource } from './component/datasources/datasource';
 import { DatasourcesOverview } from './component/datasources/overview';
+import { HashedPartitionsSpec } from './component/load-data/config/partition';
 import { saveScreenshotIfError } from './util/debug';
 import { COORDINATOR_URL } from './util/druid';
-import { DRUID_DIR } from './util/druid';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
 import { UNIFIED_CONSOLE_URL } from './util/druid';
+import { runIndexTask } from './util/druid';
 import { createBrowserNormal as createBrowser } from './util/playwright';
 import { createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
@@ -57,17 +56,18 @@ describe('Auto-compaction', () => {
   });
 
   it('Compacts segments from dynamic to hash partitions', async () => {
-    const datasourceName = uuid();
+    const testName = 'autocompaction-dynamic-to-hash-';
+    const datasourceName = testName + new Date().toISOString();
     loadInitialData(datasourceName);
 
-    await saveScreenshotIfError('auto-compaction-', page, async () => {
+    await saveScreenshotIfError(testName, page, async () => {
       const uncompactedNumSegment = 3;
       const numRow = 1412;
       await validateDatasourceStatus(page, datasourceName, uncompactedNumSegment, numRow);
 
       const compactionConfig = new CompactionConfig({
         skipOffsetFromLatest: 'PT0S',
-        partitionsSpec: new CompactionHashPartitionsSpec({
+        partitionsSpec: new HashedPartitionsSpec({
           numShards: null,
         }),
       });
@@ -88,25 +88,14 @@ describe('Auto-compaction', () => {
 });
 
 function loadInitialData(datasourceName: string) {
-  const postIndexTask = path.join(DRUID_DIR, 'examples', 'bin', 'post-index-task');
   const ingestionSpec = path.join(
-    DRUID_DIR,
-    'examples',
-    'quickstart',
-    'tutorial',
+    DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
     'compaction-init-index.json',
   );
   const setDatasourceName = `s/compaction-tutorial/${datasourceName}/`;
   const setIntervals = 's|2015-09-12/2015-09-13|2015-09-12/2015-09-12T02:00|'; // shorten to reduce test duration
-  execSync(
-    `${postIndexTask} \
-       --file <(sed -e '${setDatasourceName}' -e '${setIntervals}' ${ingestionSpec}) \
-       --url ${COORDINATOR_URL}`,
-    {
-      shell: 'bash',
-      timeout: 3 * 60 * 1000,
-    },
-  );
+  const sedCommands = [setDatasourceName, setIntervals];
+  runIndexTask(ingestionSpec, sedCommands);
 }
 
 async function validateDatasourceStatus(
@@ -137,6 +126,11 @@ async function configureCompaction(
 ) {
   const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
   await datasourcesOverview.setCompactionConfiguration(datasourceName, compactionConfig);
+
+  const savedCompactionConfig = await datasourcesOverview.getCompactionConfiguration(
+    datasourceName,
+  );
+  expect(savedCompactionConfig).toEqual(compactionConfig);
 }
 
 async function triggerCompaction() {
