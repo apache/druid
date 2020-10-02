@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`lookup edit dialog matches snapshot 1`] = `
+exports[`LookupEditDialog matches snapshot 1`] = `
 <Blueprint3.Dialog
   canOutsideClickClose={true}
   className="lookup-edit-dialog"
@@ -29,64 +29,16 @@ exports[`lookup edit dialog matches snapshot 1`] = `
         value="test"
       >
         <option
-          key="a"
-          value="a"
+          key="__default"
+          value="__default"
         >
-          a
+          __default
         </option>
         <option
-          key="b"
-          value="b"
+          key="alt-tier"
+          value="alt-tier"
         >
-          b
-        </option>
-        <option
-          key="c"
-          value="c"
-        >
-          c
-        </option>
-        <option
-          key="d"
-          value="d"
-        >
-          d
-        </option>
-        <option
-          key="e"
-          value="e"
-        >
-          e
-        </option>
-        <option
-          key="f"
-          value="f"
-        >
-          f
-        </option>
-        <option
-          key="g"
-          value="g"
-        >
-          g
-        </option>
-        <option
-          key="h"
-          value="h"
-        >
-          h
-        </option>
-        <option
-          key="i"
-          value="i"
-        >
-          i
-        </option>
-        <option
-          key="j"
-          value="j"
-        >
-          j
+          alt-tier
         </option>
       </HTMLSelect>
     </Blueprint3.FormGroup>
@@ -405,7 +357,9 @@ exports[`lookup edit dialog matches snapshot 1`] = `
       }
       model={
         Object {
-          "map": Object {},
+          "map": Object {
+            "a": 1,
+          },
           "type": "map",
         }
       }
