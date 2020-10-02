@@ -43,7 +43,6 @@ public class KafkaEventWriter implements StreamEventWriter
   {
     Properties properties = new Properties();
     properties.setProperty("bootstrap.servers", config.getKafkaHost());
-    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     properties.setProperty("acks", "all");
     properties.setProperty("retries", "3");
     properties.setProperty("key.serializer", ByteArraySerializer.class.getName());
@@ -53,6 +52,7 @@ public class KafkaEventWriter implements StreamEventWriter
       properties.setProperty("enable.idempotence", "true");
       properties.setProperty("transactional.id", IdUtils.getRandomId());
     }
+    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     this.producer = new KafkaProducer<>(
         properties,
         new StringSerializer(),

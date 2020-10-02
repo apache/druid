@@ -277,16 +277,18 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
     public Map<String, String> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException
     {
-      // reading like this results in a map that has both nested objects and also flattened string pairs
-      // so the map looks something like this:
-
+      // given some config input, such as
+      //    druid.test.config.properites.a.b.c=d
+      // calling jsonParser.readValueAs(Map.class) here results in a map that has both nested objects and also
+      // flattened string pairs, so the map looks something like this (in JSON form):
       //    {
       //      "a" : { "b": { "c" : "d" }}},
       //      "a.b.c":"d"
       //    }
-
-      // filtering out the top level keys which do not have string values produces what we want here that
-      // '-Ddruid.test.config.properites.some.property.key=foo' -> { "some.property.key":"foo"}
+      // The string pairs are the values we want to populate this map with, so filtering out the top level keys which
+      // do not have string values leaves us with
+      //    { "a.b.c":"d"}
+      // from the given example, which is what we want
       Map<String, Object> parsed = jsonParser.readValueAs(Map.class);
       Map<String, String> flat = new HashMap<>();
       for (Map.Entry<String, Object> entry : parsed.entrySet()) {
