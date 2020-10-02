@@ -68,8 +68,11 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
   )
   {
     final Closer closer = Closer.create();
-    closer.register(delegateIterator);
+    // We must register the shutdow of the shutdown executor first. This will make sure that the shutdow of the
+    // shutdown executor is executed last. This is to ensure that the shutdown executor thread can run and complete
+    // the closing of other resources.
     closer.register(exec::shutdownNow);
+    closer.register(delegateIterator);
     final CloseableIterator<T> wrappingIterator = new CloseableIterator<T>()
     {
       /**
