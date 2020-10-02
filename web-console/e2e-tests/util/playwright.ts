@@ -49,6 +49,13 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   return page;
 }
 
+export async function getLabeledInput(page: playwright.Page, label: string): Promise<string> {
+  return await page.$eval(
+    `//*[text()="${label}"]/following-sibling::div//input`,
+    el => (el as HTMLInputElement).value,
+  );
+}
+
 export async function setLabeledInput(
   page: playwright.Page,
   label: string,
