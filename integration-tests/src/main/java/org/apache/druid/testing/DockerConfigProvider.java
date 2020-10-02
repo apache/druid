@@ -21,8 +21,13 @@ package org.apache.druid.testing;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,6 +58,10 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
 
   @JsonProperty
   private String streamEndpoint;
+
+  @JsonProperty
+  @JsonDeserialize(using = ArbitraryPropertiesJsonDeserializer.class)
+  private Map<String, String> properties;
 
   @Override
   public IntegrationTestingConfig get()
@@ -190,7 +199,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getProperty(String prop)
       {
-        throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);
+        return properties.get(prop);
       }
 
       @Override
@@ -208,7 +217,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public Map<String, String> getProperties()
       {
-        return new HashMap<>();
+        return properties;
       }
 
       @Override
@@ -259,5 +268,33 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
         return streamEndpoint;
       }
     };
+  }
+
+  // there is probably a better way to do this...
+  static class ArbitraryPropertiesJsonDeserializer extends JsonDeserializer<Map<String, String>>
+  {
+    @Override
+    public Map<String, String> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
+    {
+      // reading like this results in a map that has both nested objects and also flattened string pairs
+      // so the map looks something like this:
+
+      //    {
+      //      "a" : { "b": { "c" : "d" }}},
+      //      "a.b.c":"d"
+      //    }
+
+      // filtering out the top level keys which do not have string values produces what we want here that
+      // '-Ddruid.test.config.properites.some.property.key=foo' -> { "some.property.key":"foo"}
+      Map<String, Object> parsed = jsonParser.readValueAs(Map.class);
+      Map<String, String> flat = new HashMap<>();
+      for (Map.Entry<String, Object> entry : parsed.entrySet()) {
+        if (entry.getValue() instanceof String) {
+          flat.put(entry.getKey(), (String) entry.getValue());
+        }
+      }
+      return flat;
+    }
   }
 }

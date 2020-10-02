@@ -42,8 +42,8 @@ public class KafkaEventWriter implements StreamEventWriter
   public KafkaEventWriter(IntegrationTestingConfig config, boolean txnEnabled)
   {
     Properties properties = new Properties();
-    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     properties.setProperty("bootstrap.servers", config.getKafkaHost());
+    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     properties.setProperty("acks", "all");
     properties.setProperty("retries", "3");
     properties.setProperty("key.serializer", ByteArraySerializer.class.getName());
