@@ -292,7 +292,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       Map<String, Object> parsed = jsonParser.readValueAs(Map.class);
       Map<String, String> flat = new HashMap<>();
       for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-        if (entry.getValue() instanceof String) {
+        if (!(entry.getValue() instanceof Map)) {
           flat.put(entry.getKey(), (String) entry.getValue());
         }
       }
