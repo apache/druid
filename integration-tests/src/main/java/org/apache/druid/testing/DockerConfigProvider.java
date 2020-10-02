@@ -61,7 +61,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
 
   @JsonProperty
   @JsonDeserialize(using = ArbitraryPropertiesJsonDeserializer.class)
-  private Map<String, String> properties;
+  private Map<String, String> properties = new HashMap<>();
 
   @Override
   public IntegrationTestingConfig get()
