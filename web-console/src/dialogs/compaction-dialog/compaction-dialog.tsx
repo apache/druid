@@ -16,15 +16,17 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Classes, Code, Dialog, FormGroup, Intent } from '@blueprintjs/core';
+import { Button, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import { AutoForm, Field, JsonInput } from '../../components';
+import {
+  FormJsonSelector,
+  FormJsonTabs,
+} from '../../components/form-json-selector/form-json-selector';
 import { deepGet, deepSet } from '../../utils/object-change';
 
 import './compaction-dialog.scss';
-
-type Tabs = 'form' | 'json';
 
 type CompactionConfig = Record<string, any>;
 
@@ -240,7 +242,7 @@ export interface CompactionDialogProps {
 export const CompactionDialog = React.memo(function CompactionDialog(props: CompactionDialogProps) {
   const { datasource, compactionConfig, onSave, onClose, onDelete } = props;
 
-  const [currentTab, setCurrentTab] = useState<Tabs>('form');
+  const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [currentConfig, setCurrentConfig] = useState<CompactionConfig>(
     compactionConfig || {
       dataSource: datasource,
@@ -261,20 +263,7 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
       canOutsideClickClose={false}
       title={`Compaction config: ${datasource}`}
     >
-      <FormGroup className="tabs">
-        <ButtonGroup fill>
-          <Button
-            text="Form"
-            active={currentTab === 'form'}
-            onClick={() => setCurrentTab('form')}
-          />
-          <Button
-            text="JSON"
-            active={currentTab === 'json'}
-            onClick={() => setCurrentTab('json')}
-          />
-        </ButtonGroup>
-      </FormGroup>
+      <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
       <div className="content">
         {currentTab === 'form' ? (
           <AutoForm
