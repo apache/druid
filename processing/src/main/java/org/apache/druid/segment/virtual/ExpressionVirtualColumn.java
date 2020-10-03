@@ -175,6 +175,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // are unable to compute the output type of the expression, either due to incomplete type information of the
     // inputs or because of unimplemented methods on expression implementations themselves, or, because a
     // ColumnInspector is not available
+
+    // array types must not currently escape from the expression system
+    if (outputType != null && outputType.isArray()) {
+      return new ColumnCapabilitiesImpl().setType(ValueType.STRING).setHasMultipleValues(true);
+    }
+
     return new ColumnCapabilitiesImpl().setType(outputType == null ? ValueType.FLOAT : outputType);
   }
 
@@ -185,7 +191,8 @@ public class ExpressionVirtualColumn implements VirtualColumn
 
     if (plan.getOutputType() != null) {
 
-      if (outputType != null && ExprType.fromValueType(outputType) != plan.getOutputType()) {
+      final ExprType inferredOutputType = plan.getOutputType();
+      if (outputType != null && ExprType.fromValueType(outputType) != inferredOutputType) {
         log.warn(
             "Projected output type %s of expression %s does not match provided type %s",
             plan.getOutputType(),
@@ -193,7 +200,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
             outputType
         );
       }
-      final ExprType inferredOutputType = plan.getOutputType();
       final ValueType valueType = ExprType.toValueType(inferredOutputType);
 
       if (valueType.isNumeric()) {

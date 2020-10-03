@@ -279,7 +279,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return ExprType.doubleMathFunctionAutoTypeConversion(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+      return ExprTypeConversion.doubleMathFunction(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
     }
 
     @Override
@@ -444,7 +444,7 @@ public interface Function
     {
       ExprType outputType = ExprType.LONG;
       for (Expr expr : args) {
-        outputType = ExprType.doubleMathFunctionAutoTypeConversion(outputType, expr.getOutputType(inputTypes));
+        outputType = ExprTypeConversion.doubleMathFunction(outputType, expr.getOutputType(inputTypes));
       }
       return outputType;
     }
@@ -465,7 +465,7 @@ public interface Function
         ExprType exprType = exprEval.type();
 
         if (isValidType(exprType)) {
-          outputType = ExprType.doubleMathFunctionAutoTypeConversion(outputType, exprType);
+          outputType = ExprTypeConversion.doubleMathFunction(outputType, exprType);
         }
 
         if (exprEval.value() != null) {
@@ -843,7 +843,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return ExprType.integerMathFunctionAutoTypeConversion(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+      return ExprTypeConversion.integerMathFunction(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
     }
 
     @Override
@@ -1700,8 +1700,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      // output type is defined by else
-      return args.get(2).getOutputType(inputTypes);
+      return ExprTypeConversion.conditional(inputTypes, args.subList(1, 3));
     }
   }
 
@@ -1744,8 +1743,13 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      // output type is defined by else
-      return args.get(args.size() - 1).getOutputType(inputTypes);
+      List<Expr> results = new ArrayList<>();
+      for (int i = 1; i < args.size(); i += 2) {
+        results.add(args.get(i));
+      }
+      // add else
+      results.add(args.get(args.size() - 1));
+      return ExprTypeConversion.conditional(inputTypes, results);
     }
   }
 
@@ -1788,8 +1792,13 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      // output type is defined by else
-      return args.get(args.size() - 1).getOutputType(inputTypes);
+      List<Expr> results = new ArrayList<>();
+      for (int i = 2; i < args.size(); i += 2) {
+        results.add(args.get(i));
+      }
+      // add else
+      results.add(args.get(args.size() - 1));
+      return ExprTypeConversion.conditional(inputTypes, results);
     }
   }
 
@@ -1820,7 +1829,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return args.get(0).getOutputType(inputTypes);
+      return ExprTypeConversion.conditional(inputTypes, args);
     }
   }
 
@@ -2619,7 +2628,7 @@ public interface Function
     {
       ExprType type = ExprType.LONG;
       for (Expr arg : args) {
-        type = ExprType.doubleMathFunctionAutoTypeConversion(type, arg.getOutputType(inputTypes));
+        type = ExprTypeConversion.doubleMathFunction(type, arg.getOutputType(inputTypes));
       }
       return ExprType.asArrayType(type);
     }
