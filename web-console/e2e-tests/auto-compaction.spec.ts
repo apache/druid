@@ -17,7 +17,7 @@
  */
 
 import path from 'path';
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { CompactionConfig } from './component/datasources/compaction';
 import { Datasource } from './component/datasources/datasource';
@@ -27,7 +27,7 @@ import { saveScreenshotIfError } from './util/debug';
 import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
 import { UNIFIED_CONSOLE_URL } from './util/druid';
 import { runIndexTask } from './util/druid';
-import { createBrowserNormal as createBrowser } from './util/playwright';
+import { createBrowser } from './util/playwright';
 import { createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';

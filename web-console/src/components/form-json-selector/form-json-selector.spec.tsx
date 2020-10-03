@@ -16,17 +16,21 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import { shallow } from 'enzyme';
+import React from 'react';
 
-export async function saveScreenshotIfError(
-  filenamePrefix: string,
-  page: playwright.Page,
-  test: () => Promise<void>,
-) {
-  try {
-    await test();
-  } catch (e) {
-    await page.screenshot({ path: filenamePrefix + 'error-screenshot.png' });
-    throw e;
-  }
-}
+import { FormJsonSelector } from './form-json-selector';
+
+describe('FormJsonSelector', () => {
+  it('matches snapshot form tab', () => {
+    const formJsonSelector = shallow(<FormJsonSelector tab="form" onChange={() => {}} />);
+
+    expect(formJsonSelector).toMatchSnapshot();
+  });
+
+  it('matches snapshot form json', () => {
+    const formJsonSelector = shallow(<FormJsonSelector tab="json" onChange={() => {}} />);
+
+    expect(formJsonSelector).toMatchSnapshot();
+  });
+});

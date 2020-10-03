@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -54,7 +53,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -664,21 +662,6 @@ public class Expressions
     return druidExpression != null
            ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
            : null;
-  }
-
-  public static ExprType exprTypeForValueType(final ValueType valueType)
-  {
-    switch (valueType) {
-      case LONG:
-        return ExprType.LONG;
-      case FLOAT:
-      case DOUBLE:
-        return ExprType.DOUBLE;
-      case STRING:
-        return ExprType.STRING;
-      default:
-        throw new ISE("No ExprType for valueType[%s]", valueType);
-    }
   }
 
   /**

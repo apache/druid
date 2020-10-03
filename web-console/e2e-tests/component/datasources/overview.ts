@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { clickButton } from '../../util/playwright';
 import { getLabeledInput } from '../../util/playwright';
@@ -60,7 +60,7 @@ export class DatasourcesOverview {
 
   async getDatasources(): Promise<Datasource[]> {
     await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle0' });
+    await this.page.reload({ waitUntil: 'networkidle' });
 
     const data = await extractTable(this.page, 'div div.rt-tr-group', 'div.rt-td');
 
@@ -128,8 +128,7 @@ export class DatasourcesOverview {
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitFor(1000); // https://blueprintjs.com/docs/#core/components/popover.testing
-    await this.page.waitFor('ul.bp3-menu');
+    await this.page.waitForSelector('ul.bp3-menu');
   }
 
   async triggerCompaction(): Promise<void> {

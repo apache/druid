@@ -16,17 +16,25 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import { Button, ButtonGroup, FormGroup } from '@blueprintjs/core';
+import React from 'react';
 
-export async function saveScreenshotIfError(
-  filenamePrefix: string,
-  page: playwright.Page,
-  test: () => Promise<void>,
-) {
-  try {
-    await test();
-  } catch (e) {
-    await page.screenshot({ path: filenamePrefix + 'error-screenshot.png' });
-    throw e;
-  }
+export type FormJsonTabs = 'form' | 'json';
+
+export interface FormJsonSelectorProps {
+  tab: FormJsonTabs;
+  onChange: (tab: FormJsonTabs) => void;
 }
+
+export const FormJsonSelector = React.memo(function FormJsonSelector(props: FormJsonSelectorProps) {
+  const { tab, onChange } = props;
+
+  return (
+    <FormGroup className="form-json-selector">
+      <ButtonGroup fill>
+        <Button text="Form" active={tab === 'form'} onClick={() => onChange('form')} />
+        <Button text="JSON" active={tab === 'json'} onClick={() => onChange('json')} />
+      </ButtonGroup>
+    </FormGroup>
+  );
+});

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';
@@ -28,8 +28,9 @@ import { LocalFileDataConnector } from './component/load-data/data-connector/loc
 import { DataLoader } from './component/load-data/data-loader';
 import { QueryOverview } from './component/query/overview';
 import { saveScreenshotIfError } from './util/debug';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
 import { UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowserNormal as createBrowser } from './util/playwright';
+import { createBrowser } from './util/playwright';
 import { createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';
@@ -57,7 +58,7 @@ describe('Tutorial: Loading a file', () => {
     const testName = 'load-data-from-local-disk-';
     const datasourceName = testName + new Date().toISOString();
     const dataConnector = new LocalFileDataConnector(page, {
-      baseDirectory: 'quickstart/tutorial/',
+      baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
       fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
     });
     const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
