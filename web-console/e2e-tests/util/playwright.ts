@@ -16,22 +16,16 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
-const DEBUG = true;
+const TRUE = 'true';
 const WIDTH = 1920;
 const HEIGHT = 1080;
 const PADDING = 128;
 
-export async function createBrowserNormal(): Promise<playwright.Browser> {
-  return createBrowserInternal(!DEBUG);
-}
-
-export async function createBrowserDebug(): Promise<playwright.Browser> {
-  return createBrowserInternal(DEBUG);
-}
-
-async function createBrowserInternal(debug: boolean): Promise<playwright.Browser> {
+export async function createBrowser(): Promise<playwright.Browser> {
+  const headless = process.env['DRUID_E2E_TEST_HEADLESS'] || TRUE;
+  const debug = headless !== TRUE;
   const launchOptions: any = {
     args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`],
   };

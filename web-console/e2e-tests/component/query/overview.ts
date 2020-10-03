@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { clickButton } from '../../util/playwright';
 import { setInput } from '../../util/playwright';
@@ -36,12 +36,12 @@ export class QueryOverview {
 
   async runQuery(query: string): Promise<string[][]> {
     await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle0' });
+    await this.page.reload({ waitUntil: 'networkidle' });
 
     const input = await this.page.$('div.query-input textarea');
     await setInput(input!, query);
     await clickButton(this.page, 'Run');
-    await this.page.waitFor('div.query-info');
+    await this.page.waitForSelector('div.query-info');
 
     return await extractTable(this.page, 'div.query-output div.rt-tr-group', 'div.rt-td');
   }

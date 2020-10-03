@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { clickButton } from '../../util/playwright';
 import { getLabeledInput } from '../../util/playwright';
@@ -61,7 +61,7 @@ export class DatasourcesOverview {
 
   async getDatasources(): Promise<Datasource[]> {
     await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle0' });
+    await this.page.reload({ waitUntil: 'networkidle' });
 
     const data = await extractTable(this.page, 'div div.rt-tr-group', 'div.rt-td');
 
@@ -116,6 +116,6 @@ export class DatasourcesOverview {
 
     const editActions = await this.page.$$('span[icon=wrench]');
     editActions[index].click();
-    await this.page.waitFor('ul.bp3-menu');
+    await this.page.waitForSelector('ul.bp3-menu');
   }
 }
