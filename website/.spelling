@@ -1772,6 +1772,7 @@ missingValue
 schemaless
 spatialDimensions
 useFieldDiscovery
+appendableIndexSpec
  - ../docs/tutorials/index.md
 4CPU
 cityName
