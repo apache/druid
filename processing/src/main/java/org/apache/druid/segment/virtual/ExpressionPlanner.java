@@ -150,8 +150,16 @@ public class ExpressionPlanner
       outputType = expression.getOutputType(inspector);
     }
 
-    // if analysis, inferred output type, or implicit mapping is in play, output will be multi-valued
-    if (analysis.isOutputArray() || ExprType.isArray(outputType) || ExpressionPlan.is(traits, ExpressionPlan.Trait.NEEDS_APPLIED)) {
+    // if analysis predicts output, or inferred output type is array, output will be multi-valued
+    if (analysis.isOutputArray() || ExprType.isArray(outputType)) {
+      traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
+
+      // single input mappable may not produce array output explicitly, only through implicit mapping
+      traits.remove(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE);
+    }
+
+    // if implicit mapping is in play, output will be multi-valued but may still use SINGLE_INPUT_MAPPABLE optimization
+    if (ExpressionPlan.is(traits, ExpressionPlan.Trait.NEEDS_APPLIED)) {
       traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
     }
 

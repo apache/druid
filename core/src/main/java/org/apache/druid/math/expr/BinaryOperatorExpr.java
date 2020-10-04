@@ -83,7 +83,13 @@ abstract class BinaryOpExprBase implements Expr
   @Override
   public ExprType getOutputType(InputBindingTypes inputTypes)
   {
-    return ExprType.operatorAutoTypeConversion(left.getOutputType(inputTypes), right.getOutputType(inputTypes));
+    if (left.isNullLiteral()) {
+      return right.getOutputType(inputTypes);
+    }
+    if (right.isNullLiteral()) {
+      return left.getOutputType(inputTypes);
+    }
+    return ExprTypeConversion.operator(left.getOutputType(inputTypes), right.getOutputType(inputTypes));
   }
 
   @Override
