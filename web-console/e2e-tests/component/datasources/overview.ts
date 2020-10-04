@@ -44,7 +44,6 @@ enum DatasourceColumn {
   ACTIONS,
 }
 
-const EDIT_COMPACTION_CONFIGURATION = 'Edit compaction configuration';
 const SKIP_OFFSET_FROM_LATEST = 'Skip offset from latest';
 
 /**
@@ -83,9 +82,8 @@ export class DatasourcesOverview {
     datasourceName: string,
     compactionConfig: CompactionConfig,
   ): Promise<void> {
-    await this.openEditActions(datasourceName);
+    await this.openCompactionConfigurationDialog(datasourceName);
 
-    await this.page.click(`"${EDIT_COMPACTION_CONFIGURATION}"`);
     await setLabeledInput(
       this.page,
       SKIP_OFFSET_FROM_LATEST,
@@ -96,10 +94,20 @@ export class DatasourcesOverview {
     await clickButton(this.page, 'Submit');
   }
 
-  async getCompactionConfiguration(datasourceName: string): Promise<CompactionConfig> {
+  private async openCompactionConfigurationDialog(datasourceName: string): Promise<void> {
     await this.openEditActions(datasourceName);
+    await this.clickMenuItem('Edit compaction configuration');
+    await this.page.waitForSelector('div.compaction-dialog');
+  }
 
-    await this.page.click(`"${EDIT_COMPACTION_CONFIGURATION}"`);
+  private async clickMenuItem(text: string): Promise<void> {
+    const menuItemSelector = `//a[*[contains(text(),"${text}")]]`;
+    await this.page.click(menuItemSelector);
+  }
+
+  async getCompactionConfiguration(datasourceName: string): Promise<CompactionConfig> {
+    await this.openCompactionConfigurationDialog(datasourceName);
+
     const skipOffsetFromLatest = await getLabeledInput(this.page, SKIP_OFFSET_FROM_LATEST);
     const partitionsSpec = await readPartitionSpec(this.page);
 
@@ -116,6 +124,22 @@ export class DatasourcesOverview {
 
     const editActions = await this.page.$$('span[icon=wrench]');
     editActions[index].click();
+    await this.waitForPopupMenu();
+  }
+
+  private async waitForPopupMenu(): Promise<void> {
     await this.page.waitForSelector('ul.bp3-menu');
+  }
+
+  async triggerCompaction(): Promise<void> {
+    await this.page.goto(this.baseUrl);
+    await this.clickMoreButton({ modifiers: ['Alt'] });
+    await this.clickMenuItem('Force compaction run');
+    await clickButton(this.page, 'Force compaction run');
+  }
+
+  private async clickMoreButton(options: any): Promise<void> {
+    await this.page.click('//button[span[@icon="more"]]', options);
+    await this.waitForPopupMenu();
   }
 }
