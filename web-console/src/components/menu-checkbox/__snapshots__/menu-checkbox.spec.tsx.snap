@@ -1,18 +1,71 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`menu checkbox matches snapshot 1`] = `
+exports[`MenuCheckbox matches snapshot checked 1`] = `
 <li
-  class="menu-checkbox"
+  class=""
 >
-  <label
-    class="bp3-control bp3-checkbox"
+  <a
+    class="bp3-menu-item menu-checkbox"
   >
-    <input
-      type="checkbox"
-    />
     <span
-      class="bp3-control-indicator"
-    />
-  </label>
+      class="bp3-icon bp3-icon-tick-circle"
+      icon="tick-circle"
+    >
+      <svg
+        data-icon="tick-circle"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <desc>
+          tick-circle
+        </desc>
+        <path
+          d="M8 16c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm4-11c-.28 0-.53.11-.71.29L7 9.59l-2.29-2.3a1.003 1.003 0 00-1.42 1.42l3 3c.18.18.43.29.71.29s.53-.11.71-.29l5-5A1.003 1.003 0 0012 5z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
+    <div
+      class="bp3-text-overflow-ellipsis bp3-fill"
+    >
+      hello
+    </div>
+  </a>
+</li>
+`;
+
+exports[`MenuCheckbox matches snapshot unchecked 1`] = `
+<li
+  class=""
+>
+  <a
+    class="bp3-menu-item menu-checkbox"
+  >
+    <span
+      class="bp3-icon bp3-icon-circle"
+      icon="circle"
+    >
+      <svg
+        data-icon="circle"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <desc>
+          circle
+        </desc>
+        <path
+          d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 14c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
+    <div
+      class="bp3-text-overflow-ellipsis bp3-fill"
+    >
+      hello
+    </div>
+  </a>
 </li>
 `;
