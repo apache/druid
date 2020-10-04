@@ -16,24 +16,21 @@
  * limitations under the License.
  */
 
-.lookup-edit-dialog {
-  &.bp3-dialog {
-    height: 80vh;
-    width: 600px;
-  }
+import { shallow } from 'enzyme';
+import React from 'react';
 
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 15px 5px 5px 15px;
-    flex: 1;
-    overflow: auto;
-  }
+import { FormJsonSelector } from './form-json-selector';
 
-  .ace-solarized-dark {
-    background-color: #232c35;
-  }
+describe('FormJsonSelector', () => {
+  it('matches snapshot form tab', () => {
+    const formJsonSelector = shallow(<FormJsonSelector tab="form" onChange={() => {}} />);
 
-  .ace_gutter-layer {
-    background-color: #27313c;
-  }
-}
+    expect(formJsonSelector).toMatchSnapshot();
+  });
+
+  it('matches snapshot form json', () => {
+    const formJsonSelector = shallow(<FormJsonSelector tab="json" onChange={() => {}} />);
+
+    expect(formJsonSelector).toMatchSnapshot();
+  });
+});
