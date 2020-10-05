@@ -80,6 +80,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.URL;
@@ -953,6 +954,73 @@ public class CompactSegmentsTest
     public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
     {
       return EasyMock.niceMock(DruidNodeDiscovery.class);
+    }
+  }
+
+  public static class StaticUtilsTest
+  {
+    @Test
+    public void testIsParalleModeNullTuningConfigReturnFalse()
+    {
+      Assert.assertFalse(CompactSegments.isParallelMode(null));
+    }
+
+    @Test
+    public void testIsParallelModeNullPartitionsSpecReturnFalse()
+    {
+      ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
+      Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(null);
+      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeNonRangePartitionVaryingMaxNumConcurrentSubTasks()
+    {
+      ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
+      Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
+
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(null);
+      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
+      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
+      Assert.assertTrue(CompactSegments.isParallelMode(tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeRangePartitionVaryingMaxNumConcurrentSubTasks()
+    {
+      ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
+      Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(SingleDimensionPartitionsSpec.class));
+
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(null);
+      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
+      Assert.assertTrue(CompactSegments.isParallelMode(tuningConfig));
+
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
+      Assert.assertTrue(CompactSegments.isParallelMode(tuningConfig));
+    }
+
+    @Test
+    public void testFindMaxNumTaskSlotsUsedByOneCompactionTaskWhenIsParallelMode()
+    {
+      ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
+      Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
+      Assert.assertEquals(3, CompactSegments.findMaxNumTaskSlotsUsedByOneCompactionTask(tuningConfig));
+    }
+
+    @Test
+    public void testFindMaxNumTaskSlotsUsedByOneCompactionTaskWhenIsSequentialMode()
+    {
+      ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
+      Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
+      Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
+      Assert.assertEquals(1, CompactSegments.findMaxNumTaskSlotsUsedByOneCompactionTask(tuningConfig));
     }
   }
 }
