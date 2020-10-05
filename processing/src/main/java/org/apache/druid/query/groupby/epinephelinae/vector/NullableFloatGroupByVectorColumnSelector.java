@@ -37,7 +37,7 @@ public class NullableFloatGroupByVectorColumnSelector implements GroupByVectorCo
   @Override
   public int getGroupingKeySize()
   {
-    return 1 + Float.BYTES;
+    return Byte.BYTES + Float.BYTES;
   }
 
   @Override

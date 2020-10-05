@@ -37,7 +37,7 @@ public class NullableLongGroupByVectorColumnSelector implements GroupByVectorCol
   @Override
   public int getGroupingKeySize()
   {
-    return 1 + Long.BYTES;
+    return Byte.BYTES + Long.BYTES;
   }
 
   @Override

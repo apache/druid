@@ -47,7 +47,10 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       final SingleValueDimensionVectorSelector selector
   )
   {
-    Preconditions.checkArgument(ValueType.STRING == capabilities.getType());
+    Preconditions.checkArgument(
+        ValueType.STRING == capabilities.getType(),
+        "groupBy dimension processors must be STRING typed"
+    );
     return new SingleValueStringGroupByVectorColumnSelector(selector);
   }
 
@@ -57,7 +60,10 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       final MultiValueDimensionVectorSelector selector
   )
   {
-    Preconditions.checkArgument(ValueType.STRING == capabilities.getType());
+    Preconditions.checkArgument(
+        ValueType.STRING == capabilities.getType(),
+        "groupBy dimension processors must be STRING typed"
+    );
     throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
   }
 

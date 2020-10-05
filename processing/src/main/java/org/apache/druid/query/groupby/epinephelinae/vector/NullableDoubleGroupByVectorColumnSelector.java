@@ -37,7 +37,7 @@ public class NullableDoubleGroupByVectorColumnSelector implements GroupByVectorC
   @Override
   public int getGroupingKeySize()
   {
-    return 1 + Double.BYTES;
+    return Byte.BYTES + Double.BYTES;
   }
 
   @Override
