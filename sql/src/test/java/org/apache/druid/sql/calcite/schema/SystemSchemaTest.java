@@ -1289,7 +1289,7 @@ public class SystemSchemaTest extends CalciteTestBase
           case STRING:
             if (signature.getColumnName(i).equals("segment_id")) {
               expectedClass = SegmentId.class;
-            } else if (signature.getColumnName(i).equals("shardSpec")) {
+            } else if (signature.getColumnName(i).equals("shard_spec")) {
               expectedClass = ShardSpec.class;
             } else if (signature.getColumnName(i).equals("last_compaction_state")) {
               expectedClass = CompactionState.class;
