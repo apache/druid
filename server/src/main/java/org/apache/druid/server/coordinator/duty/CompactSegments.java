@@ -163,7 +163,12 @@ public class CompactSegments implements CoordinatorDuty
 
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(
-              doRun(compactionConfigs, currentRunAutoCompactionSnapshotBuilders, numAvailableCompactionTaskSlots, iterator)
+              doRun(
+                  compactionConfigs,
+                  currentRunAutoCompactionSnapshotBuilders,
+                  numAvailableCompactionTaskSlots,
+                  iterator
+              )
           );
         } else {
           stats.accumulate(makeStats(currentRunAutoCompactionSnapshotBuilders, 0, iterator));
@@ -301,7 +306,7 @@ public class CompactSegments implements CoordinatorDuty
         LOG.infoSegments(segmentsToCompact, "Compacting segments");
         // Count the compaction task itself + its sub tasks
         numSubmittedTasks++;
-        numCompactionTasksAndSubtasks += findMaxNumTaskSlotsUsedByOneCompactionTask(config.getTuningConfig()) + 1;
+        numCompactionTasksAndSubtasks += findMaxNumTaskSlotsUsedByOneCompactionTask(config.getTuningConfig());
       } else {
         throw new ISE("segmentsToCompact is empty?");
       }
