@@ -37,10 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RunWith(EasyMockRunner.class)
 public class TimedShutoffInputSourceReaderTest
 {
-//happy case - no timeout, close normally
-//- timeout then close
-//- close then timeout
-
   @Mock
   private InputSourceReader mockInputSourceReader;
 
@@ -67,7 +63,7 @@ public class TimedShutoffInputSourceReaderTest
   @Test
   public void testCloseWhenTimeoutBeforeIteratorCloseNormally() throws Exception
   {
-    int timeout = 1;
+    int timeout = 300;
     DateTime timeoutDateTime = DateTimes.nowUtc().plusMillis(timeout);
     CloseableIterator<InputRowListPlusRawValues> delegateTestIterator = createTestCloseableIterator();
     EasyMock.expect(mockInputSourceReader.sample()).andReturn(delegateTestIterator);
@@ -78,8 +74,53 @@ public class TimedShutoffInputSourceReaderTest
     // Should be True as iterator is still open
     Assert.assertTrue(timeoutIterator.hasNext());
     Assert.assertTrue(delegateTestIterator.hasNext());
-    // Close manually (no timeout)
+    // Close due to timeout (timeout happen automatically as we sleep for more than timeout period)
+    Thread.sleep(1000);
+    Assert.assertFalse(timeoutIterator.hasNext());
+    Assert.assertFalse(delegateTestIterator.hasNext());
+  }
+
+  @Test
+  public void testCloseConcurrentlyTimeoutFirst() throws Exception
+  {
+    int timeout = 300;
+    DateTime timeoutDateTime = DateTimes.nowUtc().plusMillis(timeout);
+    CloseableIterator<InputRowListPlusRawValues> delegateTestIterator = createTestCloseableIterator();
+    EasyMock.expect(mockInputSourceReader.sample()).andReturn(delegateTestIterator);
+    EasyMock.replay(mockInputSourceReader);
+
+    TimedShutoffInputSourceReader timeoutReader = new TimedShutoffInputSourceReader(mockInputSourceReader, timeoutDateTime);
+    CloseableIterator<InputRowListPlusRawValues> timeoutIterator = timeoutReader.sample();
+    // Should be True as iterator is still open
+    Assert.assertTrue(timeoutIterator.hasNext());
+    Assert.assertTrue(delegateTestIterator.hasNext());
+    // Wait for timeout
+    Thread.sleep(400);
+    // Close manually while timeout is already closing the iterator
     timeoutIterator.close();
+    Thread.sleep(1000);
+    Assert.assertFalse(timeoutIterator.hasNext());
+    Assert.assertFalse(delegateTestIterator.hasNext());
+  }
+
+  @Test
+  public void testCloseConcurrentlyTimeoutAfter() throws Exception
+  {
+    int timeout = 300;
+    DateTime timeoutDateTime = DateTimes.nowUtc().plusMillis(timeout);
+    CloseableIterator<InputRowListPlusRawValues> delegateTestIterator = createTestCloseableIterator();
+    EasyMock.expect(mockInputSourceReader.sample()).andReturn(delegateTestIterator);
+    EasyMock.replay(mockInputSourceReader);
+
+    TimedShutoffInputSourceReader timeoutReader = new TimedShutoffInputSourceReader(mockInputSourceReader, timeoutDateTime);
+    CloseableIterator<InputRowListPlusRawValues> timeoutIterator = timeoutReader.sample();
+    // Should be True as iterator is still open
+    Assert.assertTrue(timeoutIterator.hasNext());
+    Assert.assertTrue(delegateTestIterator.hasNext());
+    // Close before timeout. However, since closing takes longer than timeout period. The timeout will call close again
+    // while close from this call is still ongoing.
+    timeoutIterator.close();
+    Thread.sleep(1000);
     Assert.assertFalse(timeoutIterator.hasNext());
     Assert.assertFalse(delegateTestIterator.hasNext());
   }
@@ -115,7 +156,7 @@ public class TimedShutoffInputSourceReaderTest
       {
         try {
           // Simulate time required to close the iterator
-          Thread.sleep(1000);
+          Thread.sleep(500);
           closedSuccessfully.set(true);
         }
         catch (InterruptedException e) {
