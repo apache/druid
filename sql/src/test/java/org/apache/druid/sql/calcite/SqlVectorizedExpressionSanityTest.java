@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -91,6 +92,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT SUM(PARSE_LONG(string1)) FROM foo",
       "SELECT SUM(PARSE_LONG(string3)) FROM foo",
       "SELECT TIME_FLOOR(__time, 'PT1H'), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      "SELECT TIME_FLOOR(__time, 'PT1H'), string2, SUM(long1 * double4) FROM foo WHERE string2 = '10' GROUP BY 1,2 ORDER BY 3",
       "SELECT TIME_FLOOR(__time, 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 1",
       "SELECT TIME_FLOOR(__time, 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 1",
@@ -179,8 +181,14 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException, RelConversionException, SqlParseException
   {
-    final Map<String, Object> vector = ImmutableMap.of("vectorize", "force");
-    final Map<String, Object> nonvector = ImmutableMap.of("vectorize", "false");
+    final Map<String, Object> vector = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, "force",
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "force"
+    );
+    final Map<String, Object> nonvector = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, "false",
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
+    );
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
 

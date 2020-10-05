@@ -20,21 +20,15 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -47,7 +41,7 @@ import java.util.stream.Collectors;
 public class RowBasedIndexedTable<RowType> implements IndexedTable
 {
   private final List<RowType> table;
-  private final List<Map<Object, IntList>> index;
+  private final List<Index> indexes;
   private final RowSignature rowSignature;
   private final List<Function<RowType, Object>> columnFunctions;
   private final Set<String> keyColumns;
@@ -76,33 +70,29 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       );
     }
 
-    index = new ArrayList<>(rowSignature.size());
+    indexes = new ArrayList<>(rowSignature.size());
 
     for (int i = 0; i < rowSignature.size(); i++) {
       final String column = rowSignature.getColumnName(i);
-      final Map<Object, IntList> m;
+      final Index m;
 
       if (keyColumns.contains(column)) {
         final ValueType keyType =
             rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
 
+        final RowBasedIndexBuilder builder = new RowBasedIndexBuilder(keyType);
         final Function<RowType, Object> columnFunction = columnFunctions.get(i);
 
-        m = new HashMap<>();
-
-        for (int j = 0; j < table.size(); j++) {
-          final RowType row = table.get(j);
-          final Object key = DimensionHandlerUtils.convertObjectToType(columnFunction.apply(row), keyType);
-          if (key != null) {
-            final IntList array = m.computeIfAbsent(key, k -> new IntArrayList());
-            array.add(j);
-          }
+        for (final RowType row : table) {
+          builder.add(columnFunction.apply(row));
         }
+
+        m = builder.build();
       } else {
         m = null;
       }
 
-      index.add(m);
+      indexes.add(m);
     }
   }
 
@@ -127,7 +117,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   @Override
   public Index columnIndex(int column)
   {
-    return getKeyColumnIndex(column, index, rowSignature);
+    return getKeyColumnIndex(column, indexes);
   }
 
   @Override
@@ -161,30 +151,14 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     // nothing to close
   }
 
-  static Index getKeyColumnIndex(int column, List<Map<Object, IntList>> keyColumnsIndex, RowSignature rowSignature)
+  static Index getKeyColumnIndex(int column, List<Index> indexes)
   {
-    final Map<Object, IntList> indexMap = keyColumnsIndex.get(column);
+    final Index index = indexes.get(column);
 
-    if (indexMap == null) {
+    if (index == null) {
       throw new IAE("Column[%d] is not a key column", column);
     }
 
-    final ValueType columnType =
-        rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
-
-    return key -> {
-      final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, columnType, false);
-
-      if (convertedKey != null) {
-        final IntList found = indexMap.get(convertedKey);
-        if (found != null) {
-          return found;
-        } else {
-          return IntLists.EMPTY_LIST;
-        }
-      } else {
-        return IntLists.EMPTY_LIST;
-      }
-    };
+    return index;
   }
 }

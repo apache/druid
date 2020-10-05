@@ -10886,7 +10886,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private Map<String, Object> makeContext()
   {
     return ImmutableMap.<String, Object>builder()
-        .put("vectorize", vectorize ? "force" : "false")
+        .put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false")
+        .put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false")
         .put("vectorSize", 16) // Small vector size to ensure we use more than one.
         .build();
   }

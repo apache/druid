@@ -16,11 +16,25 @@
  * limitations under the License.
  */
 
-.menu-checkbox {
-  height: 30px;
-  padding: 7px 4px;
+import { Button, ButtonGroup, FormGroup } from '@blueprintjs/core';
+import React from 'react';
 
-  label {
-    margin: 0;
-  }
+export type FormJsonTabs = 'form' | 'json';
+
+export interface FormJsonSelectorProps {
+  tab: FormJsonTabs;
+  onChange: (tab: FormJsonTabs) => void;
 }
+
+export const FormJsonSelector = React.memo(function FormJsonSelector(props: FormJsonSelectorProps) {
+  const { tab, onChange } = props;
+
+  return (
+    <FormGroup className="form-json-selector">
+      <ButtonGroup fill>
+        <Button text="Form" active={tab === 'form'} onClick={() => onChange('form')} />
+        <Button text="JSON" active={tab === 'json'} onClick={() => onChange('json')} />
+      </ButtonGroup>
+    </FormGroup>
+  );
+});

@@ -42,6 +42,7 @@ import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
@@ -79,6 +80,7 @@ public class VectorGroupByEngine
     return canVectorizeDimensions(capabilitiesFunction, query.getDimensions())
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
            && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+           && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);
   }
 

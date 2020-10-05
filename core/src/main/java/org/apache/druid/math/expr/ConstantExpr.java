@@ -58,12 +58,6 @@ abstract class ConstantExpr implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);
@@ -105,6 +99,11 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   }
 
 
+  @Override
+  public boolean isNullLiteral()
+  {
+    return true;
+  }
 }
 
 class LongExpr extends ConstantExpr
@@ -432,6 +431,12 @@ class StringExpr extends ConstantExpr
   public Object getLiteralValue()
   {
     return value;
+  }
+
+  @Override
+  public boolean isNullLiteral()
+  {
+    return value == null;
   }
 
   @Override

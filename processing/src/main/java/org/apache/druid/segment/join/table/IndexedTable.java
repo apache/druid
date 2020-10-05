@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
@@ -92,10 +93,37 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
    */
   interface Index
   {
+    int NOT_FOUND = -1;
+
     /**
-     * Returns the list of row numbers where the column this Reader is based on contains 'key'.
+     * Returns the natural key type for the index.
+     */
+    ValueType keyType();
+
+    /**
+     * Returns whether keys are unique in this index. If this returns true, then {@link #find(Object)} will only ever
+     * return a zero- or one-element list.
+     */
+    boolean areKeysUnique();
+
+    /**
+     * Returns the list of row numbers corresponding to "key" in this index.
+     *
+     * If "key" is some type other than the natural type {@link #keyType()}, it will be converted before checking
+     * the index.
      */
     IntList find(Object key);
+
+    /**
+     * Returns the row number corresponding to "key" in this index, or {@link #NOT_FOUND} if the key does not exist
+     * in the index.
+     *
+     * It is only valid to call this method if {@link #keyType()} is {@link ValueType#LONG} and {@link #areKeysUnique()}
+     * returns true.
+     *
+     * @throws UnsupportedOperationException if preconditions are not met
+     */
+    int findUniqueLong(long key);
   }
 
   /**

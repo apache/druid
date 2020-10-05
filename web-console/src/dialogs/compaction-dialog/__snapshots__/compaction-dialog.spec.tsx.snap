@@ -8,24 +8,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -38,6 +24,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -92,7 +84,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
@@ -235,24 +226,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -265,6 +242,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -319,7 +302,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
@@ -444,7 +426,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
         text="Close"
       />
       <Blueprint3.Button
-        disabled={true}
+        disabled={false}
         intent="primary"
         onClick={[Function]}
         text="Submit"
@@ -462,24 +444,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -492,6 +460,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -546,7 +520,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
@@ -689,24 +662,10 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -719,6 +678,12 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -773,7 +738,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
             "type": "number",
           },
           Object {
