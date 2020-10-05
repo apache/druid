@@ -176,11 +176,13 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public void close()
   {
-    if (closed) {
-      return;
+    synchronized (this) {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      consumer.close();
     }
-    closed = true;
-    consumer.close();
   }
 
   public static void addConsumerPropertiesFromConfig(

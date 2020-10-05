@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TimedShutoffInputSourceReader implements InputSourceReader
 {
@@ -68,17 +69,16 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
   )
   {
     final Closer closer = Closer.create();
-    // We must register the shutdownNow method of the shutdown executor first. This will cause the shutdown executor
-    // to be closed last and ensure other resources which depend on it can close successfully.
-    closer.register(exec::shutdownNow);
     closer.register(delegateIterator);
     final CloseableIterator<T> wrappingIterator = new CloseableIterator<T>()
     {
       /**
        * Indicates this iterator has been closed or not.
-       * Volatile since there is a happens-before relationship between {@link #hasNext()} and {@link #close()}.
+       * AtomicBoolean since the value can be change by multiple concurrent calls to the {@link #close()} method
+       * and we want to only allows one call.
        */
-      volatile boolean closed;
+      private final AtomicBoolean closed = new AtomicBoolean(false);
+
       /**
        * Caching the next item. The item returned from the underling iterator is either a non-null {@link InputRow}
        * or {@link InputRowListPlusRawValues}.
@@ -92,7 +92,7 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
         if (next != null) {
           return true;
         }
-        if (!closed && delegateIterator.hasNext()) {
+        if (!closed.get() && delegateIterator.hasNext()) {
           next = delegateIterator.next();
           return true;
         } else {
@@ -115,13 +115,14 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
       @Override
       public void close() throws IOException
       {
-        closed = true;
-        closer.close();
+        if (closed.compareAndSet(false, true)) {
+          closer.close();
+        }
       }
     };
     exec.schedule(
         () -> {
-          LOG.info("Closing delegate inputSource.");
+          LOG.info("Closing dependencies due to timeout");
 
           try {
             wrappingIterator.close();
@@ -133,6 +134,7 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
         shutoffTime.getMillis() - System.currentTimeMillis(),
         TimeUnit.MILLISECONDS
     );
+    exec.shutdown();
 
     return wrappingIterator;
   }
