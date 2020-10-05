@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, IButtonProps, Popover, Radio, RadioGroup } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  IButtonProps,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Popover,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
@@ -51,7 +59,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
     ...other
   } = props;
 
-  const [delay, setDelay] = useState(
+  const [selectedDelay, setSelectedDelay] = useState(
     localStorageKey && localStorageGet(localStorageKey)
       ? Number(localStorageGet(localStorageKey))
       : defaultDelay,
@@ -59,31 +67,31 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
 
   useInterval(() => {
     onRefresh(true);
-  }, delay);
+  }, selectedDelay);
 
-  function handleSelection(e: any) {
-    const selectedDelay = Number(e.currentTarget.value);
-    setDelay(selectedDelay);
+  function handleSelection(delay: number) {
+    setSelectedDelay(delay);
     if (localStorageKey) {
-      localStorageSet(localStorageKey, String(selectedDelay));
+      localStorageSet(localStorageKey, String(delay));
     }
   }
 
   return (
-    <ButtonGroup>
+    <ButtonGroup className="timed-button">
       <Button {...other} text={text} icon={icon} onClick={() => onRefresh(false)} />
       <Popover
         content={
-          <RadioGroup
-            label={label}
-            className="timed-button"
-            onChange={handleSelection}
-            selectedValue={delay}
-          >
-            {delays.map(({ label, delay }) => (
-              <Radio label={label} value={delay} key={label} />
+          <Menu>
+            <MenuDivider title={label} />
+            {delays.map(({ label, delay }, i) => (
+              <MenuItem
+                key={i}
+                icon={selectedDelay === delay ? IconNames.SELECTION : IconNames.CIRCLE}
+                text={label}
+                onClick={() => handleSelection(delay)}
+              />
             ))}
-          </RadioGroup>
+          </Menu>
         }
       >
         <Button {...other} rightIcon={IconNames.CARET_DOWN} />
