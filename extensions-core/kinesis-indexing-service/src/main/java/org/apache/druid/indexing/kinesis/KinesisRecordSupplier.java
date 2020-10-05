@@ -553,31 +553,29 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   }
 
   @Override
-  public void close()
+  public synchronized void close()
   {
-    synchronized (this) {
-      if (this.closed) {
-        return;
-      }
-
-      assign(ImmutableSet.of());
-
-      if (scheduledExec != null) {
-        scheduledExec.shutdown();
-
-        try {
-          if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
-            scheduledExec.shutdownNow();
-          }
-        }
-        catch (InterruptedException e) {
-          log.warn(e, "InterruptedException while shutting down");
-          throw new RuntimeException(e);
-        }
-      }
-
-      this.closed = true;
+    if (this.closed) {
+      return;
     }
+
+    assign(ImmutableSet.of());
+
+    if (scheduledExec != null) {
+      scheduledExec.shutdown();
+
+      try {
+        if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
+          scheduledExec.shutdownNow();
+        }
+      }
+      catch (InterruptedException e) {
+        log.warn(e, "InterruptedException while shutting down");
+        throw new RuntimeException(e);
+      }
+    }
+
+    this.closed = true;
   }
 
   @Override
