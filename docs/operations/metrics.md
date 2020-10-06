@@ -171,7 +171,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
 
-### Indexing service
+## Indexing service
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -186,6 +186,16 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`task/running/count`|Number of current running tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
 |`task/pending/count`|Number of current pending tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
 |`task/waiting/count`|Number of current waiting tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
+
+## Shuffle metrics (Native parallel task)
+
+The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`
+See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more details.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/shuffle/bytes`|Number of bytes shuffled per emissionPeriod.|supervisorTaskId|Varies|
+|`ingest/shuffle/requests`|Number of shuffle requests per emissionPeriod.|supervisorTaskId|Varies|
 
 ## Coordination
 
