@@ -39,7 +39,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.Overshadowable;
@@ -150,7 +149,7 @@ public class SchemalessIndexTest
         final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex.Builder()
+          theIndex = new IncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
@@ -159,7 +158,7 @@ public class SchemalessIndexTest
                       .build()
               )
               .setMaxRowCount(1000)
-              .build();
+              .buildOnheap();
         }
 
         final List<String> dims = new ArrayList<>();
@@ -368,7 +367,7 @@ public class SchemalessIndexTest
             }
           }
 
-          final IncrementalIndex rowIndex = new OnheapIncrementalIndex.Builder()
+          final IncrementalIndex rowIndex = new IncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
@@ -377,7 +376,7 @@ public class SchemalessIndexTest
                       .build()
               )
               .setMaxRowCount(1000)
-              .build();
+              .buildOnheap();
 
           rowIndex.add(
               new MapBasedInputRow(timestamp, dims, event)
@@ -405,7 +404,7 @@ public class SchemalessIndexTest
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
 
-    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex retVal = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
@@ -414,7 +413,7 @@ public class SchemalessIndexTest
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     try {
       final List<Object> events = JSON_MAPPER.readValue(new File(filename), List.class);

@@ -46,7 +46,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -152,10 +151,10 @@ public class MultiSegmentScanQueryTest extends NullHandlingTest
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(maxRowCount)
-        .build();
+        .buildOnheap();
   }
 
   @AfterClass

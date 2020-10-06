@@ -37,7 +37,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -81,7 +80,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
   {
     TopNQueryEngine engine = new TopNQueryEngine(pool);
 
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
@@ -89,7 +88,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";

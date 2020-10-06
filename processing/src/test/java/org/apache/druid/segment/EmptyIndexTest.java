@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -73,10 +72,10 @@ public class EmptyIndexTest
     }
 
     try {
-      IncrementalIndex emptyIndex = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex emptyIndex = new IncrementalIndex.Builder()
           .setSimpleTestingIndexSchema(/* empty */)
           .setMaxRowCount(1000)
-          .build();
+          .buildOnheap();
 
       IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
           Intervals.of("2012-08-01/P3D"),

@@ -42,7 +42,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Before;
@@ -79,7 +78,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithDistinctCountAgg() throws Exception
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
@@ -88,7 +87,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
         )
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";

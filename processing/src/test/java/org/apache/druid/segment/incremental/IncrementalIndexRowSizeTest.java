@@ -37,11 +37,11 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementalIndexRowSizeBasic()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(10000)
         .setMaxBytesInMemory(1000)
-        .build();
+        .buildOnheap();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B"));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
@@ -51,11 +51,11 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementalIndexRowSizeArr()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(10000)
         .setMaxBytesInMemory(1000)
-        .build();
+        .buildOnheap();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
@@ -71,11 +71,11 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementalIndexRowSizeComplex()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(10000)
         .setMaxBytesInMemory(1000)
-        .build();
+        .buildOnheap();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,

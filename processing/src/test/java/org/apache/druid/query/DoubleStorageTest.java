@@ -55,7 +55,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -322,10 +321,10 @@ public class DoubleStorageTest
         )
         .build();
 
-    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
 
     getStreamOfEvents().forEach(o -> {

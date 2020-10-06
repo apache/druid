@@ -47,7 +47,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testMultithreadAddFacts() throws Exception
   {
-    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.MINUTE)
@@ -55,7 +55,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -111,7 +111,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testMultithreadAddFactsUsingExpressionAndJavaScript() throws Exception
   {
-    final IncrementalIndex indexExpr = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex indexExpr = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.MINUTE)
@@ -125,9 +125,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
-    final IncrementalIndex indexJs = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex indexJs = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.MINUTE)
@@ -143,7 +143,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -205,7 +205,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
-    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.MINUTE)
@@ -213,7 +213,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
     index.add(new MapBasedInputRow(
             0,

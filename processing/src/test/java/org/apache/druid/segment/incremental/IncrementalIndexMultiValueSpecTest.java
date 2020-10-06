@@ -78,10 +78,10 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
         return null;
       }
     };
-    IncrementalIndex<?> index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex<?> index = new IncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(10000)
-        .build();
+        .buildOnheap();
     index.add(
         new MapBasedInputRow(
             0,

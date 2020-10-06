@@ -49,7 +49,6 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -293,10 +292,10 @@ public class TestIndex
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)
         .build();
-    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex retVal = new IncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(10000)
-        .build();
+        .buildOnheap();
 
     try {
       return loadIncrementalIndex(retVal, source);

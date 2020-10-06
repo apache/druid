@@ -42,7 +42,6 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
@@ -139,11 +138,11 @@ public class GroupByQueryRunnerFactoryTest
 
   private Segment createSegment() throws Exception
   {
-    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setConcurrentEventAdd(true)
         .setMaxRowCount(5000)
-        .build();
+        .buildOnheap();
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(

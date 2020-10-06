@@ -73,7 +73,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -134,7 +133,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withDimensionsSpec(new DimensionsSpec(
@@ -150,7 +149,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         )
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
   }
 
   @Before

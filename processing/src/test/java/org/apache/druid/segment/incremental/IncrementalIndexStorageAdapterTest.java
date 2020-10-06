@@ -111,10 +111,10 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return new OnheapIncrementalIndex.Builder()
+                    return new IncrementalIndex.Builder()
                         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
                         .setMaxRowCount(1000)
-                        .build();
+                        .buildOnheap();
                   }
                 }
             }

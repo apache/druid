@@ -46,7 +46,6 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -124,7 +123,7 @@ public class IncrementalIndexReadBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMetrics(schemaInfo.getAggsArray())
@@ -132,7 +131,7 @@ public class IncrementalIndexReadBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment)
-        .build();
+        .buildOnheap();
   }
 
   @Benchmark

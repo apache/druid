@@ -55,7 +55,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -114,7 +113,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex theIndex = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -139,7 +138,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                 ).build()
         )
         .setMaxRowCount(NUM_POINTS)
-        .build();
+        .buildOnheap();
 
     theIndex.add(
         new MapBasedInputRow(
@@ -280,7 +279,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   private static QueryableIndex makeMergedQueryableIndex(IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex first = new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -304,9 +303,9 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   ).build()
           )
           .setMaxRowCount(1000)
-          .build();
+          .buildOnheap();
 
-      IncrementalIndex second = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex second = new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -330,9 +329,9 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   ).build()
           )
           .setMaxRowCount(1000)
-          .build();
+          .buildOnheap();
 
-      IncrementalIndex third = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex third = new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -356,7 +355,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
-          .build();
+          .buildOnheap();
 
       first.add(
           new MapBasedInputRow(

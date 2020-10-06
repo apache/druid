@@ -48,7 +48,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -361,7 +360,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         true
     );
 
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).build();
+    IncrementalIndex index = new IncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).buildOnheap();
     index.add(
         new MapBasedInputRow(
             DateTimes.nowUtc().getMillis(),
