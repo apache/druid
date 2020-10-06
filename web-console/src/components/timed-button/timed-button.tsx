@@ -31,8 +31,6 @@ import React, { useState } from 'react';
 import { useInterval } from '../../hooks';
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
 
-import './timed-button.scss';
-
 export interface DelayLabel {
   label: string;
   delay: number;
