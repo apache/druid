@@ -204,6 +204,11 @@
             <artifactId>log4j-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.checkerframework</groupId>
+            <artifactId>checker-qual</artifactId>
+            <version>${checkerframework.version}</version>
+        </dependency>
+        <dependency>
             <!-- Used in native parallel batch indexing to determine distribution of dimension values -->
             <groupId>org.apache.datasketches</groupId>
             <artifactId>datasketches-java</artifactId>

@@ -194,8 +194,8 @@ See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more deta
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/shuffle/bytes`|Number of bytes shuffled per emissionPeriod.|supervisorTaskId|Varies|
-|`ingest/shuffle/requests`|Number of shuffle requests per emissionPeriod.|supervisorTaskId|Varies|
+|`ingest/shuffle/bytes`|Number of bytes shuffled per emission period.|supervisorTaskId|Varies|
+|`ingest/shuffle/requests`|Number of shuffle requests per emission period.|supervisorTaskId|Varies|
 
 ## Coordination
 
