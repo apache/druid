@@ -19,12 +19,14 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
@@ -216,7 +218,8 @@ public class VectorGroupByEngine
     );
   }
 
-  private static class VectorGroupByEngineIterator implements CloseableIterator<ResultRow>
+  @VisibleForTesting
+  static class VectorGroupByEngineIterator implements CloseableIterator<ResultRow>
   {
     private final GroupByQuery query;
     private final GroupByQueryConfig querySpecificConfig;
@@ -278,7 +281,7 @@ public class VectorGroupByEngine
     @Override
     public ResultRow next()
     {
-      if (delegate == null || !delegate.hasNext()) {
+      if (!hasNext()) {
         throw new NoSuchElementException();
       }
 
@@ -310,22 +313,19 @@ public class VectorGroupByEngine
     }
 
     @Override
-    public void remove()
+    public void close() throws IOException
     {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void close()
-    {
-      cursor.close();
-
+      Closer closer = Closer.create();
+      closer.register(vectorGrouper);
       if (delegate != null) {
-        delegate.close();
+        closer.register(delegate);
       }
+      closer.register(cursor);
+      closer.close();
     }
 
-    private VectorGrouper makeGrouper()
+    @VisibleForTesting
+    VectorGrouper makeGrouper()
     {
       final VectorGrouper grouper;
 
@@ -463,7 +463,7 @@ public class VectorGroupByEngine
 
             return resultRow;
           },
-          vectorGrouper
+          () -> {} // Grouper will be closed when VectorGroupByEngineIterator is closed.
       );
     }
   }
