@@ -121,7 +121,7 @@ public class GroupByQueryHelper
         .build();
 
 
-    AppendableIndexBuilder indexBuilder;
+    final AppendableIndexBuilder indexBuilder;
 
     if (query.getContextValue("useOffheap", false)) {
       indexBuilder = new OffheapIncrementalIndex.Builder()

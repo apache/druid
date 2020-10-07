@@ -41,7 +41,7 @@ public interface TuningConfig
   int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
 
   /**
-   * The inceremental index implementation to use
+   * The incremental index implementation to use
    */
   AppendableIndexSpec getAppendableIndexSpec();
 

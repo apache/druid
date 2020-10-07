@@ -119,7 +119,7 @@ public abstract class AppendableIndexBuilder
 
   public final IncrementalIndex build()
   {
-    log.info("Building appendable index.");
+    log.debug("Building appendable index.");
     validate();
     return buildInner();
   }
