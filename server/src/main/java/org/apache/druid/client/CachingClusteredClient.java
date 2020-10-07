@@ -839,11 +839,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
       if (dataSourceAnalysis.isJoin()) {
         return null; // Broker join caching disabled - https://github.com/apache/druid/issues/10444
-       /* byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis).orElse(null);
-        if (null == joinDataSourceCacheKey) {
-          return null;    // A join operation that does not support caching
-        }
-        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));*/
       }
       return strategy.computeCacheKey(query);
     }
