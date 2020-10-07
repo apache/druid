@@ -1269,8 +1269,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      // initializing this to 0, it will be lazily initialized to a value
-      // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+      /** initializing this to 0, it will be lazily intialized to a value
+       * @see #getMaxBytesInMemoryOrDefault() */
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.partitionsSpec = partitionsSpec;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
