@@ -64,7 +64,7 @@ describe('compaction', () => {
 
     expect(formatCompactionConfigAndStatus(BASIC_CONFIG, undefined)).toEqual('Awaiting first run');
 
-    expect(formatCompactionConfigAndStatus(undefined, ZERO_STATUS)).toEqual('Running');
+    expect(formatCompactionConfigAndStatus(undefined, ZERO_STATUS)).toEqual('Not enabled');
 
     expect(formatCompactionConfigAndStatus(BASIC_CONFIG, ZERO_STATUS)).toEqual('Running');
 
