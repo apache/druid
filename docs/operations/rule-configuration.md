@@ -220,6 +220,19 @@ Period broadcast rules are of the form:
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
+### Import Rule
+
+Import rules are of the form:
+
+```json
+    {
+      "importedRuleset": "stuff_other_source",
+      "type": "importRules"
+    }
+```
+* `type` - this should always be "importRules"
+* `importedRuleset` - A datasource from which to include rules. Changes to rules on the imported datasource will be reflected dynamically. 
+
 ## Permanently deleting data
 
 Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any

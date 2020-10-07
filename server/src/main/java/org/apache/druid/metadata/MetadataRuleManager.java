@@ -36,7 +36,7 @@ public interface MetadataRuleManager
   void poll();
 
   Map<String, List<Rule>> getAllRules();
-    
+
   List<Rule> getRules(String dataSource);
 
   List<Rule> getRulesWithDefault(String dataSource);
