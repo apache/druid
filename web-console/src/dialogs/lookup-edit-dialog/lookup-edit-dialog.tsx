@@ -100,14 +100,9 @@ export function isLookupSubmitDisabled(
     !lookupVersion ||
     !lookupTier ||
     !lookupSpec ||
-    !lookupName ||
-    lookupName === '' ||
-    lookupVersion === '' ||
-    lookupTier === '' ||
-    lookupSpec.type === '' ||
-    lookupSpec.type === undefined ||
-    (lookupSpec.type === 'map' && lookupSpec.map === undefined) ||
-    (lookupSpec.type === 'cachedNamespace' && lookupSpec.extractionNamespace === undefined);
+    !lookupSpec.type ||
+    (lookupSpec.type === 'map' && !lookupSpec.map) ||
+    (lookupSpec.type === 'cachedNamespace' && !lookupSpec.extractionNamespace);
 
   if (
     !disableSubmit &&
