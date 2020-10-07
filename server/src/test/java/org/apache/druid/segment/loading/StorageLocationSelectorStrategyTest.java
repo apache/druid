@@ -29,6 +29,7 @@ import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -362,7 +363,7 @@ public class StorageLocationSelectorStrategyTest
               binder.bind(Properties.class).toInstance(props);
 
               JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
-              JsonConfigProvider.bind(binder, "druid.segmentCache.locationSelector", StorageLocationSelectorStrategy.class);
+              StorageNodeModule.bindLocationSelectorStrategy(binder);
             }
 
             @Provides
