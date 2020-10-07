@@ -295,4 +295,115 @@ public class JsonReaderTest
       Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
+
+  @Test
+  public void testSamplInvalidJSONText() throws IOException
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+            )
+        ),
+        null,
+        null
+    );
+
+    //make sure JsonReader is used
+    format.setLineSplittable(false);
+
+    //2nd row is ill-formed
+    final ByteEntity source = new ByteEntity(
+        StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
+                           + "{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4xxx,\"o\":{\"mg\":2}}\n" //value of baz is invalid
+                           + "{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":3}}\n")
+    );
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+            Collections.emptyList()
+        ),
+        source,
+        null
+    );
+
+    // the invalid character in line 2 stops parsing of the 3-line text in a whole
+    // so the total num of iteration is 1
+    final int numExpectedIterations = 1;
+
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+        numActualIterations++;
+
+        final InputRowListPlusRawValues rawValues = iterator.next();
+
+        Assert.assertNotNull(rawValues.getParseException());
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+  @Test
+  public void testSampleEmptyText() throws IOException
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+            )
+        ),
+        null,
+        null
+    );
+
+    //make sure JsonReader is used
+    format.setLineSplittable(false);
+
+    //input is empty
+    final ByteEntity source = new ByteEntity(
+        StringUtils.toUtf8("")
+    );
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+            Collections.emptyList()
+        ),
+        source,
+        null
+    );
+
+    // the total num of iteration is 1
+    final int numExpectedIterations = 1;
+
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+        numActualIterations++;
+
+        final InputRowListPlusRawValues rawValues = iterator.next();
+
+        Assert.assertNotNull(rawValues.getParseException());
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
 }

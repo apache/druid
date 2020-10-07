@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
@@ -64,12 +65,14 @@ public class JsonInputFormatTest
   {
     EqualsVerifier.forClass(JsonInputFormat.class)
               .usingGetClass()
+              //suppress warning of non-final field lineSplittable used in `equals` method
+              .suppress(Warning.NONFINAL_FIELDS)
               .withPrefabValues(
               ObjectMapper.class,
               new ObjectMapper(),
               new ObjectMapper()
               )
-              .withIgnoredFields("objectMapper", "lineSplittable")
+              .withIgnoredFields("objectMapper")
               .verify();
   }
 }

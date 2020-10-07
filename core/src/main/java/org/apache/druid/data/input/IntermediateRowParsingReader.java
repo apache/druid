@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -109,20 +110,30 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                                                                       new ParseException(e, "Unable to parse row [%s] into JSON", row)));
       }
 
+      if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
+        return Collections.singletonList(InputRowListPlusRawValues.of(null,
+                                                                      new ParseException("Unable parse row [%s] into Map", row)));
+      }
+
       List<InputRow> rows;
       try {
         rows = parseInputRows(row);
       }
       catch (ParseException e) {
-        return Collections.singletonList(InputRowListPlusRawValues.of(rawColumnsList.isEmpty() ? null : rawColumnsList.get(0), e));
+        return Collections.singletonList(InputRowListPlusRawValues.of(null, e));
       }
       catch (IOException e) {
-        return Collections.singletonList(InputRowListPlusRawValues.of(rawColumnsList.isEmpty() ? null : rawColumnsList.get(0),
+        return Collections.singletonList(InputRowListPlusRawValues.of(null,
                                                                       new ParseException(e, "Unable to parse row [%s] into inputRow", row)));
       }
 
+      if (rows.size() != rawColumnsList.size()) {
+        return Collections.singletonList(InputRowListPlusRawValues.of(null,
+                                                                      new ParseException("Unable to parse row [%s]: size of map and inputRows are not the size", row)));
+      }
+
       List<InputRowListPlusRawValues> list = new ArrayList<InputRowListPlusRawValues>();
-      for (int i = 0; i < Math.min(rows.size(), rawColumnsList.size()); i++) {
+      for (int i = 0; i < rows.size(); i++) {
         list.add(InputRowListPlusRawValues.of(rows.get(i), rawColumnsList.get(i)));
       }
       return list;
@@ -138,7 +149,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
 
   /**
    * Parses the given intermediate row into a list of {@link InputRow}s.
-   * This should return a non-empty list
+   * This should return a non-empty list.
    *
    * @throws ParseException if it cannot parse the given intermediateRow properly
    */
@@ -148,7 +159,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * Converts the given intermediate row into a {@link Map}. The returned JSON will be used by InputSourceSampler.
    * Implementations can use any method to convert the given row into a Map.
    *
-   * This should return a non-empty list with the same size of the list returned by {@link #parseInputRows}
+   * This should return a non-empty list with the same size of the list returned by {@link #parseInputRows} or the returned objects will be discarded
    */
   protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
 
