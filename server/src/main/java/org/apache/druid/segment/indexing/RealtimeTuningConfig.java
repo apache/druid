@@ -42,9 +42,8 @@ import java.io.File;
 /**
  *
  */
-public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
+public class RealtimeTuningConfig implements AppenderatorConfig
 {
-  private static final int DEFAULT_MAX_ROWS_IN_MEMORY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final Period DEFAULT_WINDOW_PERIOD = new Period("PT10M");
   private static final VersioningPolicy DEFAULT_VERSIONING_POLICY = new IntervalStartVersioningPolicy();
@@ -138,7 +137,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    /** initializing this to 0, it will be lazily intialized to a value
+    /** initializing this to 0, it will be lazily initialized to a value
      * @see #getMaxBytesInMemoryOrDefault() */
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null

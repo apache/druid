@@ -1111,7 +1111,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
+  public static class IndexTuningConfig implements AppenderatorConfig
   {
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -1269,7 +1269,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      /** initializing this to 0, it will be lazily intialized to a value
+      /** initializing this to 0, it will be lazily initialized to a value
        * @see #getMaxBytesInMemoryOrDefault() */
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.partitionsSpec = partitionsSpec;
