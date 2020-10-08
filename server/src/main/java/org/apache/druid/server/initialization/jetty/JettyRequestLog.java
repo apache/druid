@@ -33,6 +33,12 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
   private static final Logger logger = new Logger("org.apache.druid.jetty.RequestLog");
   private static final String COORDINATOR = "/coordinator";
   private static final String OVERLORD = "/indexer";
+<<<<<<< HEAD
+=======
+  private static final String POST = "POST";
+  private static final String DELETE = "DELETE";
+  private static final String PUT = "PUT";
+>>>>>>> 8b5fd51b39848081fcc16c1c25ce1b789d823e00
 
   @Override
   public void log(Request request, Response response)
@@ -45,9 +51,15 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
           request.getHttpURI().toString(),
           request.getProtocol()
       );
+<<<<<<< HEAD
     } else if ((HttpMethod.POST.equals(request.getMethod())
         || HttpMethod.DELETE.equals(request.getMethod())
         || HttpMethod.PUT.equals(request.getMethod()))
+=======
+    } else if ((POST.equals(request.getMethod())
+        || DELETE.equals(request.getMethod())
+        || PUT.equals(request.getMethod()))
+>>>>>>> 8b5fd51b39848081fcc16c1c25ce1b789d823e00
         && (request.getHttpURI().toString().contains(COORDINATOR)
         || request.getHttpURI().toString().contains(OVERLORD))) {
       logger.info(
