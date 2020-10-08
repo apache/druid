@@ -2656,7 +2656,7 @@ export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): Inge
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
-function guessInputFormat(sampleData: string[]): InputFormat {
+export function guessInputFormat(sampleData: string[]): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
