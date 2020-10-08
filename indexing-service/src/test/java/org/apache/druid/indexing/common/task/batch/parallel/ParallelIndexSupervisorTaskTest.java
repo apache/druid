@@ -249,7 +249,7 @@ public class ParallelIndexSupervisorTaskTest
     }
   }
 
-  public static class staticUtilsTest
+  public static class StaticUtilsTest
   {
     @Test
     public void testIsParallelModeFalse_nullTuningConfig()
