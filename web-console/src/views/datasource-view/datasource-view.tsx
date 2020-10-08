@@ -48,7 +48,6 @@ import {
   formatBytes,
   formatCompactionConfigAndStatus,
   formatInteger,
-  formatMegabytes,
   formatPercent,
   getDruidErrorMessage,
   LocalStorageKeys,
@@ -120,7 +119,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 }
 
 const formatTotalDataSize = formatBytes;
-const formatSegmentSize = formatMegabytes;
+const formatSegmentSize = formatInteger;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
@@ -230,12 +229,9 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
   SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
   SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
-  MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size,
-  (
-    SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
-    COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0)
-  ) AS avg_segment_size,
-  MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size,
+  MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size,
+  AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_size,
+  MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
   (
     SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
@@ -1010,11 +1006,11 @@ GROUP BY 1`;
               ),
             },
             {
-              Header: twoLines('Segment size (MB)', 'min / avg / max'),
+              Header: twoLines('Segment size (rows)', 'minimum / average / maximum'),
               show: hiddenColumns.exists('Segment size'),
               accessor: 'avg_segment_size',
               filterable: false,
-              width: 150,
+              width: 220,
               Cell: ({ value, original }) => (
                 <>
                   <BracedText

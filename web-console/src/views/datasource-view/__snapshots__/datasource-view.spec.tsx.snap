@@ -184,7 +184,7 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Segment size (MB)
+            Segment size (rows)
             <br />
             min / avg / max
           </React.Fragment>,
