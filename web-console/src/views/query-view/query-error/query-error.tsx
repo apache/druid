@@ -26,16 +26,38 @@ import './query-error.scss';
 export interface QueryErrorProps {
   error: DruidError;
   moveCursorTo: (rowColumn: RowColumn) => void;
+  queryString?: string;
+  onQueryStringChange?: (newQueryString: string, run?: boolean) => void;
 }
 
 export const QueryError = React.memo(function QueryError(props: QueryErrorProps) {
-  const { error, moveCursorTo } = props;
+  const { error, moveCursorTo, queryString, onQueryStringChange } = props;
 
   if (!error.errorMessage) {
     return <div className="query-error">{error.message}</div>;
   }
 
-  const { position } = error;
+  const { position, suggestion } = error;
+  let suggestionElement: JSX.Element | undefined;
+  if (suggestion && queryString && onQueryStringChange) {
+    const newQuery = suggestion.fn(queryString);
+    if (newQuery) {
+      suggestionElement = (
+        <p>
+          Suggestion:{' '}
+          <span
+            className="suggestion"
+            onClick={() => {
+              onQueryStringChange(newQuery, true);
+            }}
+          >
+            {suggestion.label}
+          </span>
+        </p>
+      );
+    }
+  }
+
   return (
     <div className="query-error">
       {error.error && <p>{`Error: ${error.error}`}</p>}
@@ -62,6 +84,7 @@ export const QueryError = React.memo(function QueryError(props: QueryErrorProps)
         </p>
       )}
       {error.errorClass && <p>{error.errorClass}</p>}
+      {suggestionElement}
     </div>
   );
 });

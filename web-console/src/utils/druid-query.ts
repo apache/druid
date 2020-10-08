@@ -31,6 +31,11 @@ export interface DruidErrorResponse {
   host?: string;
 }
 
+export interface QuerySuggestion {
+  label: string;
+  fn: (query: string) => string | undefined;
+}
+
 export function parseHtmlError(htmlStr: string): string | undefined {
   const startIndex = htmlStr.indexOf('</h3><pre>');
   const endIndex = htmlStr.indexOf('\n\tat');
@@ -92,12 +97,55 @@ export class DruidError extends Error {
     return;
   }
 
+  static getSuggestion(errorMessage: string): QuerySuggestion | undefined {
+    // == is used instead of =
+    if (errorMessage.includes('Encountered "= =" at')) {
+      return {
+        label: `Replace == with =`,
+        fn: str => {
+          if (!str.includes('==')) return;
+          return str.replace(/==/g, '=');
+        },
+      };
+    }
+
+    // Incorrect quoting on table
+    const mq = errorMessage.match(/Column '([^']+)' not found in any table/);
+    if (mq) {
+      const literalString = mq[1];
+      return {
+        label: `Replace "${literalString}" with '${literalString}'`,
+        fn: str => {
+          if (!str.includes(`"${literalString}"`)) return;
+          return str.replace(`"${literalString}"`, `'${literalString}'`);
+        },
+      };
+    }
+
+    // , before FROM
+    const mc = errorMessage.match(/Encountered "(FROM)" at/i);
+    if (mc) {
+      const fromKeyword = mc[1];
+      return {
+        label: `Remove , before ${fromKeyword}`,
+        fn: str => {
+          const newQuery = str.replace(/,(\s+FROM)/gim, '$1');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    return;
+  }
+
   public canceled?: boolean;
   public error?: string;
   public errorMessage?: string;
   public position?: RowColumn;
   public errorClass?: string;
   public host?: string;
+  public suggestion?: QuerySuggestion;
 
   constructor(e: any) {
     super(axios.isCancel(e) ? CANCELED_MESSAGE : getDruidErrorMessage(e));
@@ -126,6 +174,7 @@ export class DruidError extends Error {
 
       if (this.errorMessage) {
         this.position = DruidError.parsePosition(this.errorMessage);
+        this.suggestion = DruidError.getSuggestion(this.errorMessage);
       }
     }
   }
