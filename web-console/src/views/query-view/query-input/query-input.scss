@@ -17,6 +17,7 @@
  */
 
 @import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
 
 .query-input {
   .ace-container {
@@ -25,12 +26,20 @@
     height: 100%;
 
     .ace-solarized-dark {
-      background-color: #232c35;
+      background-color: transparent;
     }
 
-    .ace_gutter-layer {
-      background-color: #27313c;
-      width: 50px;
+    .ace_gutter {
+      background-color: $dark-gray4;
+      color: $gray5;
+    }
+
+    .ace_gutter-active-line {
+      background-color: rgba($gray1, 0.6);
+    }
+
+    .ace_text-layer {
+      filter: brightness(1.3) saturate(0.8);
     }
   }
 }

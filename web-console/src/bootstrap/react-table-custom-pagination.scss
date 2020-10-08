@@ -16,14 +16,18 @@
  * limitations under the License.
  */
 
+@import '../blueprint-overrides/common/colors';
+@import '../blueprint-overrides/common/variables';
+
 .ReactTable {
   .-pageJump {
     .bp3-input {
       position: relative;
       top: -2px;
+      border: none;
 
       .bp3-dark & {
-        background-color: #374653;
+        background-color: $dark-gray4;
       }
     }
   }
@@ -33,9 +37,10 @@
       width: 90px;
       position: relative;
       top: -2px;
+      border: none;
 
       .bp3-dark & {
-        background-color: #394b59;
+        background-color: $dark-gray4;
       }
     }
   }

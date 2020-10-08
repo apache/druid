@@ -16,40 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-@import '../../blueprint-overrides/common/colors';
+$navbar-padding: $pt-grid-size * 1.5 !default;
 
-.ingestion-view {
-  height: 100%;
-  width: 100%;
-
-  .top-pane {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 0;
-
-    .view-control-bar {
-      margin-bottom: $standard-padding;
-    }
-  }
-
-  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
-    height: 3px;
-    background-color: $gray1;
-  }
-
-  .bottom-pane {
-    position: absolute;
-    width: 100%;
-    top: 12px;
-    bottom: 0;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: $view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
-  }
-}
+$navbar-background-color: $white !default;
+$dark-navbar-background-color: $dark-gray3;

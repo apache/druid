@@ -34,8 +34,10 @@ body {
 }
 
 body {
+  background: $light-gray4;
+
   &.bp3-dark {
-    background: rgb(41, 55, 66);
+    background: $dark-gray2;
   }
 
   &.mouse-mode {

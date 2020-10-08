@@ -43,7 +43,7 @@ export const HomeViewCard = React.memo(function HomeViewCard(props: HomeViewCard
       href={href}
       target={href && href[0] === '/' ? '_blank' : undefined}
     >
-      <Card interactive>
+      <Card interactive elevation={1}>
         <H5>
           <Icon color="#bfccd5" icon={icon} />
           &nbsp;{title}

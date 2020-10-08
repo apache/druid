@@ -520,7 +520,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
     return (
-      <Card className={'spec-card'} interactive onClick={onClick}>
+      <Card className={'spec-card'} interactive onClick={onClick} elevation={1}>
         <Icon className="spec-card-icon" icon={icon} iconSize={30} />
         <div className={'spec-card-header'}>
           {title}
@@ -683,6 +683,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <Card
         className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
+        elevation={1}
         onClick={() => {
           this.setState({
             selectedComboType: selectedComboType !== comboType ? comboType : undefined,
@@ -706,20 +707,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const welcomeMessage = this.renderWelcomeStepMessage();
     return (
       <>
-        <div className="main bp3-input">
-          {this.renderIngestionCard('kafka')}
-          {this.renderIngestionCard('kinesis')}
-          {this.renderIngestionCard('azure-event-hubs')}
-          {this.renderIngestionCard('index_parallel:s3')}
-          {this.renderIngestionCard('index_parallel:azure')}
-          {this.renderIngestionCard('index_parallel:google')}
-          {this.renderIngestionCard('index_parallel:hdfs')}
-          {this.renderIngestionCard('index_parallel:druid')}
-          {this.renderIngestionCard('index_parallel:http')}
-          {this.renderIngestionCard('index_parallel:local')}
-          {this.renderIngestionCard('index_parallel:inline')}
-          {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
-          {this.renderIngestionCard('other')}
+        <div className="main">
+          <div className="ingestion-cards">
+            {this.renderIngestionCard('kafka')}
+            {this.renderIngestionCard('kinesis')}
+            {this.renderIngestionCard('azure-event-hubs')}
+            {this.renderIngestionCard('index_parallel:s3')}
+            {this.renderIngestionCard('index_parallel:azure')}
+            {this.renderIngestionCard('index_parallel:google')}
+            {this.renderIngestionCard('index_parallel:hdfs')}
+            {this.renderIngestionCard('index_parallel:druid')}
+            {this.renderIngestionCard('index_parallel:http')}
+            {this.renderIngestionCard('index_parallel:local')}
+            {this.renderIngestionCard('index_parallel:inline')}
+            {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
+            {this.renderIngestionCard('other')}
+          </div>
         </div>
         <div className="control">
           {welcomeMessage && <Callout className="intro">{welcomeMessage}</Callout>}
