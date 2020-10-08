@@ -318,6 +318,9 @@ public class MaterializedViewSupervisorTest
 
   }
 
+  /**
+   * Verifies that creating HadoopIndexTask compleates without raising exception.
+   */
   @Test
   public void testCreateTask()
   {
