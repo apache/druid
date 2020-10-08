@@ -80,7 +80,8 @@ public class AvroFlattenerMakerTest
         flattener.getRootField(record, "someNull")
     );
     Assert.assertEquals(
-        record.getSomeFixed(),
+        // Casted to an array by transformValue
+        record.getSomeFixed().bytes(),
         flattener.getRootField(record, "someFixed")
     );
     Assert.assertEquals(
@@ -89,7 +90,8 @@ public class AvroFlattenerMakerTest
         flattener.getRootField(record, "someBytes")
     );
     Assert.assertEquals(
-        record.getSomeEnum(),
+        // Casted to a string by transformValue
+        record.getSomeEnum().toString(),
         flattener.getRootField(record, "someEnum")
     );
     Assert.assertEquals(
@@ -165,7 +167,8 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someNull").apply(record)
     );
     Assert.assertEquals(
-        record.getSomeFixed(),
+        // Casted to an array by transformValue
+        record.getSomeFixed().bytes(),
         flattener.makeJsonPathExtractor("$.someFixed").apply(record)
     );
     Assert.assertEquals(
@@ -174,7 +177,8 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someBytes").apply(record)
     );
     Assert.assertEquals(
-        record.getSomeEnum(),
+        // Casted to a string by transformValue
+        record.getSomeEnum().toString(),
         flattener.makeJsonPathExtractor("$.someEnum").apply(record)
     );
     Assert.assertEquals(
