@@ -316,6 +316,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   public int hashCode()
   {
     return Objects.hash(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
         partitionsSpec,

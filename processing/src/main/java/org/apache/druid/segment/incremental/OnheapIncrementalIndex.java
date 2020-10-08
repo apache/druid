@@ -476,5 +476,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     {
       return that.getClass().equals(this.getClass());
     }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(this.getClass());
+    }
   }
 }

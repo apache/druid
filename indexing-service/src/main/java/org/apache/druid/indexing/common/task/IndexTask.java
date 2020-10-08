@@ -1550,6 +1550,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public int hashCode()
     {
       return Objects.hash(
+          appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
