@@ -144,42 +144,41 @@ function progress(done: number, awaiting: number): number {
 
 const PERCENT_BRACES = [formatPercent(1)];
 
-interface Datasource {
-  datasource: string;
-  rules: Rule[];
-  compactionConfig?: CompactionConfig;
-  compactionStatus?: CompactionStatus;
-  [key: string]: any;
+interface DatasourceQueryResultRow {
+  readonly datasource: string;
+  readonly num_segments: number;
+  readonly num_available_segments: number;
+  readonly num_segments_to_load: number;
+  readonly num_segments_to_drop: number;
+  readonly total_data_size: number;
+  readonly replicated_size: number;
+  readonly min_segment_size: number;
+  readonly avg_segment_size: number;
+  readonly max_segment_size: number;
+  readonly total_rows: number;
+  readonly avg_row_size: number;
+}
+
+interface Datasource extends DatasourceQueryResultRow {
+  readonly rules: Rule[];
+  readonly compactionConfig?: CompactionConfig;
+  readonly compactionStatus?: CompactionStatus;
+  readonly unused?: boolean;
 }
 
 interface DatasourcesAndDefaultRules {
-  datasources: Datasource[];
-  defaultRules: Rule[];
-}
-
-interface DatasourceQueryResultRow {
-  datasource: string;
-  num_segments: number;
-  num_available_segments: number;
-  num_segments_to_load: number;
-  num_segments_to_drop: number;
-  total_data_size: number;
-  replicated_size: number;
-  min_segment_size: number;
-  avg_segment_size: number;
-  max_segment_size: number;
-  total_rows: number;
-  avg_row_size: number;
+  readonly datasources: Datasource[];
+  readonly defaultRules: Rule[];
 }
 
 interface RetentionDialogOpenOn {
-  datasource: string;
-  rules: Rule[];
+  readonly datasource: string;
+  readonly rules: Rule[];
 }
 
 interface CompactionDialogOpenOn {
-  datasource: string;
-  compactionConfig: CompactionConfig;
+  readonly datasource: string;
+  readonly compactionConfig: CompactionConfig;
 }
 
 export interface DatasourcesViewProps {
@@ -229,18 +228,18 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
-  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS total_data_size,
-  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS replicated_size,
-  MIN("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS min_segment_size,
+  SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
+  SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
+  MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size,
   (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
-    COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
+    SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
+    COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0)
   ) AS avg_segment_size,
-  MAX("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS max_segment_size,
+  MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
   (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
-    SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
+    SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
+    SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)
   ) AS avg_row_size
 FROM sys.segments
 GROUP BY 1`;
@@ -361,7 +360,7 @@ GROUP BY 1`;
         const allDatasources = (datasources as any).concat(
           unused.map(d => ({ datasource: d, unused: true })),
         );
-        allDatasources.forEach((ds: Datasource) => {
+        allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compactionConfig = compactionConfigs[ds.datasource];
           ds.compactionStatus = compactionStatuses[ds.datasource];
