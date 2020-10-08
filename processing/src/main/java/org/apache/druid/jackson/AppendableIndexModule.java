@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
-import org.apache.druid.segment.incremental.OffheapIncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 public class AppendableIndexModule extends SimpleModule
@@ -38,7 +37,6 @@ public class AppendableIndexModule extends SimpleModule
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = OnheapIncrementalIndex.Spec.class)
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = OnheapIncrementalIndex.Spec.TYPE, value = OnheapIncrementalIndex.Spec.class),
-      @JsonSubTypes.Type(name = OffheapIncrementalIndex.Spec.TYPE, value = OffheapIncrementalIndex.Spec.class)
   })
   public interface AppendableIndexSpecMixin
   {

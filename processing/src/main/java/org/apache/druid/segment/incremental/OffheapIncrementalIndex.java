@@ -19,12 +19,9 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -35,7 +32,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -381,67 +377,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           maxRowCount,
           Objects.requireNonNull(bufferPool, "bufferPool is null")
       );
-    }
-  }
-
-  public static class Spec implements AppendableIndexSpec, Supplier<ByteBuffer>
-  {
-    public static final String TYPE = "offheap";
-    static final int DEFAULT_BUFFER_SIZE = 1 << 23;
-    static final int DEFAULT_CACHE_SIZE = 1 << 30;
-
-    final int bufferSize;
-    final int cacheSize;
-    final NonBlockingPool<ByteBuffer> bufferPool;
-
-    @JsonCreator
-    public Spec(
-        final @JsonProperty("bufferSize") @Nullable Integer bufferSize,
-        final @JsonProperty("cacheSize") @Nullable Integer cacheSize
-    )
-    {
-      this.bufferSize = bufferSize != null && bufferSize > 0 ? bufferSize : DEFAULT_BUFFER_SIZE;
-      this.cacheSize = cacheSize != null && cacheSize > this.bufferSize ? cacheSize : DEFAULT_CACHE_SIZE;
-      this.bufferPool = new StupidPool<>(
-          "Offheap incremental-index buffer pool",
-          this,
-          0,
-          this.cacheSize / this.bufferSize
-      );
-    }
-
-    @JsonProperty
-    public int getBufferSize()
-    {
-      return bufferSize;
-    }
-
-    @JsonProperty
-    public int getCacheSize()
-    {
-      return cacheSize;
-    }
-
-    @Override
-    public ByteBuffer get()
-    {
-      return ByteBuffer.allocateDirect(bufferSize);
-    }
-
-    @Override
-    public AppendableIndexBuilder builder()
-    {
-      return new Builder().setBufferPool(bufferPool);
-    }
-
-    @Override
-    public long getDefaultMaxBytesInMemory()
-    {
-      // In the realtime node, the entire JVM's direct memory is utilized for ingestion and persist operations.
-      // But maxBytesInMemory only refers to the active index size and not to the index being flushed to disk and the
-      // persist buffer.
-      // To account for that, we set default to 1/2 of the max jvm's direct memory.
-      return JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes() / 2;
     }
   }
 }

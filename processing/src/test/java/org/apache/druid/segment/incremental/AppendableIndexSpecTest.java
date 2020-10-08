@@ -40,32 +40,11 @@ public class AppendableIndexSpecTest
   }
 
   @Test
-  public void testSerializationOffheapString() throws Exception
+  public void testSerializationDefaultString() throws Exception
   {
     AppendableIndexSpec spec = JSON_MAPPER.readValue(
-        "{\"type\": \"offheap\"}", AppendableIndexSpec.class
+        "{}", AppendableIndexSpec.class
     );
-    Assert.assertTrue(spec instanceof OffheapIncrementalIndex.Spec);
-  }
-
-  @Test
-  public void testSerializationOffheapStringWithZeroSizes() throws Exception
-  {
-    AppendableIndexSpec spec = JSON_MAPPER.readValue(
-        "{\"type\": \"offheap\", \"bufferSize\": 0, \"cacheSize\": 0}", AppendableIndexSpec.class
-    );
-    Assert.assertTrue(spec instanceof OffheapIncrementalIndex.Spec);
-  }
-
-  @Test
-  public void testSerializationOffheapStringWithSizes() throws Exception
-  {
-    AppendableIndexSpec spec = JSON_MAPPER.readValue(
-        "{\"type\": \"offheap\", \"bufferSize\": 1048576, \"cacheSize\": 1073741824}",
-        AppendableIndexSpec.class
-    );
-    Assert.assertTrue(spec instanceof OffheapIncrementalIndex.Spec);
-    Assert.assertEquals(1048576, ((OffheapIncrementalIndex.Spec) spec).bufferSize);
-    Assert.assertEquals(1073741824, ((OffheapIncrementalIndex.Spec) spec).cacheSize);
+    Assert.assertTrue(spec instanceof OnheapIncrementalIndex.Spec);
   }
 }
