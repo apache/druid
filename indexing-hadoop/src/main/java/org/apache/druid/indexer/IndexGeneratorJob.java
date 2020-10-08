@@ -301,6 +301,7 @@ public class IndexGeneratorJob implements Jobby
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
+    // Build the incremental-index according to the spec that was chosen by the user
     IncrementalIndex newIndex = tuningConfig.getAppendableIndexSpec().builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())

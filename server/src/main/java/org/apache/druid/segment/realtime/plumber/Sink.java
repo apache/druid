@@ -328,6 +328,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .build();
+
+    // Build the incremental-index according to the spec that was chosen by the user
     final IncrementalIndex newIndex = appendableIndexSpec.builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
