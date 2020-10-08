@@ -470,5 +470,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       // we halved default to 1/6(max jvm memory)
       return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
     }
+
+    @Override
+    public boolean equals(Object that)
+    {
+      return that.getClass().equals(this.getClass());
+    }
   }
 }

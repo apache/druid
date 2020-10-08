@@ -26,6 +26,7 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfi
 import org.apache.druid.indexing.kinesis.test.TestModifiedKinesisIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
@@ -66,6 +67,7 @@ public class KinesisIndexTaskTuningConfigTest
     );
 
     Assert.assertNotNull(config.getBasePersistDirectory());
+    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
@@ -102,7 +104,8 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"fetchSequenceNumberTimeout\": 6000,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
-                     + "  \"fetchThreads\": 2\n"
+                     + "  \"fetchThreads\": 2,\n"
+                     + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
                      + "}";
 
     KinesisIndexTaskTuningConfig config = (KinesisIndexTaskTuningConfig) mapper.readValue(
@@ -116,6 +119,7 @@ public class KinesisIndexTaskTuningConfigTest
     );
 
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
+    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
@@ -169,6 +173,7 @@ public class KinesisIndexTaskTuningConfigTest
         mapper.readValue(serialized, TestModifiedKinesisIndexTaskTuningConfig.class);
 
     Assert.assertEquals(null, deserialized.getExtra());
+    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
     Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
     Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
     Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
@@ -228,6 +233,7 @@ public class KinesisIndexTaskTuningConfigTest
     KinesisIndexTaskTuningConfig deserialized =
         mapper.readValue(serialized, KinesisIndexTaskTuningConfig.class);
 
+    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
     Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
     Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
     Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
@@ -320,6 +326,7 @@ public class KinesisIndexTaskTuningConfigTest
     );
     KinesisIndexTaskTuningConfig copy = (KinesisIndexTaskTuningConfig) original.convertToTaskTuningConfig();
 
+    Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(3, copy.getMaxBytesInMemory());
     Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());

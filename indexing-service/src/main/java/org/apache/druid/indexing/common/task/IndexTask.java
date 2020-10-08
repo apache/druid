@@ -1529,7 +1529,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         return false;
       }
       IndexTuningConfig that = (IndexTuningConfig) o;
-      return maxRowsInMemory == that.maxRowsInMemory &&
+      return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
+             maxRowsInMemory == that.maxRowsInMemory &&
              maxBytesInMemory == that.maxBytesInMemory &&
              maxPendingPersists == that.maxPendingPersists &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
