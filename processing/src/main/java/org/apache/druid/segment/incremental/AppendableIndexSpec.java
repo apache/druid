@@ -21,6 +21,9 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.guice.annotations.UnstableApi;
 
+/**
+ * AppendableIndexSpec describes the in-memory indexing method for data ingestion.
+ */
 @UnstableApi
 public interface AppendableIndexSpec
 {
