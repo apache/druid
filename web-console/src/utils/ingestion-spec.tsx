@@ -2656,7 +2656,7 @@ export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): Inge
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
-function guessInputFormat(sampleData: string[]): InputFormat {
+export function guessInputFormat(sampleData: string[]): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
@@ -2672,7 +2672,7 @@ function guessInputFormat(sampleData: string[]): InputFormat {
       return inputFormatFromType('orc');
     }
     // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if (sampleDatum.startsWith('Obj1')) {
+    if (sampleDatum.startsWith('Obj') && sampleDatum.charCodeAt(3) === 1) {
       return inputFormatFromType('avro_ocf');
     }
 
