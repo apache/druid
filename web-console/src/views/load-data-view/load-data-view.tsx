@@ -1235,9 +1235,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 fillDataSourceNameIfNeeded(
                   fillInputFormat(
                     spec,
-                    filterMap(inputQueryState.data.data, l =>
-                      l.parsed ? l.parsed.raw : undefined,
-                    ),
+                    filterMap(inputQueryState.data.data, l => (l.input ? l.input.raw : undefined)),
                   ),
                 ),
               );
