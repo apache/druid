@@ -65,7 +65,7 @@ abstract class UnaryExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     return expr.getOutputType(inputTypes);
   }
@@ -132,13 +132,13 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(expr) && expr.canVectorize(inputTypes);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.negate(inputTypes, expr);
   }
@@ -171,7 +171,7 @@ class UnaryNotExpr extends UnaryExpr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     ExprType implicitCast = super.getOutputType(inputTypes);
     if (ExprType.STRING.equals(implicitCast)) {

@@ -81,7 +81,7 @@ abstract class BinaryOpExprBase implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     if (left.isNullLiteral()) {
       return right.getOutputType(inputTypes);
@@ -137,18 +137,18 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
       return ExprEval.of(null);
     }
 
-    if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
-      return evalString(leftVal.asString(), rightVal.asString());
-    } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
-      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
-    } else {
-      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
+    ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
+    switch (type) {
+      case STRING:
+        return evalString(leftVal.asString(), rightVal.asString());
+      case LONG:
+        return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
+      case DOUBLE:
+      default:
+        if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
+          return ExprEval.of(null);
+        }
+        return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
     }
   }
 

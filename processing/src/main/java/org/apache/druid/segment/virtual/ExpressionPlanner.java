@@ -21,6 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
@@ -56,6 +57,7 @@ public class ExpressionPlanner
     Parser.validateExpr(expression, analysis);
 
     EnumSet<ExpressionPlan.Trait> traits = EnumSet.noneOf(ExpressionPlan.Trait.class);
+    Set<String> noCapabilities = new HashSet<>();
     Set<String> maybeMultiValued = new HashSet<>();
     List<String> needsApplied = ImmutableList.of();
     ValueType singleInputType = null;
@@ -120,7 +122,7 @@ public class ExpressionPlanner
             maybeMultiValued.add(column);
           }
         } else {
-          maybeMultiValued.add(column);
+          noCapabilities.add(column);
         }
       }
 
@@ -135,8 +137,12 @@ public class ExpressionPlanner
         traits.add(ExpressionPlan.Trait.NON_SCALAR_INPUTS);
       }
 
-      if (!maybeMultiValued.isEmpty()) {
+      if (!noCapabilities.isEmpty()) {
         traits.add(ExpressionPlan.Trait.UNKNOWN_INPUTS);
+      }
+
+      if (!maybeMultiValued.isEmpty()) {
+        traits.add(ExpressionPlan.Trait.INCOMPLETE_INPUTS);
       }
 
       // if expression needs transformed, lets do it
@@ -145,8 +151,15 @@ public class ExpressionPlanner
       }
     }
 
-    // only set output type
-    if (ExpressionPlan.none(traits, ExpressionPlan.Trait.UNKNOWN_INPUTS, ExpressionPlan.Trait.NEEDS_APPLIED)) {
+    // only set output type if we are pretty confident about input types
+    final boolean shoulComputeOutput = ExpressionPlan.none(
+        traits,
+        ExpressionPlan.Trait.UNKNOWN_INPUTS,
+        ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+        ExpressionPlan.Trait.NEEDS_APPLIED
+    );
+
+    if (shoulComputeOutput) {
       outputType = expression.getOutputType(inspector);
     }
 
@@ -163,16 +176,22 @@ public class ExpressionPlanner
       traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
     }
 
-    // vectorized expressions do not currently support unknown inputs, multi-valued inputs or outputs, implicit mapping
+    // vectorized expressions do not support incomplete, multi-valued inputs or outputs, or implicit mapping
+    // they also do support unknown inputs, but they also do not currently have to deal with them, as missing
+    // capabilites is indicative of a non-existent column instead of an unknown schema. If this ever changes,
+    // this check should also change
     boolean supportsVector = ExpressionPlan.none(
         traits,
-        ExpressionPlan.Trait.UNKNOWN_INPUTS,
+        ExpressionPlan.Trait.INCOMPLETE_INPUTS,
         ExpressionPlan.Trait.NEEDS_APPLIED,
         ExpressionPlan.Trait.NON_SCALAR_INPUTS,
         ExpressionPlan.Trait.NON_SCALAR_OUTPUT
     );
 
     if (supportsVector && expression.canVectorize(inspector)) {
+      // make sure to compute the output type for a vector expression though, because we might have skipped it earlier
+      // due to unknown inputs, but that's ok here since it just means it doesnt exist
+      outputType = expression.getOutputType(inspector);
       traits.add(ExpressionPlan.Trait.VECTORIZABLE);
     }
     return new ExpressionPlan(
@@ -181,7 +200,7 @@ public class ExpressionPlanner
         traits,
         outputType,
         singleInputType,
-        maybeMultiValued,
+        Sets.union(noCapabilities, maybeMultiValued),
         needsApplied
     );
   }

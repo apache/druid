@@ -132,13 +132,13 @@ public interface Expr
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingTypes}, compute what the output {@link ExprType} will be for this expression. A return
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression. A return
    * value of null indicates that the given type information was not enough to resolve the output type, so the
    * expression must be evaluated using default {@link #eval} handling where types are only known after evaluation,
    * through {@link ExprEval#type}.
    */
   @Nullable
-  default ExprType getOutputType(InputBindingTypes inputTypes)
+  default ExprType getOutputType(InputBindingInspector inputTypes)
   {
     return null;
   }
@@ -148,7 +148,7 @@ public interface Expr
    * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
    */
-  default boolean canVectorize(InputBindingTypes inputTypes)
+  default boolean canVectorize(InputBindingInspector inputTypes)
   {
     return false;
   }
@@ -157,7 +157,7 @@ public interface Expr
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
    */
-  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     throw Exprs.cannotVectorize(this);
   }
@@ -167,8 +167,12 @@ public interface Expr
    * inferring the output type of an expression with {@link #getOutputType}. A null value means that either the binding
    * doesn't exist, or, that the type information is unavailable.
    */
-  interface InputBindingTypes
+  interface InputBindingInspector
   {
+    /**
+     * Get the {@link ExprType} from the backing store for a given identifier (this is likely a column, but could be other
+     * things depending on the backing adapter)
+     */
     @Nullable
     ExprType getType(String name);
 
@@ -179,12 +183,11 @@ public interface Expr
      */
     default boolean areNumeric(List<Expr> args)
     {
-      boolean numeric = args.size() > 0;
+      boolean numeric = true;
       for (Expr arg : args) {
         ExprType argType = arg.getOutputType(this);
         if (argType == null) {
-          numeric = false;
-          break;
+          continue;
         }
         numeric &= argType.isNumeric();
       }
@@ -202,7 +205,7 @@ public interface Expr
     }
 
     /**
-     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingTypes)} to a value of true
+     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingInspector)} to a value of true
      */
     default boolean canVectorize(List<Expr> args)
     {
@@ -214,7 +217,7 @@ public interface Expr
     }
 
     /**
-     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingTypes)} to a value of true
+     * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingInspector)} to a value of true
      */
     default boolean canVectorize(Expr... args)
     {
@@ -223,9 +226,9 @@ public interface Expr
   }
 
   /**
-   * {@link InputBindingTypes} + vectorizations stuff for {@link #buildVectorized}
+   * {@link InputBindingInspector} + vectorizations stuff for {@link #buildVectorized}
    */
-  interface VectorInputBindingTypes extends InputBindingTypes
+  interface VectorInputBindingInspector extends InputBindingInspector
   {
     int getMaxVectorSize();
   }
@@ -247,7 +250,7 @@ public interface Expr
    * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
    * which exist
    */
-  interface VectorInputBinding extends VectorInputBindingTypes
+  interface VectorInputBinding extends VectorInputBindingInspector
   {
     <T> T[] getObjectVector(String name);
 

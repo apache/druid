@@ -35,7 +35,7 @@ public class VectorMathProcessors
    *    double  -> double
    */
   public static <T> ExprVectorProcessor<T> makeMathProcessor(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr arg,
       Supplier<LongOutLongInFunctionVectorProcessor> longOutLongInSupplier,
       Supplier<DoubleOutDoubleInFunctionVectorProcessor> doubleOutDoubleInSupplier
@@ -44,9 +44,9 @@ public class VectorMathProcessors
     final ExprType inputType = arg.getOutputType(inputTypes);
 
     ExprVectorProcessor<?> processor = null;
-    if (ExprType.LONG.equals(inputType)) {
+    if (inputType == ExprType.LONG) {
       processor = longOutLongInSupplier.get();
-    } else if (ExprType.DOUBLE.equals(inputType)) {
+    } else if (inputType == ExprType.DOUBLE) {
       processor = doubleOutDoubleInSupplier.get();
     }
     if (processor == null) {
@@ -61,7 +61,7 @@ public class VectorMathProcessors
    *    double  -> double
    */
   public static <T> ExprVectorProcessor<T> makeDoubleMathProcessor(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr arg,
       Supplier<DoubleOutLongInFunctionVectorProcessor> doubleOutLongInSupplier,
       Supplier<DoubleOutDoubleInFunctionVectorProcessor> doubleOutDoubleInSupplier
@@ -70,9 +70,9 @@ public class VectorMathProcessors
     final ExprType inputType = arg.getOutputType(inputTypes);
 
     ExprVectorProcessor<?> processor = null;
-    if (ExprType.LONG.equals(inputType)) {
+    if (inputType == ExprType.LONG) {
       processor = doubleOutLongInSupplier.get();
-    } else if (ExprType.DOUBLE.equals(inputType)) {
+    } else if (inputType == ExprType.DOUBLE) {
       processor = doubleOutDoubleInSupplier.get();
     }
     if (processor == null) {
@@ -87,7 +87,7 @@ public class VectorMathProcessors
    *    double  -> long
    */
   public static <T> ExprVectorProcessor<T> makeLongMathProcessor(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr arg,
       Supplier<LongOutLongInFunctionVectorProcessor> longOutLongInSupplier,
       Supplier<LongOutDoubleInFunctionVectorProcessor> longOutDoubleInSupplier
@@ -96,9 +96,9 @@ public class VectorMathProcessors
     final ExprType inputType = arg.getOutputType(inputTypes);
 
     ExprVectorProcessor<?> processor = null;
-    if (ExprType.LONG.equals(inputType)) {
+    if (inputType == ExprType.LONG) {
       processor = longOutLongInSupplier.get();
-    } else if (ExprType.DOUBLE.equals(inputType)) {
+    } else if (inputType == ExprType.DOUBLE) {
       processor = longOutDoubleInSupplier.get();
     }
     if (processor == null) {
@@ -115,7 +115,7 @@ public class VectorMathProcessors
    *    double, double  -> double
    */
   public static <T> ExprVectorProcessor<T> makeMathProcessor(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right,
       Supplier<LongOutLongsInFunctionVectorProcessor> longOutLongsInProcessor,
@@ -127,17 +127,23 @@ public class VectorMathProcessors
     final ExprType leftType = left.getOutputType(inputTypes);
     final ExprType rightType = right.getOutputType(inputTypes);
     ExprVectorProcessor<?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
+    if (leftType == ExprType.LONG) {
+      if (rightType == null || rightType == ExprType.LONG) {
         processor = longOutLongsInProcessor.get();
-      } else if (ExprType.DOUBLE.equals(rightType)) {
+      } else if (rightType == ExprType.DOUBLE) {
         processor = doubleOutLongDoubleInProcessor.get();
       }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
+    } else if (leftType == ExprType.DOUBLE) {
+      if (rightType == ExprType.LONG) {
         processor = doubleOutDoubleLongInProcessor.get();
-      } else if (ExprType.DOUBLE.equals(rightType)) {
+      } else if (rightType == null || rightType == ExprType.DOUBLE) {
         processor = doubleOutDoublesInProcessor.get();
+      }
+    } else if (leftType == null) {
+      if (rightType == ExprType.LONG) {
+        processor = longOutLongsInProcessor.get();
+      } else if (rightType == ExprType.DOUBLE) {
+        processor = doubleOutLongDoubleInProcessor.get();
       }
     }
     if (processor == null) {
@@ -154,7 +160,7 @@ public class VectorMathProcessors
    *    double, double  -> double
    */
   public static <T> ExprVectorProcessor<T> makeDoubleMathProcessor(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right,
       Supplier<DoubleOutLongsInFunctionVectorProcessor> doubleOutLongsInProcessor,
@@ -166,16 +172,22 @@ public class VectorMathProcessors
     final ExprType leftType = left.getOutputType(inputTypes);
     final ExprType rightType = right.getOutputType(inputTypes);
     ExprVectorProcessor<?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
+    if (leftType == ExprType.LONG) {
+      if (rightType == ExprType.LONG) {
         processor = doubleOutLongsInProcessor.get();
-      } else if (ExprType.DOUBLE.equals(rightType)) {
+      } else if (rightType == null || rightType == ExprType.DOUBLE) {
         processor = doubleOutLongDoubleInProcessor.get();
       }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
+    } else if (leftType == ExprType.DOUBLE) {
+      if (rightType == ExprType.LONG) {
         processor = doubleOutDoubleLongInProcessor.get();
-      } else if (ExprType.DOUBLE.equals(rightType)) {
+      } else if (rightType == null || rightType == ExprType.DOUBLE) {
+        processor = doubleOutDoublesInProcessor.get();
+      }
+    } else if (leftType == null) {
+      if (rightType == ExprType.LONG) {
+        processor = doubleOutDoubleLongInProcessor.get();
+      } else if (rightType == ExprType.DOUBLE) {
         processor = doubleOutDoublesInProcessor.get();
       }
     }
@@ -193,7 +205,7 @@ public class VectorMathProcessors
    *    double, double  -> long
    */
   public static <T> ExprVectorProcessor<T> makeLongMathProcessor(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right,
       Supplier<LongOutLongsInFunctionVectorProcessor> longOutLongsInProcessor,
@@ -205,16 +217,22 @@ public class VectorMathProcessors
     final ExprType leftType = left.getOutputType(inputTypes);
     final ExprType rightType = right.getOutputType(inputTypes);
     ExprVectorProcessor<?> processor = null;
-    if (ExprType.LONG.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
+    if (leftType == ExprType.LONG) {
+      if (rightType == null || rightType == ExprType.LONG) {
         processor = longOutLongsInProcessor.get();
-      } else if (ExprType.DOUBLE.equals(rightType)) {
+      } else if (rightType == ExprType.DOUBLE) {
         processor = longOutLongDoubleInProcessor.get();
       }
-    } else if (ExprType.DOUBLE.equals(leftType)) {
-      if (ExprType.LONG.equals(rightType)) {
+    } else if (leftType == ExprType.DOUBLE) {
+      if (rightType == ExprType.LONG) {
         processor = longOutDoubleLongInProcessor.get();
-      } else if (ExprType.DOUBLE.equals(rightType)) {
+      } else if (rightType == null || rightType == ExprType.DOUBLE) {
+        processor = longOutDoublesInProcessor.get();
+      }
+    } else if (leftType == null) {
+      if (rightType == ExprType.LONG) {
+        processor = longOutLongsInProcessor.get();
+      } else if (rightType == ExprType.DOUBLE) {
         processor = longOutDoublesInProcessor.get();
       }
     }
@@ -224,7 +242,7 @@ public class VectorMathProcessors
     return (ExprVectorProcessor<T>) processor;
   }
 
-  public static <T> ExprVectorProcessor<T> plus(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> plus(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -281,7 +299,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> minus(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> minus(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -338,7 +356,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> multiply(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> multiply(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -395,7 +413,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> divide(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> divide(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -452,7 +470,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> longDivide(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> longDivide(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeLongMathProcessor(
         inputTypes,
@@ -509,7 +527,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> modulo(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> modulo(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -566,7 +584,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> negate(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> negate(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeMathProcessor(
         inputTypes,
@@ -596,7 +614,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> power(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> power(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -653,24 +671,25 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> doublePower(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> doublePower(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    if (ExprType.LONG.equals(left.getOutputType(inputTypes))) {
-      if (ExprType.LONG.equals(right.getOutputType(inputTypes))) {
-        processor = new DoubleOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
-        )
+    ExprType leftType = left.getOutputType(inputTypes);
+    ExprType rightType = right.getOutputType(inputTypes);
+    if ((leftType == ExprType.LONG && (rightType == null || rightType == ExprType.LONG)) ||
+        (leftType == null && rightType == ExprType.LONG)) {
+      processor = new DoubleOutLongsInFunctionVectorProcessor(
+          left.buildVectorized(inputTypes),
+          right.buildVectorized(inputTypes),
+          inputTypes.getMaxVectorSize()
+      )
+      {
+        @Override
+        public double apply(long left, long right)
         {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.pow(left, right);
-          }
-        };
-      }
+          return Math.pow(left, right);
+        }
+      };
     }
 
     if (processor != null) {
@@ -679,7 +698,7 @@ public class VectorMathProcessors
     return power(inputTypes, left, right);
   }
 
-  public static <T> ExprVectorProcessor<T> max(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> max(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -736,7 +755,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> min(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> min(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeMathProcessor(
         inputTypes,
@@ -793,7 +812,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> atan2(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> atan2(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -850,7 +869,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> copySign(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> copySign(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -907,7 +926,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> hypot(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> hypot(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -964,7 +983,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> remainder(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> remainder(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1021,7 +1040,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> nextAfter(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> nextAfter(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1078,7 +1097,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> scalb(Expr.VectorInputBindingTypes inputTypes, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> scalb(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1135,7 +1154,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> acos(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> acos(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1165,7 +1184,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> asin(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> asin(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1195,7 +1214,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> atan(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> atan(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1225,7 +1244,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> cos(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> cos(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1255,7 +1274,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> cosh(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> cosh(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1285,7 +1304,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> cot(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> cot(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1315,7 +1334,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> sin(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> sin(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1345,7 +1364,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> sinh(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> sinh(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1375,7 +1394,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> tan(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> tan(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1405,7 +1424,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> tanh(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> tanh(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1435,7 +1454,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> abs(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> abs(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeMathProcessor(
         inputTypes,
@@ -1465,7 +1484,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> cbrt(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> cbrt(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1495,7 +1514,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> ceil(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> ceil(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1525,7 +1544,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> floor(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> floor(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1555,7 +1574,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> exp(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> exp(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1585,7 +1604,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> expm1(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> expm1(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1615,7 +1634,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> getExponent(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> getExponent(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeLongMathProcessor(
         inputTypes,
@@ -1645,7 +1664,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> log(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> log(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1675,7 +1694,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> log10(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> log10(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1705,7 +1724,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> log1p(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> log1p(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1735,7 +1754,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> nextUp(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> nextUp(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1765,7 +1784,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> rint(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> rint(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1795,7 +1814,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> signum(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> signum(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1825,7 +1844,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> sqrt(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> sqrt(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1855,7 +1874,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> toDegrees(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> toDegrees(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1885,7 +1904,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> toRadians(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> toRadians(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,
@@ -1915,7 +1934,7 @@ public class VectorMathProcessors
     );
   }
 
-  public static <T> ExprVectorProcessor<T> ulp(Expr.VectorInputBindingTypes inputTypes, Expr arg)
+  public static <T> ExprVectorProcessor<T> ulp(Expr.VectorInputBindingInspector inputTypes, Expr arg)
   {
     return makeDoubleMathProcessor(
         inputTypes,

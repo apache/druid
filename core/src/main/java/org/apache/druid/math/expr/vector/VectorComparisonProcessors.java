@@ -25,7 +25,7 @@ import org.apache.druid.math.expr.Expr;
 public class VectorComparisonProcessors
 {
   public static <T> ExprVectorProcessor<T> equal(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right
   )
@@ -86,7 +86,7 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> notEqual(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right
   )
@@ -147,7 +147,7 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> greaterThanOrEqual(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right
   )
@@ -208,7 +208,7 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> greaterThan(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right
   )
@@ -269,7 +269,7 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> lessThanOrEqual(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right
   )
@@ -330,7 +330,7 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> lessThan(
-      Expr.VectorInputBindingTypes inputTypes,
+      Expr.VectorInputBindingInspector inputTypes,
       Expr left,
       Expr right
   )

@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class OutputTypeTest extends InitializedNullHandlingTest
 {
-  private final Expr.InputBindingTypes inputTypes = inputTypesFromMap(
+  private final Expr.InputBindingInspector inputTypes = inputTypesFromMap(
       ImmutableMap.<String, ExprType>builder().put("x", ExprType.STRING)
                                               .put("x_", ExprType.STRING)
                                               .put("y", ExprType.LONG)
@@ -392,13 +392,13 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   @Test
   public void testOperatorAutoConversion()
   {
-    // nulls output nulls
-    Assert.assertNull(ExprTypeConversion.operator(ExprType.LONG, null));
-    Assert.assertNull(ExprTypeConversion.operator(null, ExprType.LONG));
-    Assert.assertNull(ExprTypeConversion.operator(ExprType.DOUBLE, null));
-    Assert.assertNull(ExprTypeConversion.operator(null, ExprType.DOUBLE));
-    Assert.assertNull(ExprTypeConversion.operator(ExprType.STRING, null));
-    Assert.assertNull(ExprTypeConversion.operator(null, ExprType.STRING));
+    // nulls output other
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(ExprType.LONG, null));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(null, ExprType.LONG));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.DOUBLE, null));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(null, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.operator(ExprType.STRING, null));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.operator(null, ExprType.STRING));
     // only long stays long
     Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(ExprType.LONG, ExprType.LONG));
     // only string stays string
@@ -409,8 +409,8 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.DOUBLE, ExprType.DOUBLE));
     Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.DOUBLE, ExprType.STRING));
     Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.STRING, ExprType.DOUBLE));
-    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.STRING, ExprType.LONG));
-    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.LONG, ExprType.STRING));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(ExprType.STRING, ExprType.LONG));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(ExprType.LONG, ExprType.STRING));
     // unless it is an array, and those have to be the same
     Assert.assertEquals(ExprType.LONG_ARRAY, ExprTypeConversion.operator(ExprType.LONG_ARRAY, ExprType.LONG_ARRAY));
     Assert.assertEquals(
@@ -426,47 +426,47 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   @Test
   public void testFunctionAutoConversion()
   {
-    // nulls output nulls
-    Assert.assertNull(ExprTypeConversion.doubleMathFunction(ExprType.LONG, null));
-    Assert.assertNull(ExprTypeConversion.doubleMathFunction(null, ExprType.LONG));
-    Assert.assertNull(ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE, null));
-    Assert.assertNull(ExprTypeConversion.doubleMathFunction(null, ExprType.DOUBLE));
-    Assert.assertNull(ExprTypeConversion.doubleMathFunction(ExprType.STRING, null));
-    Assert.assertNull(ExprTypeConversion.doubleMathFunction(null, ExprType.STRING));
+    // nulls output other
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.function(ExprType.LONG, null));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.function(null, ExprType.LONG));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.function(ExprType.DOUBLE, null));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.function(null, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(ExprType.STRING, null));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(null, ExprType.STRING));
     // only long stays long
-    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.doubleMathFunction(ExprType.LONG, ExprType.LONG));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.function(ExprType.LONG, ExprType.LONG));
     // any double makes all doubles
-    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.doubleMathFunction(ExprType.LONG, ExprType.DOUBLE));
-    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE, ExprType.LONG));
-    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.function(ExprType.LONG, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.function(ExprType.DOUBLE, ExprType.LONG));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.function(ExprType.DOUBLE, ExprType.DOUBLE));
     // any string makes become string
-    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.doubleMathFunction(ExprType.LONG, ExprType.STRING));
-    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.doubleMathFunction(ExprType.STRING, ExprType.LONG));
-    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE, ExprType.STRING));
-    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.doubleMathFunction(ExprType.STRING, ExprType.DOUBLE));
-    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.doubleMathFunction(ExprType.STRING, ExprType.STRING));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(ExprType.LONG, ExprType.STRING));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(ExprType.STRING, ExprType.LONG));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(ExprType.DOUBLE, ExprType.STRING));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(ExprType.STRING, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.function(ExprType.STRING, ExprType.STRING));
     // unless it is an array, and those have to be the same
-    Assert.assertEquals(ExprType.LONG_ARRAY, ExprTypeConversion.doubleMathFunction(ExprType.LONG_ARRAY, ExprType.LONG_ARRAY));
+    Assert.assertEquals(ExprType.LONG_ARRAY, ExprTypeConversion.function(ExprType.LONG_ARRAY, ExprType.LONG_ARRAY));
     Assert.assertEquals(
         ExprType.DOUBLE_ARRAY,
-        ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE_ARRAY, ExprType.DOUBLE_ARRAY)
+        ExprTypeConversion.function(ExprType.DOUBLE_ARRAY, ExprType.DOUBLE_ARRAY)
     );
     Assert.assertEquals(
         ExprType.STRING_ARRAY,
-        ExprTypeConversion.doubleMathFunction(ExprType.STRING_ARRAY, ExprType.STRING_ARRAY)
+        ExprTypeConversion.function(ExprType.STRING_ARRAY, ExprType.STRING_ARRAY)
     );
   }
 
   @Test
   public void testIntegerFunctionAutoConversion()
   {
-    // nulls output nulls
-    Assert.assertNull(ExprTypeConversion.integerMathFunction(ExprType.LONG, null));
-    Assert.assertNull(ExprTypeConversion.integerMathFunction(null, ExprType.LONG));
-    Assert.assertNull(ExprTypeConversion.integerMathFunction(ExprType.DOUBLE, null));
-    Assert.assertNull(ExprTypeConversion.integerMathFunction(null, ExprType.DOUBLE));
-    Assert.assertNull(ExprTypeConversion.integerMathFunction(ExprType.STRING, null));
-    Assert.assertNull(ExprTypeConversion.integerMathFunction(null, ExprType.STRING));
+    // nulls output other
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.integerMathFunction(ExprType.LONG, null));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.integerMathFunction(null, ExprType.LONG));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.integerMathFunction(ExprType.DOUBLE, null));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.integerMathFunction(null, ExprType.DOUBLE));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.integerMathFunction(ExprType.STRING, null));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.integerMathFunction(null, ExprType.STRING));
     // all numbers are longs
     Assert.assertEquals(ExprType.LONG, ExprTypeConversion.integerMathFunction(ExprType.LONG, ExprType.LONG));
     Assert.assertEquals(ExprType.LONG, ExprTypeConversion.integerMathFunction(ExprType.LONG, ExprType.DOUBLE));
@@ -494,30 +494,30 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   public void testAutoConversionArrayMismatchArrays()
   {
     expectedException.expect(IAE.class);
-    ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE_ARRAY, ExprType.LONG_ARRAY);
+    ExprTypeConversion.function(ExprType.DOUBLE_ARRAY, ExprType.LONG_ARRAY);
   }
 
   @Test
   public void testAutoConversionArrayMismatchArrayScalar()
   {
     expectedException.expect(IAE.class);
-    ExprTypeConversion.doubleMathFunction(ExprType.DOUBLE_ARRAY, ExprType.LONG);
+    ExprTypeConversion.function(ExprType.DOUBLE_ARRAY, ExprType.LONG);
   }
 
   @Test
   public void testAutoConversionArrayMismatchScalarArray()
   {
     expectedException.expect(IAE.class);
-    ExprTypeConversion.doubleMathFunction(ExprType.STRING, ExprType.LONG_ARRAY);
+    ExprTypeConversion.function(ExprType.DOUBLE, ExprType.LONG_ARRAY);
   }
 
-  private void assertOutputType(String expression, Expr.InputBindingTypes inputTypes, ExprType outputType)
+  private void assertOutputType(String expression, Expr.InputBindingInspector inputTypes, ExprType outputType)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil(), false);
     Assert.assertEquals(outputType, expr.getOutputType(inputTypes));
   }
 
-  Expr.InputBindingTypes inputTypesFromMap(Map<String, ExprType> types)
+  Expr.InputBindingInspector inputTypesFromMap(Map<String, ExprType> types)
   {
     return types::get;
   }

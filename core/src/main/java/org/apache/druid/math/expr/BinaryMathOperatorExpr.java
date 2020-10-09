@@ -61,13 +61,13 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.plus(inputTypes, left, right);
   }
@@ -99,13 +99,13 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.minus(inputTypes, left, right);
   }
@@ -137,13 +137,13 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.multiply(inputTypes, left, right);
   }
@@ -175,13 +175,13 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.divide(inputTypes, left, right);
   }
@@ -213,13 +213,13 @@ class BinPowExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.power(inputTypes, left, right);
   }
@@ -251,13 +251,13 @@ class BinModuloExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return inputTypes.areNumeric(left, right) && inputTypes.canVectorize(left, right);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorMathProcessors.modulo(inputTypes, left, right);
   }

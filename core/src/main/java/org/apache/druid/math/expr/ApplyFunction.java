@@ -56,10 +56,10 @@ public interface ApplyFunction
    * If this method returns true, {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which
    * can evaluate values in batches to use with vectorized query engines.
    *
-   * @see Expr#canVectorize(Expr.InputBindingTypes)
-   * @see Function#canVectorize(Expr.InputBindingTypes, List)
+   * @see Expr#canVectorize(Expr.InputBindingInspector)
+   * @see Function#canVectorize(Expr.InputBindingInspector, List)
    */
-  default boolean canVectorize(Expr.InputBindingTypes inputTypes, Expr lambda, List<Expr> args)
+  default boolean canVectorize(Expr.InputBindingInspector inputTypes, Expr lambda, List<Expr> args)
   {
     return false;
   }
@@ -68,10 +68,10 @@ public interface ApplyFunction
    * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
    * using {@link Expr#buildVectorized}, for use in vectorized query engines.
    *
-   * @see Expr#buildVectorized(Expr.VectorInputBindingTypes)
-   * @see Function#asVectorProcessor(Expr.VectorInputBindingTypes, List)
+   * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
+   * @see Function#asVectorProcessor(Expr.VectorInputBindingInspector, List)
    */
-  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, Expr lambda, List<Expr> args)
+  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, Expr lambda, List<Expr> args)
   {
     throw new UOE("%s is not vectorized", name());
   }
@@ -109,7 +109,7 @@ public interface ApplyFunction
    * @see Expr#getOutputType
    */
   @Nullable
-  ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args);
+  ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args);
 
   /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
@@ -126,9 +126,9 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
     {
-      return ExprType.asArrayType(expr.getOutputType(new LambdaInputBindingTypes(inputTypes, expr, args)));
+      return ExprType.asArrayType(expr.getOutputType(new LambdaInputBindingInspector(inputTypes, expr, args)));
     }
 
     /**
@@ -332,7 +332,7 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
     {
       // output type is accumulator type, which is last argument
       return args.get(args.size() - 1).getOutputType(inputTypes);
@@ -535,7 +535,7 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
     {
       // output type is input array type
       return args.get(0).getOutputType(inputTypes);
@@ -590,7 +590,7 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -917,18 +917,18 @@ public interface ApplyFunction
   }
 
   /**
-   * Helper that can wrap another {@link Expr.InputBindingTypes} to use to supply the type information of a
+   * Helper that can wrap another {@link Expr.InputBindingInspector} to use to supply the type information of a
    * {@link LambdaExpr} when evaluating {@link ApplyFunctionExpr#getOutputType}. Lambda identifiers do not exist
-   * in the underlying {@link Expr.InputBindingTypes}, but can be created by mapping the lambda identifiers to the
+   * in the underlying {@link Expr.InputBindingInspector}, but can be created by mapping the lambda identifiers to the
    * arguments that will be applied to them, to map the type information.
    */
-  class LambdaInputBindingTypes implements Expr.InputBindingTypes
+  class LambdaInputBindingInspector implements Expr.InputBindingInspector
   {
     private final Object2IntMap<String> lambdaIdentifiers;
-    private final Expr.InputBindingTypes inputTypes;
+    private final Expr.InputBindingInspector inputTypes;
     private final List<Expr> args;
 
-    public LambdaInputBindingTypes(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
+    public LambdaInputBindingInspector(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
     {
       this.inputTypes = inputTypes;
       this.args = args;

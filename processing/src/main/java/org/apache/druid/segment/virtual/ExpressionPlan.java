@@ -53,9 +53,13 @@ public class ExpressionPlan
      */
     NEEDS_APPLIED,
     /**
-     * expression has inputs whose type was unresolveable, or was incomplete, such as unknown multi-valuedness
+     * expression has inputs whose type was unresolveable
      */
     UNKNOWN_INPUTS,
+    /**
+     * expression has inputs whose type was incomplete, such as unknown multi-valuedness
+     */
+    INCOMPLETE_INPUTS,
     /**
      * expression explicitly using multi-valued inputs as array inputs
      */

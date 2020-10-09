@@ -78,13 +78,13 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return expr.canVectorize(inputTypes);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return expr.buildVectorized(inputTypes);
   }
@@ -119,7 +119,7 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     return expr.getOutputType(inputTypes);
   }
@@ -177,13 +177,13 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return function.canVectorize(inputTypes, args);
   }
 
   @Override
-  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return function.asVectorProcessor(inputTypes, args);
   }
@@ -216,7 +216,7 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     return function.getOutputType(inputTypes, args);
   }
@@ -298,7 +298,7 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return function.canVectorize(inputTypes, lambdaExpr, argsExpr) &&
            lambdaExpr.canVectorize(inputTypes) &&
@@ -306,7 +306,7 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return function.asVectorProcessor(inputTypes, lambdaExpr, argsExpr);
   }
@@ -338,7 +338,7 @@ class ApplyFunctionExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     return function.getOutputType(inputTypes, lambdaExpr, argsExpr);
   }

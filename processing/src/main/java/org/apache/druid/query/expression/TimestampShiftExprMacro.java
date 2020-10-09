@@ -106,7 +106,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inputTypes)
     {
       return ExprType.LONG;
     }
@@ -139,7 +139,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inputTypes)
     {
       return ExprType.LONG;
     }

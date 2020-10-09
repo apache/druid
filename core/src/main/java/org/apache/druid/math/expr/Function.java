@@ -115,17 +115,17 @@ public interface Function
    * @see Expr#getOutputType
    */
   @Nullable
-  ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args);
+  ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args);
 
   /**
    * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
    * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in
    * batches to use with vectorized query engines.
    *
-   * @see Expr#canVectorize(Expr.InputBindingTypes)
-   * @see ApplyFunction#canVectorize(Expr.InputBindingTypes, Expr, List)
+   * @see Expr#canVectorize(Expr.InputBindingInspector)
+   * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, Expr, List)
    */
-  default boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+  default boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
   {
     return false;
   }
@@ -134,10 +134,10 @@ public interface Function
    * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
    * using {@link Expr#buildVectorized}, for use in vectorized query engines.
    *
-   * @see Expr#buildVectorized(Expr.VectorInputBindingTypes)
-   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingTypes, Expr, List)
+   * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
+   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
    */
-  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
   {
     throw new UOE("%s is not vectorized", name());
   }
@@ -221,13 +221,13 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return args.get(0).getOutputType(inputTypes);
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
@@ -240,7 +240,7 @@ public interface Function
   {
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.DOUBLE;
     }
@@ -255,13 +255,20 @@ public interface Function
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
+      // match the logic of BinaryEvalOpExprBase.eval, except there is no string handling so both strings is also null
+      if (NullHandling.sqlCompatible() && (x.value() == null || y.value() == null)) {
         return ExprEval.of(null);
       }
-      if (x.type() == ExprType.LONG && y.type() == ExprType.LONG) {
-        return eval(x.asLong(), y.asLong());
-      } else {
-        return eval(x.asDouble(), y.asDouble());
+
+      ExprType type = ExprTypeConversion.autoDetect(x, y);
+      switch (type) {
+        case STRING:
+          return ExprEval.of(null);
+        case LONG:
+          return eval(x.asLong(), y.asLong());
+        case DOUBLE:
+        default:
+          return eval(x.asDouble(), y.asDouble());
       }
     }
 
@@ -277,13 +284,16 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
-      return ExprTypeConversion.doubleMathFunction(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+      return ExprTypeConversion.function(
+          args.get(0).getOutputType(inputTypes),
+          args.get(1).getOutputType(inputTypes)
+      );
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
@@ -296,7 +306,7 @@ public interface Function
   {
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.DOUBLE;
     }
@@ -440,11 +450,11 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       ExprType outputType = ExprType.LONG;
       for (Expr expr : args) {
-        outputType = ExprTypeConversion.doubleMathFunction(outputType, expr.getOutputType(inputTypes));
+        outputType = ExprTypeConversion.function(outputType, expr.getOutputType(inputTypes));
       }
       return outputType;
     }
@@ -465,7 +475,7 @@ public interface Function
         ExprType exprType = exprEval.type();
 
         if (isValidType(exprType)) {
-          outputType = ExprTypeConversion.doubleMathFunction(outputType, exprType);
+          outputType = ExprTypeConversion.function(outputType, exprType);
         }
 
         if (exprEval.value() != null) {
@@ -529,7 +539,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -561,14 +571,14 @@ public interface Function
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return (args.size() == 1 || (args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof Number)) &&
              inputTypes.canVectorize(args);
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       if (args.size() == 1 || args.get(1).isLiteral()) {
         final int radix = args.size() == 1 ? 10 : ((Number) args.get(1).getLiteralValue()).intValue();
@@ -606,19 +616,19 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.DOUBLE;
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return true;
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorProcessors.constantDouble(PI, inputTypes.getMaxVectorSize());
     }
@@ -645,7 +655,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.abs(inputTypes, args.get(0));
     }
@@ -666,7 +676,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.acos(inputTypes, args.get(0));
     }
@@ -687,7 +697,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.asin(inputTypes, args.get(0));
     }
@@ -708,7 +718,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.atan(inputTypes, args.get(0));
     }
@@ -729,7 +739,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cbrt(inputTypes, args.get(0));
     }
@@ -750,7 +760,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.ceil(inputTypes, args.get(0));
     }
@@ -771,7 +781,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cos(inputTypes, args.get(0));
     }
@@ -792,7 +802,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cosh(inputTypes, args.get(0));
     }
@@ -813,7 +823,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cot(inputTypes, args.get(0));
     }
@@ -841,13 +851,13 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprTypeConversion.integerMathFunction(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.longDivide(inputTypes, args.get(0), args.get(1));
     }
@@ -868,7 +878,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.exp(inputTypes, args.get(0));
     }
@@ -889,7 +899,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.expm1(inputTypes, args.get(0));
     }
@@ -910,7 +920,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.floor(inputTypes, args.get(0));
     }
@@ -932,13 +942,13 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.getExponent(inputTypes, args.get(0));
     }
@@ -959,7 +969,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.log(inputTypes, args.get(0));
     }
@@ -980,7 +990,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.log10(inputTypes, args.get(0));
     }
@@ -1001,7 +1011,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.log1p(inputTypes, args.get(0));
     }
@@ -1022,7 +1032,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.nextUp(inputTypes, args.get(0));
     }
@@ -1043,7 +1053,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.rint(inputTypes, args.get(0));
     }
@@ -1099,7 +1109,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return args.get(0).getOutputType(inputTypes);
     }
@@ -1152,7 +1162,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.signum(inputTypes, args.get(0));
     }
@@ -1173,7 +1183,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.sin(inputTypes, args.get(0));
     }
@@ -1194,7 +1204,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.sinh(inputTypes, args.get(0));
     }
@@ -1215,7 +1225,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.sqrt(inputTypes, args.get(0));
     }
@@ -1236,7 +1246,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.tan(inputTypes, args.get(0));
     }
@@ -1257,7 +1267,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.tanh(inputTypes, args.get(0));
     }
@@ -1278,7 +1288,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.toDegrees(inputTypes, args.get(0));
     }
@@ -1299,7 +1309,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.toRadians(inputTypes, args.get(0));
     }
@@ -1320,7 +1330,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.ulp(inputTypes, args.get(0));
     }
@@ -1341,7 +1351,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.atan2(inputTypes, args.get(0), args.get(1));
     }
@@ -1362,7 +1372,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.copySign(inputTypes, args.get(0), args.get(1));
     }
@@ -1383,7 +1393,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.hypot(inputTypes, args.get(0), args.get(1));
     }
@@ -1404,7 +1414,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.remainder(inputTypes, args.get(0), args.get(1));
     }
@@ -1431,7 +1441,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.max(inputTypes, args.get(0), args.get(1));
     }
@@ -1458,7 +1468,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.min(inputTypes, args.get(0), args.get(1));
     }
@@ -1479,7 +1489,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.nextAfter(inputTypes, args.get(0), args.get(1));
     }
@@ -1500,7 +1510,7 @@ public interface Function
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.doublePower(inputTypes, args.get(0), args.get(1));
     }
@@ -1516,7 +1526,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.DOUBLE;
     }
@@ -1524,23 +1534,27 @@ public interface Function
     @Override
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
+      if (NullHandling.sqlCompatible() && (x.value() == null || y.value() == null)) {
         return ExprEval.of(null);
       }
-      if (NullHandling.sqlCompatible() && x.isNumericNull() || y.isNumericNull()) {
-        return ExprEval.of(null);
+
+      ExprType type = ExprTypeConversion.autoDetect(x, y);
+      switch (type) {
+        case STRING:
+          return ExprEval.of(null);
+        default:
+          return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
       }
-      return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.scalb(inputTypes, args.get(0), args.get(1));
     }
@@ -1608,7 +1622,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       // can only know cast output type if cast to argument is constant
       if (args.get(1).isLiteral()) {
@@ -1618,15 +1632,15 @@ public interface Function
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public boolean canVectorize(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return args.get(0).canVectorize(inputTypes) && args.get(1).isLiteral();
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, List<Expr> args)
     {
-      return CastToTypeVectorProcessor.castToType(
+      return CastToTypeVectorProcessor.cast(
           args.get(0).buildVectorized(inputTypes),
           ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
       );
@@ -1698,7 +1712,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprTypeConversion.conditional(inputTypes, args.subList(1, 3));
     }
@@ -1741,7 +1755,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       List<Expr> results = new ArrayList<>();
       for (int i = 1; i < args.size(); i += 2) {
@@ -1790,7 +1804,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       List<Expr> results = new ArrayList<>();
       for (int i = 2; i < args.size(); i += 2) {
@@ -1827,7 +1841,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprTypeConversion.conditional(inputTypes, args);
     }
@@ -1858,7 +1872,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -1889,7 +1903,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -1939,7 +1953,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -1970,7 +1984,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2011,7 +2025,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2056,7 +2070,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2106,7 +2120,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2122,7 +2136,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2154,7 +2168,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2205,7 +2219,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2239,7 +2253,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2273,7 +2287,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2289,7 +2303,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2318,7 +2332,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2363,7 +2377,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2402,7 +2416,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2452,7 +2466,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2511,7 +2525,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2624,11 +2638,11 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       ExprType type = ExprType.LONG;
       for (Expr arg : args) {
-        type = ExprTypeConversion.doubleMathFunction(type, arg.getOutputType(inputTypes));
+        type = ExprTypeConversion.function(type, arg.getOutputType(inputTypes));
       }
       return ExprType.asArrayType(type);
     }
@@ -2680,7 +2694,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2710,7 +2724,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING_ARRAY;
     }
@@ -2751,7 +2765,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
@@ -2780,7 +2794,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.elementType(args.get(0).getOutputType(inputTypes));
     }
@@ -2808,7 +2822,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.elementType(args.get(0).getOutputType(inputTypes));
     }
@@ -2836,7 +2850,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2874,7 +2888,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -2917,7 +2931,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       ExprType arrayType = args.get(0).getOutputType(inputTypes);
       return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
@@ -2981,7 +2995,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       ExprType arrayType = args.get(0).getOutputType(inputTypes);
       return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
@@ -3044,7 +3058,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -3068,7 +3082,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -3104,7 +3118,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return args.get(0).getOutputType(inputTypes);
     }
@@ -3190,7 +3204,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       ExprType arrayType = args.get(1).getOutputType(inputTypes);
       return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);

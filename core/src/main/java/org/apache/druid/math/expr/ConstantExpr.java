@@ -46,7 +46,7 @@ abstract class ConstantExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inputTypes)
   {
     return outputType;
   }
@@ -135,13 +135,13 @@ class LongExpr extends ConstantExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return true;
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorProcessors.constantLong(value, inputTypes.getMaxVectorSize());
   }
@@ -180,13 +180,13 @@ class NullLongExpr extends NullNumericConstantExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return true;
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorProcessors.constantLong(null, inputTypes.getMaxVectorSize());
   }
@@ -290,13 +290,13 @@ class DoubleExpr extends ConstantExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return true;
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorProcessors.constantDouble(value, inputTypes.getMaxVectorSize());
   }
@@ -334,13 +334,13 @@ class NullDoubleExpr extends NullNumericConstantExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return true;
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorProcessors.constantDouble(null, inputTypes.getMaxVectorSize());
   }
@@ -452,13 +452,13 @@ class StringExpr extends ConstantExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inputTypes)
   {
     return true;
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
   {
     return VectorProcessors.constantString(value, inputTypes.getMaxVectorSize());
   }
