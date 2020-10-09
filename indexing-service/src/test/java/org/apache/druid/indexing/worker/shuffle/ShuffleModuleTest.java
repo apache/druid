@@ -37,7 +37,6 @@ import java.util.Optional;
 public class ShuffleModuleTest
 {
   private ShuffleModule shuffleModule;
-  private Injector injector;
 
   @Before
   public void setup()
@@ -50,16 +49,9 @@ public class ShuffleModuleTest
   {
     final ShuffleMonitor shuffleMonitor = new ShuffleMonitor();
     final MonitorScheduler monitorScheduler = Mockito.mock(MonitorScheduler.class);
-    Mockito.when(monitorScheduler.findMonitor(ArgumentMatchers.eq(ShuffleMonitor.class)))
+    Mockito.when(monitorScheduler.findMonitor(ShuffleMonitor.class))
            .thenReturn(Optional.of(shuffleMonitor));
-    injector = Guice.createInjector(
-        binder -> {
-          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          binder.bind(MonitorScheduler.class).toInstance(monitorScheduler);
-          binder.bind(IntermediaryDataManager.class).toInstance(Mockito.mock(IntermediaryDataManager.class));
-        },
-        shuffleModule
-    );
+    final Injector injector = createInjector(monitorScheduler);
     final Optional<ShuffleMetrics> optional = injector.getInstance(
         Key.get(new TypeLiteral<Optional<ShuffleMetrics>>() {})
     );
@@ -72,7 +64,16 @@ public class ShuffleModuleTest
     final MonitorScheduler monitorScheduler = Mockito.mock(MonitorScheduler.class);
     Mockito.when(monitorScheduler.findMonitor(ArgumentMatchers.eq(ShuffleMonitor.class)))
            .thenReturn(Optional.empty());
-    injector = Guice.createInjector(
+    final Injector injector = createInjector(monitorScheduler);
+    final Optional<ShuffleMetrics> optional = injector.getInstance(
+        Key.get(new TypeLiteral<Optional<ShuffleMetrics>>() {})
+    );
+    Assert.assertFalse(optional.isPresent());
+  }
+
+  private Injector createInjector(MonitorScheduler monitorScheduler)
+  {
+    return Guice.createInjector(
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(MonitorScheduler.class).toInstance(monitorScheduler);
@@ -80,9 +81,5 @@ public class ShuffleModuleTest
         },
         shuffleModule
     );
-    final Optional<ShuffleMetrics> optional = injector.getInstance(
-        Key.get(new TypeLiteral<Optional<ShuffleMetrics>>() {})
-    );
-    Assert.assertFalse(optional.isPresent());
   }
 }
