@@ -63,13 +63,11 @@ class SettableByteEntityReader implements InputEntityReader
 
   void setEntity(ByteEntity entity)
   {
-    if (inputFormat instanceof JsonInputFormat) {
-      ((JsonInputFormat) inputFormat).setLineSplittable(false);
-    }
+    InputFormat format = (inputFormat instanceof JsonInputFormat) ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
     this.delegate = new TransformingInputEntityReader(
         // Yes, we are creating a new reader for every stream chunk.
         // This should be fine as long as initializing a reader is cheap which it is for now.
-        inputFormat.createReader(inputRowSchema, entity, indexingTmpDir),
+        format.createReader(inputRowSchema, entity, indexingTmpDir),
         transformer
     );
   }

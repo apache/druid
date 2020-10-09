@@ -20,10 +20,10 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
@@ -53,14 +53,24 @@ public class JsonInputFormat extends NestedInputFormat
    * For more information, see: https://github.com/apache/druid/pull/10383.
    *
    */
-  @JsonIgnore
-  private boolean lineSplittable = true;
+  private final boolean lineSplittable;
 
   @JsonCreator
   public JsonInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec,
       @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns
+  )
+  {
+    this(flattenSpec, featureSpec, keepNullColumns, true);
+  }
+
+  @VisibleForTesting
+  JsonInputFormat(
+      JSONPathSpec flattenSpec,
+      Map<String, Boolean> featureSpec,
+      Boolean keepNullColumns,
+      boolean lineSplittable
   )
   {
     super(flattenSpec);
@@ -71,6 +81,7 @@ public class JsonInputFormat extends NestedInputFormat
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
     }
+    this.lineSplittable = lineSplittable;
   }
 
   @JsonProperty
@@ -93,9 +104,12 @@ public class JsonInputFormat extends NestedInputFormat
            new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
   }
 
-  public void setLineSplittable(boolean lineSplittable)
+  public JsonInputFormat withLineSplittable(boolean lineSplittable)
   {
-    this.lineSplittable = lineSplittable;
+    return new JsonInputFormat(this.getFlattenSpec(),
+                               this.getFeatureSpec(),
+                               this.keepNullColumns,
+                               lineSplittable);
   }
 
   @Override

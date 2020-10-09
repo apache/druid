@@ -103,12 +103,10 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
       @Nullable File temporaryDirectory
   )
   {
-    if (inputFormat instanceof JsonInputFormat) {
-      ((JsonInputFormat) inputFormat).setLineSplittable(false);
-    }
+    InputFormat format = inputFormat instanceof JsonInputFormat ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
     return new InputEntityIteratingReader(
         inputRowSchema,
-        inputFormat,
+        format,
         createEntityIterator(),
         temporaryDirectory
     );

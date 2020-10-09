@@ -61,11 +61,9 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        null,
+        false //make sure JsonReader is used
     );
-
-    //make sure JsonReader is used
-    format.setLineSplittable(false);
 
     final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
@@ -123,11 +121,9 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        null,
+        false //make sure JsonReader is used
     );
-
-    //make sure JsonReader is used
-    format.setLineSplittable(false);
 
     final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\n"
@@ -192,11 +188,9 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        null,
+        false //make sure JsonReader is used
     );
-
-    //make sure JsonReader is used
-    format.setLineSplittable(false);
 
     final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
@@ -247,11 +241,9 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        null,
+        false //make sure JsonReader is used
     );
-
-    //make sure JsonReader is used
-    format.setLineSplittable(false);
 
     final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
@@ -312,11 +304,9 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        null,
+        false //make sure JsonReader is used
     );
-
-    //make sure JsonReader is used
-    format.setLineSplittable(false);
 
     //2nd row is ill-formed
     final ByteEntity source = new ByteEntity(
@@ -369,11 +359,9 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        null,
+        false //make sure JsonReader is used
     );
-
-    //make sure JsonReader is used
-    format.setLineSplittable(false);
 
     //input is empty
     final ByteEntity source = new ByteEntity(
