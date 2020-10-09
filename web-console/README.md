@@ -25,7 +25,9 @@ This is the unified Druid web console that servers as a data management layer fo
 
 1. You need to be within the `web-console` directory
 2. Install the modules with `npm install`
-3. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+3. Run `npm run compile` to compile the scss files
+4. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+
 
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
 **Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
