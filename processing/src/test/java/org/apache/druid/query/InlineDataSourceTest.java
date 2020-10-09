@@ -139,7 +139,8 @@ public class InlineDataSourceTest
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(listDataSource.isCacheable());
+    Assert.assertFalse(listDataSource.isCacheable(true));
+    Assert.assertFalse(listDataSource.isCacheable(false));
   }
 
   @Test

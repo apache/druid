@@ -31,6 +31,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.Bytes;
 import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -291,11 +292,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.strategy = toolChest.getCacheStrategy(query);
       this.dataSourceAnalysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
-      // Broker join caching is disabled - https://github.com/apache/druid/issues/10444
-      this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER)
-                      && !dataSourceAnalysis.isJoin();
-      this.populateCache = CacheUtil.isPopulateSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER)
-                           && !dataSourceAnalysis.isJoin();
+      this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
+      this.populateCache = CacheUtil.isPopulateSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
       this.isBySegment = QueryContexts.isBySegment(query);
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
@@ -841,7 +839,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
       if (dataSourceAnalysis.isJoin()) {
-        return null; // Broker join caching disabled - https://github.com/apache/druid/issues/10444
+        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)
+                                                              .orElse(null);
+        if (null == joinDataSourceCacheKey) {
+          return null;    // A join operation that does not support caching
+        }
+        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
       }
       return strategy.computeCacheKey(query);
     }

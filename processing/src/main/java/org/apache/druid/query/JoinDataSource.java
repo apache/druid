@@ -175,9 +175,9 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
-  public boolean isCacheable()
+  public boolean isCacheable(boolean isBroker)
   {
-    return left.isCacheable() && right.isCacheable();
+    return left.isCacheable(isBroker) && right.isCacheable(isBroker);
   }
 
   @Override

@@ -424,7 +424,7 @@ public class JoinableFactoryWrapperTest
     @Override
     public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
     {
-      if (dataSource.isCacheable() && condition.canHashJoin()) {
+      if (dataSource.isCacheable(false) && condition.canHashJoin()) {
         String tableName = Iterators.getOnlyElement(dataSource.getTableNames().iterator());
         return Optional.of(StringUtils.toUtf8(tableName));
       }
