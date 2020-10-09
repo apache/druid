@@ -136,9 +136,10 @@ public interface Expr
    * value of null indicates that the given type information was not enough to resolve the output type, so the
    * expression must be evaluated using default {@link #eval} handling where types are only known after evaluation,
    * through {@link ExprEval#type}.
+   * @param inspector
    */
   @Nullable
-  default ExprType getOutputType(InputBindingInspector inputTypes)
+  default ExprType getOutputType(InputBindingInspector inspector)
   {
     return null;
   }
@@ -147,8 +148,9 @@ public interface Expr
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
    * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
+   * @param inspector
    */
-  default boolean canVectorize(InputBindingInspector inputTypes)
+  default boolean canVectorize(InputBindingInspector inspector)
   {
     return false;
   }
@@ -156,8 +158,9 @@ public interface Expr
   /**
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
+   * @param inspector
    */
-  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inputTypes)
+  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
   {
     throw Exprs.cannotVectorize(this);
   }

@@ -81,15 +81,15 @@ abstract class BinaryOpExprBase implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inputTypes)
+  public ExprType getOutputType(InputBindingInspector inspector)
   {
     if (left.isNullLiteral()) {
-      return right.getOutputType(inputTypes);
+      return right.getOutputType(inspector);
     }
     if (right.isNullLiteral()) {
-      return left.getOutputType(inputTypes);
+      return left.getOutputType(inspector);
     }
-    return ExprTypeConversion.operator(left.getOutputType(inputTypes), right.getOutputType(inputTypes));
+    return ExprTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
   }
 
   @Override

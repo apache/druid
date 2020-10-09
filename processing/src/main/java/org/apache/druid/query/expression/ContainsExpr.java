@@ -72,7 +72,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inputTypes)
+  public ExprType getOutputType(InputBindingInspector inspector)
   {
     return ExprType.LONG;
   }

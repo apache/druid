@@ -25,19 +25,19 @@ import org.apache.druid.math.expr.Expr;
 public class VectorComparisonProcessors
 {
   public static <T> ExprVectorProcessor<T> equal(
-      Expr.VectorInputBindingInspector inputTypes,
+      Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
     return VectorMathProcessors.makeMathProcessor(
-        inputTypes,
+        inspector,
         left,
         right,
         () -> new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -47,9 +47,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -59,9 +59,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -71,9 +71,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -86,19 +86,19 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> notEqual(
-      Expr.VectorInputBindingInspector inputTypes,
+      Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
     return VectorMathProcessors.makeMathProcessor(
-        inputTypes,
+        inspector,
         left,
         right,
         () -> new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -108,9 +108,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -120,9 +120,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -132,9 +132,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -147,19 +147,19 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> greaterThanOrEqual(
-      Expr.VectorInputBindingInspector inputTypes,
+      Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
     return VectorMathProcessors.makeMathProcessor(
-        inputTypes,
+        inspector,
         left,
         right,
         () -> new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -169,9 +169,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -181,9 +181,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -193,9 +193,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -208,19 +208,19 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> greaterThan(
-      Expr.VectorInputBindingInspector inputTypes,
+      Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
     return VectorMathProcessors.makeMathProcessor(
-        inputTypes,
+        inspector,
         left,
         right,
         () -> new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -230,9 +230,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -242,9 +242,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -254,9 +254,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -269,19 +269,19 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> lessThanOrEqual(
-      Expr.VectorInputBindingInspector inputTypes,
+      Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
     return VectorMathProcessors.makeMathProcessor(
-        inputTypes,
+        inspector,
         left,
         right,
         () -> new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -291,9 +291,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -303,9 +303,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -315,9 +315,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -330,19 +330,19 @@ public class VectorComparisonProcessors
   }
 
   public static <T> ExprVectorProcessor<T> lessThan(
-      Expr.VectorInputBindingInspector inputTypes,
+      Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
     return VectorMathProcessors.makeMathProcessor(
-        inputTypes,
+        inspector,
         left,
         right,
         () -> new LongOutLongsInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -352,9 +352,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -364,9 +364,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override
@@ -376,9 +376,9 @@ public class VectorComparisonProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorProcessor(
-            left.buildVectorized(inputTypes),
-            right.buildVectorized(inputTypes),
-            inputTypes.getMaxVectorSize()
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
         )
         {
           @Override

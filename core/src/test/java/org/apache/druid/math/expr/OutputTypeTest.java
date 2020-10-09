@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class OutputTypeTest extends InitializedNullHandlingTest
 {
-  private final Expr.InputBindingInspector inputTypes = inputTypesFromMap(
+  private final Expr.InputBindingInspector inspector = inspectorFromMap(
       ImmutableMap.<String, ExprType>builder().put("x", ExprType.STRING)
                                               .put("x_", ExprType.STRING)
                                               .put("y", ExprType.LONG)
@@ -53,339 +53,339 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   @Test
   public void testConstantsAndIdentifiers()
   {
-    assertOutputType("'hello'", inputTypes, ExprType.STRING);
-    assertOutputType("23", inputTypes, ExprType.LONG);
-    assertOutputType("3.2", inputTypes, ExprType.DOUBLE);
-    assertOutputType("['a', 'b']", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("[1,2,3]", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("[1.0]", inputTypes, ExprType.DOUBLE_ARRAY);
-    assertOutputType("x", inputTypes, ExprType.STRING);
-    assertOutputType("y", inputTypes, ExprType.LONG);
-    assertOutputType("z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("a", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("b", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("c", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("'hello'", inspector, ExprType.STRING);
+    assertOutputType("23", inspector, ExprType.LONG);
+    assertOutputType("3.2", inspector, ExprType.DOUBLE);
+    assertOutputType("['a', 'b']", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("[1,2,3]", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("[1.0]", inspector, ExprType.DOUBLE_ARRAY);
+    assertOutputType("x", inspector, ExprType.STRING);
+    assertOutputType("y", inspector, ExprType.LONG);
+    assertOutputType("z", inspector, ExprType.DOUBLE);
+    assertOutputType("a", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("b", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("c", inspector, ExprType.DOUBLE_ARRAY);
   }
 
   @Test
   public void testUnaryOperators()
   {
-    assertOutputType("-1", inputTypes, ExprType.LONG);
-    assertOutputType("-1.1", inputTypes, ExprType.DOUBLE);
-    assertOutputType("-y", inputTypes, ExprType.LONG);
-    assertOutputType("-z", inputTypes, ExprType.DOUBLE);
+    assertOutputType("-1", inspector, ExprType.LONG);
+    assertOutputType("-1.1", inspector, ExprType.DOUBLE);
+    assertOutputType("-y", inspector, ExprType.LONG);
+    assertOutputType("-z", inspector, ExprType.DOUBLE);
 
-    assertOutputType("!'true'", inputTypes, ExprType.LONG);
-    assertOutputType("!1", inputTypes, ExprType.LONG);
-    assertOutputType("!1.1", inputTypes, ExprType.DOUBLE);
-    assertOutputType("!x", inputTypes, ExprType.LONG);
-    assertOutputType("!y", inputTypes, ExprType.LONG);
-    assertOutputType("!z", inputTypes, ExprType.DOUBLE);
+    assertOutputType("!'true'", inspector, ExprType.LONG);
+    assertOutputType("!1", inspector, ExprType.LONG);
+    assertOutputType("!1.1", inspector, ExprType.DOUBLE);
+    assertOutputType("!x", inspector, ExprType.LONG);
+    assertOutputType("!y", inspector, ExprType.LONG);
+    assertOutputType("!z", inspector, ExprType.DOUBLE);
   }
 
   @Test
   public void testBinaryMathOperators()
   {
-    assertOutputType("1+1", inputTypes, ExprType.LONG);
-    assertOutputType("1-1", inputTypes, ExprType.LONG);
-    assertOutputType("1*1", inputTypes, ExprType.LONG);
-    assertOutputType("1/1", inputTypes, ExprType.LONG);
-    assertOutputType("1^1", inputTypes, ExprType.LONG);
-    assertOutputType("1%1", inputTypes, ExprType.LONG);
+    assertOutputType("1+1", inspector, ExprType.LONG);
+    assertOutputType("1-1", inspector, ExprType.LONG);
+    assertOutputType("1*1", inspector, ExprType.LONG);
+    assertOutputType("1/1", inspector, ExprType.LONG);
+    assertOutputType("1^1", inspector, ExprType.LONG);
+    assertOutputType("1%1", inspector, ExprType.LONG);
 
-    assertOutputType("y+y_", inputTypes, ExprType.LONG);
-    assertOutputType("y-y_", inputTypes, ExprType.LONG);
-    assertOutputType("y*y_", inputTypes, ExprType.LONG);
-    assertOutputType("y/y_", inputTypes, ExprType.LONG);
-    assertOutputType("y^y_", inputTypes, ExprType.LONG);
-    assertOutputType("y%y_", inputTypes, ExprType.LONG);
+    assertOutputType("y+y_", inspector, ExprType.LONG);
+    assertOutputType("y-y_", inspector, ExprType.LONG);
+    assertOutputType("y*y_", inspector, ExprType.LONG);
+    assertOutputType("y/y_", inspector, ExprType.LONG);
+    assertOutputType("y^y_", inspector, ExprType.LONG);
+    assertOutputType("y%y_", inspector, ExprType.LONG);
 
-    assertOutputType("y+z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y-z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y*z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y/z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y^z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y%z", inputTypes, ExprType.DOUBLE);
+    assertOutputType("y+z", inspector, ExprType.DOUBLE);
+    assertOutputType("y-z", inspector, ExprType.DOUBLE);
+    assertOutputType("y*z", inspector, ExprType.DOUBLE);
+    assertOutputType("y/z", inspector, ExprType.DOUBLE);
+    assertOutputType("y^z", inspector, ExprType.DOUBLE);
+    assertOutputType("y%z", inspector, ExprType.DOUBLE);
 
-    assertOutputType("z+z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z-z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z*z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z/z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z^z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z%z_", inputTypes, ExprType.DOUBLE);
+    assertOutputType("z+z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z-z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z*z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z/z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z^z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z%z_", inspector, ExprType.DOUBLE);
 
-    assertOutputType("y>y_", inputTypes, ExprType.LONG);
-    assertOutputType("y_<y", inputTypes, ExprType.LONG);
-    assertOutputType("y_<=y", inputTypes, ExprType.LONG);
-    assertOutputType("y_>=y", inputTypes, ExprType.LONG);
-    assertOutputType("y_==y", inputTypes, ExprType.LONG);
-    assertOutputType("y_!=y", inputTypes, ExprType.LONG);
-    assertOutputType("y_ && y", inputTypes, ExprType.LONG);
-    assertOutputType("y_ || y", inputTypes, ExprType.LONG);
+    assertOutputType("y>y_", inspector, ExprType.LONG);
+    assertOutputType("y_<y", inspector, ExprType.LONG);
+    assertOutputType("y_<=y", inspector, ExprType.LONG);
+    assertOutputType("y_>=y", inspector, ExprType.LONG);
+    assertOutputType("y_==y", inspector, ExprType.LONG);
+    assertOutputType("y_!=y", inspector, ExprType.LONG);
+    assertOutputType("y_ && y", inspector, ExprType.LONG);
+    assertOutputType("y_ || y", inspector, ExprType.LONG);
 
-    assertOutputType("z>y_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z<y", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z<=y", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y>=z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z==y", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z!=y", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z && y", inputTypes, ExprType.DOUBLE);
-    assertOutputType("y || z", inputTypes, ExprType.DOUBLE);
+    assertOutputType("z>y_", inspector, ExprType.DOUBLE);
+    assertOutputType("z<y", inspector, ExprType.DOUBLE);
+    assertOutputType("z<=y", inspector, ExprType.DOUBLE);
+    assertOutputType("y>=z", inspector, ExprType.DOUBLE);
+    assertOutputType("z==y", inspector, ExprType.DOUBLE);
+    assertOutputType("z!=y", inspector, ExprType.DOUBLE);
+    assertOutputType("z && y", inspector, ExprType.DOUBLE);
+    assertOutputType("y || z", inspector, ExprType.DOUBLE);
 
-    assertOutputType("z>z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z<z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z<=z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z_>=z", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z==z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z!=z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z && z_", inputTypes, ExprType.DOUBLE);
-    assertOutputType("z_ || z", inputTypes, ExprType.DOUBLE);
+    assertOutputType("z>z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z<z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z<=z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z_>=z", inspector, ExprType.DOUBLE);
+    assertOutputType("z==z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z!=z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z && z_", inspector, ExprType.DOUBLE);
+    assertOutputType("z_ || z", inspector, ExprType.DOUBLE);
 
-    assertOutputType("1*(2 + 3.0)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("1*(2 + 3.0)", inspector, ExprType.DOUBLE);
   }
 
   @Test
   public void testUnivariateMathFunctions()
   {
-    assertOutputType("pi()", inputTypes, ExprType.DOUBLE);
-    assertOutputType("abs(x)", inputTypes, ExprType.STRING);
-    assertOutputType("abs(y)", inputTypes, ExprType.LONG);
-    assertOutputType("abs(z)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("cos(y)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("cos(z)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("pi()", inspector, ExprType.DOUBLE);
+    assertOutputType("abs(x)", inspector, ExprType.STRING);
+    assertOutputType("abs(y)", inspector, ExprType.LONG);
+    assertOutputType("abs(z)", inspector, ExprType.DOUBLE);
+    assertOutputType("cos(y)", inspector, ExprType.DOUBLE);
+    assertOutputType("cos(z)", inspector, ExprType.DOUBLE);
   }
 
   @Test
   public void testBivariateMathFunctions()
   {
-    assertOutputType("div(y,y_)", inputTypes, ExprType.LONG);
-    assertOutputType("div(y,z_)", inputTypes, ExprType.LONG);
-    assertOutputType("div(z,z_)", inputTypes, ExprType.LONG);
+    assertOutputType("div(y,y_)", inspector, ExprType.LONG);
+    assertOutputType("div(y,z_)", inspector, ExprType.LONG);
+    assertOutputType("div(z,z_)", inspector, ExprType.LONG);
 
-    assertOutputType("max(y,y_)", inputTypes, ExprType.LONG);
-    assertOutputType("max(y,z_)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("max(z,z_)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("max(y,y_)", inspector, ExprType.LONG);
+    assertOutputType("max(y,z_)", inspector, ExprType.DOUBLE);
+    assertOutputType("max(z,z_)", inspector, ExprType.DOUBLE);
 
-    assertOutputType("hypot(y,y_)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("hypot(y,z_)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("hypot(z,z_)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("hypot(y,y_)", inspector, ExprType.DOUBLE);
+    assertOutputType("hypot(y,z_)", inspector, ExprType.DOUBLE);
+    assertOutputType("hypot(z,z_)", inspector, ExprType.DOUBLE);
   }
 
   @Test
   public void testConditionalFunctions()
   {
-    assertOutputType("if(y, 'foo', 'bar')", inputTypes, ExprType.STRING);
-    assertOutputType("if(y,2,3)", inputTypes, ExprType.LONG);
-    assertOutputType("if(y,2,3.0)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("if(y, 'foo', 'bar')", inspector, ExprType.STRING);
+    assertOutputType("if(y,2,3)", inspector, ExprType.LONG);
+    assertOutputType("if(y,2,3.0)", inspector, ExprType.DOUBLE);
 
     assertOutputType(
         "case_simple(x,'baz','is baz','foo','is foo','is other')",
-        inputTypes,
+        inspector,
         ExprType.STRING
     );
     assertOutputType(
         "case_simple(y,2,2,3,3,4)",
-        inputTypes,
+        inspector,
         ExprType.LONG
     );
     assertOutputType(
         "case_simple(z,2.0,2.0,3.0,3.0,4.0)",
-        inputTypes,
+        inspector,
         ExprType.DOUBLE
     );
 
     assertOutputType(
         "case_simple(y,2,2,3,3.0,4)",
-        inputTypes,
+        inspector,
         ExprType.DOUBLE
     );
     assertOutputType(
         "case_simple(z,2.0,2.0,3.0,3.0,null)",
-        inputTypes,
+        inspector,
         ExprType.DOUBLE
     );
 
     assertOutputType(
         "case_searched(x=='baz','is baz',x=='foo','is foo','is other')",
-        inputTypes,
+        inspector,
         ExprType.STRING
     );
     assertOutputType(
         "case_searched(y==1,1,y==2,2,0)",
-        inputTypes,
+        inspector,
         ExprType.LONG
     );
     assertOutputType(
         "case_searched(z==1.0,1.0,z==2.0,2.0,0.0)",
-        inputTypes,
+        inspector,
         ExprType.DOUBLE
     );
     assertOutputType(
         "case_searched(y==1,1,y==2,2.0,0)",
-        inputTypes,
+        inspector,
         ExprType.DOUBLE
     );
     assertOutputType(
         "case_searched(z==1.0,1,z==2.0,2,null)",
-        inputTypes,
+        inspector,
         ExprType.LONG
     );
     assertOutputType(
         "case_searched(z==1.0,1.0,z==2.0,2.0,null)",
-        inputTypes,
+        inspector,
         ExprType.DOUBLE
     );
 
-    assertOutputType("nvl(x, 'foo')", inputTypes, ExprType.STRING);
-    assertOutputType("nvl(y, 1)", inputTypes, ExprType.LONG);
-    assertOutputType("nvl(y, 1.1)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("nvl(z, 2.0)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("nvl(y, 2.0)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("isnull(x)", inputTypes, ExprType.LONG);
-    assertOutputType("isnull(y)", inputTypes, ExprType.LONG);
-    assertOutputType("isnull(z)", inputTypes, ExprType.LONG);
-    assertOutputType("notnull(x)", inputTypes, ExprType.LONG);
-    assertOutputType("notnull(y)", inputTypes, ExprType.LONG);
-    assertOutputType("notnull(z)", inputTypes, ExprType.LONG);
+    assertOutputType("nvl(x, 'foo')", inspector, ExprType.STRING);
+    assertOutputType("nvl(y, 1)", inspector, ExprType.LONG);
+    assertOutputType("nvl(y, 1.1)", inspector, ExprType.DOUBLE);
+    assertOutputType("nvl(z, 2.0)", inspector, ExprType.DOUBLE);
+    assertOutputType("nvl(y, 2.0)", inspector, ExprType.DOUBLE);
+    assertOutputType("isnull(x)", inspector, ExprType.LONG);
+    assertOutputType("isnull(y)", inspector, ExprType.LONG);
+    assertOutputType("isnull(z)", inspector, ExprType.LONG);
+    assertOutputType("notnull(x)", inspector, ExprType.LONG);
+    assertOutputType("notnull(y)", inspector, ExprType.LONG);
+    assertOutputType("notnull(z)", inspector, ExprType.LONG);
   }
 
   @Test
   public void testStringFunctions()
   {
-    assertOutputType("concat(x, 'foo')", inputTypes, ExprType.STRING);
-    assertOutputType("concat(y, 'foo')", inputTypes, ExprType.STRING);
-    assertOutputType("concat(z, 'foo')", inputTypes, ExprType.STRING);
+    assertOutputType("concat(x, 'foo')", inspector, ExprType.STRING);
+    assertOutputType("concat(y, 'foo')", inspector, ExprType.STRING);
+    assertOutputType("concat(z, 'foo')", inspector, ExprType.STRING);
 
-    assertOutputType("strlen(x)", inputTypes, ExprType.LONG);
-    assertOutputType("format('%s', x)", inputTypes, ExprType.STRING);
-    assertOutputType("format('%s', y)", inputTypes, ExprType.STRING);
-    assertOutputType("format('%s', z)", inputTypes, ExprType.STRING);
-    assertOutputType("strpos(x, x_)", inputTypes, ExprType.LONG);
-    assertOutputType("strpos(x, y)", inputTypes, ExprType.LONG);
-    assertOutputType("strpos(x, z)", inputTypes, ExprType.LONG);
-    assertOutputType("substring(x, 1, 2)", inputTypes, ExprType.STRING);
-    assertOutputType("left(x, 1)", inputTypes, ExprType.STRING);
-    assertOutputType("right(x, 1)", inputTypes, ExprType.STRING);
-    assertOutputType("replace(x, 'foo', '')", inputTypes, ExprType.STRING);
-    assertOutputType("lower(x)", inputTypes, ExprType.STRING);
-    assertOutputType("upper(x)", inputTypes, ExprType.STRING);
-    assertOutputType("reverse(x)", inputTypes, ExprType.STRING);
-    assertOutputType("repeat(x, 4)", inputTypes, ExprType.STRING);
+    assertOutputType("strlen(x)", inspector, ExprType.LONG);
+    assertOutputType("format('%s', x)", inspector, ExprType.STRING);
+    assertOutputType("format('%s', y)", inspector, ExprType.STRING);
+    assertOutputType("format('%s', z)", inspector, ExprType.STRING);
+    assertOutputType("strpos(x, x_)", inspector, ExprType.LONG);
+    assertOutputType("strpos(x, y)", inspector, ExprType.LONG);
+    assertOutputType("strpos(x, z)", inspector, ExprType.LONG);
+    assertOutputType("substring(x, 1, 2)", inspector, ExprType.STRING);
+    assertOutputType("left(x, 1)", inspector, ExprType.STRING);
+    assertOutputType("right(x, 1)", inspector, ExprType.STRING);
+    assertOutputType("replace(x, 'foo', '')", inspector, ExprType.STRING);
+    assertOutputType("lower(x)", inspector, ExprType.STRING);
+    assertOutputType("upper(x)", inspector, ExprType.STRING);
+    assertOutputType("reverse(x)", inspector, ExprType.STRING);
+    assertOutputType("repeat(x, 4)", inspector, ExprType.STRING);
   }
 
   @Test
   public void testArrayFunctions()
   {
-    assertOutputType("array(1, 2, 3)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array(1, 2, 3.0)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array(1, 2, 3)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array(1, 2, 3.0)", inspector, ExprType.DOUBLE_ARRAY);
 
-    assertOutputType("array_length(a)", inputTypes, ExprType.LONG);
-    assertOutputType("array_length(b)", inputTypes, ExprType.LONG);
-    assertOutputType("array_length(c)", inputTypes, ExprType.LONG);
+    assertOutputType("array_length(a)", inspector, ExprType.LONG);
+    assertOutputType("array_length(b)", inspector, ExprType.LONG);
+    assertOutputType("array_length(c)", inspector, ExprType.LONG);
 
-    assertOutputType("string_to_array(x, ',')", inputTypes, ExprType.STRING_ARRAY);
+    assertOutputType("string_to_array(x, ',')", inspector, ExprType.STRING_ARRAY);
 
-    assertOutputType("array_to_string(a, ',')", inputTypes, ExprType.STRING);
-    assertOutputType("array_to_string(b, ',')", inputTypes, ExprType.STRING);
-    assertOutputType("array_to_string(c, ',')", inputTypes, ExprType.STRING);
+    assertOutputType("array_to_string(a, ',')", inspector, ExprType.STRING);
+    assertOutputType("array_to_string(b, ',')", inspector, ExprType.STRING);
+    assertOutputType("array_to_string(c, ',')", inspector, ExprType.STRING);
 
-    assertOutputType("array_offset(a, 1)", inputTypes, ExprType.STRING);
-    assertOutputType("array_offset(b, 1)", inputTypes, ExprType.LONG);
-    assertOutputType("array_offset(c, 1)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("array_offset(a, 1)", inspector, ExprType.STRING);
+    assertOutputType("array_offset(b, 1)", inspector, ExprType.LONG);
+    assertOutputType("array_offset(c, 1)", inspector, ExprType.DOUBLE);
 
-    assertOutputType("array_ordinal(a, 1)", inputTypes, ExprType.STRING);
-    assertOutputType("array_ordinal(b, 1)", inputTypes, ExprType.LONG);
-    assertOutputType("array_ordinal(c, 1)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("array_ordinal(a, 1)", inspector, ExprType.STRING);
+    assertOutputType("array_ordinal(b, 1)", inspector, ExprType.LONG);
+    assertOutputType("array_ordinal(c, 1)", inspector, ExprType.DOUBLE);
 
-    assertOutputType("array_offset_of(a, 'a')", inputTypes, ExprType.LONG);
-    assertOutputType("array_offset_of(b, 1)", inputTypes, ExprType.LONG);
-    assertOutputType("array_offset_of(c, 1.0)", inputTypes, ExprType.LONG);
+    assertOutputType("array_offset_of(a, 'a')", inspector, ExprType.LONG);
+    assertOutputType("array_offset_of(b, 1)", inspector, ExprType.LONG);
+    assertOutputType("array_offset_of(c, 1.0)", inspector, ExprType.LONG);
 
-    assertOutputType("array_ordinal_of(a, 'a')", inputTypes, ExprType.LONG);
-    assertOutputType("array_ordinal_of(b, 1)", inputTypes, ExprType.LONG);
-    assertOutputType("array_ordinal_of(c, 1.0)", inputTypes, ExprType.LONG);
+    assertOutputType("array_ordinal_of(a, 'a')", inspector, ExprType.LONG);
+    assertOutputType("array_ordinal_of(b, 1)", inspector, ExprType.LONG);
+    assertOutputType("array_ordinal_of(c, 1.0)", inspector, ExprType.LONG);
 
-    assertOutputType("array_append(x, x_)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_append(a, x_)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_append(y, y_)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_append(b, y_)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_append(z, z_)", inputTypes, ExprType.DOUBLE_ARRAY);
-    assertOutputType("array_append(c, z_)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_append(x, x_)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_append(a, x_)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_append(y, y_)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_append(b, y_)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_append(z, z_)", inspector, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_append(c, z_)", inspector, ExprType.DOUBLE_ARRAY);
 
-    assertOutputType("array_concat(x, a)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_concat(a, a)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_concat(y, b)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_concat(b, b)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_concat(z, c)", inputTypes, ExprType.DOUBLE_ARRAY);
-    assertOutputType("array_concat(c, c)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_concat(x, a)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_concat(a, a)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_concat(y, b)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_concat(b, b)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_concat(z, c)", inspector, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_concat(c, c)", inspector, ExprType.DOUBLE_ARRAY);
 
-    assertOutputType("array_contains(a, 'a')", inputTypes, ExprType.LONG);
-    assertOutputType("array_contains(b, 1)", inputTypes, ExprType.LONG);
-    assertOutputType("array_contains(c, 2.0)", inputTypes, ExprType.LONG);
+    assertOutputType("array_contains(a, 'a')", inspector, ExprType.LONG);
+    assertOutputType("array_contains(b, 1)", inspector, ExprType.LONG);
+    assertOutputType("array_contains(c, 2.0)", inspector, ExprType.LONG);
 
-    assertOutputType("array_overlap(a, a)", inputTypes, ExprType.LONG);
-    assertOutputType("array_overlap(b, b)", inputTypes, ExprType.LONG);
-    assertOutputType("array_overlap(c, c)", inputTypes, ExprType.LONG);
+    assertOutputType("array_overlap(a, a)", inspector, ExprType.LONG);
+    assertOutputType("array_overlap(b, b)", inspector, ExprType.LONG);
+    assertOutputType("array_overlap(c, c)", inspector, ExprType.LONG);
 
-    assertOutputType("array_slice(a, 1, 2)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_slice(b, 1, 2)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_slice(c, 1, 2)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_slice(a, 1, 2)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_slice(b, 1, 2)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_slice(c, 1, 2)", inspector, ExprType.DOUBLE_ARRAY);
 
-    assertOutputType("array_prepend(x, a)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_prepend(x, x_)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("array_prepend(y, b)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_prepend(y, y_)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("array_prepend(z, c)", inputTypes, ExprType.DOUBLE_ARRAY);
-    assertOutputType("array_prepend(z, z_)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_prepend(x, a)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_prepend(x, x_)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("array_prepend(y, b)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_prepend(y, y_)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("array_prepend(z, c)", inspector, ExprType.DOUBLE_ARRAY);
+    assertOutputType("array_prepend(z, z_)", inspector, ExprType.DOUBLE_ARRAY);
   }
 
   @Test
   public void testReduceFunctions()
   {
-    assertOutputType("greatest('B', x, 'A')", inputTypes, ExprType.STRING);
-    assertOutputType("greatest(y, 0)", inputTypes, ExprType.LONG);
-    assertOutputType("greatest(34.0, z, 5.0, 767.0)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("greatest('B', x, 'A')", inspector, ExprType.STRING);
+    assertOutputType("greatest(y, 0)", inspector, ExprType.LONG);
+    assertOutputType("greatest(34.0, z, 5.0, 767.0)", inspector, ExprType.DOUBLE);
 
-    assertOutputType("least('B', x, 'A')", inputTypes, ExprType.STRING);
-    assertOutputType("least(y, 0)", inputTypes, ExprType.LONG);
-    assertOutputType("least(34.0, z, 5.0, 767.0)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("least('B', x, 'A')", inspector, ExprType.STRING);
+    assertOutputType("least(y, 0)", inspector, ExprType.LONG);
+    assertOutputType("least(34.0, z, 5.0, 767.0)", inspector, ExprType.DOUBLE);
   }
 
   @Test
   public void testApplyFunctions()
   {
-    assertOutputType("map((x) -> concat(x, 'foo'), x)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("map((x) -> x + x, y)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("map((x) -> x + x, z)", inputTypes, ExprType.DOUBLE_ARRAY);
-    assertOutputType("map((x) -> concat(x, 'foo'), a)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("map((x) -> x + x, b)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("map((x) -> x + x, c)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("map((x) -> concat(x, 'foo'), x)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("map((x) -> x + x, y)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("map((x) -> x + x, z)", inspector, ExprType.DOUBLE_ARRAY);
+    assertOutputType("map((x) -> concat(x, 'foo'), a)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("map((x) -> x + x, b)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("map((x) -> x + x, c)", inspector, ExprType.DOUBLE_ARRAY);
     assertOutputType(
         "cartesian_map((x, y) -> concat(x, y), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'])",
-        inputTypes,
+        inspector,
         ExprType.STRING_ARRAY
     );
-    assertOutputType("fold((x, acc) -> x + acc, y, 0)", inputTypes, ExprType.LONG);
-    assertOutputType("fold((x, acc) -> x + acc, y, y)", inputTypes, ExprType.LONG);
-    assertOutputType("fold((x, acc) -> x + acc, y, 1.0)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("fold((x, acc) -> x + acc, y, z)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("fold((x, acc) -> x + acc, y, 0)", inspector, ExprType.LONG);
+    assertOutputType("fold((x, acc) -> x + acc, y, y)", inspector, ExprType.LONG);
+    assertOutputType("fold((x, acc) -> x + acc, y, 1.0)", inspector, ExprType.DOUBLE);
+    assertOutputType("fold((x, acc) -> x + acc, y, z)", inspector, ExprType.DOUBLE);
 
-    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, 0)", inputTypes, ExprType.LONG);
-    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, y)", inputTypes, ExprType.LONG);
-    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, 1.0)", inputTypes, ExprType.DOUBLE);
-    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, z)", inputTypes, ExprType.DOUBLE);
+    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, 0)", inspector, ExprType.LONG);
+    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, y)", inspector, ExprType.LONG);
+    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, 1.0)", inspector, ExprType.DOUBLE);
+    assertOutputType("cartesian_fold((x, y, acc) -> x + y + acc, y, z, z)", inspector, ExprType.DOUBLE);
 
-    assertOutputType("filter((x) -> x == 'foo', a)", inputTypes, ExprType.STRING_ARRAY);
-    assertOutputType("filter((x) -> x > 1, b)", inputTypes, ExprType.LONG_ARRAY);
-    assertOutputType("filter((x) -> x > 1, c)", inputTypes, ExprType.DOUBLE_ARRAY);
+    assertOutputType("filter((x) -> x == 'foo', a)", inspector, ExprType.STRING_ARRAY);
+    assertOutputType("filter((x) -> x > 1, b)", inspector, ExprType.LONG_ARRAY);
+    assertOutputType("filter((x) -> x > 1, c)", inspector, ExprType.DOUBLE_ARRAY);
 
-    assertOutputType("any((x) -> x == 'foo', a)", inputTypes, ExprType.LONG);
-    assertOutputType("any((x) -> x > 1, b)", inputTypes, ExprType.LONG);
-    assertOutputType("any((x) -> x > 1.2, c)", inputTypes, ExprType.LONG);
+    assertOutputType("any((x) -> x == 'foo', a)", inspector, ExprType.LONG);
+    assertOutputType("any((x) -> x > 1, b)", inspector, ExprType.LONG);
+    assertOutputType("any((x) -> x > 1.2, c)", inspector, ExprType.LONG);
 
-    assertOutputType("all((x) -> x == 'foo', a)", inputTypes, ExprType.LONG);
-    assertOutputType("all((x) -> x > 1, b)", inputTypes, ExprType.LONG);
-    assertOutputType("all((x) -> x > 1.2, c)", inputTypes, ExprType.LONG);
+    assertOutputType("all((x) -> x == 'foo', a)", inspector, ExprType.LONG);
+    assertOutputType("all((x) -> x > 1, b)", inspector, ExprType.LONG);
+    assertOutputType("all((x) -> x > 1.2, c)", inspector, ExprType.LONG);
   }
 
 
@@ -511,13 +511,13 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     ExprTypeConversion.function(ExprType.DOUBLE, ExprType.LONG_ARRAY);
   }
 
-  private void assertOutputType(String expression, Expr.InputBindingInspector inputTypes, ExprType outputType)
+  private void assertOutputType(String expression, Expr.InputBindingInspector inspector, ExprType outputType)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil(), false);
-    Assert.assertEquals(outputType, expr.getOutputType(inputTypes));
+    Assert.assertEquals(outputType, expr.getOutputType(inspector));
   }
 
-  Expr.InputBindingInspector inputTypesFromMap(Map<String, ExprType> types)
+  Expr.InputBindingInspector inspectorFromMap(Map<String, ExprType> types)
   {
     return types::get;
   }

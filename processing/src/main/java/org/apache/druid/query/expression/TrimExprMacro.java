@@ -172,7 +172,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.STRING;
     }
@@ -300,7 +300,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.STRING;
     }

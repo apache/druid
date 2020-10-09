@@ -113,9 +113,9 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingInspector inputTypes)
+  public ExprType getOutputType(InputBindingInspector inspector)
   {
-    return inputTypes.getType(binding);
+    return inspector.getType(binding);
   }
 
   @Override
@@ -138,15 +138,15 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public boolean canVectorize(InputBindingInspector inputTypes)
+  public boolean canVectorize(InputBindingInspector inspector)
   {
     return true;
   }
 
   @Override
-  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inputTypes)
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
   {
-    ExprType inputType = inputTypes.getType(binding);
+    ExprType inputType = inspector.getType(binding);
 
     if (inputType == null) {
       // nil column, we can be anything, why not be a double

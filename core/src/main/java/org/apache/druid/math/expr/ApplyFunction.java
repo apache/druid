@@ -59,7 +59,7 @@ public interface ApplyFunction
    * @see Expr#canVectorize(Expr.InputBindingInspector)
    * @see Function#canVectorize(Expr.InputBindingInspector, List)
    */
-  default boolean canVectorize(Expr.InputBindingInspector inputTypes, Expr lambda, List<Expr> args)
+  default boolean canVectorize(Expr.InputBindingInspector inspector, Expr lambda, List<Expr> args)
   {
     return false;
   }
@@ -71,7 +71,11 @@ public interface ApplyFunction
    * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
    * @see Function#asVectorProcessor(Expr.VectorInputBindingInspector, List)
    */
-  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inputTypes, Expr lambda, List<Expr> args)
+  default <T> ExprVectorProcessor<T> asVectorProcessor(
+      Expr.VectorInputBindingInspector inspector,
+      Expr lambda,
+      List<Expr> args
+  )
   {
     throw new UOE("%s is not vectorized", name());
   }
@@ -109,7 +113,7 @@ public interface ApplyFunction
    * @see Expr#getOutputType
    */
   @Nullable
-  ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args);
+  ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args);
 
   /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
@@ -126,9 +130,9 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
-      return ExprType.asArrayType(expr.getOutputType(new LambdaInputBindingInspector(inputTypes, expr, args)));
+      return ExprType.asArrayType(expr.getOutputType(new LambdaInputBindingInspector(inspector, expr, args)));
     }
 
     /**
@@ -332,10 +336,10 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
       // output type is accumulator type, which is last argument
-      return args.get(args.size() - 1).getOutputType(inputTypes);
+      return args.get(args.size() - 1).getOutputType(inspector);
     }
   }
 
@@ -535,10 +539,10 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
       // output type is input array type
-      return args.get(0).getOutputType(inputTypes);
+      return args.get(0).getOutputType(inspector);
     }
 
     private <T> Stream<T> filter(T[] array, LambdaExpr expr, SettableLambdaBinding binding)
@@ -590,7 +594,7 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
       return ExprType.LONG;
     }
@@ -925,12 +929,12 @@ public interface ApplyFunction
   class LambdaInputBindingInspector implements Expr.InputBindingInspector
   {
     private final Object2IntMap<String> lambdaIdentifiers;
-    private final Expr.InputBindingInspector inputTypes;
+    private final Expr.InputBindingInspector inspector;
     private final List<Expr> args;
 
-    public LambdaInputBindingInspector(Expr.InputBindingInspector inputTypes, LambdaExpr expr, List<Expr> args)
+    public LambdaInputBindingInspector(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
-      this.inputTypes = inputTypes;
+      this.inspector = inspector;
       this.args = args;
       List<String> identifiers = expr.getIdentifiers();
       this.lambdaIdentifiers = new Object2IntOpenHashMap<>(args.size());
@@ -944,9 +948,9 @@ public interface ApplyFunction
     public ExprType getType(String name)
     {
       if (lambdaIdentifiers.containsKey(name)) {
-        return ExprType.elementType(args.get(lambdaIdentifiers.getInt(name)).getOutputType(inputTypes));
+        return ExprType.elementType(args.get(lambdaIdentifiers.getInt(name)).getOutputType(inspector));
       }
-      return inputTypes.getType(name);
+      return inspector.getType(name);
     }
   }
 }
