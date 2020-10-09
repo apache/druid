@@ -25,15 +25,14 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Map;
 
 public class ShuffleMonitor extends AbstractMonitor
 {
-  private static final String SUPERVISOR_TASK_ID_DIMENSION = "supervisorTaskId";
-  private static final String SHUFFLE_BYTES_KEY = "ingest/shuffle/bytes";
-  private static final String SHUFFLE_REQUESTS_KEY = "ingest/shuffle/requests";
+  static final String SUPERVISOR_TASK_ID_DIMENSION = "supervisorTaskId";
+  static final String SHUFFLE_BYTES_KEY = "ingest/shuffle/bytes";
+  static final String SHUFFLE_REQUESTS_KEY = "ingest/shuffle/requests";
 
   /**
    * ShuffleMonitor can be instantiated in any node types if it is defined in
@@ -48,12 +47,6 @@ public class ShuffleMonitor extends AbstractMonitor
   public void setShuffleMetrics(ShuffleMetrics shuffleMetrics)
   {
     this.shuffleMetrics = shuffleMetrics;
-  }
-
-  @Nullable
-  public ShuffleMetrics getShuffleMetrics()
-  {
-    return shuffleMetrics;
   }
 
   @Override

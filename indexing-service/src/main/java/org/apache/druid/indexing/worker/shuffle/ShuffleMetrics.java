@@ -101,7 +101,8 @@ public class ShuffleMetrics
     private long shuffleBytes;
     private int shuffleRequests;
 
-    private void accumulate(long shuffleBytes)
+    @VisibleForTesting
+    void accumulate(long shuffleBytes)
     {
       this.shuffleBytes += shuffleBytes;
       this.shuffleRequests++;
