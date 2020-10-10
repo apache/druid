@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
+import { AnchorButton, Button, ButtonGroup, Intent, Switch } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
@@ -94,6 +94,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   }
 
   componentWillUnmount(): void {
+    this.showLogQueryManager.terminate();
     this.removeTailer();
   }
 
@@ -143,7 +144,8 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
       <div className="show-log">
         <div className="top-actions">
           {status === 'RUNNING' && (
-            <Checkbox
+            <Switch
+              className="tail-log"
               label="Tail log"
               checked={this.state.tail}
               onChange={this.handleCheckboxChange}

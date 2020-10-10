@@ -16,22 +16,22 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
 import { TimedButton } from './timed-button';
 
-describe('Timed button', () => {
+describe('TimedButton', () => {
   it('matches snapshot', () => {
-    const timedButton = (
+    const timedButton = shallow(
       <TimedButton
         delays={[{ label: 'timeValue', delay: 1000 }]}
         onRefresh={() => null}
-        label={'label'}
+        label={'Select delay'}
         defaultDelay={1000}
-      />
+      />,
     );
-    const { container } = render(timedButton);
-    expect(container.firstChild).toMatchSnapshot();
+
+    expect(timedButton).toMatchSnapshot();
   });
 });

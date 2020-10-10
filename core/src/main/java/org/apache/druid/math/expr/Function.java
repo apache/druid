@@ -225,6 +225,12 @@ public interface Function
     {
       return args.get(0).getOutputType(inputTypes);
     }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
+    }
   }
 
   /**
@@ -273,7 +279,13 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return ExprType.functionAutoTypeConversion(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+      return ExprTypeConversion.doubleMathFunction(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
   }
 
@@ -432,7 +444,7 @@ public interface Function
     {
       ExprType outputType = ExprType.LONG;
       for (Expr expr : args) {
-        outputType = ExprType.functionAutoTypeConversion(outputType, expr.getOutputType(inputTypes));
+        outputType = ExprTypeConversion.doubleMathFunction(outputType, expr.getOutputType(inputTypes));
       }
       return outputType;
     }
@@ -453,7 +465,7 @@ public interface Function
         ExprType exprType = exprEval.type();
 
         if (isValidType(exprType)) {
-          outputType = ExprType.functionAutoTypeConversion(outputType, exprType);
+          outputType = ExprTypeConversion.doubleMathFunction(outputType, exprType);
         }
 
         if (exprEval.value() != null) {
@@ -631,6 +643,12 @@ public interface Function
     {
       return ExprEval.of(Math.abs(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.abs(inputTypes, args.get(0));
+    }
   }
 
   class Acos extends DoubleUnivariateMathFunction
@@ -645,6 +663,12 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.acos(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.acos(inputTypes, args.get(0));
     }
   }
 
@@ -661,6 +685,12 @@ public interface Function
     {
       return ExprEval.of(Math.asin(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.asin(inputTypes, args.get(0));
+    }
   }
 
   class Atan extends DoubleUnivariateMathFunction
@@ -675,12 +705,6 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.atan(param));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -703,6 +727,12 @@ public interface Function
     {
       return ExprEval.of(Math.cbrt(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.cbrt(inputTypes, args.get(0));
+    }
   }
 
   class Ceil extends DoubleUnivariateMathFunction
@@ -718,6 +748,12 @@ public interface Function
     {
       return ExprEval.of(Math.ceil(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.ceil(inputTypes, args.get(0));
+    }
   }
 
   class Cos extends DoubleUnivariateMathFunction
@@ -732,12 +768,6 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.cos(param));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -762,12 +792,6 @@ public interface Function
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
-    }
-
-    @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.cosh(inputTypes, args.get(0));
@@ -786,12 +810,6 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.cos(param) / Math.sin(param));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -821,16 +839,17 @@ public interface Function
       return ExprEval.of((long) (x / y));
     }
 
+    @Nullable
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
+      return ExprTypeConversion.integerMathFunction(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
     }
 
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
-      return VectorMathProcessors.divide(inputTypes, args.get(0), args.get(1));
+      return VectorMathProcessors.longDivide(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -847,6 +866,12 @@ public interface Function
     {
       return ExprEval.of(Math.exp(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.exp(inputTypes, args.get(0));
+    }
   }
 
   class Expm1 extends DoubleUnivariateMathFunction
@@ -861,6 +886,12 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.expm1(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.expm1(inputTypes, args.get(0));
     }
   }
 
@@ -877,6 +908,12 @@ public interface Function
     {
       return ExprEval.of(Math.floor(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.floor(inputTypes, args.get(0));
+    }
   }
 
   class GetExponent extends UnivariateMathFunction
@@ -891,6 +928,19 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.getExponent(param));
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.getExponent(inputTypes, args.get(0));
     }
   }
 
@@ -907,6 +957,12 @@ public interface Function
     {
       return ExprEval.of(Math.log(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.log(inputTypes, args.get(0));
+    }
   }
 
   class Log10 extends DoubleUnivariateMathFunction
@@ -921,6 +977,12 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.log10(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.log10(inputTypes, args.get(0));
     }
   }
 
@@ -937,6 +999,12 @@ public interface Function
     {
       return ExprEval.of(Math.log1p(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.log1p(inputTypes, args.get(0));
+    }
   }
 
   class NextUp extends DoubleUnivariateMathFunction
@@ -952,6 +1020,12 @@ public interface Function
     {
       return ExprEval.of(Math.nextUp(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.nextUp(inputTypes, args.get(0));
+    }
   }
 
   class Rint extends DoubleUnivariateMathFunction
@@ -966,6 +1040,12 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.rint(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.rint(inputTypes, args.get(0));
     }
   }
 
@@ -1070,6 +1150,12 @@ public interface Function
     {
       return ExprEval.of(Math.signum(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.signum(inputTypes, args.get(0));
+    }
   }
 
   class Sin extends DoubleUnivariateMathFunction
@@ -1084,12 +1170,6 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.sin(param));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -1114,12 +1194,6 @@ public interface Function
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
-    }
-
-    @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.sinh(inputTypes, args.get(0));
@@ -1139,6 +1213,12 @@ public interface Function
     {
       return ExprEval.of(Math.sqrt(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.sqrt(inputTypes, args.get(0));
+    }
   }
 
   class Tan extends DoubleUnivariateMathFunction
@@ -1153,12 +1233,6 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.tan(param));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -1183,12 +1257,6 @@ public interface Function
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
-    }
-
-    @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.tanh(inputTypes, args.get(0));
@@ -1208,6 +1276,12 @@ public interface Function
     {
       return ExprEval.of(Math.toDegrees(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.toDegrees(inputTypes, args.get(0));
+    }
   }
 
   class ToRadians extends DoubleUnivariateMathFunction
@@ -1222,6 +1296,12 @@ public interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.toRadians(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.toRadians(inputTypes, args.get(0));
     }
   }
 
@@ -1238,6 +1318,12 @@ public interface Function
     {
       return ExprEval.of(Math.ulp(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.ulp(inputTypes, args.get(0));
+    }
   }
 
   class Atan2 extends DoubleBivariateMathFunction
@@ -1252,6 +1338,12 @@ public interface Function
     protected ExprEval eval(double y, double x)
     {
       return ExprEval.of(Math.atan2(y, x));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.atan2(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -1268,6 +1360,12 @@ public interface Function
     {
       return ExprEval.of(Math.copySign(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.copySign(inputTypes, args.get(0), args.get(1));
+    }
   }
 
   class Hypot extends DoubleBivariateMathFunction
@@ -1283,6 +1381,12 @@ public interface Function
     {
       return ExprEval.of(Math.hypot(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.hypot(inputTypes, args.get(0), args.get(1));
+    }
   }
 
   class Remainder extends DoubleBivariateMathFunction
@@ -1297,6 +1401,12 @@ public interface Function
     protected ExprEval eval(double x, double y)
     {
       return ExprEval.of(Math.IEEEremainder(x, y));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.remainder(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -1318,12 +1428,6 @@ public interface Function
     protected ExprEval eval(double x, double y)
     {
       return ExprEval.of(Math.max(x, y));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -1354,12 +1458,6 @@ public interface Function
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
-    }
-
-    @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
     {
       return VectorMathProcessors.min(inputTypes, args.get(0), args.get(1));
@@ -1379,6 +1477,12 @@ public interface Function
     {
       return ExprEval.of(Math.nextAfter(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.nextAfter(inputTypes, args.get(0), args.get(1));
+    }
   }
 
   class Pow extends DoubleBivariateMathFunction
@@ -1393,12 +1497,6 @@ public interface Function
     protected ExprEval eval(double x, double y)
     {
       return ExprEval.of(Math.pow(x, y));
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
-    {
-      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
     }
 
     @Override
@@ -1426,7 +1524,25 @@ public interface Function
     @Override
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
+      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
+        return ExprEval.of(null);
+      }
+      if (NullHandling.sqlCompatible() && x.isNumericNull() || y.isNumericNull()) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return inputTypes.areNumeric(args) && inputTypes.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingTypes inputTypes, List<Expr> args)
+    {
+      return VectorMathProcessors.scalb(inputTypes, args.get(0), args.get(1));
     }
   }
 
@@ -1584,8 +1700,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      // output type is defined by else
-      return args.get(2).getOutputType(inputTypes);
+      return ExprTypeConversion.conditional(inputTypes, args.subList(1, 3));
     }
   }
 
@@ -1628,8 +1743,13 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      // output type is defined by else
-      return args.get(args.size() - 1).getOutputType(inputTypes);
+      List<Expr> results = new ArrayList<>();
+      for (int i = 1; i < args.size(); i += 2) {
+        results.add(args.get(i));
+      }
+      // add else
+      results.add(args.get(args.size() - 1));
+      return ExprTypeConversion.conditional(inputTypes, results);
     }
   }
 
@@ -1672,8 +1792,13 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      // output type is defined by else
-      return args.get(args.size() - 1).getOutputType(inputTypes);
+      List<Expr> results = new ArrayList<>();
+      for (int i = 2; i < args.size(); i += 2) {
+        results.add(args.get(i));
+      }
+      // add else
+      results.add(args.get(args.size() - 1));
+      return ExprTypeConversion.conditional(inputTypes, results);
     }
   }
 
@@ -1704,7 +1829,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return args.get(0).getOutputType(inputTypes);
+      return ExprTypeConversion.conditional(inputTypes, args);
     }
   }
 
@@ -2503,7 +2628,7 @@ public interface Function
     {
       ExprType type = ExprType.LONG;
       for (Expr arg : args) {
-        type = ExprType.functionAutoTypeConversion(type, arg.getOutputType(inputTypes));
+        type = ExprTypeConversion.doubleMathFunction(type, arg.getOutputType(inputTypes));
       }
       return ExprType.asArrayType(type);
     }

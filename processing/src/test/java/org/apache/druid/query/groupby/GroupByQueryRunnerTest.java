@@ -190,7 +190,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private static final Closer RESOURCE_CLOSER = Closer.create();
 
   private final QueryRunner<ResultRow> runner;
-  private final String runnerName;
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
   private final boolean vectorize;
@@ -455,7 +454,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
-    this.runnerName = runner.toString();
+    String runnerName = runner.toString();
     this.vectorize = vectorize;
   }
 
@@ -10645,6 +10644,171 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGroupByOnNullableLong()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("longNumericNull", "nullable", ValueType.LONG)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setLimit(5)
+        .build();
+
+    List<ResultRow> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10L, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20L, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40L, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50L, "rows", 6L)
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", 0L, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10L, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20L, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40L, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50L, "rows", 6L)
+      );
+    }
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByOnNullableDouble()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("doubleNumericNull", "nullable", ValueType.DOUBLE)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setLimit(5)
+        .build();
+
+    List<ResultRow> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", 0.0, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
+      );
+    }
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByOnNullableDoubleNoLimitPushdown()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("doubleNumericNull", "nullable", ValueType.DOUBLE)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, false))
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("nullable", OrderByColumnSpec.Direction.ASCENDING)), 5))
+        .build();
+
+    List<ResultRow> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", 0.0, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
+      );
+    }
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByOnNullableFloat()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("floatNumericNull", "nullable", ValueType.FLOAT)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setLimit(5)
+        .build();
+
+    List<ResultRow> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10.0f, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20.0f, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40.0f, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50.0f, "rows", 6L)
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          makeRow(query, "2011-04-01", "nullable", 0.0f, "rows", 6L),
+          makeRow(query, "2011-04-01", "nullable", 10.0f, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 20.0f, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 40.0f, "rows", 2L),
+          makeRow(query, "2011-04-01", "nullable", 50.0f, "rows", 6L)
+      );
+    }
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
   public void testGroupByOnVirtualColumn()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
@@ -10722,7 +10886,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private Map<String, Object> makeContext()
   {
     return ImmutableMap.<String, Object>builder()
-        .put("vectorize", vectorize ? "force" : "false")
+        .put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false")
+        .put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false")
         .put("vectorSize", 16) // Small vector size to ensure we use more than one.
         .build();
   }

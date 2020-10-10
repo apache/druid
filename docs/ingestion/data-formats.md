@@ -227,6 +227,8 @@ The Parquet `inputFormat` has the following components:
 
 > You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro OCF input format.
 
+> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+
 The `inputFormat` to load data of Avro OCF format. An example is:
 ```json
 "ioConfig": {
@@ -342,6 +344,8 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 ### Avro Hadoop Parser
 
 > You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+
+> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`.
@@ -864,6 +868,8 @@ an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/ti
 ### Avro Stream Parser
 
 > You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+
+> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Avro data from a stream directly.
 

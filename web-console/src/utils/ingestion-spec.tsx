@@ -2114,10 +2114,6 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 
   if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
-    case 'hashed':
-      if (!deepGet(tuningConfig, 'partitionsSpec.numShards')) return true;
-      break;
-
     case 'single_dim':
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
       const hasTargetRowsPerSegment = Boolean(
@@ -2190,7 +2186,6 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Num shards',
           type: 'number',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
-          required: true,
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -2661,7 +2656,7 @@ export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): Inge
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
-function guessInputFormat(sampleData: string[]): InputFormat {
+export function guessInputFormat(sampleData: string[]): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
@@ -2677,7 +2672,7 @@ function guessInputFormat(sampleData: string[]): InputFormat {
       return inputFormatFromType('orc');
     }
     // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if (sampleDatum.startsWith('Obj1')) {
+    if (sampleDatum.startsWith('Obj') && sampleDatum.charCodeAt(3) === 1) {
       return inputFormatFromType('avro_ocf');
     }
 

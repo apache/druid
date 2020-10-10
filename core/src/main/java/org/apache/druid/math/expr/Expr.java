@@ -53,6 +53,12 @@ public interface Expr
     return false;
   }
 
+  default boolean isNullLiteral()
+  {
+    // Overridden by things that are null literals.
+    return false;
+  }
+
   /**
    * Returns the value of expr if expr is a literal, or throws an exception otherwise.
    *
@@ -111,12 +117,6 @@ public interface Expr
    * {@link Parser#parse(String, ExprMacroTable)} will produce an equivalent {@link Expr}.
    */
   String stringify();
-
-  /**
-   * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
-   * ensuring the {@link Visitor} can visit all of its {@link Expr} children before visiting itself
-   */
-  void visit(Visitor visitor);
 
   /**
    * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}. Each {@link Expr} is responsible for
@@ -252,23 +252,13 @@ public interface Expr
     <T> T[] getObjectVector(String name);
 
     long[] getLongVector(String name);
+
     double[] getDoubleVector(String name);
+
     @Nullable
     boolean[] getNullVector(String name);
 
     int getCurrentVectorSize();
-  }
-
-  /**
-   * Mechanism to inspect an {@link Expr}, implementing a {@link Visitor} allows visiting all children of an
-   * {@link Expr}
-   */
-  interface Visitor
-  {
-    /**
-     * Provide the {@link Visitor} with an {@link Expr} to inspect
-     */
-    void visit(Expr expr);
   }
 
   /**

@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -75,7 +77,11 @@ public class ExpressionVectorSelectorsTest
       "parse_long(string1)",
       "parse_long(string1) * double3",
       "parse_long(string5) * parse_long(string1)",
-      "parse_long(string5) * parse_long(string1) * double3"
+      "parse_long(string5) * parse_long(string1) * double3",
+      "'string constant'",
+      "1",
+      "192412.24124",
+      "null"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;
@@ -167,7 +173,8 @@ public class ExpressionVectorSelectorsTest
             )
         )
     );
-    VectorCursor cursor = new QueryableIndexStorageAdapter(index).makeVectorCursor(
+    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
+    VectorCursor cursor = storageAdapter.makeVectorCursor(
         null,
         index.getDataInterval(),
         virtualColumns,
@@ -176,40 +183,55 @@ public class ExpressionVectorSelectorsTest
         null
     );
 
-    VectorValueSelector selector = null;
-    VectorObjectSelector objectSelector = null;
-    if (outputType.isNumeric()) {
-      selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
-    } else {
-      objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector("v");
-    }
-    int rowCount = 0;
-    while (!cursor.isDone()) {
-      boolean[] nulls;
-      switch (outputType) {
-        case LONG:
-          nulls = selector.getNullVector();
-          long[] longs = selector.getLongVector();
-          for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-            results.add(nulls != null && nulls[i] ? null : longs[i]);
-          }
-          break;
-        case DOUBLE:
-          nulls = selector.getNullVector();
-          double[] doubles = selector.getDoubleVector();
-          for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-            results.add(nulls != null && nulls[i] ? null : doubles[i]);
-          }
-          break;
-        case STRING:
-          Object[] objects = objectSelector.getObjectVector();
-          for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++, rowCount++) {
-            results.add(objects[i]);
-          }
-          break;
-      }
+    ColumnCapabilities capabilities = virtualColumns.getColumnCapabilities(storageAdapter, "v");
 
-      cursor.advance();
+    int rowCount = 0;
+    if (capabilities.isDictionaryEncoded().isTrue()) {
+      SingleValueDimensionVectorSelector selector = cursor.getColumnSelectorFactory().makeSingleValueDimensionSelector(
+          DefaultDimensionSpec.of("v")
+      );
+      while (!cursor.isDone()) {
+        int[] row = selector.getRowVector();
+        for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+          results.add(selector.lookupName(row[i]));
+        }
+        cursor.advance();
+      }
+    } else {
+      VectorValueSelector selector = null;
+      VectorObjectSelector objectSelector = null;
+      if (outputType.isNumeric()) {
+        selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
+      } else {
+        objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector("v");
+      }
+      while (!cursor.isDone()) {
+        boolean[] nulls;
+        switch (outputType) {
+          case LONG:
+            nulls = selector.getNullVector();
+            long[] longs = selector.getLongVector();
+            for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+              results.add(nulls != null && nulls[i] ? null : longs[i]);
+            }
+            break;
+          case DOUBLE:
+            nulls = selector.getNullVector();
+            double[] doubles = selector.getDoubleVector();
+            for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+              results.add(nulls != null && nulls[i] ? null : doubles[i]);
+            }
+            break;
+          case STRING:
+            Object[] objects = objectSelector.getObjectVector();
+            for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++, rowCount++) {
+              results.add(objects[i]);
+            }
+            break;
+        }
+
+        cursor.advance();
+      }
     }
     closer.register(cursor);
 
@@ -224,10 +246,15 @@ public class ExpressionVectorSelectorsTest
 
     int rowCountCursor = cursors
         .map(nonVectorized -> {
-          final ColumnValueSelector nonSelector = nonVectorized.getColumnSelectorFactory().makeColumnValueSelector("v");
+          final ColumnValueSelector nonSelector = nonVectorized.getColumnSelectorFactory()
+                                                               .makeColumnValueSelector("v");
           int rows = 0;
           while (!nonVectorized.isDone()) {
-            Assert.assertEquals(StringUtils.format("Failed at row %s", rows), nonSelector.getObject(), results.get(rows));
+            Assert.assertEquals(
+                StringUtils.format("Failed at row %s", rows),
+                nonSelector.getObject(),
+                results.get(rows)
+            );
             rows++;
             nonVectorized.advance();
           }

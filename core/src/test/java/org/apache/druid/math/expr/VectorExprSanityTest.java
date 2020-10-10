@@ -109,7 +109,35 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testUnivariateMathFunctions()
   {
-    final String[] functions = new String[]{"atan", "cos", "cosh", "cot", "sin", "sinh", "tan", "tanh"};
+    final String[] functions = new String[]{
+        "abs",
+        "acos",
+        "asin",
+        "atan",
+        "cbrt",
+        "ceil",
+        "cos",
+        "cosh",
+        "cot",
+        "exp",
+        "expm1",
+        "floor",
+        "getExponent",
+        "log",
+        "log10",
+        "log1p",
+        "nextUp",
+        "rint",
+        "signum",
+        "sin",
+        "sinh",
+        "sqrt",
+        "tan",
+        "tanh",
+        "toDegrees",
+        "toRadians",
+        "ulp"
+    };
     final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())"};
     testFunctions(types, templates, functions);
   }
@@ -117,7 +145,18 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBivariateMathFunctions()
   {
-    final String[] functions = new String[]{"max", "min", "pow"};
+    final String[] functions = new String[]{
+        "atan2",
+        "copySign",
+        "div",
+        "hypot",
+        "remainder",
+        "max",
+        "min",
+        "nextAfter",
+        "scalb",
+        "pow"
+    };
     final String[] templates = new String[]{"%s(d1, d2)", "%s(d1, l1)", "%s(l1, d1)", "%s(l1, l2)"};
     testFunctions(types, templates, functions);
   }

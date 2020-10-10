@@ -203,11 +203,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }));
   };
 
-  private async submitLookupEdit(updatelookupEditVersion: boolean) {
+  private async submitLookupEdit(updateLookupVersion: boolean) {
     const { lookupEdit, isEdit } = this.state;
     if (!lookupEdit) return;
 
-    const version = updatelookupEditVersion ? new Date().toISOString() : lookupEdit.version;
+    const version = updateLookupVersion ? new Date().toISOString() : lookupEdit.version;
     let endpoint = '/druid/coordinator/v1/lookups/config';
     const specJson: any = lookupEdit.spec;
     let dataJson: any;

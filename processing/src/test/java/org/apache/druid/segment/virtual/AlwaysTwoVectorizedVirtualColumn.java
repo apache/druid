@@ -48,26 +48,38 @@ import java.util.List;
  */
 public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
 {
+  static final String DONT_CALL_THIS = "don't call this";
   private final String outputName;
   private final ColumnCapabilities capabilities;
   private final boolean dictionaryEncoded;
+  private final boolean canVectorize;
 
   public AlwaysTwoVectorizedVirtualColumn(
       String name,
       ColumnCapabilities capabilites
   )
   {
+    this(name, capabilites, true);
+  }
+
+  public AlwaysTwoVectorizedVirtualColumn(
+      String name,
+      ColumnCapabilities capabilites,
+      boolean canVectorize
+  )
+  {
     this.outputName = name;
     this.capabilities = capabilites;
     this.dictionaryEncoded = capabilites.isDictionaryEncoded().isTrue() &&
                              capabilites.areDictionaryValuesUnique().isTrue();
+    this.canVectorize = canVectorize;
   }
 
   @Override
   public boolean canVectorize(ColumnInspector inspector)
   {
     Assert.assertNotNull(inspector);
-    return true;
+    return canVectorize;
   }
 
   @Override
@@ -79,13 +91,13 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
-    throw new IllegalStateException("don't call this");
+    throw new IllegalStateException(DONT_CALL_THIS);
   }
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
-    throw new IllegalStateException("don't call this");
+    throw new IllegalStateException(DONT_CALL_THIS);
   }
 
   @Override

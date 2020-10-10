@@ -102,13 +102,6 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    expr.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     List<IdentifierExpr> newArgs =
@@ -199,15 +192,6 @@ class FunctionExpr implements Expr
   public String stringify()
   {
     return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
-  }
-
-  @Override
-  public void visit(Visitor visitor)
-  {
-    for (Expr child : args) {
-      child.visit(visitor);
-    }
-    visitor.visit(this);
   }
 
   @Override
@@ -336,16 +320,6 @@ class ApplyFunctionExpr implements Expr
         lambdaExpr.stringify(),
         ARG_JOINER.join(argsExpr.stream().map(Expr::stringify).iterator())
     );
-  }
-
-  @Override
-  public void visit(Visitor visitor)
-  {
-    lambdaExpr.visit(visitor);
-    for (Expr arg : argsExpr) {
-      arg.visit(visitor);
-    }
-    visitor.visit(this);
   }
 
   @Override

@@ -16,6 +16,20 @@
  * limitations under the License.
  */
 
-.timed-button {
-  padding: 10px 10px 5px 10px;
+import { PartitionsSpec } from '../load-data/config/partition';
+
+/**
+ * Datasource compaction configuration
+ */
+export class CompactionConfig {
+  constructor(props: CompactionConfigProps) {
+    Object.assign(this, props);
+  }
 }
+
+interface CompactionConfigProps {
+  readonly skipOffsetFromLatest: string;
+  readonly partitionsSpec: PartitionsSpec;
+}
+
+export interface CompactionConfig extends CompactionConfigProps {}

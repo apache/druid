@@ -242,7 +242,7 @@ profile provider (in this order).
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks
 managed by the given supervisor. This includes the latest sequence numbers as reported by Kinesis. Unlike the Kafka
-Indexing Service, stats about lag are not yet supported.
+Indexing Service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
 
 The status report also contains the supervisor's state and a list of recently thrown exceptions (reported as
 `recentErrors`, whose max size can be controlled using the `druid.supervisor.maxStoredExceptionEvents` configuration).
