@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
@@ -65,8 +64,7 @@ public class JsonInputFormat extends NestedInputFormat
     this(flattenSpec, featureSpec, keepNullColumns, true);
   }
 
-  @VisibleForTesting
-  JsonInputFormat(
+  public JsonInputFormat(
       JSONPathSpec flattenSpec,
       Map<String, Boolean> featureSpec,
       Boolean keepNullColumns,
@@ -104,6 +102,11 @@ public class JsonInputFormat extends NestedInputFormat
            new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
   }
 
+  /**
+   * Create a new JsonInputFormat object based on the given parameter
+   *
+   * sub-classes may need to override this method to create a object with correct sub-class type
+   */
   public JsonInputFormat withLineSplittable(boolean lineSplittable)
   {
     return new JsonInputFormat(this.getFlattenSpec(),
