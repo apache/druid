@@ -594,7 +594,7 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/coordinator/v1/compaction/compact`, {});
+          const resp = await Api.post(`/druid/coordinator/v1/compaction/compact`, {});
           return resp.data;
         }}
         confirmButtonText="Force compaction run"
