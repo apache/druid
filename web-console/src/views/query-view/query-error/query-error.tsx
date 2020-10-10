@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { HighlightText } from '../../../components';
 import { DruidError, RowColumn } from '../../../utils';
@@ -32,6 +32,7 @@ export interface QueryErrorProps {
 
 export const QueryError = React.memo(function QueryError(props: QueryErrorProps) {
   const { error, moveCursorTo, queryString, onQueryStringChange } = props;
+  const [showMode, setShowMore] = useState(false);
 
   if (!error.errorMessage) {
     return <div className="query-error">{error.message}</div>;
@@ -62,11 +63,11 @@ export const QueryError = React.memo(function QueryError(props: QueryErrorProps)
     <div className="query-error">
       {suggestionElement}
       {error.error && <p>{`Error: ${error.error}`}</p>}
-      {error.errorMessage && (
+      {error.errorMessageWithoutExpectation && (
         <p>
           {position ? (
             <HighlightText
-              text={error.errorMessage}
+              text={error.errorMessageWithoutExpectation}
               find={position.match}
               replace={
                 <span
@@ -80,8 +81,24 @@ export const QueryError = React.memo(function QueryError(props: QueryErrorProps)
               }
             />
           ) : (
-            error.errorMessage
+            error.errorMessageWithoutExpectation
           )}
+          {error.expectation && !showMode && (
+            <>
+              {' '}
+              <span className="more-or-less" onClick={() => setShowMore(true)}>
+                More...
+              </span>
+            </>
+          )}
+        </p>
+      )}
+      {error.expectation && showMode && (
+        <p>
+          {error.expectation}{' '}
+          <span className="more-or-less" onClick={() => setShowMore(false)}>
+            Less...
+          </span>
         </p>
       )}
       {error.errorClass && <p>{error.errorClass}</p>}

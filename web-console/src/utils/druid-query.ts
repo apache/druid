@@ -162,6 +162,8 @@ export class DruidError extends Error {
   public canceled?: boolean;
   public error?: string;
   public errorMessage?: string;
+  public errorMessageWithoutExpectation?: string;
+  public expectation?: string;
   public position?: RowColumn;
   public errorClass?: string;
   public host?: string;
@@ -195,6 +197,14 @@ export class DruidError extends Error {
       if (this.errorMessage) {
         this.position = DruidError.parsePosition(this.errorMessage);
         this.suggestion = DruidError.getSuggestion(this.errorMessage);
+
+        const expectationIndex = this.errorMessage.indexOf('Was expecting one of');
+        if (expectationIndex >= 0) {
+          this.errorMessageWithoutExpectation = this.errorMessage.slice(0, expectationIndex).trim();
+          this.expectation = this.errorMessage.slice(expectationIndex).trim();
+        } else {
+          this.errorMessageWithoutExpectation = this.errorMessage;
+        }
       }
     }
   }
