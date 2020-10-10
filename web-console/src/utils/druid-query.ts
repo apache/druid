@@ -105,7 +105,6 @@ export class DruidError extends Error {
   }
 
   static getSuggestion(errorMessage: string): QuerySuggestion | undefined {
-    console.log(errorMessage);
     // == is used instead of =
     // ex: Encountered "= =" at line 3, column 15. Was expecting one of
     const matchEquals = errorMessage.match(/Encountered "= =" at line (\d+), column (\d+)./);
@@ -116,7 +115,6 @@ export class DruidError extends Error {
         label: `Replace == with =`,
         fn: str => {
           const index = DruidError.positionToIndex(str, line, column);
-          console.log(index, str);
           if (!str.slice(index).startsWith('==')) return;
           return `${str.slice(0, index)}=${str.slice(index + 2)}`;
         },
