@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 import java.io.File;
 import java.util.Map;
 import java.util.Objects;
@@ -42,6 +43,7 @@ public class AvroOCFInputFormat extends NestedInputFormat
   private static final Logger LOGGER = new Logger(AvroOCFInputFormat.class);
 
   private final boolean binaryAsString;
+  private final boolean explodeUnions;
   @Nullable
   private final Schema readerSchema;
 
@@ -50,7 +52,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
       @JacksonInject @Json ObjectMapper mapper,
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("schema") @Nullable Map<String, Object> schema,
-      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
+      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString,
+      @JsonProperty("explodeUnions") @Nullable Boolean explodeUnions
   ) throws Exception
   {
     super(flattenSpec);
@@ -62,7 +65,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
     } else {
       this.readerSchema = null;
     }
-    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.binaryAsString = binaryAsString != null && binaryAsString;
+    this.explodeUnions = explodeUnions != null && explodeUnions;
   }
 
   @Override
@@ -82,7 +86,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
         temporaryDirectory,
         readerSchema,
         getFlattenSpec(),
-        binaryAsString
+        binaryAsString,
+        explodeUnions
     );
   }
 

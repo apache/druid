@@ -13,6 +13,12 @@
 		{"name":"someIntValueMap","type":{"type":"map","values":"int"}},
 		{"name":"someStringValueMap","type":{"type":"map","values":"string"}},
 		{"name":"someUnion","type":["null","string"]},
+		{"name":"someMultiMemberUnion", "type": ["string", "int", {
+		  "type": "record", "name": "UnionSubRecord", "fields": [
+		    {"name": "subString", "type": "string"},
+		    {"name": "subFloat", "type": "float"}
+		  ]
+		}]},
 		{"name":"someNull","type":"null"},
     {"name":"someFixed","type":{"type":"fixed","size":16,"name":"MyFixed"}},
     {"name":"someBytes","type":"bytes"},

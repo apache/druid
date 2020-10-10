@@ -56,14 +56,15 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       File temporaryDirectory,
       @Nullable Schema readerSchema,
       JSONPathSpec flattenSpec,
-      boolean binaryAsString
+      boolean binaryAsString,
+      boolean explodeUnions
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.temporaryDirectory = temporaryDirectory;
     this.readerSchema = readerSchema;
-    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString));
+    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString, explodeUnions));
   }
 
   @Override

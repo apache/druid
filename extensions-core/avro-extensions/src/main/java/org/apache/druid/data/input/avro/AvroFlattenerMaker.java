@@ -44,13 +44,8 @@ import java.util.stream.Collectors;
 
 public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<GenericRecord>
 {
-  private static final JsonProvider AVRO_JSON_PROVIDER = new GenericAvroJsonProvider();
-  private static final Configuration JSONPATH_CONFIGURATION =
-      Configuration.builder()
-                   .jsonProvider(AVRO_JSON_PROVIDER)
-                   .mappingProvider(new NotImplementedMappingProvider())
-                   .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
-                   .build();
+  private final JsonProvider avroJsonProvider;
+  private final Configuration jsonPathConfiguration;
 
   private static final EnumSet<Schema.Type> ROOT_TYPES = EnumSet.of(
       Schema.Type.STRING,
@@ -99,10 +94,18 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
    * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
    * @param binaryAsString boolean to encode the byte[] as a string.
    */
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString)
+  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean explodeUnions)
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
+
+    this.avroJsonProvider= new GenericAvroJsonProvider(explodeUnions);
+    this.jsonPathConfiguration =
+        Configuration.builder()
+                     .jsonProvider(avroJsonProvider)
+                     .mappingProvider(new NotImplementedMappingProvider())
+                     .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
+                     .build();
   }
 
   @Override
@@ -126,7 +129,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   public Function<GenericRecord, Object> makeJsonPathExtractor(final String expr)
   {
     final JsonPath jsonPath = JsonPath.compile(expr);
-    return record -> transformValue(jsonPath.read(record, JSONPATH_CONFIGURATION));
+    return record -> transformValue(jsonPath.read(record, jsonPathConfiguration));
   }
 
   @Override
@@ -138,7 +141,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public JsonProvider getJsonProvider()
   {
-    return AVRO_JSON_PROVIDER;
+    return avroJsonProvider;
   }
 
   @Override

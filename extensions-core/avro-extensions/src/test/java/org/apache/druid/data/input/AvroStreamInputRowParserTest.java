@@ -151,6 +151,7 @@ public class AvroStreamInputRowParserTest
       }
   );
   private static final String SOME_UNION_VALUE = "string as union";
+  private static final Integer SOME_UNION_MEMBER_VALUE = 1;
   private static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
   private static final String SOME_RECORD_STRING_VALUE = "string in record";
   private static final List<MyNestedRecord> SOME_RECORD_ARRAY_VALUE = Collections.singletonList(MyNestedRecord.newBuilder()
@@ -176,7 +177,9 @@ public class AvroStreamInputRowParserTest
     Repository repository = new Avro1124RESTRepositoryClientWrapper("http://github.io");
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
         PARSE_SPEC,
-        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
+        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
+        false
     );
     ByteBufferInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(parser),
@@ -193,7 +196,9 @@ public class AvroStreamInputRowParserTest
     Repository repository = new InMemoryRepository(null);
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
         PARSE_SPEC,
-        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
+        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
+        false
     );
     ByteBufferInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(parser),
@@ -234,7 +239,9 @@ public class AvroStreamInputRowParserTest
     Repository repository = new InMemoryRepository(null);
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
         PARSE_SPEC_SCHEMALESS,
-        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
+        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
+        false
     );
     ByteBufferInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(parser),
@@ -370,6 +377,7 @@ public class AvroStreamInputRowParserTest
                         .setSomeIntValueMap(SOME_INT_VALUE_MAP_VALUE)
                         .setSomeStringValueMap(SOME_STRING_VALUE_MAP_VALUE)
                         .setSomeUnion(SOME_UNION_VALUE)
+                        .setSomeMultiMemberUnion(SOME_UNION_MEMBER_VALUE)
                         .setSomeFixed(SOME_FIXED_VALUE)
                         .setSomeBytes(SOME_BYTES_VALUE)
                         .setSomeNull(null)
