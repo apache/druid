@@ -466,18 +466,29 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
   }
 
-  private boolean isParallelMode()
+  /**
+   * Returns true if this task can run in the parallel mode with the given inputSource and tuningConfig.
+   * This method should be synchronized with CompactSegments.isParallelMode(ClientCompactionTaskQueryTuningConfig).
+   */
+  public static boolean isParallelMode(InputSource inputSource, @Nullable ParallelIndexTuningConfig tuningConfig)
   {
+    if (null == tuningConfig) {
+      return false;
+    }
+    boolean useRangePartitions = useRangePartitions(tuningConfig);
     // Range partitioning is not implemented for runSequential() (but hash partitioning is)
-    int minRequiredNumConcurrentSubTasks = useRangePartitions() ? 1 : 2;
-
-    return baseInputSource.isSplittable()
-           && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+    int minRequiredNumConcurrentSubTasks = useRangePartitions ? 1 : 2;
+    return inputSource.isSplittable() && tuningConfig.getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
   }
 
-  private boolean useRangePartitions()
+  private static boolean useRangePartitions(ParallelIndexTuningConfig tuningConfig)
   {
-    return ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+  }
+
+  private boolean isParallelMode()
+  {
+    return isParallelMode(baseInputSource, ingestionSchema.getTuningConfig());
   }
 
   /**
@@ -512,7 +523,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private TaskStatus runMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
-    return useRangePartitions()
+    return useRangePartitions(ingestionSchema.getTuningConfig())
            ? runRangePartitionMultiPhaseParallel(toolbox)
            : runHashPartitionMultiPhaseParallel(toolbox);
   }

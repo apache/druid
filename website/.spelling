@@ -613,6 +613,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository

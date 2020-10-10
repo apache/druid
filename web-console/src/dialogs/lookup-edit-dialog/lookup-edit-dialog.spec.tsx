@@ -21,7 +21,7 @@ import React from 'react';
 
 import { isLookupSubmitDisabled, LookupEditDialog } from './lookup-edit-dialog';
 
-describe('lookup edit dialog', () => {
+describe('LookupEditDialog', () => {
   it('matches snapshot', () => {
     const lookupEditDialog = shallow(
       <LookupEditDialog
@@ -31,9 +31,9 @@ describe('lookup edit dialog', () => {
         lookupName={'test'}
         lookupTier={'test'}
         lookupVersion={'test'}
-        lookupSpec={{ type: 'map', map: {} }}
+        lookupSpec={{ type: 'map', map: { a: 1 } }}
         isEdit={false}
-        allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
+        allLookupTiers={['__default', 'alt-tier']}
       />,
     );
 

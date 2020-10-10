@@ -54,14 +54,19 @@ export function formatCompactionConfigAndStatus(
   compactionConfig: CompactionConfig | undefined,
   compactionStatus: CompactionStatus | undefined,
 ) {
-  if (compactionStatus) {
-    if (compactionStatus.bytesAwaitingCompaction === 0 && !zeroCompactionStatus(compactionStatus)) {
-      return 'Fully compacted';
+  if (compactionConfig) {
+    if (compactionStatus) {
+      if (
+        compactionStatus.bytesAwaitingCompaction === 0 &&
+        !zeroCompactionStatus(compactionStatus)
+      ) {
+        return 'Fully compacted';
+      } else {
+        return capitalizeFirst(compactionStatus.scheduleStatus);
+      }
     } else {
-      return capitalizeFirst(compactionStatus.scheduleStatus);
+      return 'Awaiting first run';
     }
-  } else if (compactionConfig) {
-    return 'Awaiting first run';
   } else {
     return 'Not enabled';
   }

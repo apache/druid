@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { cleanSpec, downgradeSpec, upgradeSpec } from './ingestion-spec';
+import { cleanSpec, downgradeSpec, guessInputFormat, upgradeSpec } from './ingestion-spec';
 
 describe('ingestion-spec', () => {
   const oldSpec = {
@@ -118,6 +118,37 @@ describe('ingestion-spec', () => {
       spec: {
         dataSchema: {},
       },
+    });
+  });
+
+  describe('guessInputFormat', () => {
+    it('works for parquet', () => {
+      expect(guessInputFormat(['PAR1lol']).type).toEqual('parquet');
+    });
+
+    it('works for orc', () => {
+      expect(guessInputFormat(['ORClol']).type).toEqual('orc');
+    });
+
+    it('works for AVRO', () => {
+      expect(guessInputFormat(['Obj\x01lol']).type).toEqual('avro_ocf');
+      expect(guessInputFormat(['Obj1lol']).type).toEqual('regex');
+    });
+
+    it('works for JSON', () => {
+      expect(guessInputFormat(['{"a":1}']).type).toEqual('json');
+    });
+
+    it('works for TSV', () => {
+      expect(guessInputFormat(['A\tB\tX\tY']).type).toEqual('tsv');
+    });
+
+    it('works for CSV', () => {
+      expect(guessInputFormat(['A,B,X,Y']).type).toEqual('csv');
+    });
+
+    it('works for regex', () => {
+      expect(guessInputFormat(['A|B|X|Y']).type).toEqual('regex');
     });
   });
 });

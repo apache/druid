@@ -8,24 +8,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -240,24 +226,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -472,24 +444,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -704,24 +662,10 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >

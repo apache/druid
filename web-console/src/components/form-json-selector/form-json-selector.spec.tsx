@@ -16,6 +16,21 @@
  * limitations under the License.
  */
 
-.timed-button {
-  padding: 10px 10px 5px 10px;
-}
+import { shallow } from 'enzyme';
+import React from 'react';
+
+import { FormJsonSelector } from './form-json-selector';
+
+describe('FormJsonSelector', () => {
+  it('matches snapshot form tab', () => {
+    const formJsonSelector = shallow(<FormJsonSelector tab="form" onChange={() => {}} />);
+
+    expect(formJsonSelector).toMatchSnapshot();
+  });
+
+  it('matches snapshot form json', () => {
+    const formJsonSelector = shallow(<FormJsonSelector tab="json" onChange={() => {}} />);
+
+    expect(formJsonSelector).toMatchSnapshot();
+  });
+});

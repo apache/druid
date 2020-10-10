@@ -229,18 +229,18 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
-  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_data_size,
-  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS replicated_size,
-  MIN("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS min_segment_size,
+  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS total_data_size,
+  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS replicated_size,
+  MIN("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS min_segment_size,
   (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) /
-    COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)
+    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
+    COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
   ) AS avg_segment_size,
-  MAX("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS max_segment_size,
+  MAX("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS max_segment_size,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
   (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) /
-    SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)
+    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
+    SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
   ) AS avg_row_size
 FROM sys.segments
 GROUP BY 1`;
@@ -893,9 +893,10 @@ GROUP BY 1`;
           data={datasources}
           loading={datasourcesAndDefaultRulesState.loading}
           noDataText={
-            !datasourcesAndDefaultRulesState.loading && datasources && !datasources.length
+            datasourcesAndDefaultRulesState.getErrorMessage() ||
+            (!datasourcesAndDefaultRulesState.loading && datasources && !datasources.length
               ? 'No datasources'
-              : datasourcesAndDefaultRulesState.getErrorMessage() || ''
+              : '')
           }
           filterable
           filtered={datasourceFilter}
@@ -1209,12 +1210,12 @@ GROUP BY 1`;
               width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: ({ value: datasource, original }) => {
-                const { unused, rules, compaction } = original;
+                const { unused, rules, compactionConfig } = original;
                 const datasourceActions = this.getDatasourceActions(
                   datasource,
                   unused,
                   rules,
-                  compaction,
+                  compactionConfig,
                 );
                 return (
                   <ActionCell
