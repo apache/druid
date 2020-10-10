@@ -2182,16 +2182,40 @@ export function getPartitionRelatedTuningSpecFormFields(
         },
         // partitionsSpec type: hashed
         {
+          name: 'partitionsSpec.targetRowsPerSegment',
+          label: 'Target rows per segment',
+          type: 'number',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
+            !deepGet(t, 'partitionsSpec.numShards'),
+          info: (
+            <p>
+              If you have skewed data, you may want to set this field to generate evenly sized
+              segments.
+              <br />
+              <br /> A target row count for each partition. Each partition will have a row count
+              close to the target assuming evenly distributed keys. Defaults to 5 million if
+              numShards is null.
+            </p>
+          ),
+        },
+        {
           name: 'partitionsSpec.numShards',
           label: 'Num shards',
           type: 'number',
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
           info: (
-            <>
+            <p>
+              If you know the optimal number of shards and want to speed up the time it takes for
+              compaction to run, set this field.
+              <br />
+              <br />
               Directly specify the number of shards to create. If this is specified and 'intervals'
               is specified in the granularitySpec, the index task can skip the determine
               intervals/partitions pass through the data.
-            </>
+            </p>
           ),
         },
         {
