@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Api } from '../singletons/api';
+import { Api, API_ENDPOINTS } from '../singletons/api';
 
 import { localStorageGetJson, LocalStorageKeys } from './local-storage-keys';
 
@@ -52,7 +52,7 @@ export class Capabilities {
     // Check SQL endpoint
     try {
       await Api.post(
-        '/druid/v2/sql',
+        API_ENDPOINTS.druidV2Sql,
         { query: 'SELECT 1337', context: { timeout: Capabilities.STATUS_TIMEOUT } },
         { timeout: Capabilities.STATUS_TIMEOUT },
       );
@@ -62,7 +62,7 @@ export class Capabilities {
         return; // other failure
       }
       try {
-        await Api.get('/status', { timeout: Capabilities.STATUS_TIMEOUT });
+        await Api.get(API_ENDPOINTS.status, { timeout: Capabilities.STATUS_TIMEOUT });
       } catch (e) {
         return; // total failure
       }
@@ -70,7 +70,7 @@ export class Capabilities {
 
       try {
         await Api.post(
-          '/druid/v2',
+          API_ENDPOINTS.druidV2,
           {
             queryType: 'dataSourceMetadata',
             dataSource: '__web_console_probe__',

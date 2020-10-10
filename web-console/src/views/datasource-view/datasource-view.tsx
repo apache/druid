@@ -38,7 +38,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -292,8 +292,8 @@ GROUP BY 1`;
         if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
         } else if (capabilities.hasCoordinatorAccess()) {
-          const datasourcesResp = await Api.get('/druid/coordinator/v1/datasources?simple');
-          const loadstatusResp = await Api.get('/druid/coordinator/v1/loadstatus?simple');
+          const datasourcesResp = await Api.get(API_ENDPOINTS.datasourcesSimple);
+          const loadstatusResp = await Api.get(API_ENDPOINTS.coordinatorLoadStatusSimple);
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.data.map(
             (d: any): DatasourceQueryResultRow => {
@@ -338,21 +338,21 @@ GROUP BY 1`;
           // Using 'includeDisabled' parameter for compatibility.
           // Should be changed to 'includeUnused' in Druid 0.17
           const unusedResp = await Api.get(
-            '/druid/coordinator/v1/metadata/datasources?includeDisabled',
+            API_ENDPOINTS.coordinatorMetadataDatasourcesIncludeDisabled,
           );
           unused = unusedResp.data.filter((d: string) => !seen[d]);
         }
 
-        const rulesResp = await Api.get('/druid/coordinator/v1/rules');
+        const rulesResp = await Api.get(API_ENDPOINTS.coordinatorRules);
         const rules = rulesResp.data;
 
-        const compactionConfigsResp = await Api.get('/druid/coordinator/v1/config/compaction');
+        const compactionConfigsResp = await Api.get(API_ENDPOINTS.coordinatorConfigCompaction);
         const compactionConfigs = lookupBy(
           compactionConfigsResp.data.compactionConfigs || [],
           (c: CompactionConfig) => c.dataSource,
         );
 
-        const compactionStatusesResp = await Api.get('/druid/coordinator/v1/compaction/status');
+        const compactionStatusesResp = await Api.get(API_ENDPOINTS.coordinatorCompactionStatus);
         const compactionStatuses = lookupBy(
           compactionStatusesResp.data.latestStatus || [],
           (c: CompactionStatus) => c.dataSource,
@@ -382,7 +382,7 @@ GROUP BY 1`;
     this.tiersQueryManager = new QueryManager({
       processQuery: async capabilities => {
         if (capabilities.hasCoordinatorAccess()) {
-          const tiersResp = await Api.get('/druid/coordinator/v1/tiers');
+          const tiersResp = await Api.get(API_ENDPOINTS.coordinatorTiers);
           return tiersResp.data;
         } else {
           throw new Error(`must have coordinator access`);
@@ -594,7 +594,7 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.post(`/druid/coordinator/v1/compaction/compact`, {});
+          const resp = await Api.post(API_ENDPOINTS.coordinatorCompactionCompact, {});
           return resp.data;
         }}
         confirmButtonText="Force compaction run"

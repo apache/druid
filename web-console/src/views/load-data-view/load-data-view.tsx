@@ -54,7 +54,7 @@ import {
 import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
 import { getLink } from '../../links';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
@@ -3067,7 +3067,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (isTask(spec)) {
       let taskResp: any;
       try {
-        taskResp = await Api.post('/druid/indexer/v1/task', spec);
+        taskResp = await Api.post(API_ENDPOINTS.task, spec);
       } catch (e) {
         AppToaster.show({
           message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
@@ -3087,7 +3087,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       }, 1000);
     } else {
       try {
-        await Api.post('/druid/indexer/v1/supervisor', spec);
+        await Api.post(API_ENDPOINTS.supervisor, spec);
       } catch (e) {
         AppToaster.show({
           message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,

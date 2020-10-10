@@ -120,7 +120,7 @@ module.exports = env => {
                 ident: 'postcss',
                 plugins: () => [
                   postcssPresetEnv({
-                    autoprefixer: { grid: "no-autoplace" },
+                    autoprefixer: { grid: 'no-autoplace' },
                     browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
                   }),
                 ],

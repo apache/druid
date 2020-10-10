@@ -21,7 +21,7 @@ import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../../singletons/api';
 import { lookupBy, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
@@ -53,10 +53,10 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
         });
         return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
       } else if (capabilities.hasCoordinatorAccess()) {
-        const services = (await Api.get('/druid/coordinator/v1/servers?simple')).data;
+        const services = (await Api.get(API_ENDPOINTS.coordinatorServersSimple)).data;
 
         const middleManager = capabilities.hasOverlordAccess()
-          ? (await Api.get('/druid/indexer/v1/workers')).data
+          ? (await Api.get(API_ENDPOINTS.workers)).data
           : [];
 
         return {

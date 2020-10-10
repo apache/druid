@@ -34,7 +34,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import {
   addFilter,
   compact,
@@ -264,7 +264,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsNoSqlQueryManager = new QueryManager({
       processQuery: async () => {
-        const datasourceList = (await Api.get('/druid/coordinator/v1/metadata/datasources')).data;
+        const datasourceList = (await Api.get(API_ENDPOINTS.coordinatorMetadataDatasources)).data;
         const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
           datasourceList.map(async (d: string) => {
             const segments = (await Api.get(`/druid/coordinator/v1/datasources/${d}?full`)).data

@@ -39,7 +39,7 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -251,7 +251,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: IngestionView.SUPERVISOR_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const supervisors = (await Api.get('/druid/indexer/v1/supervisor?full')).data;
+          const supervisors = (await Api.get(API_ENDPOINTS.supervisorFull)).data;
           if (!Array.isArray(supervisors)) throw new Error(`Unexpected results`);
           return supervisors.map((sup: any) => {
             return {
@@ -343,7 +343,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   private submitSupervisor = async (spec: JSON) => {
     try {
-      await Api.post('/druid/indexer/v1/supervisor', spec);
+      await Api.post(API_ENDPOINTS.supervisor, spec);
     } catch (e) {
       AppToaster.show({
         message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
@@ -361,7 +361,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   private submitTask = async (spec: JSON) => {
     try {
-      await Api.post('/druid/indexer/v1/task', spec);
+      await Api.post(API_ENDPOINTS.task, spec);
     } catch (e) {
       AppToaster.show({
         message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
@@ -955,7 +955,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
+          const resp = await Api.post(API_ENDPOINTS.supervisorResumeAll, {});
           return resp.data;
         }}
         confirmButtonText="Resume all supervisors"
@@ -981,7 +981,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
+          const resp = await Api.post(API_ENDPOINTS.supervisorSuspendAll, {});
           return resp.data;
         }}
         confirmButtonText="Suspend all supervisors"
@@ -1007,7 +1007,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
+          const resp = await Api.post(API_ENDPOINTS.supervisorTerminateAll, {});
           return resp.data;
         }}
         confirmButtonText="Terminate all supervisors"

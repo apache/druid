@@ -21,7 +21,7 @@ import React, { useState } from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../../singletons/api';
 import { pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
@@ -36,7 +36,7 @@ export const StatusCard = React.memo(function StatusCard(_props: StatusCardProps
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusSummaryState] = useQueryManager<null, StatusSummary>({
     processQuery: async () => {
-      const statusResp = await Api.get('/status');
+      const statusResp = await Api.get(API_ENDPOINTS.status);
       return {
         version: statusResp.data.version,
         extensionCount: statusResp.data.modules.length,

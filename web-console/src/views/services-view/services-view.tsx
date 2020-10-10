@@ -34,7 +34,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import {
   addFilter,
   formatBytes,
@@ -181,7 +181,7 @@ FROM sys.servers
 ORDER BY "rank" DESC, "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
-    const allServiceResp = await Api.get('/druid/coordinator/v1/servers?simple');
+    const allServiceResp = await Api.get(API_ENDPOINTS.coordinatorServersSimple);
     const allServices = allServiceResp.data;
     return allServices.map((s: any) => {
       return {
@@ -220,7 +220,7 @@ ORDER BY "rank" DESC, "service" DESC`;
         }
 
         if (capabilities.hasCoordinatorAccess()) {
-          const loadQueueResponse = await Api.get('/druid/coordinator/v1/loadqueue?simple');
+          const loadQueueResponse = await Api.get(API_ENDPOINTS.coordinatorLoadqueueSimple);
           const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
@@ -234,7 +234,7 @@ ORDER BY "rank" DESC, "service" DESC`;
         if (capabilities.hasOverlordAccess()) {
           let middleManagers: MiddleManagerQueryResultRow[];
           try {
-            const middleManagerResponse = await Api.get('/druid/indexer/v1/workers');
+            const middleManagerResponse = await Api.get(API_ENDPOINTS.workers);
             middleManagers = middleManagerResponse.data;
           } catch (e) {
             if (

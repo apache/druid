@@ -21,7 +21,7 @@ import { sum } from 'd3-array';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../../singletons/api';
 import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { deepGet } from '../../../utils/object-change';
@@ -48,11 +48,11 @@ FROM sys.segments`,
         });
         return segments.length === 1 ? segments[0] : null;
       } else if (capabilities.hasCoordinatorAccess()) {
-        const loadstatusResp = await Api.get('/druid/coordinator/v1/loadstatus?simple');
+        const loadstatusResp = await Api.get(API_ENDPOINTS.coordinatorLoadStatusSimple);
         const loadstatus = loadstatusResp.data;
         const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
-        const datasourcesMetaResp = await Api.get('/druid/coordinator/v1/datasources?simple');
+        const datasourcesMetaResp = await Api.get(API_ENDPOINTS.datasourcesSimple);
         const datasourcesMeta = datasourcesMetaResp.data;
         const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
           deepGet(curr, 'properties.segments.count'),

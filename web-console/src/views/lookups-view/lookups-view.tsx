@@ -33,7 +33,7 @@ import {
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage,
@@ -107,14 +107,14 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     this.lookupsQueryManager = new QueryManager({
       processQuery: async () => {
-        const tiersResp = await Api.get('/druid/coordinator/v1/lookups/config?discover=true');
+        const tiersResp = await Api.get(API_ENDPOINTS.coordinatorLookupsConfigDiscover);
         const tiers =
           tiersResp.data && tiersResp.data.length > 0
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
         const lookupEntries: {}[] = [];
-        const lookupResp = await Api.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.get(API_ENDPOINTS.coordinatorLookupsConfigAll);
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
@@ -208,7 +208,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     if (!lookupEdit) return;
 
     const version = updateLookupVersion ? new Date().toISOString() : lookupEdit.version;
-    let endpoint = '/druid/coordinator/v1/lookups/config';
+    let endpoint = API_ENDPOINTS.coordinatorLookupsConfig;
     const specJson: any = lookupEdit.spec;
     let dataJson: any;
     if (isEdit) {

@@ -20,7 +20,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../../singletons/api';
 import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
@@ -45,7 +45,7 @@ export const SupervisorsCard = React.memo(function SupervisorsCard(props: Superv
 FROM sys.supervisors`,
         }))[0];
       } else if (capabilities.hasOverlordAccess()) {
-        const resp = await Api.get('/druid/indexer/v1/supervisor?full');
+        const resp = await Api.get(API_ENDPOINTS.supervisorFull);
         const data = resp.data;
         return {
           running: data.filter((d: any) => d.spec.suspended === false).length,

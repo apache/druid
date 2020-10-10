@@ -24,7 +24,7 @@ import { SnitchDialog } from '..';
 import { AutoForm, ExternalLink } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage } from '../../utils';
 
@@ -42,7 +42,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
-      const historyResp = await Api(`/druid/coordinator/v1/config/history?count=100`);
+      const historyResp = await Api.get(`/druid/coordinator/v1/config/history?count=100`);
       return historyResp.data;
     },
     initQuery: null,
@@ -51,7 +51,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
   useQueryManager<null, Record<string, any>>({
     processQuery: async () => {
       try {
-        const configResp = await Api.get('/druid/coordinator/v1/config');
+        const configResp = await Api.get(API_ENDPOINTS.coordinatorconfig);
         setDynamicConfig(configResp.data);
       } catch (e) {
         AppToaster.show({
@@ -69,7 +69,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   async function saveConfig(comment: string) {
     try {
-      await Api.post('/druid/coordinator/v1/config', dynamicConfig, {
+      await Api.post(API_ENDPOINTS.coordinatorconfig, dynamicConfig, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,

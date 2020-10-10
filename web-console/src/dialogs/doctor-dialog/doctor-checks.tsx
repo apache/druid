@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { pluralIfNeeded, queryDruidSql } from '../../utils';
 import { deepGet } from '../../utils/object-change';
 import { postToSampler } from '../../utils/sampler';
@@ -76,7 +76,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that everything in /status/properties is above board
       let properties: Record<string, string>;
       try {
-        properties = (await Api.get(`/status/properties`)).data;
+        properties = (await Api.get(API_ENDPOINTS.properties)).data;
       } catch (e) {
         controls.addIssue(
           `Did not get a /status/properties response from the Router. Message: ${e.message}`,
@@ -133,7 +133,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 
       let coordinatorStatus: any;
       try {
-        coordinatorStatus = (await Api.get(`/proxy/coordinator/status`)).data;
+        coordinatorStatus = (await Api.get(API_ENDPOINTS.coordinatorStatus)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the Coordinator service. Try confirming that it is running and accessible.',
@@ -143,7 +143,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 
       let overlordStatus: any;
       try {
-        overlordStatus = (await Api.get(`/proxy/overlord/status`)).data;
+        overlordStatus = (await Api.get(API_ENDPOINTS.overlordStatus)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the Overlord service. Try confirming that it is running and accessible.',
@@ -170,14 +170,14 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that everything in coordinator and overlord /status/properties is good and matches where needed
       let myProperties: Record<string, string>;
       try {
-        myProperties = (await Api.get(`/status/properties`)).data;
+        myProperties = (await Api.get(API_ENDPOINTS.properties)).data;
       } catch {
         return;
       }
 
       let coordinatorProperties: Record<string, string>;
       try {
-        coordinatorProperties = (await Api.get(`/proxy/coordinator/status/properties`)).data;
+        coordinatorProperties = (await Api.get(API_ENDPOINTS.coordinatorStatusProperties)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the coordinator. Try confirming that it is running and accessible.',
@@ -187,7 +187,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 
       let overlordProperties: Record<string, string>;
       try {
-        overlordProperties = (await Api.get(`/proxy/overlord/status/properties`)).data;
+        overlordProperties = (await Api.get(API_ENDPOINTS.overlordStatusProperties)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the overlord. Try confirming that it is running and accessible.',
@@ -384,7 +384,7 @@ ORDER BY "num_bad_time_chunks"`,
         // Grab the auto-compaction definitions and ignore dataSources that already have auto-compaction
         let compactionResult: any;
         try {
-          compactionResult = (await Api.get('/druid/coordinator/v1/config/compaction')).data;
+          compactionResult = (await Api.get(API_ENDPOINTS.coordinatorConfigCompaction)).data;
         } catch (e) {
           controls.addIssue(`Could not get compaction config. Something is wrong.`);
           return;

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Api } from '../singletons/api';
+import { Api, API_ENDPOINTS } from '../singletons/api';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
@@ -166,7 +166,7 @@ export function headerAndRowsFromSampleResponse(
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
-    statusResp = await Api.get(`/proxy/overlord/status`);
+    statusResp = await Api.get(API_ENDPOINTS.overlordStatus);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
