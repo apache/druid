@@ -56,7 +56,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that the router responds to /status and gives some valid info back
       let status: any;
       try {
-        status = (await Api.get(`/status`)).data;
+        status = (await Api.get(API_ENDPOINTS.status)).data;
       } catch (e) {
         controls.addIssue(
           `Did not get a /status response from the Router service. Try confirming that it is running and accessible. Got: ${e.message}`,
@@ -126,7 +126,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that everything in Coordinator's /status is good
       let myStatus: any;
       try {
-        myStatus = (await Api.get(`/status`)).data;
+        myStatus = (await Api.get(API_ENDPOINTS.status)).data;
       } catch {
         return;
       }
