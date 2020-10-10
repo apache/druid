@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { DruidError } from './druid-query';
 import { sane } from 'druid-query-toolkit/build/test-utils';
+
+import { DruidError } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
