@@ -17,6 +17,7 @@
  */
 
 import { DruidError } from './druid-query';
+import { sane } from 'druid-query-toolkit/build/test-utils';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -55,23 +56,58 @@ describe('DruidQuery', () => {
 
   describe('DruidError.getSuggestion', () => {
     it('works for ==', () => {
+      const sql = sane`
+        SELECT *
+        FROM wikipedia -- test ==
+        WHERE channel == '#ar.wikipedia'
+      `;
+      const suggestion = DruidError.getSuggestion(`Encountered "= =" at line 3, column 15.`);
+      expect(suggestion!.label).toEqual(`Replace == with =`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT *
+        FROM wikipedia -- test ==
+        WHERE channel = '#ar.wikipedia'
+      `);
+    });
+
+    it('works for == 2', () => {
+      const sql = sane`
+        SELECT
+          channel, COUNT(*) AS "Count"
+        FROM wikipedia
+        WHERE channel == 'de'
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `;
       const suggestion = DruidError.getSuggestion(
-        `Encountered "= =" at line 1, column 42. Was expecting one of: <EOF> "EXCEPT" ... "FETCH" ... "GROUP" ...`,
+        `Encountered "= =" at line 4, column 15. Was expecting one of: <EOF> "EXCEPT" ... "FETCH" ... "GROUP" ...`,
       );
       expect(suggestion!.label).toEqual(`Replace == with =`);
-      expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel == '#ar.wikipedia'`)).toEqual(
-        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
-      );
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT
+          channel, COUNT(*) AS "Count"
+        FROM wikipedia
+        WHERE channel = 'de'
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `);
     });
 
     it('works for incorrectly quoted literal', () => {
+      const sql = sane`
+        SELECT *
+        FROM wikipedia -- test "#ar.wikipedia"
+        WHERE channel = "#ar.wikipedia"
+      `;
       const suggestion = DruidError.getSuggestion(
-        `org.apache.calcite.runtime.CalciteContextException: From line 1, column 44 to line 1, column 58: Column '#ar.wikipedia' not found in any table`,
+        `org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table`,
       );
       expect(suggestion!.label).toEqual(`Replace "#ar.wikipedia" with '#ar.wikipedia'`);
-      expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = "#ar.wikipedia"`)).toEqual(
-        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
-      );
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT *
+        FROM wikipedia -- test "#ar.wikipedia"
+        WHERE channel = '#ar.wikipedia'
+      `);
     });
 
     it('removes comma (,) before FROM', () => {

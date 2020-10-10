@@ -97,35 +97,57 @@ export class DruidError extends Error {
     return;
   }
 
+  static positionToIndex(str: string, line: number, column: number): number {
+    const lines = str.split('\n').slice(0, line);
+    const lastLineIndex = lines.length - 1;
+    lines[lastLineIndex] = lines[lastLineIndex].slice(0, column - 1);
+    return lines.join('\n').length;
+  }
+
   static getSuggestion(errorMessage: string): QuerySuggestion | undefined {
+    console.log(errorMessage);
     // == is used instead of =
-    if (errorMessage.includes('Encountered "= =" at')) {
+    // ex: Encountered "= =" at line 3, column 15. Was expecting one of
+    const matchEquals = errorMessage.match(/Encountered "= =" at line (\d+), column (\d+)./);
+    if (matchEquals) {
+      const line = Number(matchEquals[1]);
+      const column = Number(matchEquals[2]);
       return {
         label: `Replace == with =`,
         fn: str => {
-          if (!str.includes('==')) return;
-          return str.replace(/==/g, '=');
+          const index = DruidError.positionToIndex(str, line, column);
+          console.log(index, str);
+          if (!str.slice(index).startsWith('==')) return;
+          return `${str.slice(0, index)}=${str.slice(index + 2)}`;
         },
       };
     }
 
     // Incorrect quoting on table
-    const mq = errorMessage.match(/Column '([^']+)' not found in any table/);
-    if (mq) {
-      const literalString = mq[1];
+    // ex: org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table
+    const matchQuotes = errorMessage.match(
+      /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/,
+    );
+    if (matchQuotes) {
+      const line = Number(matchQuotes[1]);
+      const column = Number(matchQuotes[2]);
+      const literalString = matchQuotes[3];
       return {
         label: `Replace "${literalString}" with '${literalString}'`,
         fn: str => {
-          if (!str.includes(`"${literalString}"`)) return;
-          return str.replace(`"${literalString}"`, `'${literalString}'`);
+          const index = DruidError.positionToIndex(str, line, column);
+          if (!str.slice(index).startsWith(`"${literalString}"`)) return;
+          return `${str.slice(0, index)}'${literalString}'${str.slice(
+            index + literalString.length + 2,
+          )}`;
         },
       };
     }
 
     // , before FROM
-    const mc = errorMessage.match(/Encountered "(FROM)" at/i);
-    if (mc) {
-      const fromKeyword = mc[1];
+    const matchComma = errorMessage.match(/Encountered "(FROM)" at/i);
+    if (matchComma) {
+      const fromKeyword = matchComma[1];
       return {
         label: `Remove , before ${fromKeyword}`,
         fn: str => {
