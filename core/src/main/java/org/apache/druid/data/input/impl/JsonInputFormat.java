@@ -105,7 +105,7 @@ public class JsonInputFormat extends NestedInputFormat
   /**
    * Create a new JsonInputFormat object based on the given parameter
    *
-   * sub-classes may need to override this method to create a object with correct sub-class type
+   * sub-classes may need to override this method to create an object with correct sub-class type
    */
   public JsonInputFormat withLineSplittable(boolean lineSplittable)
   {
