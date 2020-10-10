@@ -73,6 +73,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -92,6 +93,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -114,6 +116,7 @@ public class DataSourceAnalysisTest
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -137,6 +140,7 @@ public class DataSourceAnalysisTest
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -155,6 +159,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -177,6 +182,7 @@ public class DataSourceAnalysisTest
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -195,6 +201,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isJoin());
   }
 
   @Test
@@ -242,6 +249,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test
@@ -291,6 +299,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test
@@ -319,6 +328,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test
@@ -350,6 +360,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test
@@ -400,6 +411,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test
@@ -430,6 +442,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test
@@ -460,6 +473,7 @@ public class DataSourceAnalysisTest
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isJoin());
   }
 
   @Test

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -26,6 +27,7 @@ import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +39,13 @@ import java.util.stream.Collectors;
 /**
  * An IndexedTable composed of a List-based table and Map-based indexes. The implementation is agnostic to the
  * specific row type; it uses a {@link RowAdapter} to work with any sort of object.
+ * The class allows passing in a cache key. If the key is non-null, results of any join on this table can be cached.
+ * That cache becomes invalidated if this key changes. Creators of this class can pass in a non-null cache key if its
+ * possible to construct a small identifier
+ *  - that must change when contents of this indexed table chances
+ *  - May remain unchanged when contents of this indexed table
+ *
+ *  How the cache key is constructed itself, depends on how the RowBasedIndexedTable is being built.
  */
 public class RowBasedIndexedTable<RowType> implements IndexedTable
 {
@@ -46,6 +55,8 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   private final List<Function<RowType, Object>> columnFunctions;
   private final Set<String> keyColumns;
   private final String version;
+  @Nullable
+  private final byte[] cacheKey;
 
   public RowBasedIndexedTable(
       final List<RowType> table,
@@ -55,12 +66,26 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       final String version
   )
   {
+    this(table, rowAdapter, rowSignature, keyColumns, version, null);
+  }
+
+  public RowBasedIndexedTable(
+      final List<RowType> table,
+      final RowAdapter<RowType> rowAdapter,
+      final RowSignature rowSignature,
+      final Set<String> keyColumns,
+      final String version,
+      @Nullable
+      final byte[] cacheKey
+  )
+  {
     this.table = table;
     this.rowSignature = rowSignature;
     this.columnFunctions =
         rowSignature.getColumnNames().stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
     this.keyColumns = keyColumns;
     this.version = version;
+    this.cacheKey = cacheKey;
 
     if (!ImmutableSet.copyOf(rowSignature.getColumnNames()).containsAll(keyColumns)) {
       throw new ISE(
@@ -130,6 +155,18 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     }
 
     return row -> columnFn.apply(table.get(row));
+  }
+
+  @Override
+  public byte[] computeCacheKey()
+  {
+    return Preconditions.checkNotNull(cacheKey, "Cache key can't be null");
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return (null != cacheKey);
   }
 
   @Override
