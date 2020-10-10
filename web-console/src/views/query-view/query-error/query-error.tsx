@@ -60,6 +60,7 @@ export const QueryError = React.memo(function QueryError(props: QueryErrorProps)
 
   return (
     <div className="query-error">
+      {suggestionElement}
       {error.error && <p>{`Error: ${error.error}`}</p>}
       {error.errorMessage && (
         <p>
@@ -84,7 +85,6 @@ export const QueryError = React.memo(function QueryError(props: QueryErrorProps)
         </p>
       )}
       {error.errorClass && <p>{error.errorClass}</p>}
-      {suggestionElement}
     </div>
   );
 });
