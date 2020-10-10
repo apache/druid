@@ -41,7 +41,7 @@ export const API_ENDPOINTS = {
   coordinatorLookupsConfig: '/druid/coordinator/v1/lookups/config',
   coordinatorLookupsConfigDiscover: '/druid/coordinator/v1/lookups/config?discover=true',
   coordinatorLookupsConfigAll: '/druid/coordinator/v1/lookups/config/all',
-  coordinatorconfig: '/druid/coordinator/v1/config',
+  coordinatorConfig: '/druid/coordinator/v1/config',
   coordinatorConfigCompaction: '/druid/coordinator/v1/config/compaction',
   coordinatorLoadStatusSimple: '/druid/coordinator/v1/loadstatus?simple',
   coordinatorMetadataDatasources: '/druid/coordinator/v1/metadata/datasources',

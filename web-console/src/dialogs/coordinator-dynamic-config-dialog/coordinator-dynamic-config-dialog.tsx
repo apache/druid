@@ -51,7 +51,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
   useQueryManager<null, Record<string, any>>({
     processQuery: async () => {
       try {
-        const configResp = await Api.get(API_ENDPOINTS.coordinatorconfig);
+        const configResp = await Api.get(API_ENDPOINTS.coordinatorConfig);
         setDynamicConfig(configResp.data);
       } catch (e) {
         AppToaster.show({
@@ -69,7 +69,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   async function saveConfig(comment: string) {
     try {
-      await Api.post(API_ENDPOINTS.coordinatorconfig, dynamicConfig, {
+      await Api.post(API_ENDPOINTS.coordinatorConfig, dynamicConfig, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,
