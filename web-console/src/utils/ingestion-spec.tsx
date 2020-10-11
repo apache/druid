@@ -2114,6 +2114,11 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 
   if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
+    case 'hashed':
+      return (
+        Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
+        Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'))
+      );
     case 'single_dim':
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
       const hasTargetRowsPerSegment = Boolean(
@@ -2189,14 +2194,17 @@ export function getPartitionRelatedTuningSpecFormFields(
             deepGet(t, 'partitionsSpec.type') === 'hashed' &&
             !deepGet(t, 'partitionsSpec.numShards'),
           info: (
-            <p>
-              If you have skewed data, you may want to set this field to generate evenly sized
-              segments.
-              <br />
-              <br /> A target row count for each partition. Each partition will have a row count
-              close to the target assuming evenly distributed keys. Defaults to 5 million if
-              numShards is null.
-            </p>
+            <>
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition
+                dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to
+                the target assuming evenly distributed keys. Defaults to 5 million if numShards is
+                null.
+              </p>
+            </>
           ),
         },
         {
@@ -2207,15 +2215,17 @@ export function getPartitionRelatedTuningSpecFormFields(
             deepGet(t, 'partitionsSpec.type') === 'hashed' &&
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
           info: (
-            <p>
-              If you know the optimal number of shards and want to speed up the time it takes for
-              compaction to run, set this field.
-              <br />
-              <br />
-              Directly specify the number of shards to create. If this is specified and 'intervals'
-              is specified in the granularitySpec, the index task can skip the determine
-              intervals/partitions pass through the data.
-            </p>
+            <>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for
+                compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and
+                'intervals' is specified in the granularitySpec, the index task can skip the
+                determine intervals/partitions pass through the data.
+              </p>
+            </>
           ),
         },
         {

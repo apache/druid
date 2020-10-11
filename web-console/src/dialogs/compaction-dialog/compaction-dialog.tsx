@@ -82,12 +82,16 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
       !deepGet(t, 'tuningConfig.partitionsSpec.numShards'),
     info: (
-      <p>
-        If you have skewed data, you may want to set this field to generate evenly sized segments.
-        <br />
-        <br /> A target row count for each partition. Each partition will have a row count close to
-        the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
-      </p>
+      <>
+        <p>
+          If the segments generated are a sub-optimal size for the requested partition dimensions,
+          consider setting this field.
+        </p>
+        <p>
+          A target row count for each partition. Each partition will have a row count close to the
+          target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+        </p>
+      </>
     ),
   },
   {
@@ -98,15 +102,17 @@ const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     info: (
-      <p>
-        If you know the optimal number of shards and want to speed up the time it takes for
-        compaction to run, set this field.
-        <br />
-        <br />
-        Directly specify the number of shards to create. If this is specified and 'intervals' is
-        specified in the granularitySpec, the index task can skip the determine intervals/partitions
-        pass through the data.
-      </p>
+      <>
+        <p>
+          If you know the optimal number of shards and want to speed up the time it takes for
+          compaction to run, set this field.
+        </p>
+        <p>
+          Directly specify the number of shards to create. If this is specified and 'intervals' is
+          specified in the granularitySpec, the index task can skip the determine
+          intervals/partitions pass through the data.
+        </p>
+      </>
     ),
   },
   {
@@ -233,7 +239,12 @@ function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
     deepGet(compactionConfig, 'tuningConfig.partitionsSpec.type') || 'dynamic';
   switch (partitionsSpecType) {
     // case 'dynamic': // Nothing to check for dynamic
-    // case 'hashed': // Nothing to check for hashed
+    case 'hashed':
+      return !(
+        Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment')) &&
+        Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment'))
+      );
+      break;
     case 'single_dim':
       if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.partitionDimension')) {
         return false;
