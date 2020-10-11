@@ -242,7 +242,7 @@ function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
     case 'hashed':
       return !(
         Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment')) &&
-        Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment'))
+        Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.numShards'))
       );
       break;
     case 'single_dim':

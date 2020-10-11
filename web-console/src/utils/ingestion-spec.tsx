@@ -2117,7 +2117,7 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
     case 'hashed':
       return (
         Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
-        Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'))
+        Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
       );
     case 'single_dim':
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
