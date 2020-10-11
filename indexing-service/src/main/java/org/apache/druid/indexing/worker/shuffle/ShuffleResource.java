@@ -17,12 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.worker.http;
+package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,6 +41,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * HTTP endpoints for shuffle system. The MiddleManager and Indexer use this resource to serve intermediary shuffle
@@ -60,11 +60,13 @@ public class ShuffleResource
   private static final Logger log = new Logger(ShuffleResource.class);
 
   private final IntermediaryDataManager intermediaryDataManager;
+  private final Optional<ShuffleMetrics> shuffleMetrics;
 
   @Inject
-  public ShuffleResource(IntermediaryDataManager intermediaryDataManager)
+  public ShuffleResource(IntermediaryDataManager intermediaryDataManager, Optional<ShuffleMetrics> shuffleMetrics)
   {
     this.intermediaryDataManager = intermediaryDataManager;
+    this.shuffleMetrics = shuffleMetrics;
   }
 
   @GET
@@ -96,6 +98,7 @@ public class ShuffleResource
       );
       return Response.status(Status.NOT_FOUND).entity(errorMessage).build();
     } else {
+      shuffleMetrics.ifPresent(metrics -> metrics.shuffleRequested(supervisorTaskId, partitionFile.length()));
       return Response.ok(
           (StreamingOutput) output -> {
             try (final FileInputStream fileInputStream = new FileInputStream(partitionFile)) {
