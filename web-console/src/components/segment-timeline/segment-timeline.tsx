@@ -21,7 +21,7 @@ import { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import React from 'react';
 
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { Capabilities } from '../../utils/capabilities';
 import { formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils/index';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
@@ -266,11 +266,11 @@ ORDER BY "start" DESC`;
             before.setMonth(before.getMonth() - timeSpan);
             const beforeIso = before.toISOString();
 
-            datasources = (await Api.get(`/druid/coordinator/v1/datasources`)).data;
+            datasources = (await Api.get(API_ENDPOINTS.datasources)).data;
             intervals = (await Promise.all(
               datasources.map(async datasource => {
                 const intervalMap = (await Api.get(
-                  `/druid/coordinator/v1/datasources/${datasource}/intervals?simple`,
+                  `${API_ENDPOINTS.datasources}/${datasource}/intervals?simple`,
                 )).data;
 
                 return Object.keys(intervalMap)

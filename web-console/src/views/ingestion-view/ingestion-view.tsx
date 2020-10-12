@@ -684,7 +684,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
+          const resp = await Api.post(`${API_ENDPOINTS.task}/${killTaskId}/shutdown`, {});
           return resp.data;
         }}
         confirmButtonText="Kill task"

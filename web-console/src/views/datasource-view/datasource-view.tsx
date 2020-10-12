@@ -426,7 +426,7 @@ GROUP BY 1`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.delete(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkAsUnusedAllSegmentsIn}`,
+            `${API_ENDPOINTS.datasources}/${datasourceToMarkAsUnusedAllSegmentsIn}`,
             {},
           );
           return resp.data;
@@ -457,7 +457,7 @@ GROUP BY 1`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
+            `${API_ENDPOINTS.datasources}/${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
             {},
           );
           return resp.data;
@@ -489,7 +489,7 @@ GROUP BY 1`;
           if (!useUnuseInterval) return;
           const param = isUse ? 'markUsed' : 'markUnused';
           const resp = await Api.post(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkSegmentsByIntervalIn}/${param}`,
+            `${API_ENDPOINTS.datasources}/${datasourceToMarkSegmentsByIntervalIn}/${param}`,
             {
               interval: useUnuseInterval,
             },
@@ -531,7 +531,7 @@ GROUP BY 1`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.delete(
-            `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
+            `${API_ENDPOINTS.datasources}/${killDatasource}?kill=true&interval=1000/3000`,
             {},
           );
           return resp.data;
@@ -614,7 +614,7 @@ GROUP BY 1`;
 
   private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
-      await Api.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
+      await Api.post(`${API_ENDPOINTS.coordinatorRules}/${datasource}`, rules, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,
@@ -655,7 +655,7 @@ GROUP BY 1`;
   private saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
-      await Api.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      await Api.post(API_ENDPOINTS.coordinatorConfigCompaction, compactionConfig);
       this.setState({ compactionDialogOpenOn: undefined });
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
@@ -677,7 +677,7 @@ GROUP BY 1`;
         text: 'Confirm',
         onClick: async () => {
           try {
-            await Api.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
+            await Api.delete(`${API_ENDPOINTS.coordinatorConfigCompaction}/${datasource}`);
             this.setState({ compactionDialogOpenOn: undefined }, () =>
               this.datasourceQueryManager.rerunLastQuery(),
             );

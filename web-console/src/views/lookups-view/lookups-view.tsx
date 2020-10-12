@@ -151,7 +151,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   private async initializeLookup() {
     try {
-      await Api.post(`/druid/coordinator/v1/lookups/config`, {});
+      await Api.post(API_ENDPOINTS.coordinatorLookupsConfig, {});
       this.lookupsQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({

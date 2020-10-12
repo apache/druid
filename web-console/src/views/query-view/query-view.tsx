@@ -28,7 +28,7 @@ import { Loader } from '../../components';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
@@ -225,7 +225,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     });
 
     const queryRunner = new QueryRunner((payload, isSql, cancelToken) => {
-      return Api.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+      return Api.post(`${API_ENDPOINTS.druidV2}${isSql ? '/sql' : ''}`, payload, { cancelToken });
     });
 
     this.queryManager = new QueryManager({

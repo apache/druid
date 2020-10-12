@@ -267,7 +267,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         const datasourceList = (await Api.get(API_ENDPOINTS.coordinatorMetadataDatasources)).data;
         const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
           datasourceList.map(async (d: string) => {
-            const segments = (await Api.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
+            const segments = (await Api.get(`${API_ENDPOINTS.datasources}/${d}?full`)).data
               .segments;
 
             return segments.map((segment: any) => {
@@ -611,7 +611,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.delete(
-            `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
+            `${API_ENDPOINTS.datasources}/${terminateDatasourceId}/segments/${terminateSegmentId}`,
             {},
           );
           return resp.data;
