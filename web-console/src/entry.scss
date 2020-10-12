@@ -17,6 +17,7 @@
  */
 
 @import '../node_modules/normalize.css/normalize';
+@import '~fontsource-open-sans/index.css';
 @import './blueprint-overrides';
 @import '~@blueprintjs/core/src/blueprint';
 @import '~@blueprintjs/datetime/src/blueprint-datetime';
@@ -25,7 +26,6 @@
 
 html,
 body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
   position: fixed;
   height: 100%;
   width: 100%;

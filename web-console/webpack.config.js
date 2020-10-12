@@ -129,6 +129,15 @@ module.exports = env => {
             { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
           ],
         },
+        {
+          test: /\.(woff|woff2|ttf|eot)$/,
+          use: {
+            loader: 'file-loader',
+            options: {
+              name: '[name].[ext]!static'
+            }
+          }
+        }
       ],
     },
     performance: {
