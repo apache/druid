@@ -42,7 +42,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
-      const historyResp = await Api.get(`/druid/coordinator/v1/config/history?count=100`);
+      const historyResp = await Api.get(`${API_ENDPOINTS.coordinatorConfig}/history?count=100`);
       return historyResp.data;
     },
     initQuery: null,

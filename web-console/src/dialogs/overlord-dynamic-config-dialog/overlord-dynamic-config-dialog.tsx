@@ -42,7 +42,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
-      const historyResp = await Api.get(`/druid/indexer/v1/worker/history?count=100`);
+      const historyResp = await Api.get(`${API_ENDPOINTS.worker}/history?count=100`);
       return historyResp.data;
     },
     initQuery: null,
@@ -51,7 +51,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   useQueryManager<null, Record<string, any>>({
     processQuery: async () => {
       try {
-        const configResp = await Api.get(`/druid/indexer/v1/worker`);
+        const configResp = await Api.get(API_ENDPOINTS.worker);
         setDynamicConfig(configResp.data);
       } catch (e) {
         AppToaster.show({
