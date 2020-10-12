@@ -57,7 +57,7 @@ module.exports = env => {
       path: path.resolve(__dirname, './public'),
       filename: `[name]-${version}.js`,
       chunkFilename: `[name]-${version}.js`,
-      publicPath: '/public',
+      publicPath: 'public/',
     },
     target: 'web',
     resolve: {
@@ -134,7 +134,7 @@ module.exports = env => {
           use: {
             loader: 'file-loader',
             options: {
-              name: '[name].[ext]!static'
+              name: '[name].[ext]'
             }
           }
         }
