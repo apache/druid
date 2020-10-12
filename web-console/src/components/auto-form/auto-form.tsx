@@ -55,6 +55,7 @@ export interface Field<M> {
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
   adjustment?: (model: M) => M;
+  issueWithValue?: (value: any) => string | undefined;
 }
 
 export interface AutoFormProps<M> {
@@ -91,6 +92,36 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     } else {
       return functor;
     }
+  }
+
+  static issueWithModel<M>(model: M | undefined, fields: readonly Field<M>[]): string | undefined {
+    if (typeof model === 'undefined') {
+      return `model is undefined`;
+    }
+
+    for (const field of fields) {
+      const fieldValue = deepGet(model, field.name);
+      const fieldValueDefined = typeof fieldValue !== 'undefined';
+      const fieldDefined = AutoForm.evaluateFunctor(field.defined, model, true);
+      if (fieldDefined) {
+        const fieldRequired = AutoForm.evaluateFunctor(field.required, model, true);
+        if (fieldRequired) {
+          if (!fieldValueDefined) {
+            return `field ${field.name} is required`;
+          }
+        }
+
+        if (fieldValueDefined && field.issueWithValue) {
+          const valueIssue = field.issueWithValue(fieldValue);
+          if (valueIssue) return `field ${field.name} has issue ${valueIssue}`;
+        }
+      } else {
+        if (fieldValueDefined) {
+          return `field ${field.name} is defined but it should not be`;
+        }
+      }
+    }
+    return;
   }
 
   constructor(props: AutoFormProps<T>) {
@@ -274,6 +305,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         onChange={(v: any) => this.fieldChange(field, v)}
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         height={field.height}
+        issueWithValue={field.issueWithValue}
       />
     );
   }

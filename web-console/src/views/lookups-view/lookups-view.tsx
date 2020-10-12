@@ -167,7 +167,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
     if (!lookupEntriesAndTiers) return;
 
-    const target: any = lookupEntriesAndTiers.lookupEntries.find((lookupEntry: any) => {
+    const target: any = lookupEntriesAndTiers.lookupEntries.find(lookupEntry => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
     if (id === '') {
@@ -179,7 +179,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           lookupEdit: {
             name: '',
             tier: loadingEntriesAndTiers ? loadingEntriesAndTiers.tiers[0] : '',
-            spec: { type: '' },
+            spec: { type: 'map', map: {} },
             version: new Date().toISOString(),
           },
         };
