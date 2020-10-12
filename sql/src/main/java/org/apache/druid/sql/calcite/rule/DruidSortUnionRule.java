@@ -27,6 +27,9 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 
 import java.util.Collections;
 
+/**
+ * Rule that pushes LIMIT and OFFSET into a {@link DruidUnionRel}.
+ */
 public class DruidSortUnionRule extends RelOptRule
 {
   private static final DruidSortUnionRule INSTANCE = new DruidSortUnionRule();

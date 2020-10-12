@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -67,12 +66,11 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -928,9 +926,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         SeekableStreamIndexTaskTuningConfig tuningConfig,
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
         @Nullable Map<String, Object> context,
-        @Nullable ChatHandlerProvider chatHandlerProvider,
-        AuthorizerMapper authorizerMapper,
-        RowIngestionMetersFactory rowIngestionMetersFactory,
         @Nullable String groupId
     )
     {
@@ -941,11 +936,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           tuningConfig,
           ioConfig,
           context,
-          chatHandlerProvider,
-          authorizerMapper,
-          rowIngestionMetersFactory,
-          groupId,
-          null
+          groupId
       );
     }
 
@@ -1055,9 +1046,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           taskTuningConfig,
           taskIoConfig,
           null,
-          null,
-          null,
-          rowIngestionMetersFactory,
           null
       ));
     }

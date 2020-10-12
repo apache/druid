@@ -143,6 +143,7 @@ public class ExpressionFilterTest extends BaseFilterTest
       assertFilterMatchesSkipVectorize(edf("dim3 < 2.0"), ImmutableList.of("3", "4", "6", "9"));
     }
     assertFilterMatchesSkipVectorize(edf("like(dim3, '1%')"), ImmutableList.of("1", "3", "4", "6", "9"));
+    assertFilterMatchesSkipVectorize(edf("array_contains(dim3, '1')"), ImmutableList.of("3", "4", "6"));
   }
 
   @Test
@@ -158,6 +159,16 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(edf("dim4 == '1'"), ImmutableList.of("0"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '3'"), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '4'"), ImmutableList.of("4", "5"));
+    assertFilterMatchesSkipVectorize(edf("concat(dim4, dim4) == '33'"), ImmutableList.of("3"));
+    assertFilterMatchesSkipVectorize(edf("like(dim4, '4%')"), ImmutableList.of("4", "5"));
+    assertFilterMatchesSkipVectorize(edf("array_contains(dim4, '5')"), ImmutableList.of("4", "5"));
+    assertFilterMatchesSkipVectorize(edf("array_to_string(dim4, ':') == '4:5'"), ImmutableList.of("4", "5"));
+  }
+
+  @Test
+  public void testSingleAndMultiValuedStringColumn()
+  {
+    assertFilterMatchesSkipVectorize(edf("array_contains(dim4, dim3)"), ImmutableList.of("5", "9"));
   }
 
   @Test
@@ -284,7 +295,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(ExpressionFilter.class)
-                  .withIgnoredFields("requiredBindings")
+                  .withIgnoredFields("bindingDetails")
                   .usingGetClass()
                   .verify();
   }

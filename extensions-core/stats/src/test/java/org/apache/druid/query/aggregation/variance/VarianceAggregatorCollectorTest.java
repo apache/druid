@@ -144,6 +144,35 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testVarianceComparatorShouldCompareVarianceFirst()
+  {
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
+    VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(3, 5d, 2.0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
+  }
+
+  @Test
+  public void testVarianceComparatorShouldCompareCountsIfVarianceIsEqual()
+  {
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
+    VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(3, 5d, 1.0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) > 0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) < 0);
+  }
+
+  @Test
+  public void testVarianceComparatorShouldCompareSumIfVarianceAndCountsAreEqual()
+  {
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
+    VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(4, 5d, 1.0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
+    v2.sum = v1.sum;
+    Assert.assertEquals(0, VarianceAggregatorCollector.COMPARATOR.compare(v1, v2));
+  }
+
   private static class FloatHandOver extends TestFloatColumnSelector
   {
     float v;

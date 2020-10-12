@@ -1175,13 +1175,13 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   private String getUnparseableTimestampString()
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-           : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+           ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
+           : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
   }
 
   private String unparseableTimestampErrorString(Map<String, Object> rawColumns)
   {
-    return StringUtils.format("Unparseable timestamp found! Event: %s", rawColumns);
+    return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
   }
 
   @Nullable

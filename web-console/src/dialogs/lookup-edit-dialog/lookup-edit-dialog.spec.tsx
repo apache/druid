@@ -19,9 +19,9 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { isDisabled, LookupEditDialog } from './lookup-edit-dialog';
+import { isLookupSubmitDisabled, LookupEditDialog } from './lookup-edit-dialog';
 
-describe('lookup edit dialog', () => {
+describe('LookupEditDialog', () => {
   it('matches snapshot', () => {
     const lookupEditDialog = shallow(
       <LookupEditDialog
@@ -31,9 +31,9 @@ describe('lookup edit dialog', () => {
         lookupName={'test'}
         lookupTier={'test'}
         lookupVersion={'test'}
-        lookupSpec={{ type: 'map', map: {} }}
+        lookupSpec={{ type: 'map', map: { a: 1 } }}
         isEdit={false}
-        allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
+        allLookupTiers={['__default', 'alt-tier']}
       />,
     );
 
@@ -43,44 +43,46 @@ describe('lookup edit dialog', () => {
 
 describe('Type Map Should be disabled', () => {
   it('Missing LookupName', () => {
-    expect(isDisabled(undefined, 'v1', '__default', { type: '' })).toBe(true);
+    expect(isLookupSubmitDisabled(undefined, 'v1', '__default', { type: '' })).toBe(true);
   });
 
   it('Empty version', () => {
-    expect(isDisabled('lookup', '', '__default', { type: '' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', '', '__default', { type: '' })).toBe(true);
   });
 
   it('Missing version', () => {
-    expect(isDisabled('lookup', undefined, '__default', { type: '' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', undefined, '__default', { type: '' })).toBe(true);
   });
 
   it('Empty tier', () => {
-    expect(isDisabled('lookup', 'v1', '', { type: '' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', '', { type: '' })).toBe(true);
   });
 
   it('Missing tier', () => {
-    expect(isDisabled('lookup', 'v1', undefined, { type: '' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', undefined, { type: '' })).toBe(true);
   });
 
   it('Missing spec', () => {
-    expect(isDisabled('lookup', 'v1', '__default', {})).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', '__default', {})).toBe(true);
   });
 
   it('Type undefined', () => {
-    expect(isDisabled('lookup', 'v1', '__default', { type: undefined })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', '__default', { type: undefined })).toBe(true);
   });
 
   it('Lookup of type map with no map', () => {
-    expect(isDisabled('lookup', 'v1', '__default', { type: 'map' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', '__default', { type: 'map' })).toBe(true);
   });
 
   it('Lookup of type cachedNamespace with no extractionNamespace', () => {
-    expect(isDisabled('lookup', 'v1', '__default', { type: 'cachedNamespace' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', '__default', { type: 'cachedNamespace' })).toBe(
+      true,
+    );
   });
 
   it('Lookup of type cachedNamespace with extractionNamespace type uri, format csv, no namespaceParseSpec', () => {
     expect(
-      isDisabled('lookup', 'v1', '__default', {
+      isLookupSubmitDisabled('lookup', 'v1', '__default', {
         type: 'cachedNamespace',
         extractionNamespace: {
           type: 'uri',
@@ -94,7 +96,7 @@ describe('Type Map Should be disabled', () => {
 
   it('Lookup of type cachedNamespace with extractionNamespace type uri, format csv, no columns and skipHeaderRows', () => {
     expect(
-      isDisabled('lookup', 'v1', '__default', {
+      isLookupSubmitDisabled('lookup', 'v1', '__default', {
         type: 'cachedNamespace',
         extractionNamespace: {
           type: 'uri',
@@ -111,7 +113,7 @@ describe('Type Map Should be disabled', () => {
 
   it('Lookup of type cachedNamespace with extractionNamespace type uri, format tsv, no columns', () => {
     expect(
-      isDisabled('lookup', 'v1', '__default', {
+      isLookupSubmitDisabled('lookup', 'v1', '__default', {
         type: 'cachedNamespace',
         extractionNamespace: {
           type: 'uri',
@@ -129,7 +131,7 @@ describe('Type Map Should be disabled', () => {
 
   it('Lookup of type cachedNamespace with extractionNamespace type customJson, format tsv, no keyFieldName', () => {
     expect(
-      isDisabled('lookup', 'v1', '__default', {
+      isLookupSubmitDisabled('lookup', 'v1', '__default', {
         type: 'cachedNamespace',
         extractionNamespace: {
           type: 'uri',
@@ -147,7 +149,7 @@ describe('Type Map Should be disabled', () => {
 
   it('Lookup of type cachedNamespace with extractionNamespace type customJson, format customJson, no valueFieldName', () => {
     expect(
-      isDisabled('lookup', 'v1', '__default', {
+      isLookupSubmitDisabled('lookup', 'v1', '__default', {
         type: 'cachedNamespace',
         extractionNamespace: {
           type: 'uri',
@@ -166,13 +168,15 @@ describe('Type Map Should be disabled', () => {
 
 describe('Type cachedNamespace should be disabled', () => {
   it('No extractionNamespace', () => {
-    expect(isDisabled('lookup', 'v1', '__default', { type: 'cachedNamespace' })).toBe(true);
+    expect(isLookupSubmitDisabled('lookup', 'v1', '__default', { type: 'cachedNamespace' })).toBe(
+      true,
+    );
   });
 
   describe('ExtractionNamespace type URI', () => {
     it('Format csv, no namespaceParseSpec', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -186,7 +190,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('Format csv, no columns and skipHeaderRows', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -203,7 +207,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('Format tsv, no columns', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -221,7 +225,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('Format tsv, no keyFieldName', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -239,7 +243,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('Format customJson, no valueFieldName', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -259,7 +263,7 @@ describe('Type cachedNamespace should be disabled', () => {
   describe('ExtractionNamespace type JDBC', () => {
     it('No namespace', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'jdbc',
@@ -282,7 +286,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('No connectorConfig', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'jdbc',
@@ -300,7 +304,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('No table', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'jdbc',
@@ -323,7 +327,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('No keyColumn', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'jdbc',
@@ -346,7 +350,7 @@ describe('Type cachedNamespace should be disabled', () => {
 
     it('No keyColumn', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'jdbc',
@@ -371,7 +375,9 @@ describe('Type cachedNamespace should be disabled', () => {
 
 describe('Type Map Should be enabled', () => {
   it('Has type and has Map', () => {
-    expect(isDisabled('lookup', 'v1', '__default', { type: 'map', map: { a: 'b' } })).toBe(false);
+    expect(
+      isLookupSubmitDisabled('lookup', 'v1', '__default', { type: 'map', map: { a: 'b' } }),
+    ).toBe(false);
   });
 });
 
@@ -379,7 +385,7 @@ describe('Type cachedNamespace Should be enabled', () => {
   describe('ExtractionNamespace type URI', () => {
     it('Format csv with columns', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -396,7 +402,7 @@ describe('Type cachedNamespace Should be enabled', () => {
 
     it('Format csv with skipHeaderRows', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -413,7 +419,7 @@ describe('Type cachedNamespace Should be enabled', () => {
 
     it('Format tsv, only columns', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -430,7 +436,7 @@ describe('Type cachedNamespace Should be enabled', () => {
 
     it('Format tsv, keyFieldName and valueFieldName', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'uri',
@@ -450,7 +456,7 @@ describe('Type cachedNamespace Should be enabled', () => {
   describe('ExtractionNamespace type JDBC', () => {
     it('No namespace', () => {
       expect(
-        isDisabled('lookup', 'v1', '__default', {
+        isLookupSubmitDisabled('lookup', 'v1', '__default', {
           type: 'cachedNamespace',
           extractionNamespace: {
             type: 'jdbc',

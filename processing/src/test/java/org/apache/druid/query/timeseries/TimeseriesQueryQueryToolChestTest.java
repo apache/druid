@@ -383,7 +383,7 @@ public class TimeseriesQueryQueryToolChestTest
                     .add("rows", ValueType.LONG)
                     .add("index", ValueType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", null)
+                    .add("const", ValueType.LONG)
                     .build(),
         TOOL_CHEST.resultArraySignature(query)
     );
@@ -410,7 +410,7 @@ public class TimeseriesQueryQueryToolChestTest
                     .add("rows", ValueType.LONG)
                     .add("index", ValueType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", null)
+                    .add("const", ValueType.LONG)
                     .build(),
         TOOL_CHEST.resultArraySignature(query)
     );

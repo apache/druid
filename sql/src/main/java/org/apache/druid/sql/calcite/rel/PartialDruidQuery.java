@@ -393,7 +393,7 @@ public class PartialDruidQuery
       case SCAN:
         return scan;
       default:
-        throw new ISE("WTF?! Unknown stage: %s", currentStage);
+        throw new ISE("Unknown stage: %s", currentStage);
     }
   }
 

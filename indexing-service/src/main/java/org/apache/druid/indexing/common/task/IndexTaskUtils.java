@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.security.Access;
@@ -40,7 +41,7 @@ import java.util.List;
 public class IndexTaskUtils
 {
   @Nullable
-  public static List<String> getMessagesFromSavedParseExceptions(CircularBuffer<Throwable> savedParseExceptions)
+  public static List<String> getMessagesFromSavedParseExceptions(CircularBuffer<ParseException> savedParseExceptions)
   {
     if (savedParseExceptions == null) {
       return null;

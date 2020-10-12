@@ -340,7 +340,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     // ideally this would involve JoinableFactory.isDirectlyJoinable to check that the global datasources
     // are in fact possibly joinable, but for now isGlobal is coupled to joinability
     return !(DruidRels.isScanOrMapping(right, false)
-             && DruidRels.dataSourceIfLeafRel(right).filter(DataSource::isGlobal).isPresent());
+             && DruidRels.druidTableIfLeafRel(right).filter(table -> table.getDataSource().isGlobal()).isPresent());
   }
 
   /**

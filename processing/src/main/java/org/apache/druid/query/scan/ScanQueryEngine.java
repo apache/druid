@@ -65,7 +65,7 @@ public class ScanQueryEngine
   )
   {
     // "legacy" should be non-null due to toolChest.mergeResults
-    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "WTF?! Expected non-null legacy");
+    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
     final Object numScannedRows = responseContext.get(ResponseContext.Key.NUM_SCANNED_ROWS);
     if (numScannedRows != null) {

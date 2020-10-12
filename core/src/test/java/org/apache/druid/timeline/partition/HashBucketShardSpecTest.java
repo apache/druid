@@ -36,13 +36,20 @@ import java.util.List;
 public class HashBucketShardSpecTest
 {
   private final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
-  
+
   @Test
   public void testConvert()
   {
     Assert.assertEquals(
-        new BuildingHashBasedNumberedShardSpec(3, 5, 12, ImmutableList.of("dim"), mapper),
-        new HashBucketShardSpec(5, 12, ImmutableList.of("dim"), mapper).convert(3)
+        new BuildingHashBasedNumberedShardSpec(
+            3,
+            5,
+            12,
+            ImmutableList.of("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
+            mapper
+        ),
+        new HashBucketShardSpec(5, 12, ImmutableList.of("dim"), HashPartitionFunction.MURMUR3_32_ABS, mapper).convert(3)
     );
   }
 
@@ -51,7 +58,13 @@ public class HashBucketShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
-        new HashBucketShardSpec(5, 12, ImmutableList.of("dim"), mapper).createChunk("test")
+        new HashBucketShardSpec(
+            5,
+            12,
+            ImmutableList.of("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
+            mapper
+        ).createChunk("test")
     );
   }
 
@@ -59,9 +72,9 @@ public class HashBucketShardSpecTest
   public void testShardSpecLookup()
   {
     final List<ShardSpec> shardSpecs = ImmutableList.of(
-        new HashBucketShardSpec(0, 3, ImmutableList.of("dim"), mapper),
-        new HashBucketShardSpec(1, 3, ImmutableList.of("dim"), mapper),
-        new HashBucketShardSpec(2, 3, ImmutableList.of("dim"), mapper)
+        new HashBucketShardSpec(0, 3, ImmutableList.of("dim"), HashPartitionFunction.MURMUR3_32_ABS, mapper),
+        new HashBucketShardSpec(1, 3, ImmutableList.of("dim"), HashPartitionFunction.MURMUR3_32_ABS, mapper),
+        new HashBucketShardSpec(2, 3, ImmutableList.of("dim"), HashPartitionFunction.MURMUR3_32_ABS, mapper)
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
@@ -103,7 +116,13 @@ public class HashBucketShardSpecTest
     mapper.registerSubtypes(new NamedType(HashBucketShardSpec.class, HashBucketShardSpec.TYPE));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
 
-    final HashBucketShardSpec original = new HashBucketShardSpec(5, 12, ImmutableList.of("dim"), mapper);
+    final HashBucketShardSpec original = new HashBucketShardSpec(
+        5,
+        12,
+        ImmutableList.of("dim"),
+        HashPartitionFunction.MURMUR3_32_ABS,
+        mapper
+    );
     final String json = mapper.writeValueAsString(original);
     final HashBucketShardSpec fromJson = (HashBucketShardSpec) mapper.readValue(json, ShardSpec.class);
     Assert.assertEquals(original, fromJson);

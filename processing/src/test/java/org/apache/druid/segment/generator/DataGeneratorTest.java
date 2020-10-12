@@ -411,6 +411,74 @@ public class DataGeneratorTest
     Assert.assertEquals(0, dist.getNumericalVariance(), 0);
   }
 
+  @Test
+  public void testLazyZipf()
+  {
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
+    RowValueTracker tracker = new RowValueTracker();
+
+    schemas.add(
+        GeneratorColumnSchema.makeLazyZipf(
+            "dimA",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            0,
+            1220000,
+            1.0
+        )
+    );
+
+    schemas.add(
+        GeneratorColumnSchema.makeLazyZipf(
+            "dimB",
+            ValueType.FLOAT,
+            false,
+            1,
+            null,
+            99990,
+            99999,
+            1.0
+        )
+    );
+
+    schemas.add(
+        GeneratorColumnSchema.makeLazyZipf(
+            "dimC",
+            ValueType.DOUBLE,
+            false,
+            1,
+            null,
+            0,
+            100000,
+            1.5
+        )
+    );
+    schemas.add(
+        GeneratorColumnSchema.makeLazyZipf(
+            "dimD",
+            ValueType.LONG,
+            false,
+            1,
+            null,
+            0,
+            100000,
+            1.5
+        )
+    );
+
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
+    for (int i = 0; i < 100000; i++) {
+      InputRow row = dataGenerator.nextRow();
+      System.out.println("Z-ROW: " + row);
+
+      tracker.addRow(row);
+    }
+
+    tracker.printStuff();
+  }
+
   private static class RowValueTracker
   {
     private Map<String, Map<Object, Integer>> dimensionMap;

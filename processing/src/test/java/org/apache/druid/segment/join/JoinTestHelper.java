@@ -143,6 +143,7 @@ public class JoinTestHelper
       };
 
   public static final String INDEXED_TABLE_VERSION = DateTimes.nowUtc().toString();
+  public static final byte[] INDEXED_TABLE_CACHE_KEY = new byte[] {1, 2, 3};
 
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
@@ -259,6 +260,21 @@ public class JoinTestHelper
             COUNTRIES_SIGNATURE,
             ImmutableSet.of("countryNumber", "countryIsoCode"),
             INDEXED_TABLE_VERSION
+        )
+    );
+  }
+
+  public static RowBasedIndexedTable<Map<String, Object>> createCountriesIndexedTableWithCacheKey() throws IOException
+  {
+    return withRowsFromResource(
+        "/wikipedia/countries.json",
+        rows -> new RowBasedIndexedTable<>(
+            rows,
+            createMapRowAdapter(COUNTRIES_SIGNATURE),
+            COUNTRIES_SIGNATURE,
+            ImmutableSet.of("countryNumber", "countryIsoCode"),
+            INDEXED_TABLE_VERSION,
+            INDEXED_TABLE_CACHE_KEY
         )
     );
   }

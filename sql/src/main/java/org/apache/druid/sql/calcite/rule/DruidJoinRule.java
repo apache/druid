@@ -75,7 +75,15 @@ public class DruidJoinRule extends RelOptRule
   public boolean matches(RelOptRuleCall call)
   {
     final Join join = call.rel(0);
-    return canHandleCondition(join.getCondition(), join.getLeft().getRowType());
+    final DruidRel<?> left = call.rel(1);
+    final DruidRel<?> right = call.rel(2);
+
+    // 1) Can handle the join condition as a native join.
+    // 2) Left has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
+    // 3) Right has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
+    return canHandleCondition(join.getCondition(), join.getLeft().getRowType())
+           && left.getPartialDruidQuery() != null
+           && right.getPartialDruidQuery() != null;
   }
 
   @Override
