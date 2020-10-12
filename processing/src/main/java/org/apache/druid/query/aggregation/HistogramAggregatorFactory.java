@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -201,9 +202,27 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "histogram";
+  }
+
+  /**
+   * actual type is {@link Histogram}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  /**
+   * actual type is {@link HistogramVisual}
+   */
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

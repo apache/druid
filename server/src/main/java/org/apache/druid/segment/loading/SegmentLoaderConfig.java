@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class SegmentLoaderConfig
 {
@@ -62,6 +63,8 @@ public class SegmentLoaderConfig
 
   @JsonProperty
   private int statusQueueMaxSize = 100;
+
+  private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
   {
@@ -118,6 +121,14 @@ public class SegmentLoaderConfig
   public int getStatusQueueMaxSize()
   {
     return statusQueueMaxSize;
+  }
+
+  public long getCombinedMaxSize()
+  {
+    if (combinedMaxSize == 0) {
+      combinedMaxSize = getLocations().stream().mapToLong(StorageLocationConfig::getMaxSize).sum();
+    }
+    return combinedMaxSize;
   }
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)

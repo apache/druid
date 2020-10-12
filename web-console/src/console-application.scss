@@ -19,10 +19,6 @@
 @import './variables';
 
 .console-application {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-
   .view-container {
     position: absolute;
     top: $header-bar-height;

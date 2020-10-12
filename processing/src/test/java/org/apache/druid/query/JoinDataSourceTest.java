@@ -87,13 +87,15 @@ public class JoinDataSourceTest
   @Test
   public void test_isCacheable_tableToTable()
   {
-    Assert.assertFalse(joinTableToTable.isCacheable());
+    Assert.assertTrue(joinTableToTable.isCacheable(true));
+    Assert.assertTrue(joinTableToTable.isCacheable(false));
   }
 
   @Test
   public void test_isCacheable_lookup()
   {
-    Assert.assertFalse(joinTableToLookup.isCacheable());
+    Assert.assertFalse(joinTableToLookup.isCacheable(true));
+    Assert.assertFalse(joinTableToLookup.isCacheable(false));
   }
 
   @Test

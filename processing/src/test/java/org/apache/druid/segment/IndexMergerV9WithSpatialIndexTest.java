@@ -125,7 +125,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                     )
                 ).build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
         .buildOnheap();
 
@@ -301,7 +300,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
           .buildOnheap();
 
@@ -329,7 +327,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
           .buildOnheap();
 
@@ -357,7 +354,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
           .buildOnheap();
 

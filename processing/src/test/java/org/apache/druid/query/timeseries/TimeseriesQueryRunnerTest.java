@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -335,9 +336,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testFullOnTimeseriesMaxMin()
   {
-    // Cannot vectorize due to "doubleMin", "doubleMax" aggregators.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.ALL)
@@ -371,14 +369,19 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testFullOnTimeseriesLongMin()
+  public void testFullOnTimeseriesMinMaxAggregators()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.ALL)
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
-                                      QueryRunnerTestHelper.INDEX_LONG_MIN
+                                      QueryRunnerTestHelper.INDEX_LONG_MIN,
+                                      QueryRunnerTestHelper.INDEX_LONG_MAX,
+                                      QueryRunnerTestHelper.INDEX_DOUBLE_MIN,
+                                      QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
+                                      QueryRunnerTestHelper.INDEX_FLOAT_MIN,
+                                      QueryRunnerTestHelper.INDEX_FLOAT_MAX
                                   )
                                   .descending(descending)
                                   .context(makeContext())
@@ -396,6 +399,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(59L, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC));
+    Assert.assertEquals(1870, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC));
+    Assert.assertEquals(59.021022D, result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC), 0);
+    Assert.assertEquals(1870.061029D, result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC), 0);
+    Assert.assertEquals(59.021023F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC), 0);
+    Assert.assertEquals(1870.061F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC), 0);
   }
 
   @Test
@@ -468,7 +476,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "index"
                                           ),
                                           QueryRunnerTestHelper.QUALITY_UNIQUES,
-                                          QueryRunnerTestHelper.INDEX_LONG_MIN
+                                          QueryRunnerTestHelper.INDEX_LONG_MIN,
+                                          QueryRunnerTestHelper.INDEX_FLOAT_MAX
                                       )
                                   )
                                   .descending(descending)
@@ -479,13 +488,17 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 78L)
+                ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9,
+                                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 78L,
+                                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC, 1522.043701171875)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 97L)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9,
+                                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 97L,
+                                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC, 1321.375F)
             )
         )
     );
@@ -506,7 +519,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                           QueryRunnerTestHelper.ROWS_COUNT,
                                           QueryRunnerTestHelper.INDEX_LONG_SUM,
                                           QueryRunnerTestHelper.QUALITY_UNIQUES,
-                                          QueryRunnerTestHelper.INDEX_LONG_MIN
+                                          QueryRunnerTestHelper.INDEX_LONG_MIN,
+                                          QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
+                                          QueryRunnerTestHelper.INDEX_FLOAT_MIN
                                       )
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
@@ -515,43 +530,38 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
-
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     expectedResults.add(
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows",
-                    13L,
-                    "index",
-                    6619L,
-                    "uniques",
-                    QueryRunnerTestHelper.UNIQUES_9,
-                    QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC,
-                    6633.0,
-                    QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                    78L
-                )
+                builder
+                    .put("rows", 13L)
+                    .put("index", 6619L)
+                    .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                    .put(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC, 6633.0)
+                    .put(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 78L)
+                    .put(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC, 1522.043733D)
+                    .put(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC, 78.62254333496094F)
+                    .build()
             )
         )
     );
 
+    ImmutableMap.Builder<String, Object> builder2 = ImmutableMap.builder();
     expectedResults.add(
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows",
-                    13L,
-                    "index",
-                    5827L,
-                    "uniques",
-                    QueryRunnerTestHelper.UNIQUES_9,
-                    QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC,
-                    5841.0,
-                    QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                    97L
-                )
+                builder2
+                    .put("rows", 13L)
+                    .put("index", 5827L)
+                    .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                    .put(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC, 5841.0)
+                    .put(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 97L)
+                    .put(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC, 1321.375057D)
+                    .put(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC, 97.38743591308594F)
+                    .build()
             )
         )
     );
@@ -560,22 +570,20 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       Collections.reverse(expectedResults);
     }
 
+    ImmutableMap.Builder<String, Object> builder3 = ImmutableMap.builder();
     expectedResults.add(
         new Result<>(
             null,
             new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows",
-                    26L,
-                    "index",
-                    12446L,
-                    "uniques",
-                    QueryRunnerTestHelper.UNIQUES_9,
-                    QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC,
-                    12473.0,
-                    QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                    78L
-                )
+                builder3
+                    .put("rows", 26L)
+                    .put("index", 12446L)
+                    .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                    .put(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC, 12473.0)
+                    .put(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 78L)
+                    .put(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC, 1522.043733D)
+                    .put(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC, 78.62254333496094F)
+                    .build()
             )
         )
     );
@@ -605,7 +613,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       Arrays.asList(
                                           QueryRunnerTestHelper.ROWS_COUNT,
                                           QueryRunnerTestHelper.INDEX_LONG_SUM,
-                                          QueryRunnerTestHelper.INDEX_LONG_MIN
+                                          QueryRunnerTestHelper.INDEX_LONG_MIN,
+                                          QueryRunnerTestHelper.INDEX_LONG_MAX,
+                                          QueryRunnerTestHelper.INDEX_DOUBLE_MIN,
+                                          QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
+                                          QueryRunnerTestHelper.INDEX_FLOAT_MIN,
+                                          QueryRunnerTestHelper.INDEX_FLOAT_MAX
                                       )
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
@@ -626,7 +639,17 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC,
                     NullHandling.sqlCompatible() ? null : 1.0,
                     QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                    NullHandling.sqlCompatible() ? null : Long.MAX_VALUE
+                    NullHandling.sqlCompatible() ? null : Long.MAX_VALUE,
+                    QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+                    NullHandling.sqlCompatible() ? null : Long.MIN_VALUE,
+                    QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+                    NullHandling.sqlCompatible() ? null : Double.POSITIVE_INFINITY,
+                    QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+                    NullHandling.sqlCompatible() ? null : Double.NEGATIVE_INFINITY,
+                    QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+                    NullHandling.sqlCompatible() ? null : Float.POSITIVE_INFINITY,
+                    QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+                    NullHandling.sqlCompatible() ? null : Float.NEGATIVE_INFINITY
                 )
             )
         )
@@ -648,9 +671,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithVirtualColumn()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -2923,8 +2943,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   private Map<String, Object> makeContext(final Map<String, Object> myContext)
   {
     final Map<String, Object> context = new HashMap<>();
-    context.put("vectorize", vectorize ? "force" : "false");
-    context.put("vectorSize", 16); // Small vector size to ensure we use more than one.
+    context.put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false");
+    context.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false");
+    context.put(QueryContexts.VECTOR_SIZE_KEY, 16); // Small vector size to ensure we use more than one.
     context.putAll(myContext);
     return context;
   }

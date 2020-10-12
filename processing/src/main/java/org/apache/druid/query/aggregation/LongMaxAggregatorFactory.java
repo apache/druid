@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -67,6 +69,15 @@ public class LongMaxAggregatorFactory extends SimpleLongAggregatorFactory
   protected BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongMaxBufferAggregator(selector);
+  }
+
+  @Override
+  protected VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    return new LongMaxVectorAggregator(selector);
   }
 
   @Override

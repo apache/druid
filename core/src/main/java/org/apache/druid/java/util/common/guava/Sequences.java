@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
+ *
  */
 public class Sequences
 {
@@ -131,10 +132,18 @@ public class Sequences
     };
   }
 
-  // This will materialize the entire sequence in memory. Use at your own risk.
+  /**
+   * Returns a sorted copy of the provided sequence.
+   *
+   * This will materialize the entire sequence in memory. Use at your own risk.
+   *
+   * The sort is stable, meaning that equal elements (as determined by the comparator) will not be reordered.
+   */
   public static <T> Sequence<T> sort(final Sequence<T> sequence, final Comparator<T> comparator)
   {
     List<T> seqList = sequence.toList();
+
+    // Note: Collections.sort is guaranteed to be stable.
     Collections.sort(seqList, comparator);
     return simple(seqList);
   }

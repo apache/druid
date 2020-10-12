@@ -108,7 +108,7 @@ class SimpleColumnHolder implements ColumnHolder
     if (columnSupplier == null) {
       return INVALID_COMPLEX_COLUMN_TYPE_VALUE_SELECTOR;
     }
-    return getCapabilities().getType().makeNewSettableColumnValueSelector();
+    return ValueTypes.makeNewSettableColumnValueSelector(getCapabilities().getType());
   }
 
   private static class InvalidComplexColumnTypeValueSelector extends SettableObjectColumnValueSelector

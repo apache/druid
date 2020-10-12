@@ -19,53 +19,70 @@
 
 package org.apache.druid.java.util.metrics;
 
+
+import com.google.common.collect.ImmutableList;
 import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.joda.time.Duration;
-import org.junit.Before;
+import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 
-import java.util.Arrays;
+import java.time.Duration;
+import java.util.Optional;
 
 public class MonitorSchedulerTest
 {
+  @Test
+  public void testFindMonitor()
+  {
+    class Monitor1 extends NoopMonitor
+    {
+    }
+    class Monitor2 extends NoopMonitor
+    {
+    }
+    class Monitor3 extends NoopMonitor
+    {
+    }
 
-  private MonitorSchedulerConfig config = new MonitorSchedulerConfig()
+    final Monitor1 monitor1 = new Monitor1();
+    final Monitor2 monitor2 = new Monitor2();
+
+    final MonitorScheduler scheduler = new MonitorScheduler(
+        Mockito.mock(MonitorSchedulerConfig.class),
+        CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("monitor-scheduler-test").build(),
+        Mockito.mock(ServiceEmitter.class),
+        ImmutableList.of(monitor1, monitor2)
+    );
+
+    final Optional<Monitor1> maybeFound1 = scheduler.findMonitor(Monitor1.class);
+    final Optional<Monitor2> maybeFound2 = scheduler.findMonitor(Monitor2.class);
+    Assert.assertTrue(maybeFound1.isPresent());
+    Assert.assertTrue(maybeFound2.isPresent());
+    Assert.assertSame(monitor1, maybeFound1.get());
+    Assert.assertSame(monitor2, maybeFound2.get());
+
+    Assert.assertFalse(scheduler.findMonitor(Monitor3.class).isPresent());
+  }
+
+  private static class NoopMonitor implements Monitor
   {
     @Override
-    public Duration getEmitterPeriod()
+    public void start()
     {
-      return new Duration(2L);
+
     }
-  };
 
-  @Mock
-  private CronScheduler cronScheduler;
+    @Override
+    public void stop()
+    {
 
-  @Mock
-  private ServiceEmitter emitter;
+    }
 
-  @Mock
-  private Monitor monitor;
-
-  public MonitorScheduler scheduler;
-
-  @Before
-  public void setUp()
-  {
-    MockitoAnnotations.initMocks(this);
-    scheduler = new MonitorScheduler(config, cronScheduler, emitter, Arrays.asList(monitor));
-    Mockito.when(monitor.monitor(emitter)).thenReturn(true);
+    @Override
+    public boolean monitor(ServiceEmitter emitter)
+    {
+      return true;
+    }
   }
-
-  @Test
-  public void testStart_Success()
-  {
-    scheduler.start();
-    Mockito.verify(cronScheduler, Mockito.times(1)).scheduleAt(Mockito.any(), Mockito.any(Runnable.class));
-  }
-
 }

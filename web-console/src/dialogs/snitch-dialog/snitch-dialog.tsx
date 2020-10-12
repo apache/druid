@@ -37,9 +37,7 @@ export interface SnitchDialogProps {
 
 export interface SnitchDialogState {
   comment: string;
-
   showFinalStep?: boolean;
-
   showHistory?: boolean;
 }
 

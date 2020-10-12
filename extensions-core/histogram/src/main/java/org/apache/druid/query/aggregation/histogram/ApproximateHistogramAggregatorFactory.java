@@ -32,9 +32,14 @@ import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -100,6 +105,24 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
         metricFactory.makeColumnValueSelector(fieldName),
         resolution
     );
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory metricVectorFactory)
+  {
+    return new ApproximateHistogramVectorAggregator(
+        metricVectorFactory.makeValueSelector(fieldName),
+        resolution
+    );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    /* skip vectorization for string types which may be parseable to numbers. There is no vector equivalent of
+     string value selector*/
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return (capabilities != null) && capabilities.getType().isNumeric();
   }
 
   @Override
@@ -299,9 +322,27 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "approximateHistogram";
+  }
+
+  /**
+   * actual type is {@link ApproximateHistogram}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  /**
+   * actual type is {@link ApproximateHistogram} if {@link #finalizeAsBase64Binary} is set, else {@link Histogram}
+   */
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

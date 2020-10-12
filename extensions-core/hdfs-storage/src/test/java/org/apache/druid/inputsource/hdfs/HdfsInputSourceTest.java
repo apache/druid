@@ -251,7 +251,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void hasCorrectSplits() throws IOException
     {
       // Set maxSplitSize to 1 so that each inputSplit has only one object
-      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(1L))
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(1L, null))
                                                   .collect(Collectors.toList());
       splits.forEach(split -> Assert.assertEquals(1, split.get().size()));
       Set<Path> actualPaths = splits.stream()
@@ -264,7 +264,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void createSplitsRespectSplitHintSpec() throws IOException
     {
-      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(7L))
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(7L, null))
                                                   .collect(Collectors.toList());
       Assert.assertEquals(2, splits.size());
       Assert.assertEquals(2, splits.get(0).get().size());
@@ -275,15 +275,14 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void hasCorrectNumberOfSplits() throws IOException
     {
       // Set maxSplitSize to 1 so that each inputSplit has only one object
-      int numSplits = target.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L));
+      int numSplits = target.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null));
       Assert.assertEquals(NUM_FILE, numSplits);
     }
 
     @Test
     public void createCorrectInputSourceWithSplit() throws Exception
     {
-      // Set maxSplitSize to 1 so that each inputSplit has only one object
-      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(1L))
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(null, 1))
                                                   .collect(Collectors.toList());
 
       for (InputSplit<List<Path>> split : splits) {

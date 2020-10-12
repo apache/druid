@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -65,13 +66,16 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void killUnusedSegments(String dataSource, Interval interval)
+  public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
   {
-    runTask(new ClientKillUnusedSegmentsTaskQuery(dataSource, interval));
+    final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval);
+    runTask(taskId, taskQuery);
   }
 
   @Override
   public String compactSegments(
+      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       ClientCompactionTaskQueryTuningConfig tuningConfig,
@@ -89,18 +93,19 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    return runTask(
-        new ClientCompactionTaskQuery(
-            dataSource,
-            new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
-            tuningConfig,
-            context
-        )
+    final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
+        taskId,
+        dataSource,
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
+        tuningConfig,
+        context
     );
+    return runTask(taskId, taskQuery);
   }
 
   @Override
-  public String runTask(Object taskObject)
+  public String runTask(String taskId, Object taskObject)
   {
     try {
       // Warning, magic: here we may serialize ClientTaskQuery objects, but OverlordResource.taskPost() deserializes
@@ -114,11 +119,11 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         if (!Strings.isNullOrEmpty(response.getContent())) {
           throw new ISE(
               "Failed to post task[%s] with error[%s].",
-              taskObject,
+              taskId,
               response.getContent()
           );
         } else {
-          throw new ISE("Failed to post task[%s]. Please check overlord log", taskObject);
+          throw new ISE("Failed to post task[%s]. Please check overlord log", taskId);
         }
       }
 
@@ -126,8 +131,14 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           response.getContent(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
-      final String taskId = (String) resultMap.get("task");
-      return Preconditions.checkNotNull(taskId, "Null task id for task[%s]", taskObject);
+      final String returnedTaskId = (String) resultMap.get("task");
+      Preconditions.checkState(
+          taskId.equals(returnedTaskId),
+          "Got a different taskId[%s]. Expected taskId[%s]",
+          returnedTaskId,
+          taskId
+      );
+      return taskId;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

@@ -20,104 +20,61 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
 
-import { pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { useQueryManager } from '../../../hooks';
+import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
+
+export interface SupervisorCounts {
+  running: number;
+  suspended: number;
+}
 
 export interface SupervisorsCardProps {
   capabilities: Capabilities;
 }
 
-export interface SupervisorsCardState {
-  supervisorCountLoading: boolean;
-  runningSupervisorCount: number;
-  suspendedSupervisorCount: number;
-  supervisorCountError?: string;
-}
-
-export class SupervisorsCard extends React.PureComponent<
-  SupervisorsCardProps,
-  SupervisorsCardState
-> {
-  private supervisorQueryManager: QueryManager<Capabilities, any>;
-
-  constructor(props: SupervisorsCardProps, context: any) {
-    super(props, context);
-    this.state = {
-      supervisorCountLoading: false,
-      runningSupervisorCount: 0,
-      suspendedSupervisorCount: 0,
-    };
-
-    this.supervisorQueryManager = new QueryManager({
-      processQuery: async capabilities => {
-        if (capabilities.hasSql()) {
-          return (await queryDruidSql({
-            query: `SELECT
-  COUNT(*) FILTER (WHERE "suspended" = 0) AS "runningSupervisorCount",
-  COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspendedSupervisorCount"
+export const SupervisorsCard = React.memo(function SupervisorsCard(props: SupervisorsCardProps) {
+  const [supervisorCountState] = useQueryManager<Capabilities, SupervisorCounts>({
+    processQuery: async capabilities => {
+      if (capabilities.hasSql()) {
+        return (await queryDruidSql({
+          query: `SELECT
+  COUNT(*) FILTER (WHERE "suspended" = 0) AS "running",
+  COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspended"
 FROM sys.supervisors`,
-          }))[0];
-        } else if (capabilities.hasOverlordAccess()) {
-          const resp = await axios.get('/druid/indexer/v1/supervisor?full');
-          const data = resp.data;
-          const runningSupervisorCount = data.filter((d: any) => d.spec.suspended === false).length;
-          const suspendedSupervisorCount = data.filter((d: any) => d.spec.suspended === true)
-            .length;
-          return {
-            runningSupervisorCount,
-            suspendedSupervisorCount,
-          };
-        } else {
-          throw new Error(`must have SQL or overlord access`);
-        }
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          runningSupervisorCount: result ? result.runningSupervisorCount : 0,
-          suspendedSupervisorCount: result ? result.suspendedSupervisorCount : 0,
-          supervisorCountLoading: loading,
-          supervisorCountError: error,
-        });
-      },
-    });
-  }
+        }))[0];
+      } else if (capabilities.hasOverlordAccess()) {
+        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+        const data = resp.data;
+        return {
+          running: data.filter((d: any) => d.spec.suspended === false).length,
+          suspended: data.filter((d: any) => d.spec.suspended === true).length,
+        };
+      } else {
+        throw new Error(`must have SQL or overlord access`);
+      }
+    },
+    initQuery: props.capabilities,
+  });
 
-  componentDidMount(): void {
-    const { capabilities } = this.props;
+  const { running, suspended } = supervisorCountState.data || {
+    running: 0,
+    suspended: 0,
+  };
 
-    this.supervisorQueryManager.runQuery(capabilities);
-  }
-
-  componentWillUnmount(): void {
-    this.supervisorQueryManager.terminate();
-  }
-
-  render(): JSX.Element {
-    const {
-      supervisorCountLoading,
-      supervisorCountError,
-      runningSupervisorCount,
-      suspendedSupervisorCount,
-    } = this.state;
-
-    return (
-      <HomeViewCard
-        className="supervisors-card"
-        href={'#ingestion'}
-        icon={IconNames.LIST_COLUMNS}
-        title={'Supervisors'}
-        loading={supervisorCountLoading}
-        error={supervisorCountError}
-      >
-        {!Boolean(runningSupervisorCount + suspendedSupervisorCount) && <p>No supervisors</p>}
-        {Boolean(runningSupervisorCount) && (
-          <p>{pluralIfNeeded(runningSupervisorCount, 'running supervisor')}</p>
-        )}
-        {Boolean(suspendedSupervisorCount) && (
-          <p>{pluralIfNeeded(suspendedSupervisorCount, 'suspended supervisor')}</p>
-        )}
-      </HomeViewCard>
-    );
-  }
-}
+  return (
+    <HomeViewCard
+      className="supervisors-card"
+      href={'#ingestion'}
+      icon={IconNames.LIST_COLUMNS}
+      title={'Supervisors'}
+      loading={supervisorCountState.loading}
+      error={supervisorCountState.error}
+    >
+      {!Boolean(running + suspended) && <p>No supervisors</p>}
+      {Boolean(running) && <p>{pluralIfNeeded(running, 'running supervisor')}</p>}
+      {Boolean(suspended) && <p>{pluralIfNeeded(suspended, 'suspended supervisor')}</p>}
+    </HomeViewCard>
+  );
+});

@@ -107,7 +107,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   public void emit(Event event)
   {
     if (!started.get()) {
-      throw new ISE("WTF emit was called while service is not started yet");
+      throw new ISE("Emit called unexpectedly before service start");
     }
     if (event instanceof ServiceMetricEvent) {
       final TimelineMetric timelineEvent = timelineMetricConverter.druidEventToTimelineMetric((ServiceMetricEvent) event);
@@ -183,6 +183,24 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   protected String getHostname()
   {
     return config.getHostname();
+  }
+
+  @Override
+  protected boolean isHostInMemoryAggregationEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  protected int getHostInMemoryAggregationPort()
+  {
+    return 0;  // since host in-memory aggregation is disabled, this return value is unimportant
+  }
+
+  @Override
+  protected String getHostInMemoryAggregationProtocol()
+  {
+    return "";  // since host in-memory aggregation is disabled, this return value is unimportant
   }
 
   private class ConsumerRunnable implements Runnable

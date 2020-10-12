@@ -137,7 +137,6 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                     )
                 ).build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
         .buildOnheap();
 
@@ -303,7 +302,6 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
           .buildOnheap();
 
@@ -330,7 +328,6 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
           .buildOnheap();
 
@@ -357,7 +354,6 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
           .buildOnheap();
 

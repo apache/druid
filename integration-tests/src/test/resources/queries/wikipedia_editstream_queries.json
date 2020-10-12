@@ -1398,33 +1398,35 @@
         },
         "expectedResults": [
             {
-                "id": "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-                "intervals": ["2012-12-29T00:00:00.000Z/2013-01-10T08:00:00.000Z"],
-                "columns": {
-                    "country_name": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 208,
+                "id":"wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
+                "intervals":["2012-12-29T00:00:00.000Z/2013-01-10T08:00:00.000Z"],
+                "columns":{
+                    "country_name":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":208,
                         "minValue":"",
                         "maxValue":"mmx._unknown",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "hasNulls":true
                     },
-                    "language": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 36,
+                    "language":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":36,
                         "minValue":"ar",
                         "maxValue":"zh",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "hasNulls":false
                     }
                 },
-                "size": 0,
-                "numRows": 4462111,
-                "aggregators": null,
-                "timestampSpec": null,
-                "queryGranularity": null,
+                "size":0,
+                "numRows":4462111,
+                "aggregators":null,
+                "timestampSpec":null,
+                "queryGranularity":null,
                 "rollup":null
             }
         ]
@@ -1928,6 +1930,105 @@
                 "event": {
                     "d": "Wikipedia:Vandalismusmeldung",
                     "rows": 991
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy, 1 agg, subquery over join of union to inline",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "query",
+                "query": {
+                    "queryType": "groupBy",
+                    "dataSource": {
+                        "type": "join",
+                        "left": {
+                            "type": "union",
+                            "dataSources": ["wikipedia_editstream", "wikipedia_editstream"]
+                        },
+                        "right": {
+                            "type": "inline",
+                            "columnNames": ["page", "lookupPage"],
+                            "columnTypes": ["string", "string"],
+                            "rows": [
+                                ["Wikipedia:Vandalismusmeldung", "inline join!"]
+                            ]
+                        },
+                        "rightPrefix": "j.",
+                        "condition": "page == \"j.page\"",
+                        "joinType": "LEFT"
+                    },
+                    "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+                    "granularity": "all",
+                    "virtualColumns": [
+                        {
+                            "type": "expression",
+                            "name": "lookupPage",
+                            "expression": "nvl(\"j.lookupPage\", \"page\")",
+                            "outputType": "string"
+                        }
+                    ],
+                    "aggregations": [
+                        {
+                            "type": "count",
+                            "name": "rows"
+                        }
+                    ],
+                    "dimensions": ["lookupPage"]
+                }
+            },
+            "intervals": ["2013-01-01T00:00:00.000/2013-01-02T00:00:00.000"],
+            "granularity": "all",
+            "aggregations": [
+                {
+                    "type": "longSum",
+                    "name": "rows_outer",
+                    "fieldName": "rows"
+                }
+            ],
+            "dimensions": ["lookupPage"],
+            "limitSpec": {
+                "type": "default",
+                "columns": [
+                    {
+                        "dimension": "rows_outer",
+                        "dimensionOrder": "numeric",
+                        "direction": "descending"
+                    }
+                ],
+                "limit": 3
+            },
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "event": {
+                    "lookupPage": "inline join!",
+                    "rows_outer": 1982
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "event": {
+                    "lookupPage": "Wikipedia:Administrators'_noticeboard/Incidents",
+                    "rows_outer": 1980
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "event": {
+                    "lookupPage": "Wikipedia:Administrator_intervention_against_vandalism",
+                    "rows_outer": 1600
                 }
             }
         ]

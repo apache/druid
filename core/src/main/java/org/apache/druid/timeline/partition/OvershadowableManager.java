@@ -287,6 +287,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param minorVersion the minor version to check overshadow relation. The found groups will have lower minor versions
    *                     than this.
    * @param fromState    the state to search for overshadowed groups.
+   *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
   @VisibleForTesting
@@ -333,6 +334,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param minorVersion the minor version to check overshadow relation. The found groups will have higher minor
    *                     versions than this.
    * @param fromState    the state to search for overshadowed groups.
+   *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
   @VisibleForTesting
@@ -438,9 +440,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * The given standby group can be visible in the below two cases:
    *
    * - The standby group is full. Since every standby group has a higher version than the current visible group,
-   *   it should become visible immediately when it's full.
+   * it should become visible immediately when it's full.
    * - The standby group is not full but not empty and the current visible is not full. If there's no fully available
-   *   group, the group of the highest version should be the visible.
+   * group, the group of the highest version should be the visible.
    */
   private void moveNewStandbyToVisibleIfNecessary(AtomicUpdateGroup<T> standbyGroup, State stateOfGroup)
   {
@@ -530,7 +532,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
             findOvershadows(group, State.STANDBY)
         );
         if (overshadowingStandbys.isEmpty()) {
-          throw new ISE("WTH? atomicUpdateGroup[%s] is in overshadowed state, but no one overshadows it?", group);
+          throw new ISE("Unexpected state: atomicUpdateGroup[%s] is overshadowed, but nothing overshadows it", group);
         }
         groupsOvershadowingAug = overshadowingStandbys;
         isOvershadowingGroupsFull = false;
@@ -585,6 +587,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param groups               atomicUpdateGroups sorted by their rootPartitionRange
    * @param startRootPartitionId the start partitionId of the root partition range to check the coverage
    * @param endRootPartitionId   the end partitionId of the root partition range to check the coverage
+   *
    * @return true if the given groups fully cover the given partition range.
    */
   private boolean doGroupsFullyCoverPartitionRange(
@@ -675,7 +678,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
             // If this chunk is already in the atomicUpdateGroup, it should be in knownPartitionChunks
             // and this code must not be executed.
             throw new ISE(
-                "WTH? chunk[%s] is in the atomicUpdateGroup[%s] but not in knownPartitionChunks[%s]?",
+                "Unexpected state: chunk[%s] is in the atomicUpdateGroup[%s] but not in knownPartitionChunks[%s]",
                 chunk,
                 atomicUpdateGroup,
                 knownPartitionChunks
@@ -875,7 +878,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
     if (!removed.equals(aug)) {
       throw new ISE(
-          "WTH? actually removed atomicUpdateGroup[%s] is different from the one which is supposed to be[%s]",
+          "Unexpected state: Removed atomicUpdateGroup[%s] is different from expected atomicUpdateGroup[%s]",
           removed,
           aug
       );
@@ -896,7 +899,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
     if (!knownChunk.equals(partitionChunk)) {
       throw new ISE(
-          "WTH? Same partitionId[%d], but known partition[%s] is different from the input partition[%s]",
+          "Unexpected state: Same partitionId[%d], but known partition[%s] is different from the input partition[%s]",
           partitionChunk.getChunkNumber(),
           knownChunk,
           partitionChunk
@@ -932,7 +935,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
               (SingleEntryShort2ObjectSortedMap<AtomicUpdateGroup<T>>) map;
           //noinspection ConstantConditions
           return singleMap.val.isFull();
-        });
+        }
+    );
   }
 
   @Nullable

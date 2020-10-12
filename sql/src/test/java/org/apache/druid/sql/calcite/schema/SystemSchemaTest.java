@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.SettableFuture;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -48,14 +47,16 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -89,14 +90,18 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -105,10 +110,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -247,7 +250,7 @@ public class SystemSchemaTest extends CalciteTestBase
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments(), realtimeSegments),
         new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
-        new MapJoinableFactory(ImmutableMap.of()),
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
@@ -270,8 +273,12 @@ public class SystemSchemaTest extends CalciteTestBase
     );
   }
 
+  private final CompactionState expectedCompactionState = new CompactionState(
+      new DynamicPartitionsSpec(null, null),
+      Collections.singletonMap("test", "map")
+  );
 
-  private final DataSegment publishedSegment1 = new DataSegment(
+  private final DataSegment publishedCompactedSegment1 = new DataSegment(
       "wikipedia1",
       Intervals.of("2007/2008"),
       "version1",
@@ -279,10 +286,11 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
       null,
+      expectedCompactionState,
       1,
       53000L
   );
-  private final DataSegment publishedSegment2 = new DataSegment(
+  private final DataSegment publishedCompactedSegment2 = new DataSegment(
       "wikipedia2",
       Intervals.of("2008/2009"),
       "version2",
@@ -290,16 +298,18 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
       null,
+      expectedCompactionState,
       1,
       83000L
   );
-  private final DataSegment publishedSegment3 = new DataSegment(
+  private final DataSegment publishedUncompactedSegment3 = new DataSegment(
       "wikipedia3",
       Intervals.of("2009/2010"),
       "version3",
       null,
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
+      null,
       null,
       1,
       47000L
@@ -494,7 +504,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(16, fields.size());
+    Assert.assertEquals(17, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -517,9 +527,9 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentWithOvershadowedStatus(publishedSegment1, true),
-        new SegmentWithOvershadowedStatus(publishedSegment2, false),
-        new SegmentWithOvershadowedStatus(publishedSegment3, false),
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),
+        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false),
         new SegmentWithOvershadowedStatus(segment1, true),
         new SegmentWithOvershadowedStatus(segment2, false)
     ));
@@ -575,7 +585,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         1L, //is_available
         0L, //is_realtime
-        1L //is_overshadowed
+        1L, //is_overshadowed
+        null //is_compacted
     );
 
     verifyRow(
@@ -588,7 +599,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         1L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed,
+        null //is_compacted
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -602,7 +614,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_published
         1L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        null //is_compacted
     );
 
     verifyRow(
@@ -615,7 +628,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_published
         1L, //is_available
         1L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        null //is_compacted
     );
 
     verifyRow(
@@ -628,10 +642,12 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_published
         1L, //is_available
         1L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        null //is_compacted
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
+    // wikipedia segment 1 and 2 are compacted while 3 are not compacted
     verifyRow(
         rows.get(5),
         "wikipedia1_2007-01-01T00:00:00.000Z_2008-01-01T00:00:00.000Z_version1",
@@ -642,7 +658,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         0L, //is_available
         0L, //is_realtime
-        1L //is_overshadowed
+        1L, //is_overshadowed
+        expectedCompactionState //is_compacted
     );
 
     verifyRow(
@@ -655,7 +672,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         0L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        expectedCompactionState //is_compacted
     );
 
     verifyRow(
@@ -668,7 +686,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_published
         0L, //is_available
         0L, //is_realtime
-        0L //is_overshadowed
+        0L, //is_overshadowed
+        null //is_compacted
     );
 
     // Verify value types.
@@ -685,7 +704,8 @@ public class SystemSchemaTest extends CalciteTestBase
       long isPublished,
       long isAvailable,
       long isRealtime,
-      long isOvershadowed
+      long isOvershadowed,
+      CompactionState compactionState
   )
   {
     Assert.assertEquals(segmentId, row[0].toString());
@@ -702,6 +722,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(isAvailable, row[10]);
     Assert.assertEquals(isRealtime, row[11]);
     Assert.assertEquals(isOvershadowed, row[12]);
+    Assert.assertEquals(compactionState, row[16]);
   }
 
   @Test
@@ -1036,17 +1057,18 @@ public class SystemSchemaTest extends CalciteTestBase
   {
 
     SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
-                                                 .withConstructor(client, mapper, responseHandler, authMapper)
+                                                 .withConstructor(client, mapper, authMapper)
                                                  .createMock();
-    EasyMock.replay(tasksTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks", false)).andReturn(request).anyTimes();
-    SettableFuture<InputStream> future = SettableFuture.create();
-    EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
-    final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
-    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
-    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    EasyMock.replay(tasksTable);
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
+
+
+    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
@@ -1082,9 +1104,8 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"errorMsg\": null\n"
                   + "}]";
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
-    in.add(bytesToWrite);
-    in.done();
-    future.set(in);
+    responseHolder.addChunk(bytesToWrite);
+    responseHolder.done();
 
     EasyMock.replay(client, request, responseHandler);
     DataContext dataContext = new DataContext()
@@ -1159,23 +1180,23 @@ public class SystemSchemaTest extends CalciteTestBase
                                                             .withConstructor(
                                                                 client,
                                                                 mapper,
-                                                                responseHandler,
                                                                 authMapper
                                                             )
                                                             .createMock();
     EasyMock.replay(supervisorTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system", false))
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system"))
             .andReturn(request)
             .anyTimes();
-    SettableFuture<InputStream> future = SettableFuture.create();
-    EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
-    final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
+
+    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+
+    EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.getStatus().getCode()).anyTimes();
     EasyMock.expect(request.getUrl())
             .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
             .anyTimes();
-
-    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
 
     String json = "[{\n"
                   + "\t\"id\": \"wikipedia\",\n"
@@ -1190,9 +1211,8 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "}]";
 
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
-    in.add(bytesToWrite);
-    in.done();
-    future.set(in);
+    responseHolder.addChunk(bytesToWrite);
+    responseHolder.done();
 
     EasyMock.replay(client, request, responseHandler);
     DataContext dataContext = new DataContext()
@@ -1271,6 +1291,8 @@ public class SystemSchemaTest extends CalciteTestBase
               expectedClass = SegmentId.class;
             } else if (signature.getColumnName(i).equals("shardSpec")) {
               expectedClass = ShardSpec.class;
+            } else if (signature.getColumnName(i).equals("last_compaction_state")) {
+              expectedClass = CompactionState.class;
             } else if (signature.getColumnName(i).equals("dimensions") || signature.getColumnName(i).equals("metrics")) {
               expectedClass = List.class;
             } else {
