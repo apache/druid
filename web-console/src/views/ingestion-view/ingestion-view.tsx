@@ -432,7 +432,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
+            `${API_ENDPOINTS.supervisor}${resumeSupervisorId}/resume`,
             {},
           );
           return resp.data;
@@ -461,7 +461,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
+            `${API_ENDPOINTS.supervisor}${suspendSupervisorId}/suspend`,
             {},
           );
           return resp.data;
@@ -490,7 +490,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
+            `${API_ENDPOINTS.supervisor}${resetSupervisorId}/reset`,
             {},
           );
           return resp.data;
@@ -528,7 +528,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
+            `${API_ENDPOINTS.supervisor}${terminateSupervisorId}/terminate`,
             {},
           );
           return resp.data;

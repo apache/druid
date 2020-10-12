@@ -73,7 +73,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
     >
       {activeTab === 'status' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/status`}
+          endpoint={`${API_ENDPOINTS.supervisor}${supervisorId}/status`}
           transform={x => deepGet(x, 'payload')}
           downloadFilename={`supervisor-status-${supervisorId}.json`}
         />
@@ -86,13 +86,13 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       )}
       {activeTab === 'payload' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
+          endpoint={`${API_ENDPOINTS.supervisor}${supervisorId}`}
           downloadFilename={`supervisor-payload-${supervisorId}.json`}
         />
       )}
       {activeTab === 'history' && (
         <ShowHistory
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`}
+          endpoint={`${API_ENDPOINTS.supervisor}${supervisorId}/history`}
           downloadFilename={`supervisor-history-${supervisorId}.json`}
         />
       )}

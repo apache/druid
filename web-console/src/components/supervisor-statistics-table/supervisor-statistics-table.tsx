@@ -61,7 +61,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
   props: SupervisorStatisticsTableProps,
 ) {
   const { supervisorId } = props;
-  const endpoint = `/druid/indexer/v1/supervisor/${supervisorId}/stats`;
+  const endpoint = `${API_ENDPOINTS.supervisor}${supervisorId}/stats`;
 
   const [supervisorStatisticsState] = useQueryManager<null, SupervisorStatisticsTableRow[]>({
     processQuery: async () => {
