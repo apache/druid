@@ -21,6 +21,7 @@ import React, { useState } from 'react';
 import { ShowJson } from '../../components';
 import { ShowHistory } from '../../components/show-history/show-history';
 import { SupervisorStatisticsTable } from '../../components/supervisor-statistics-table/supervisor-statistics-table';
+import { API_ENDPOINTS } from '../../singletons/api';
 import { BasicAction } from '../../utils/basic-action';
 import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
@@ -73,7 +74,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
     >
       {activeTab === 'status' && (
         <ShowJson
-          endpoint={`${API_ENDPOINTS.supervisor}${supervisorId}/status`}
+          endpoint={`${API_ENDPOINTS.supervisor}/${supervisorId}/status`}
           transform={x => deepGet(x, 'payload')}
           downloadFilename={`supervisor-status-${supervisorId}.json`}
         />
@@ -86,13 +87,13 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       )}
       {activeTab === 'payload' && (
         <ShowJson
-          endpoint={`${API_ENDPOINTS.supervisor}${supervisorId}`}
+          endpoint={`${API_ENDPOINTS.supervisor}/${supervisorId}`}
           downloadFilename={`supervisor-payload-${supervisorId}.json`}
         />
       )}
       {activeTab === 'history' && (
         <ShowHistory
-          endpoint={`${API_ENDPOINTS.supervisor}${supervisorId}/history`}
+          endpoint={`${API_ENDPOINTS.supervisor}/${supervisorId}/history`}
           downloadFilename={`supervisor-history-${supervisorId}.json`}
         />
       )}

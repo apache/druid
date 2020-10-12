@@ -432,7 +432,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `${API_ENDPOINTS.supervisor}${resumeSupervisorId}/resume`,
+            `${API_ENDPOINTS.supervisor}/${resumeSupervisorId}/resume`,
             {},
           );
           return resp.data;
@@ -461,7 +461,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `${API_ENDPOINTS.supervisor}${suspendSupervisorId}/suspend`,
+            `${API_ENDPOINTS.supervisor}/${suspendSupervisorId}/suspend`,
             {},
           );
           return resp.data;
@@ -489,10 +489,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.post(
-            `${API_ENDPOINTS.supervisor}${resetSupervisorId}/reset`,
-            {},
-          );
+          const resp = await Api.post(`${API_ENDPOINTS.supervisor}/${resetSupervisorId}/reset`, {});
           return resp.data;
         }}
         confirmButtonText="Hard reset supervisor"
@@ -528,7 +525,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.post(
-            `${API_ENDPOINTS.supervisor}${terminateSupervisorId}/terminate`,
+            `${API_ENDPOINTS.supervisor}/${terminateSupervisorId}/terminate`,
             {},
           );
           return resp.data;

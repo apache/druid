@@ -2983,7 +2983,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { initSupervisorId } = this.props;
 
     try {
-      const resp = await Api.get(`${API_ENDPOINTS.supervisor}${initSupervisorId}`);
+      const resp = await Api.get(`${API_ENDPOINTS.supervisor}/${initSupervisorId}`);
       this.updateSpec(cleanSpec(resp.data));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');

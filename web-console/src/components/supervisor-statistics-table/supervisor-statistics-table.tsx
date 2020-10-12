@@ -21,7 +21,7 @@ import React from 'react';
 import ReactTable, { CellInfo, Column } from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import { Api } from '../../singletons/api';
+import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { UrlBaser } from '../../singletons/url-baser';
 import { deepGet } from '../../utils/object-change';
 import { Loader } from '../loader/loader';
@@ -61,7 +61,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
   props: SupervisorStatisticsTableProps,
 ) {
   const { supervisorId } = props;
-  const endpoint = `${API_ENDPOINTS.supervisor}${supervisorId}/stats`;
+  const endpoint = `${API_ENDPOINTS.supervisor}/${supervisorId}/stats`;
 
   const [supervisorStatisticsState] = useQueryManager<null, SupervisorStatisticsTableRow[]>({
     processQuery: async () => {
