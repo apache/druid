@@ -48,6 +48,7 @@ import {
   formatBytes,
   formatCompactionConfigAndStatus,
   formatInteger,
+  formatMillions,
   formatPercent,
   getDruidErrorMessage,
   LocalStorageKeys,
@@ -119,7 +120,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 }
 
 const formatTotalDataSize = formatBytes;
-const formatSegmentSize = formatInteger;
+const formatSegmentSize = formatMillions;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;

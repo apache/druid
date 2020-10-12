@@ -235,6 +235,12 @@ export function formatPercent(n: number): string {
   return (n * 100).toFixed(2) + '%';
 }
 
+export function formatMillions(n: number): string {
+  const s = (n / 1e6).toFixed(3);
+  if (s === '0.000') return String(Math.round(n));
+  return s + ' M';
+}
+
 function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
