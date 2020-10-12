@@ -284,7 +284,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: IngestionView.TASK_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await Api.get(`/druid/indexer/v1/tasks`);
+          const resp = await Api.get(API_ENDPOINTS.tasks);
           return IngestionView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);

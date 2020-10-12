@@ -2999,7 +2999,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { initTaskId } = this.props;
 
     try {
-      const resp = await Api.get(`/druid/indexer/v1/task/${initTaskId}`);
+      const resp = await Api.get(`${API_ENDPOINTS.task}/${initTaskId}`);
       this.updateSpec(cleanSpec(resp.data.payload));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
