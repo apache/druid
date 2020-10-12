@@ -266,7 +266,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       <AsyncActionDialog
         action={async () => {
           await Api.delete(
-            `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
+            `${API_ENDPOINTS.coordinatorLookupsConfig}/${deleteLookupTier}/${deleteLookupName}`,
           );
         }}
         confirmButtonText="Delete lookup"
