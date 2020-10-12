@@ -41,6 +41,15 @@ const extraLinesForLib = {
   ***************************************************************************** */`
 }
 
+const extraPackages = {
+  'opensans@1.101.0': {
+    licenses: 'Apache-2.0',
+    repository: 'https://github.com/google/fonts/tree/master/apache/opensans',
+    publisher: 'Google',
+    url: 'https://fonts.google.com/specimen/Open+Sans',
+  }
+}
+
 function injectConsoleLicenses(consoleLicenses) {
   const text = fs.readFileSync(LICENSES_FILE, 'utf-8');
   const textLines = text.split('\n');
@@ -90,6 +99,8 @@ checker.init(
       console.log('err', err);
       return;
     }
+
+    Object.assign(packages, extraPackages);
 
     const seen = {};
     const mapped = Object.keys(packages)
