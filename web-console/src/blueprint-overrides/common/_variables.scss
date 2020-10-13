@@ -25,18 +25,10 @@ $ns: bp3 !default;
 $pt-grid-size: 10px !default;
 
 // see https://bitsofco.de/the-new-system-font-stack/
-$pt-font-family:
-"Open Sans",
--apple-system,
-"BlinkMacSystemFont",
-"Segoe UI",
-"Roboto",
-"Oxygen",
-"Ubuntu",
-"Cantarell",
-"Helvetica Neue",
-"Icons16", // support inline Palantir icons
-sans-serif;
+$pt-font-family: 'Open Sans', -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen',
+  'Ubuntu', 'Cantarell', 'Helvetica Neue', 'Icons16',
+  // support inline Palantir icons
+    sans-serif;
 
 $pt-font-family-monospace: monospace !default;
 
@@ -49,8 +41,8 @@ $pt-line-height: ($pt-grid-size * 1.8) / $pt-font-size + 0.0001 !default;
 
 // Icon variables
 
-$icons16-family: "Icons16" !default;
-$icons20-family: "Icons20" !default;
+$icons16-family: 'Icons16' !default;
+$icons20-family: 'Icons20' !default;
 
 $pt-icon-size-standard: 16px !default;
 $pt-icon-size-large: 20px !default;
