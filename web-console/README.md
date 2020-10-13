@@ -47,12 +47,6 @@ As part of this repo:
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console
 
-Generated/copied dynamically
-
-- `index.html` - Entry file for the coordinator console
-- `pages/` - The files for the older coordinator console
-- `coordinator-console/` - Files for the coordinator console
-
 ## List of non SQL data reading APIs used
 
 ```
