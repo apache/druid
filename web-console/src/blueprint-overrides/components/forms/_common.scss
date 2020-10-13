@@ -16,27 +16,27 @@
  * limitations under the License.
  */
 
-$input-padding-horizontal: $pt-grid-size !default;
-$input-small-padding: $pt-input-height-small - $pt-icon-size-standard !default;
-$input-font-weight: 400 !default;
+$input-padding-horizontal: $pt-grid-size;
+$input-small-padding: $pt-input-height-small - $pt-icon-size-standard;
+$input-font-weight: 400;
 $input-transition: box-shadow $pt-transition-duration $pt-transition-ease;
 
-$input-color: $pt-text-color !default;
-$input-color-disabled: $button-color-disabled !default;
-$input-placeholder-color: $pt-text-color-disabled !default;
-$input-background-color: $white !default;
-$input-background-color-disabled: rgba($light-gray1, 0.5) !default;
-$input-shadow-color-focus: $pt-intent-primary !default;
+$input-color: $pt-text-color;
+$input-color-disabled: $button-color-disabled;
+$input-placeholder-color: $pt-text-color-disabled;
+$input-background-color: $white;
+$input-background-color-disabled: rgba($light-gray1, 0.5);
+$input-shadow-color-focus: $pt-intent-primary;
 
-$dark-input-color: $pt-dark-text-color !default;
-$dark-input-color-disabled: $dark-button-color-disabled !default;
-$dark-input-placeholder-color: $pt-dark-text-color-disabled !default;
+$dark-input-color: $pt-dark-text-color;
+$dark-input-color-disabled: $dark-button-color-disabled;
+$dark-input-placeholder-color: $pt-dark-text-color-disabled;
 $dark-input-background-color: $dark-gray4;
-$dark-input-background-color-disabled: rgba($dark-gray5, 0.5) !default;
-$dark-input-shadow-color-focus: $pt-intent-primary !default;
+$dark-input-background-color-disabled: rgba($dark-gray5, 0.5);
+$dark-input-shadow-color-focus: $pt-intent-primary;
 
-$control-indicator-size: $pt-icon-size-standard !default;
-$control-indicator-size-large: $pt-icon-size-large !default;
+$control-indicator-size: $pt-icon-size-standard;
+$control-indicator-size-large: $pt-icon-size-large;
 
 // avoids edge blurriness for light theme focused default input
 // second box-shadow of $pt-input-box-shadow
