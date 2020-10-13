@@ -52,12 +52,16 @@
 
 .ace_tooltip {
   padding: 10px;
-  background-color: #333d47;
   color: #c1ccd5;
   width: 500px;
   display: block;
   height: auto;
   white-space: initial;
+  background: $gray2;
+
+  .bp3-dark & {
+    background: $dark-gray2;
+  }
 
   hr {
     margin: 10px 0;
