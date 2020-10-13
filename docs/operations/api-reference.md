@@ -414,20 +414,20 @@ This is only valid for dataSource which has compaction enabled.
 
 * `/druid/coordinator/v1/compaction/status`
 
-Returns the latest status (statistics and informations) from the latest auto compaction run of all dataSource which has/had auto compaction enabled.
-The response payload includes a list of `latestStatus` object. Each `latestStatus` respresent the status for a dataSource (which has/had auto compaction enabled). 
+Returns the status and statistics from the latest auto compaction run of all dataSource which has/had auto compaction enabled.
+The response payload includes a list of `latestStatus` object. Each `latestStatus` represent the status for a dataSource (which has/had auto compaction enabled). 
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
 * `scheduleStatus`: auto compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto compaction config submitted otherwise, `NOT_ENABLED`
 * `bytesAwaitingCompaction`: total byte of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that is eligible for auto compaction)
 * `bytesCompacted`: total byte of this datasource that is already compacted with the spec set in the auto compaction config.
-* `bytesSkipped`: total byte of this datasource that is skipped (not elligible for auto compaction) by the auto compaction.
+* `bytesSkipped`: total byte of this datasource that is skipped (not eligible for auto compaction) by the auto compaction.
 * `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that is eligible for auto compaction)
 * `segmentCountCompacted`: total number of segments of this datasource that is already compacted with the spec set in the auto compaction config.
-* `segmentCountSkipped`: total number of segments of this datasource that is skipped (not elligible for auto compaction) by the auto compaction.
+* `segmentCountSkipped`: total number of segments of this datasource that is skipped (not eligible for auto compaction) by the auto compaction.
 * `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that is eligible for auto compaction)
 * `intervalCountCompacted`: total number of intervals of this datasource that is already compacted with the spec set in the auto compaction config.
-* `intervalCountSkipped`: total number of intervals of this datasource that is skipped (not elligible for auto compaction) by the auto compaction.
+* `intervalCountSkipped`: total number of intervals of this datasource that is skipped (not eligible for auto compaction) by the auto compaction.
 
 ##### GET
 
