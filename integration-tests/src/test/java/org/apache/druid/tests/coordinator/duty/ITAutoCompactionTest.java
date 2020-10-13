@@ -476,16 +476,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Map<String, String> actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assert.assertNotNull(actualStatus);
     Assert.assertEquals(actualStatus.get("scheduleStatus"), scheduleStatus.toString());
-    Assert.assertEquals(actualStatus.get("bytesAwaitingCompaction"), bytesAwaitingCompaction);
-    Assert.assertEquals(actualStatus.get("bytesCompacted"), bytesCompacted);
-    Assert.assertEquals(actualStatus.get("bytesSkipped"), bytesSkipped);
-    Assert.assertEquals(actualStatus.get("segmentCountAwaitingCompaction"), segmentCountAwaitingCompaction);
-    Assert.assertEquals(actualStatus.get("segmentCountCompacted"), segmentCountCompacted);
-    Assert.assertEquals(actualStatus.get("segmentCountSkipped"), segmentCountSkipped);
-    Assert.assertEquals(actualStatus.get("intervalCountAwaitingCompaction"), intervalCountAwaitingCompaction);
-    Assert.assertEquals(actualStatus.get("intervalCountCompacted"), intervalCountCompacted);
-    Assert.assertEquals(actualStatus.get("intervalCountSkipped"), intervalCountSkipped);
-
-
+    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesAwaitingCompaction")), bytesAwaitingCompaction);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesCompacted")), bytesCompacted);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesSkipped")), bytesSkipped);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountAwaitingCompaction")), segmentCountAwaitingCompaction);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountCompacted")), segmentCountCompacted);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountSkipped")), segmentCountSkipped);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountAwaitingCompaction")), intervalCountAwaitingCompaction);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountCompacted")), intervalCountCompacted);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountSkipped")), intervalCountSkipped);
   }
 }
