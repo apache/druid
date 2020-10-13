@@ -514,6 +514,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               moveCursorTo={position => {
                 this.moveToPosition(position);
               }}
+              queryString={queryString}
+              onQueryStringChange={this.handleQueryStringChange}
             />
           )}
           {queryResultState.loading && (

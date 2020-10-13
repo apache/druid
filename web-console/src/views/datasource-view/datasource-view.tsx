@@ -48,7 +48,7 @@ import {
   formatBytes,
   formatCompactionConfigAndStatus,
   formatInteger,
-  formatMegabytes,
+  formatMillions,
   formatPercent,
   getDruidErrorMessage,
   LocalStorageKeys,
@@ -88,7 +88,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Availability',
     'Segment load/drop queues',
     'Total data size',
-    'Segment size',
     'Compaction',
     '% Compacted',
     'Left to be compacted',
@@ -120,7 +119,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 }
 
 const formatTotalDataSize = formatBytes;
-const formatSegmentSize = formatMegabytes;
+const formatSegmentRows = formatMillions;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
@@ -144,42 +143,41 @@ function progress(done: number, awaiting: number): number {
 
 const PERCENT_BRACES = [formatPercent(1)];
 
-interface Datasource {
-  datasource: string;
-  rules: Rule[];
-  compactionConfig?: CompactionConfig;
-  compactionStatus?: CompactionStatus;
-  [key: string]: any;
+interface DatasourceQueryResultRow {
+  readonly datasource: string;
+  readonly num_segments: number;
+  readonly num_available_segments: number;
+  readonly num_segments_to_load: number;
+  readonly num_segments_to_drop: number;
+  readonly total_data_size: number;
+  readonly replicated_size: number;
+  readonly min_segment_rows: number;
+  readonly avg_segment_rows: number;
+  readonly max_segment_rows: number;
+  readonly total_rows: number;
+  readonly avg_row_size: number;
+}
+
+interface Datasource extends DatasourceQueryResultRow {
+  readonly rules: Rule[];
+  readonly compactionConfig?: CompactionConfig;
+  readonly compactionStatus?: CompactionStatus;
+  readonly unused?: boolean;
 }
 
 interface DatasourcesAndDefaultRules {
-  datasources: Datasource[];
-  defaultRules: Rule[];
-}
-
-interface DatasourceQueryResultRow {
-  datasource: string;
-  num_segments: number;
-  num_available_segments: number;
-  num_segments_to_load: number;
-  num_segments_to_drop: number;
-  total_data_size: number;
-  replicated_size: number;
-  min_segment_size: number;
-  avg_segment_size: number;
-  max_segment_size: number;
-  total_rows: number;
-  avg_row_size: number;
+  readonly datasources: Datasource[];
+  readonly defaultRules: Rule[];
 }
 
 interface RetentionDialogOpenOn {
-  datasource: string;
-  rules: Rule[];
+  readonly datasource: string;
+  readonly rules: Rule[];
 }
 
 interface CompactionDialogOpenOn {
-  datasource: string;
-  compactionConfig: CompactionConfig;
+  readonly datasource: string;
+  readonly compactionConfig: CompactionConfig;
 }
 
 export interface DatasourcesViewProps {
@@ -229,19 +227,20 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
-  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS total_data_size,
-  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS replicated_size,
-  MIN("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS min_segment_size,
-  (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
-    COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
-  ) AS avg_segment_size,
-  MAX("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS max_segment_size,
+  SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
+  SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
+  MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows,
+  AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows,
+  MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
-  (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
-    SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
-  ) AS avg_row_size
+  CASE
+    WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0
+    THEN (
+      SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
+      SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)
+    )
+    ELSE 0
+  END AS avg_row_size
 FROM sys.segments
 GROUP BY 1`;
 
@@ -309,9 +308,9 @@ GROUP BY 1`;
                 num_segments_to_drop: 0,
                 replicated_size: -1,
                 total_data_size: totalDataSize,
-                min_segment_size: -1,
-                avg_segment_size: totalDataSize / numSegments,
-                max_segment_size: -1,
+                min_segment_rows: -1,
+                avg_segment_rows: -1,
+                max_segment_rows: -1,
                 total_rows: -1,
                 avg_row_size: -1,
               };
@@ -361,7 +360,7 @@ GROUP BY 1`;
         const allDatasources = (datasources as any).concat(
           unused.map(d => ({ datasource: d, unused: true })),
         );
-        allDatasources.forEach((ds: Datasource) => {
+        allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compactionConfig = compactionConfigs[ds.datasource];
           ds.compactionStatus = compactionStatuses[ds.datasource];
@@ -869,11 +868,11 @@ GROUP BY 1`;
 
     const totalDataSizeValues = datasources.map(d => formatTotalDataSize(d.total_data_size));
 
-    const minSegmentSizeValues = datasources.map(d => formatSegmentSize(d.min_segment_size));
+    const minSegmentRowsValues = datasources.map(d => formatSegmentRows(d.min_segment_rows));
 
-    const avgSegmentSizeValues = datasources.map(d => formatSegmentSize(d.avg_segment_size));
+    const avgSegmentRowsValues = datasources.map(d => formatSegmentRows(d.avg_segment_rows));
 
-    const maxSegmentSizeValues = datasources.map(d => formatSegmentSize(d.max_segment_size));
+    const maxSegmentRowsValues = datasources.map(d => formatSegmentRows(d.max_segment_rows));
 
     const totalRowsValues = datasources.map(d => formatTotalRows(d.total_rows));
 
@@ -1011,23 +1010,23 @@ GROUP BY 1`;
               ),
             },
             {
-              Header: twoLines('Segment size (MB)', 'min / avg / max'),
-              show: hiddenColumns.exists('Segment size'),
-              accessor: 'avg_segment_size',
+              Header: twoLines('Segment size (rows)', 'minimum / average / maximum'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment size'),
+              accessor: 'avg_segment_rows',
               filterable: false,
-              width: 150,
+              width: 220,
               Cell: ({ value, original }) => (
                 <>
                   <BracedText
-                    text={formatSegmentSize(original.min_segment_size)}
-                    braces={minSegmentSizeValues}
+                    text={formatSegmentRows(original.min_segment_rows)}
+                    braces={minSegmentRowsValues}
                   />{' '}
                   &nbsp;{' '}
-                  <BracedText text={formatSegmentSize(value)} braces={avgSegmentSizeValues} />{' '}
+                  <BracedText text={formatSegmentRows(value)} braces={avgSegmentRowsValues} />{' '}
                   &nbsp;{' '}
                   <BracedText
-                    text={formatSegmentSize(original.max_segment_size)}
-                    braces={maxSegmentSizeValues}
+                    text={formatSegmentRows(original.max_segment_rows)}
+                    braces={maxSegmentRowsValues}
                   />
                 </>
               ),
@@ -1044,7 +1043,7 @@ GROUP BY 1`;
             },
             {
               Header: twoLines('Avg. row size', '(bytes)'),
-              show: hiddenColumns.exists('Avg. row size'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Avg. row size'),
               accessor: 'avg_row_size',
               filterable: false,
               width: 100,

@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/apache/druid/"
+    "url": "https://github.com/apache/druid"
   },
   "jest": {
     "preset": "ts-jest",

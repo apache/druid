@@ -22,6 +22,7 @@ import {
   formatBytesCompact,
   formatInteger,
   formatMegabytes,
+  formatMillions,
   formatPercent,
   sortWithPrefixSuffix,
   sqlQueryCustomTableFilter,
@@ -116,6 +117,15 @@ describe('general', () => {
   describe('formatPercent', () => {
     it('works', () => {
       expect(formatPercent(2 / 3)).toEqual('66.67%');
+    });
+  });
+
+  describe('formatMillions', () => {
+    it('works', () => {
+      expect(formatMillions(1e6)).toEqual('1.000 M');
+      expect(formatMillions(1e6 + 1)).toEqual('1.000 M');
+      expect(formatMillions(1234567)).toEqual('1.235 M');
+      expect(formatMillions(345.2)).toEqual('345');
     });
   });
 });
