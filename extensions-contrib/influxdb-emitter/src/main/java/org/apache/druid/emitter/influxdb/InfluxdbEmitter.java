@@ -229,10 +229,7 @@ public class InfluxdbEmitter implements Emitter
         throw new IllegalStateException(msg);
       }
 
-      FileInputStream in = null;
-
-      try {
-        in = new FileInputStream(new File(influxdbEmitterConfig.getTrustStorePath()));
+      try (FileInputStream in = new FileInputStream(new File(influxdbEmitterConfig.getTrustStorePath()))) {
         KeyStore store = KeyStore.getInstance(influxdbEmitterConfig.getTrustStoreType());
         store.load(in, influxdbEmitterConfig.getTrustStorePassword().toCharArray());
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -244,16 +241,6 @@ public class InfluxdbEmitter implements Emitter
         String msg = "Unable to load TrustStore";
         log.error(msg);
         throw new IllegalStateException(msg);
-      }
-      finally {
-        if (in != null) {
-          try {
-            in.close();
-          }
-          catch (IOException ex) {
-            log.error("Unable to load TrustStore");
-          }
-        }
       }
       return HttpClients.custom().setSSLContext(sslContext).setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE).build();
     } else {
