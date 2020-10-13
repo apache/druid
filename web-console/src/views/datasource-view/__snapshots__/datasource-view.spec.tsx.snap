@@ -188,7 +188,7 @@ exports[`data source view matches snapshot 1`] = `
             <br />
             minimum / average / maximum
           </React.Fragment>,
-          "accessor": "avg_segment_size",
+          "accessor": "avg_segment_rows",
           "filterable": false,
           "show": true,
           "width": 220,
