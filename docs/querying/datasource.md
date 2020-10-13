@@ -134,8 +134,6 @@ another will be treated as if they contained all null values in the tables where
 The list of "dataSources" must be nonempty. If you want to query an empty dataset, use an [`inline` datasource](#inline)
 instead.
 
-Union datasources are not available in Druid SQL.
-
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
