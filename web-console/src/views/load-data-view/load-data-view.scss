@@ -29,7 +29,7 @@
   //height: 100%;
   height: 100%;
   display: grid;
-  grid-gap: 10px 5px;
+  grid-gap: $thin-padding 5px;
   grid-template-columns: 1fr 280px;
   grid-template-rows: 60px 1fr 28px;
   grid-template-areas:
@@ -167,7 +167,7 @@
     .step-section {
       display: inline-block;
       vertical-align: top;
-      margin-right: 15px;
+      margin-right: $thin-padding;
     }
 
     .step-nav-l1 {
