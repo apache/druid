@@ -52,7 +52,7 @@
     "sasslint-changed-only": "git diff --diff-filter=ACMR --name-only | grep -E \\.scss$ | xargs ./node_modules/.bin/stylelint --config sasslint.json",
     "sasslint-fix-changed-only": "npm run sasslint-changed-only -- --fix",
     "generate-licenses-file": "license-checker --production --json --out licenses.json",
-    "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;MIT;CC0-1.0' --summary",
+    "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;CC0-1.0' --summary",
     "start": "webpack-dev-server --hot --open"
   },
   "dependencies": {
