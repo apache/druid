@@ -16,29 +16,19 @@
  * limitations under the License.
  */
 
-import { Button, Collapse, TextArea } from '@blueprintjs/core';
-import React, { useState } from 'react';
+.json-collapse {
+  .collapse-buttons {
+    height: 30px;
+    margin-bottom: 5px;
+    text-align: right;
 
-import './json-collapse.scss';
+    & > * {
+      display: inline-block;
+    }
+  }
 
-interface JsonCollapseProps {
-  stringValue: string;
-  buttonText: string;
+  textarea {
+    width: 100%;
+    height: 100px;
+  }
 }
-
-export const JsonCollapse = React.memo(function JsonCollapse(props: JsonCollapseProps) {
-  const { stringValue, buttonText } = props;
-  const [isOpen, setIsOpen] = useState(false);
-
-  const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
-  return (
-    <div className="json-collapse">
-      <div className="collapse-buttons">
-        <Button minimal active={isOpen} onClick={() => setIsOpen(!isOpen)} text={buttonText} />
-      </div>
-      <Collapse isOpen={isOpen}>
-        <TextArea readOnly value={prettyValue} />
-      </Collapse>
-    </div>
-  );
-});
