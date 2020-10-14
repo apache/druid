@@ -229,18 +229,18 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|tier.|Varies.|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|tier.|Varies.|
 |`tier/total/capacity`|Total capacity in bytes available in each tier.|tier.|Varies.|
-|`compact/task/count`|Number of task issued in the auto compaction run.| |Varies.|
-|`compactTask/maxSlot/count`|Number of max task slot that can be used for auto compaction tasks in the auto compaction run.| |Varies.|
-|`compactTask/availableSlot/count`|Number of available task slot that can be used for auto compaction tasks in the auto compaction run. (this is max slot minus any currently running compaction task)| |Varies.|
-|`segment/waitCompact/bytes`|Total byte of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that is eligible for auto compaction).|datasource.|Varies.|
-|`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that is eligible for auto compaction).|datasource.|Varies.|
-|`interval/waitCompact/count`|Total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that is eligible for auto compaction).|datasource.|Varies.|
-|`segment/compacted/bytes`|Total byte of this datasource that is already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
-|`segment/compacted/count`|Total number of segments of this datasource that is already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
-|`interval/compacted/count`|Total number of intervals of this datasource that is already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
-|`segment/skipCompact/bytes`|Total byte of this datasource that is skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
-|`segment/skipCompact/count`|Total number of segments of this datasource that is skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
-|`interval/skipCompact/count`|Total number of intervals of this datasource that is skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
+|`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies.|
+|`compactTask/maxSlot/count`|Max number of task slots that can be used for auto compaction tasks in the auto compaction run.| |Varies.|
+|`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. (this is max slot minus any currently running compaction task)| |Varies.|
+|`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource.|Varies.|
+|`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource.|Varies.|
+|`interval/waitCompact/count`|Total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource.|Varies.|
+|`segment/compacted/bytes`|Total bytes of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
+|`segment/compacted/count`|Total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
+|`interval/compacted/count`|Total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
+|`segment/skipCompact/bytes`|Total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
+|`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
+|`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](
 ../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class
