@@ -4495,7 +4495,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.32.1
+version: 3.33.0
 
 ---
 
@@ -4504,7 +4504,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.19.1
+version: 3.19.2
 
 ---
 
@@ -4513,7 +4513,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.21.0
+version: 3.22.0
 
 ---
 

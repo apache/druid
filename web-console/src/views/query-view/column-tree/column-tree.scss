@@ -45,7 +45,14 @@
     }
   }
 
-  .bp3-popover-target {
-    cursor: pointer;
+  .bp3-popover-wrapper {
+    width: 188px;
+    display: inline-block;
+
+    .bp3-popover-target {
+      width: 100%;
+      display: inline-block;
+      cursor: pointer;
+    }
   }
 }
