@@ -113,6 +113,16 @@ use table datasources.
 ### `union`
 
 <!--DOCUSAURUS_CODE_TABS-->
+<!--SQL-->
+```sql
+SELECT col1, COUNT(*)
+FROM (
+  SELECT col1, col2, col3 FROM tbl1
+  UNION ALL
+  SELECT col1, col2, col3 FROM tbl2
+)
+GROUP BY col1
+```
 <!--Native-->
 ```json
 {
