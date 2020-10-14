@@ -37,7 +37,7 @@
     .ace_placeholder {
       // This padding is needed because there is a bug in this current version of ACE Editor where the padding set in
       // code is not being applied to the placeholder element
-      padding-top: 10px;
+      margin-top: 10px;
     }
 
     .ace_gutter-active-line {
