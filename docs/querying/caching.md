@@ -86,12 +86,15 @@ remote cache types such as `memcached` will be ignored by task executor processe
 ## Unsupported queries
 
 Query caching is not available for following:
-- Queries, that involve a `union` datasource, do not support result-level caching - [More details](https://github.com/apache/druid/issues/8713)
+- Queries, that involve a `union` datasource, do not support result-level caching. Refer to the 
+[related github issue](https://github.com/apache/druid/issues/8713) for details. Top level union SQL queries can still 
+be cached at result-level since they are not translated into a `union` datasource. Refer to [Union SQL](sql.md#UNION ALL) 
+for more details on how union SQL queries work.
 - Queries, that involve an `Inline` datasource or a `Lookup` datasource, do not support any caching. 
 - Queries, with a sub-query in them, do not support any caching though the output of sub-queries itself may be cached. 
 Refer to the [Query execution](query-execution.md#query) page for more details on how sub-queries are executed.
-- Join queries do not support any caching on the broker [More details](https://github.com/apache/druid/issues/10444)
-- GroupBy v2 queries do not support any caching on broker [More details](https://github.com/apache/druid/issues/3820)
+- Join queries do not support any caching on the broker [More details](https://github.com/apache/druid/issues/10444).
+- GroupBy v2 queries do not support any caching on broker [More details](https://github.com/apache/druid/issues/3820).
 - Data Source Metadata queries are not cached anywhere.
 - Queries, that have `bySegment` set in the query context, are not cached on the broker. They are currently cached on 
 historical but this behavior will potentially be removed in the future.  
