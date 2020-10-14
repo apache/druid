@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors.Signal;
 import org.joda.time.Duration;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -49,52 +50,77 @@ public class ScheduledExecutorsTest
   }
 
   @Test
-  public void testScheduleAtFixedRate_Success() throws Exception
+  public void testScheduleAtFixedRateWithCronScheduler_SuccessWithRepeatSignal() throws Exception
   {
     Mockito.when(callable.call()).thenReturn(Signal.REPEAT);
     Mockito.doAnswer(new Answer<Future<?>>()
     {
-      int scheduledCount = 0;
-
       @Override
-      public Future<?> answer(InvocationOnMock invocation) throws Throwable
+      public Future<?> answer(InvocationOnMock invocation)
       {
         final Object originalArgument = (invocation.getArguments())[1];
-        scheduledCount++;
-        if (scheduledCount == 1) {
+        // mimicking recursive scheduling with a loop
+        for (int scheduledCount = 0; scheduledCount < 2; scheduledCount++) {
+          Mockito.when(scheduler.scheduleAt(ArgumentMatchers.any(), ArgumentMatchers.any(Runnable.class)))
+              .thenReturn(null);
           ((Runnable) originalArgument).run();
         }
         return null;
       }
-    }).when(scheduler).scheduleAt(Mockito.any(), Mockito.any(Runnable.class));
+    }).when(scheduler).scheduleAt(ArgumentMatchers.any(), ArgumentMatchers.any(Runnable.class));
     Duration rate = new Duration(2L);
     ScheduledExecutors.scheduleAtFixedRate(scheduler, rate, callable);
-    Mockito.verify(scheduler, Mockito.times(2)).scheduleAt(Mockito.any(), Mockito.any(Runnable.class));
-    Mockito.verify(callable, Mockito.times(1)).call();
+    Mockito.verify(scheduler, Mockito.times(3)).scheduleAt(ArgumentMatchers.any(),
+        ArgumentMatchers.any(Runnable.class));
+    Mockito.verify(callable, Mockito.times(2)).call();
   }
 
   @Test
-  public void testScheduleAtFixedRate_UnexpectedFailure() throws Exception
+  public void testScheduleAtFixedRateWithCronScheduler_SuccessWithStopSignal() throws Exception
+  {
+    Mockito.when(callable.call()).thenReturn(Signal.STOP);
+    Mockito.doAnswer(new Answer<Future<?>>()
+    {
+      @Override
+      public Future<?> answer(InvocationOnMock invocation)
+      {
+        final Object originalArgument = (invocation.getArguments())[1];
+        // mimicking recursive scheduling with a loop
+        for (int scheduledCount = 0; scheduledCount < 2; scheduledCount++) {
+          Mockito.when(scheduler.scheduleAt(ArgumentMatchers.any(), ArgumentMatchers.any(Runnable.class)))
+              .thenReturn(null);
+          ((Runnable) originalArgument).run();
+        }
+        return null;
+      }
+    }).when(scheduler).scheduleAt(ArgumentMatchers.any(), ArgumentMatchers.any(Runnable.class));
+    Duration rate = new Duration(2L);
+    ScheduledExecutors.scheduleAtFixedRate(scheduler, rate, callable);
+    Mockito.verify(scheduler, Mockito.times(2)).scheduleAt(ArgumentMatchers.any(),
+        ArgumentMatchers.any(Runnable.class));
+    Mockito.verify(callable, Mockito.times(2)).call();
+  }
+
+  @Test
+  public void testScheduleAtFixedRateWithCronScheduler_UnexpectedFailure() throws Exception
   {
     Mockito.when(callable.call()).thenThrow(new IllegalArgumentException("Unexpected Exception"));
     Mockito.doAnswer(new Answer<Future<?>>()
     {
-      int scheduledCount = 0;
-
       @Override
-      public Future<?> answer(InvocationOnMock invocation) throws Throwable
+      public Future<?> answer(InvocationOnMock invocation)
       {
         final Object originalArgument = (invocation.getArguments())[1];
-        scheduledCount++;
-        if (scheduledCount == 1) {
-          ((Runnable) originalArgument).run();
-        }
+        Mockito.when(scheduler.scheduleAt(ArgumentMatchers.any(), ArgumentMatchers.any(Runnable.class)))
+            .thenReturn(null);
+        ((Runnable) originalArgument).run();
         return null;
       }
-    }).when(scheduler).scheduleAt(Mockito.any(), Mockito.any(Runnable.class));
+    }).when(scheduler).scheduleAt(ArgumentMatchers.any(), ArgumentMatchers.any(Runnable.class));
     Duration rate = new Duration(2L);
     ScheduledExecutors.scheduleAtFixedRate(scheduler, rate, callable);
-    Mockito.verify(scheduler, Mockito.times(2)).scheduleAt(Mockito.any(), Mockito.any(Runnable.class));
+    Mockito.verify(scheduler, Mockito.times(2)).scheduleAt(ArgumentMatchers.any(),
+        ArgumentMatchers.any(Runnable.class));
     Mockito.verify(callable, Mockito.times(1)).call();
   }
 
