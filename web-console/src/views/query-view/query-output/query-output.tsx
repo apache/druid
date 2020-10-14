@@ -29,9 +29,9 @@ import {
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
+import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, prettyPrintSql } from '../../../utils';
+import { copyAndAlert, filterMap, prettyPrintSql } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -52,6 +52,23 @@ function stringifyValue(value: unknown): string {
     default:
       return String(value);
   }
+}
+
+function getNumericColumnBraces(queryResult: QueryResult | undefined): Record<number, string[]> {
+  const numericColumnBraces: Record<number, string[]> = {};
+  if (queryResult && queryResult.rows.length) {
+    const rows = queryResult.rows;
+    const numColumns = queryResult.header.length;
+    for (let c = 0; c < numColumns; c++) {
+      const brace = filterMap(rows, row =>
+        typeof row[c] === 'number' ? String(row[c]) : undefined,
+      );
+      if (rows.length === brace.length) {
+        numericColumnBraces[c] = brace;
+      }
+    }
+  }
+  return numericColumnBraces;
 }
 
 export interface QueryOutputProps {
@@ -341,6 +358,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     }
   }
 
+  const numericColumnBraces = getNumericColumnBraces(queryResult);
   return (
     <div className="query-output">
       <ReactTable
@@ -372,7 +390,15 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
               return (
                 <div>
                   <Popover content={getCellMenu(h, i, value)}>
-                    <TableCell value={value} unlimited />
+                    {numericColumnBraces[i] ? (
+                      <BracedText
+                        text={String(value)}
+                        braces={numericColumnBraces[i]}
+                        padFractionalPart
+                      />
+                    ) : (
+                      <TableCell value={value} unlimited />
+                    )}
                   </Popover>
                 </div>
               );
