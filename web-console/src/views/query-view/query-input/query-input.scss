@@ -30,8 +30,13 @@
     }
 
     .ace_gutter {
-      background-color: $dark-gray4;
-      color: $gray5;
+      background-color: $gray5;
+      color: $gray1;
+
+      .bp3-dark & {
+        background-color: $dark-gray4;
+        color: $gray5;
+      }
     }
 
     .ace_placeholder {
