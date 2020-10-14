@@ -198,8 +198,10 @@ jobs:
     - <<: *integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk8) compaction integration test 49"
       jdk: openjdk8
-      
-      
+
+    - <<: *integration_compaction_tests
+      name: "(Compile=openjdk8, Run=openjdk8) compaction integration test xx"
+      jdk: openjdk8
       
     - <<: *integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk11) compaction integration test 0"
