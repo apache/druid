@@ -29,6 +29,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -52,6 +53,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Test(groups = {TestNGGroup.COMPACTION})
@@ -97,13 +99,36 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
-
+      getAndAssertCompactionStatus(
+          fullDatasourceName,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          0,
+          14312,
+          0,
+          0,
+          2,
+          0,
+          0,
+          1,
+          0);
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
+      getAndAssertCompactionStatus(
+          fullDatasourceName,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          0,
+          22489,
+          0,
+          0,
+          3,
+          0,
+          0,
+          2,
+          0);
     }
   }
 
@@ -200,7 +225,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
       checkCompactionIntervals(intervalsBeforeCompaction);
-
+      getAndAssertCompactionStatus(
+          fullDatasourceName,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0);
       // Update compaction slots to be 1
       updateCompactionTaskSlot(1, 1);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
@@ -208,6 +244,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
+      getAndAssertCompactionStatus(
+          fullDatasourceName,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          14312,
+          14311,
+          0,
+          2,
+          2,
+          0,
+          1,
+          1,
+          0);
       Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14312");
       // Run compaction again to compact the remaining day
       // Remaining day compacted (1 new segment). Now both days compacted (2 total)
@@ -215,6 +263,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
+      getAndAssertCompactionStatus(
+          fullDatasourceName,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          0,
+          22489,
+          0,
+          0,
+          3,
+          0,
+          0,
+          2,
+          0);
     }
   }
 
@@ -397,5 +457,33 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
     Assert.assertEquals(coordinatorCompactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
     Assert.assertEquals(coordinatorCompactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+  }
+
+  private void getAndAssertCompactionStatus(
+      String fullDatasourceName,
+      AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
+      long bytesAwaitingCompaction,
+      long bytesCompacted,
+      long bytesSkipped,
+      long segmentCountAwaitingCompaction,
+      long segmentCountCompacted,
+      long segmentCountSkipped,
+      long intervalCountAwaitingCompaction,
+      long intervalCountCompacted,
+      long intervalCountSkipped
+  ) throws Exception
+  {
+    Map<String, String> actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
+    Assert.assertNotNull(actualStatus);
+    Assert.assertEquals(actualStatus.get("scheduleStatus"), scheduleStatus.toString());
+    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesAwaitingCompaction")), bytesAwaitingCompaction);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesCompacted")), bytesCompacted);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesSkipped")), bytesSkipped);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountAwaitingCompaction")), segmentCountAwaitingCompaction);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountCompacted")), segmentCountCompacted);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountSkipped")), segmentCountSkipped);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountAwaitingCompaction")), intervalCountAwaitingCompaction);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountCompacted")), intervalCountCompacted);
+    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountSkipped")), intervalCountSkipped);
   }
 }
