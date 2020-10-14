@@ -280,6 +280,14 @@ public class DataSourceAnalysis
     return dataSource instanceof QueryDataSource;
   }
 
+  /**
+   * Returns true if this datasource is made out of a join operation
+   */
+  public boolean isJoin()
+  {
+    return !preJoinableClauses.isEmpty();
+  }
+
   @Override
   public boolean equals(Object o)
   {

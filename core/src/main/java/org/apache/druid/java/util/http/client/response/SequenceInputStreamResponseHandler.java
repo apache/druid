@@ -151,7 +151,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       }
       catch (IOException e) {
         // This should never happen
-        log.wtf(e, "The empty stream threw an IOException");
+        log.error(e, "The empty stream threw an IOException");
         throw new RuntimeException(e);
       }
       finally {

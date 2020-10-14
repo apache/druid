@@ -60,7 +60,8 @@ public class PartialHashSegmentGenerateTaskTest
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         INGESTION_SPEC,
-        ParallelIndexTestingFactory.CONTEXT
+        ParallelIndexTestingFactory.CONTEXT,
+        null
     );
   }
 
@@ -93,7 +94,8 @@ public class PartialHashSegmentGenerateTaskTest
                 Granularities.NONE,
                 intervals
             ),
-            new HashedPartitionsSpec(null, expectedNumBuckets, null)
+            new HashedPartitionsSpec(null, expectedNumBuckets, null),
+            null
         );
     Assert.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
     for (Interval interval : intervals) {

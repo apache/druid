@@ -132,7 +132,7 @@ public class LimitedBufferHashGrouperTest
   public void testBufferTooSmall()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("WTF? Using LimitedBufferHashGrouper with insufficient buffer capacity.");
+    expectedException.expectMessage("LimitedBufferHashGrouper initialized with insufficient buffer capacity");
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     makeGrouper(columnSelectorFactory, 10, 2, 100);
   }

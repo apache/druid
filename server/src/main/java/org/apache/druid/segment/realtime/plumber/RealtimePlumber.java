@@ -95,6 +95,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class RealtimePlumber implements Plumber
 {
@@ -115,7 +116,6 @@ public class RealtimePlumber implements Plumber
       String.CASE_INSENSITIVE_ORDER
   );
   private final QuerySegmentWalker texasRanger;
-
   private final Cache cache;
 
   private volatile long nextFlush = 0;
@@ -213,7 +213,8 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException
   {
     long messageTimestamp = row.getTimestampFromEpoch();
     final Sink sink = getSink(messageTimestamp);
@@ -261,7 +262,6 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -394,7 +394,7 @@ public class RealtimePlumber implements Plumber
               if (!isPushedMarker.exists()) {
                 removeSegment(sink, mergedTarget);
                 if (mergedTarget.exists()) {
-                  log.wtf("Merged target[%s] exists?!", mergedTarget);
+                  log.warn("Merged target[%s] still exists after attempt to delete it; skipping push.", mergedTarget);
                   return;
                 }
               } else {
@@ -725,7 +725,6 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
           config.getDedupColumn(),
           hydrants
       );

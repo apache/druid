@@ -50,25 +50,6 @@ function _get_druid_version() {
   _get_maven_property_value "project.version"
 }
 
-function _get_zookeeper_version() {
-  _get_maven_property_value "zookeeper.version"
-}
-
-function _download_zookeeper() {
-  local dest="$1"
-  local zk_version
-  zk_version="$(_get_zookeeper_version)"
-  #zk_tar=apache-zookeeper-${zk_version}-bin # for zk 3.5.x
-  zk_tar=zookeeper-${zk_version} # for zk 3.4.x
-
-  _log "Downloading zookeeper"
-  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/$zk_tar.tar.gz" \
-    | tar xz \
-  && rm -rf "$dest" \
-  && mv "$zk_tar" "$dest" \
-  && rm -f "$zk_tar"
-}
-
 function _build_distribution() {
   _log "Building druid distribution"
 
@@ -109,8 +90,7 @@ DRUID_PID_FILE=".druid.pid"
 
 function build() {
   _log "Building druid"
-  _build_distribution \
-  && _download_zookeeper "$(_get_code_root)/distribution/target/apache-druid-$(_get_druid_version)/zk"
+  _build_distribution
   _log "Done building druid"
 }
 

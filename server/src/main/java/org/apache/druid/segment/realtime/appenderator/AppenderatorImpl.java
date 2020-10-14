@@ -61,6 +61,8 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -131,6 +133,8 @@ public class AppenderatorImpl implements Appenderator
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
   private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
+  private final RowIngestionMeters rowIngestionMeters;
+  private final ParseExceptionHandler parseExceptionHandler;
   // Synchronize persisting commitMetadata so that multiple persist threads (if present)
   // and abandon threads do not step over each other
   private final Lock commitLock = new ReentrantLock();
@@ -169,7 +173,9 @@ public class AppenderatorImpl implements Appenderator
       @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache
+      Cache cache,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     this.myId = id;
@@ -183,6 +189,8 @@ public class AppenderatorImpl implements Appenderator
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
     this.texasRanger = sinkQuerySegmentWalker;
+    this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
+    this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -270,6 +278,12 @@ public class AppenderatorImpl implements Appenderator
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
 
+    if (addResult.isRowAdded()) {
+      rowIngestionMeters.incrementProcessed();
+    } else if (addResult.hasParseException()) {
+      parseExceptionHandler.handle(addResult.getParseException());
+    }
+
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
@@ -334,7 +348,7 @@ public class AppenderatorImpl implements Appenderator
         sink.stopAdjust();
       }
     }
-    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired, addResult.getParseException());
+    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
   }
 
   @Override
@@ -397,7 +411,6 @@ public class AppenderatorImpl implements Appenderator
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          tuningConfig.isReportParseExceptions(),
           null
       );
 
@@ -711,12 +724,12 @@ public class AppenderatorImpl implements Appenderator
     // Sanity checks
     for (FireHydrant hydrant : sink) {
       if (sink.isWritable()) {
-        throw new ISE("WTF?! Expected sink to be no longer writable before mergeAndPush. Segment[%s].", identifier);
+        throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
       }
 
       synchronized (hydrant) {
         if (!hydrant.hasSwapped()) {
-          throw new ISE("WTF?! Expected sink to be fully persisted before mergeAndPush. Segment[%s].", identifier);
+          throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
         }
       }
     }
@@ -1115,7 +1128,6 @@ public class AppenderatorImpl implements Appenderator
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
-            tuningConfig.isReportParseExceptions(),
             null,
             hydrants
         );

@@ -38,17 +38,19 @@ interface SegmentTimelineProps {
   dataQueryManager?: QueryManager<{ capabilities: Capabilities; timeSpan: number }, any>;
 }
 
+type ActiveDataType = 'sizeData' | 'countData';
+
 interface SegmentTimelineState {
   data?: Record<string, any>;
   datasources: string[];
   stackedData?: Record<string, BarUnitData[]>;
   singleDatasourceData?: Record<string, Record<string, BarUnitData[]>>;
   activeDatasource: string | null;
-  activeDataType: string; // "countData" || "sizeData"
+  activeDataType: ActiveDataType;
   dataToRender: BarUnitData[];
   timeSpan: number; // by months
   loading: boolean;
-  error?: string;
+  error?: Error;
   xScale: AxisScale<Date> | null;
   yScale: AxisScale<number> | null;
   dStart: Date;
@@ -232,7 +234,7 @@ export class SegmentTimeline extends React.PureComponent<
       singleDatasourceData: {},
       dataToRender: [],
       activeDatasource: null,
-      activeDataType: 'countData',
+      activeDataType: 'sizeData',
       timeSpan: DEFAULT_TIME_SPAN_MONTHS,
       loading: true,
       xScale: null,
@@ -251,7 +253,7 @@ export class SegmentTimeline extends React.PureComponent<
             const query = `
 SELECT
   "start", "end", "datasource",
-COUNT(*) AS "count", SUM("size") as "size"
+  COUNT(*) AS "count", SUM("size") as "size"
 FROM sys.segments
 WHERE "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -${timeSpan}, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS')
 GROUP BY 1, 2, 3
@@ -300,12 +302,12 @@ ORDER BY "start" DESC`;
           );
           return { data, datasources, stackedData, singleDatasourceData };
         },
-        onStateChange: ({ result, loading, error }) => {
+        onStateChange: ({ data, loading, error }) => {
           this.setState({
-            data: result ? result.data : undefined,
-            datasources: result ? result.datasources : [],
-            stackedData: result ? result.stackedData : undefined,
-            singleDatasourceData: result ? result.singleDatasourceData : undefined,
+            data: data ? data.data : undefined,
+            datasources: data ? data.datasources : [],
+            stackedData: data ? data.stackedData : undefined,
+            singleDatasourceData: data ? data.singleDatasourceData : undefined,
             loading,
             error,
           });
@@ -448,7 +450,7 @@ ORDER BY "start" DESC`;
     if (error) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when loading data: {error}</span>
+          <span className={'no-data-text'}>Error when loading data: {error.message}</span>
         </div>
       );
     }
@@ -517,8 +519,8 @@ ORDER BY "start" DESC`;
               onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
               selectedValue={activeDataType}
             >
-              <Radio label={'Segment count'} value={'countData'} />
               <Radio label={'Total size'} value={'sizeData'} />
+              <Radio label={'Segment count'} value={'countData'} />
             </RadioGroup>
           </FormGroup>
 
@@ -549,11 +551,11 @@ ORDER BY "start" DESC`;
               value={timeSpan}
               fill
             >
-              <option value={1}> 1 months</option>
-              <option value={3}> 3 months</option>
-              <option value={6}> 6 months</option>
-              <option value={9}> 9 months</option>
-              <option value={12}> 1 year</option>
+              <option value={1}>1 months</option>
+              <option value={3}>3 months</option>
+              <option value={6}>6 months</option>
+              <option value={9}>9 months</option>
+              <option value={12}>1 year</option>
             </HTMLSelect>
           </FormGroup>
         </div>

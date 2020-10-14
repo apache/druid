@@ -43,6 +43,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
@@ -559,14 +560,17 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = new ArrayList<>();
     if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(
-            shardInfo[0],
-            shardInfo[1],
-            shardInfo[0],
-            shardInfo[1],
-            null,
-            HadoopDruidIndexerConfig.JSON_MAPPER
-        ));
+        specs.add(
+            new HashBasedNumberedShardSpec(
+                shardInfo[0],
+                shardInfo[1],
+                shardInfo[0],
+                shardInfo[1],
+                null,
+                HashPartitionFunction.MURMUR3_32_ABS,
+                HadoopDruidIndexerConfig.JSON_MAPPER
+            )
+        );
       }
     } else if ("single".equals(partitionType)) {
       int partitionNum = 0;

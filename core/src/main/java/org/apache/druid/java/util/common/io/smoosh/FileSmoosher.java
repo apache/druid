@@ -205,7 +205,7 @@ public class FileSmoosher implements Closeable
         bytesWritten += bytesWrittenInChunk;
 
         if (bytesWritten != currOut.getCurrOffset() - startOffset) {
-          throw new ISE("WTF? Perhaps there is some concurrent modification going on?");
+          throw new ISE("Perhaps there is some concurrent modification going on?");
         }
         if (bytesWritten > size) {
           throw new ISE("Wrote[%,d] bytes for something of size[%,d].  Liar!!!", bytesWritten, size);
@@ -228,7 +228,7 @@ public class FileSmoosher implements Closeable
         writerCurrentlyInUse = false;
 
         if (bytesWritten != currOut.getCurrOffset() - startOffset) {
-          throw new ISE("WTF? Perhaps there is some concurrent modification going on?");
+          throw new ISE("Perhaps there is some concurrent modification going on?");
         }
         if (bytesWritten != size) {
           throw new IOE("Expected [%,d] bytes, only saw [%,d], potential corruption?", size, bytesWritten);

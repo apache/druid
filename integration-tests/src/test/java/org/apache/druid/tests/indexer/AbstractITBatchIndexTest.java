@@ -23,6 +23,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
@@ -321,6 +322,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialDimensionCardinalityTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);
                     }

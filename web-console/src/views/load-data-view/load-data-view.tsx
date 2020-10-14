@@ -555,7 +555,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <div className={classNames('load-data-view', 'app-view', step)}>
         {this.renderStepNav()}
-        {step === 'loading' && <Loader loading />}
+        {step === 'loading' && <Loader />}
 
         {step === 'welcome' && this.renderWelcomeStep()}
         {step === 'connect' && this.renderConnectStep()}
@@ -689,7 +689,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           });
         }}
       >
-        <img src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)} />
+        <img
+          src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)}
+          alt={`Ingestion tile for ${comboType}`}
+        />
         <p>{getIngestionTitle(comboType)}</p>
       </Card>
     );
@@ -706,6 +709,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
+          {this.renderIngestionCard('azure-event-hubs')}
           {this.renderIngestionCard('index_parallel:s3')}
           {this.renderIngestionCard('index_parallel:azure')}
           {this.renderIngestionCard('index_parallel:google')}
@@ -800,6 +804,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'kinesis':
         return <p>Load streaming data in real-time from Amazon Kinesis.</p>;
 
+      case 'azure-event-hubs':
+        return (
+          <>
+            <p>Azure Event Hubs provides an Apache Kafka compatible API for consuming data.</p>
+            <p>
+              Data from an Event Hub can be streamed into Druid by enabling the Kafka API on the
+              Namespace.
+            </p>
+            <p>
+              Please see the{' '}
+              <ExternalLink href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-for-kafka-ecosystem-overview">
+                Event Hub documentation
+              </ExternalLink>{' '}
+              for more information.
+            </p>
+          </>
+        );
+
       case 'example':
         if (exampleManifests && exampleManifests.length) {
           return; // Yield to example picker controls
@@ -853,6 +875,45 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               }}
             />
           </FormGroup>
+        );
+
+      case 'azure-event-hubs':
+        return (
+          <>
+            <FormGroup>
+              <Callout intent={Intent.WARNING}>
+                Please review and fill in the <Code>consumerProperties</Code> on the next step.
+              </Callout>
+            </FormGroup>
+            <FormGroup>
+              <Button
+                text="Connect via Kafka API"
+                rightIcon={IconNames.ARROW_RIGHT}
+                intent={Intent.PRIMARY}
+                onClick={() => {
+                  // Use the kafka ingestion type but preset some consumerProperties required for Event Hubs
+                  let newSpec = updateIngestionType(spec, 'kafka');
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.ioConfig.consumerProperties.{security.protocol}',
+                    'SASL_SSL',
+                  );
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.ioConfig.consumerProperties.{sasl.mechanism}',
+                    'PLAIN',
+                  );
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.ioConfig.consumerProperties.{sasl.jaas.config}',
+                    `org.apache.kafka.common.security.plain.PlainLoginModule required username="$ConnectionString" password="Value of 'Connection string-primary key' in the Azure UI";`,
+                  );
+                  this.updateSpec(newSpec);
+                  this.updateStep('connect');
+                }}
+              />
+            </FormGroup>
+          </>
         );
 
       case 'example':
@@ -969,7 +1030,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     if (issue) {
       this.setState({
-        inputQueryState: initRun ? QueryState.INIT : new QueryState({ error: issue }),
+        inputQueryState: initRun ? QueryState.INIT : new QueryState({ error: new Error(issue) }),
       });
       return;
     }
@@ -1025,9 +1086,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </CenterMessage>
       );
     } else if (inputQueryState.isLoading()) {
-      mainFill = <Loader loading />;
+      mainFill = <Loader />;
     } else if (inputQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${inputQueryState.error}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${inputQueryState.error.message}`}</CenterMessage>;
     } else if (inputQueryState.data) {
       const inputData = inputQueryState.data.data;
       mainFill = (
@@ -1174,9 +1235,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 fillDataSourceNameIfNeeded(
                   fillInputFormat(
                     spec,
-                    filterMap(inputQueryState.data.data, l =>
-                      l.parsed ? l.parsed.raw : undefined,
-                    ),
+                    filterMap(inputQueryState.data.data, l => (l.input ? l.input.raw : undefined)),
                   ),
                 ),
               );
@@ -1202,7 +1261,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     if (issue) {
       this.setState({
-        parserQueryState: initRun ? QueryState.INIT : new QueryState({ error: issue }),
+        parserQueryState: initRun ? QueryState.INIT : new QueryState({ error: new Error(issue) }),
       });
       return;
     }
@@ -1251,9 +1310,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </CenterMessage>
       );
     } else if (parserQueryState.isLoading()) {
-      mainFill = <Loader loading />;
+      mainFill = <Loader />;
     } else if (parserQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${parserQueryState.error}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${parserQueryState.error.message}`}</CenterMessage>;
     } else if (parserQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1284,9 +1343,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
     }
 
-    let sugestedFlattenFields: FlattenField[] | undefined;
+    let suggestedFlattenFields: FlattenField[] | undefined;
     if (canFlatten && !flattenFields.length && parserQueryState.data) {
-      sugestedFlattenFields = computeFlattenPathsForData(
+      suggestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
         'path',
         'ignore-arrays',
@@ -1328,17 +1387,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </>
           )}
           {this.renderFlattenControls()}
-          {sugestedFlattenFields && sugestedFlattenFields.length ? (
+          {suggestedFlattenFields && suggestedFlattenFields.length ? (
             <FormGroup>
               <Button
                 icon={IconNames.LIGHTBULB}
-                text={`Auto add ${pluralIfNeeded(sugestedFlattenFields.length, 'flatten spec')}`}
+                text={`Auto add ${pluralIfNeeded(suggestedFlattenFields.length, 'flatten spec')}`}
                 onClick={() => {
                   this.updateSpec(
                     deepSet(
                       spec,
                       'spec.ioConfig.inputFormat.flattenSpec.fields',
-                      sugestedFlattenFields,
+                      suggestedFlattenFields,
                     ),
                   );
                 }}
@@ -1473,7 +1532,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.setState({
         timestampQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: 'must complete parse step' }),
+          : new QueryState({ error: new Error('must complete parse step') }),
       });
       return;
     }
@@ -1521,9 +1580,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </CenterMessage>
       );
     } else if (timestampQueryState.isLoading()) {
-      mainFill = <Loader loading />;
+      mainFill = <Loader />;
     } else if (timestampQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${timestampQueryState.error}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${timestampQueryState.error.message}`}</CenterMessage>;
     } else if (timestampQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1624,7 +1683,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.setState({
         transformQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: 'must complete parse step' }),
+          : new QueryState({ error: new Error('must complete parse step') }),
       });
       return;
     }
@@ -1670,9 +1729,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (transformQueryState.isInit()) {
       mainFill = <CenterMessage>{`Please fill in the previous steps`}</CenterMessage>;
     } else if (transformQueryState.isLoading()) {
-      mainFill = <Loader loading />;
+      mainFill = <Loader />;
     } else if (transformQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${transformQueryState.error}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${transformQueryState.error.message}`}</CenterMessage>;
     } else if (transformQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1839,7 +1898,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.setState({
         filterQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: 'must complete parse step' }),
+          : new QueryState({ error: new Error('must complete parse step') }),
       });
       return;
     }
@@ -1912,9 +1971,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (filterQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else if (filterQueryState.isLoading()) {
-      mainFill = <Loader loading />;
+      mainFill = <Loader />;
     } else if (filterQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${filterQueryState.error}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${filterQueryState.error.message}`}</CenterMessage>;
     } else if (filterQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -2126,7 +2185,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.setState({
         schemaQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: 'must complete parse step' }),
+          : new QueryState({ error: new Error('must complete parse step') }),
       });
       return;
     }
@@ -2178,9 +2237,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (schemaQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else if (schemaQueryState.isLoading()) {
-      mainFill = <Loader loading />;
+      mainFill = <Loader />;
     } else if (schemaQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${schemaQueryState.error}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${schemaQueryState.error.message}`}</CenterMessage>;
     } else if (schemaQueryState.data) {
       mainFill = (
         <div className="table-with-control">

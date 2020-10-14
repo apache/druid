@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.Joinables;
 
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +69,7 @@ public class JoinDataSource implements DataSource
   {
     this.left = Preconditions.checkNotNull(left, "left");
     this.right = Preconditions.checkNotNull(right, "right");
-    this.rightPrefix = Joinables.validatePrefix(rightPrefix);
+    this.rightPrefix = JoinPrefixUtils.validatePrefix(rightPrefix);
     this.conditionAnalysis = Preconditions.checkNotNull(conditionAnalysis, "conditionAnalysis");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
   }
@@ -175,9 +175,9 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
-  public boolean isCacheable()
+  public boolean isCacheable(boolean isBroker)
   {
-    return false;
+    return left.isCacheable(isBroker) && right.isCacheable(isBroker);
   }
 
   @Override

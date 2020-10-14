@@ -17,8 +17,9 @@
  */
 
 @import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../node_modules/@blueprintjs/datetime/lib/css/blueprint-datetime';
+@import './blueprint-overrides';
+@import '~@blueprintjs/core/src/blueprint';
+@import '~@blueprintjs/datetime/src/blueprint-datetime';
 @import '../lib/react-table';
 @import '../node_modules/react-splitter-layout/lib/index.css';
 
@@ -48,4 +49,10 @@ body {
   position: absolute;
   height: 100%;
   width: 100%;
+
+  .console-application {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
 }

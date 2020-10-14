@@ -93,7 +93,6 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
 
@@ -248,7 +247,6 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
 

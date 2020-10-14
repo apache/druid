@@ -45,6 +45,15 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   private static final String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_reindex_queries.json";
   private static final String REINDEX_DATASOURCE = "wikipedia_reindex_test";
 
+  private static final String MERGE_INDEX_TASK = "/indexer/wikipedia_merge_index_task.json";
+  private static final String MERGE_INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_merge_index_queries.json";
+  private static final String MERGE_INDEX_DATASOURCE = "wikipedia_merge_index_test";
+
+  private static final String MERGE_REINDEX_TASK = "/indexer/wikipedia_merge_reindex_task.json";
+  private static final String MERGE_REINDEX_TASK_WITH_DRUID_INPUT_SOURCE = "/indexer/wikipedia_merge_reindex_druid_input_source_task.json";
+  private static final String MERGE_REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_merge_index_queries.json";
+  private static final String MERGE_REINDEX_DATASOURCE = "wikipedia_merge_reindex_test";
+
   @Test
   public void testIndexData() throws Exception
   {
@@ -107,6 +116,39 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           reindexDatasourceWithDruidInputSource,
           REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
           REINDEX_QUERIES_RESOURCE
+      );
+    }
+  }
+
+  @Test
+  public void testMERGEIndexData() throws Exception
+  {
+    final String reindexDatasource = MERGE_REINDEX_DATASOURCE + "-testMergeIndexData";
+    final String reindexDatasourceWithDruidInputSource = MERGE_REINDEX_DATASOURCE + "-testMergeReIndexData-druidInputSource";
+    try (
+        final Closeable ignored1 = unloader(MERGE_INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored3 = unloader(reindexDatasourceWithDruidInputSource + config.getExtraDatasourceNameSuffix())
+    ) {
+      doIndexTest(
+          MERGE_INDEX_DATASOURCE,
+          MERGE_INDEX_TASK,
+          MERGE_INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true
+      );
+      doReindexTest(
+          MERGE_INDEX_DATASOURCE,
+          reindexDatasource,
+          MERGE_REINDEX_TASK,
+          MERGE_REINDEX_QUERIES_RESOURCE
+      );
+      doReindexTest(
+          MERGE_INDEX_DATASOURCE,
+          reindexDatasourceWithDruidInputSource,
+          MERGE_REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
+          MERGE_INDEX_QUERIES_RESOURCE
       );
     }
   }

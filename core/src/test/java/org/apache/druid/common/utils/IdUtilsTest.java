@@ -101,7 +101,7 @@ public class IdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "wtf\u000Bis line tabulation");
+    IdUtils.validateId(THINGO, "what\u000Bis line tabulation");
   }
 
   @Test

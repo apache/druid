@@ -304,7 +304,6 @@ public class IndexGeneratorJob implements Jobby
 
     IncrementalIndex newIndex = new IncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
-        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows()) // only used by OffHeapIncrementalIndex
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
         .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
         .buildOnheap();
@@ -355,7 +354,7 @@ public class IndexGeneratorJob implements Jobby
       final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
 
       if (!bucket.isPresent()) {
-        throw new ISE("WTF?! No bucket found for row: %s", inputRow);
+        throw new ISE("No bucket found for row: %s", inputRow);
       }
 
       final long truncatedTimestamp = granularitySpec.getQueryGranularity()

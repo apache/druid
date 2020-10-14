@@ -140,7 +140,6 @@ public class NestedQueryPushDownTest
                 ))
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .buildOnheap();
