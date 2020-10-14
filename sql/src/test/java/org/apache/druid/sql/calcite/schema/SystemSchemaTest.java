@@ -523,7 +523,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSegmentsTable()
+  public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
@@ -706,7 +706,7 @@ public class SystemSchemaTest extends CalciteTestBase
       long isRealtime,
       long isOvershadowed,
       CompactionState compactionState
-  )
+  ) throws Exception
   {
     Assert.assertEquals(segmentId, row[0].toString());
     SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), 0);
@@ -722,7 +722,11 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(isAvailable, row[10]);
     Assert.assertEquals(isRealtime, row[11]);
     Assert.assertEquals(isOvershadowed, row[12]);
-    Assert.assertEquals(compactionState, row[16]);
+    if (compactionState == null) {
+      Assert.assertNull(row[16]);
+    } else {
+      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[16]);
+    }
   }
 
   @Test
@@ -1289,12 +1293,6 @@ public class SystemSchemaTest extends CalciteTestBase
           case STRING:
             if (signature.getColumnName(i).equals("segment_id")) {
               expectedClass = SegmentId.class;
-            } else if (signature.getColumnName(i).equals("shard_spec")) {
-              expectedClass = ShardSpec.class;
-            } else if (signature.getColumnName(i).equals("last_compaction_state")) {
-              expectedClass = CompactionState.class;
-            } else if (signature.getColumnName(i).equals("dimensions") || signature.getColumnName(i).equals("metrics")) {
-              expectedClass = List.class;
             } else {
               expectedClass = String.class;
             }
