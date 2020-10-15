@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
 import org.apache.druid.indexing.kinesis.test.TestModifiedKinesisIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -347,5 +348,13 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertTrue(copy.isResetOffsetAutomatically());
     Assert.assertEquals(100, copy.getMaxRecordsPerPoll());
     Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(KinesisIndexTaskTuningConfig.class)
+        .usingGetClass()
+        .verify();
   }
 }
