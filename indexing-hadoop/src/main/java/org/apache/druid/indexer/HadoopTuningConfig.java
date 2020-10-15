@@ -193,7 +193,6 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  @Override
   public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
@@ -206,14 +205,12 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  @Override
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
   }
 
   @JsonProperty
-  @Override
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
