@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
-import { createBrowserNormal } from './playwright';
+import { UNIFIED_CONSOLE_URL } from './druid';
+import { createBrowser } from './playwright';
 import { createPage } from './playwright';
 
-(async () => {
-  const browser = await createBrowserNormal();
+export async function waitTillWebConsoleReady() {
+  const browser = await createBrowser();
 
   try {
     const page = await createPage(browser);
-    await page.waitFor('//*[contains(text(),"console will not function at the moment")]', {
-      visibility: 'hidden',
+    await page.goto(UNIFIED_CONSOLE_URL);
+    await page.waitForSelector('//*[contains(text(),"console will not function at the moment")]', {
+      state: 'hidden',
     });
   } finally {
     await browser.close();
   }
-})();
+}

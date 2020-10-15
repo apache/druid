@@ -53,12 +53,6 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    return true;
-  }
-
-  @Override
   @JsonIgnore
   public int getPartitionNum()
   {

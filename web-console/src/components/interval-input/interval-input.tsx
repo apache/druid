@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
+import { Button, InputGroup, Intent, Popover, Position } from '@blueprintjs/core';
 import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
@@ -66,10 +66,11 @@ export interface IntervalInputProps {
   interval: string;
   placeholder: string | undefined;
   onValueChange: (interval: string) => void;
+  intent?: Intent;
 }
 
 export const IntervalInput = React.memo(function IntervalInput(props: IntervalInputProps) {
-  const { interval, placeholder, onValueChange } = props;
+  const { interval, placeholder, onValueChange, intent } = props;
 
   return (
     <InputGroup
@@ -99,6 +100,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
         const value = e.target.value.replace(/[^\-0-9T:/]/g, '').substring(0, 39);
         onValueChange(value);
       }}
+      intent={intent}
     />
   );
 });

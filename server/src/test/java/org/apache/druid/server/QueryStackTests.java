@@ -232,6 +232,14 @@ public class QueryStackTests
       final boolean useParallelMergePoolConfigured
   )
   {
+    return createQueryRunnerFactoryConglomerate(closer, getProcessingConfig(useParallelMergePoolConfigured));
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig
+  )
+  {
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
         () -> ByteBuffer.allocate(COMPUTE_BUFFER_SIZE)
@@ -250,7 +258,7 @@ public class QueryStackTests
                 return GroupByStrategySelector.STRATEGY_V2;
               }
             },
-            getProcessingConfig(useParallelMergePoolConfigured)
+            processingConfig
         );
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory = factoryCloserPair.lhs;

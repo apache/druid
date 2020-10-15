@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -77,6 +78,18 @@ class LambdaExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return expr.canVectorize(inputTypes);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return expr.buildVectorized(inputTypes);
+  }
+
+  @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return expr.eval(bindings);
@@ -86,13 +99,6 @@ class LambdaExpr implements Expr
   public String stringify()
   {
     return StringUtils.format("(%s) -> %s", ARG_JOINER.join(getIdentifiers()), expr.stringify());
-  }
-
-  @Override
-  public void visit(Visitor visitor)
-  {
-    expr.visit(visitor);
-    visitor.visit(this);
   }
 
   @Override
@@ -171,18 +177,21 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public String stringify()
+  public boolean canVectorize(InputBindingTypes inputTypes)
   {
-    return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
+    return function.canVectorize(inputTypes, args);
   }
 
   @Override
-  public void visit(Visitor visitor)
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
   {
-    for (Expr child : args) {
-      child.visit(visitor);
-    }
-    visitor.visit(this);
+    return function.asVectorProcessor(inputTypes, args);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
   }
 
   @Override
@@ -289,6 +298,20 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return function.canVectorize(inputTypes, lambdaExpr, argsExpr) &&
+           lambdaExpr.canVectorize(inputTypes) &&
+           argsExpr.stream().allMatch(expr -> expr.canVectorize(inputTypes));
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return function.asVectorProcessor(inputTypes, lambdaExpr, argsExpr);
+  }
+
+  @Override
   public String stringify()
   {
     return StringUtils.format(
@@ -297,16 +320,6 @@ class ApplyFunctionExpr implements Expr
         lambdaExpr.stringify(),
         ARG_JOINER.join(argsExpr.stream().map(Expr::stringify).iterator())
     );
-  }
-
-  @Override
-  public void visit(Visitor visitor)
-  {
-    lambdaExpr.visit(visitor);
-    for (Expr arg : argsExpr) {
-      arg.visit(visitor);
-    }
-    visitor.visit(this);
   }
 
   @Override

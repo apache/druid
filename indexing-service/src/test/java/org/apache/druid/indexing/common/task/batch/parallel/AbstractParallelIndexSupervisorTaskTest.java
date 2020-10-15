@@ -64,8 +64,8 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -539,7 +539,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         new NamedType(PartialHashSegmentGenerateTask.class, PartialHashSegmentGenerateTask.TYPE),
         new NamedType(PartialRangeSegmentGenerateTask.class, PartialRangeSegmentGenerateTask.TYPE),
         new NamedType(PartialGenericSegmentMergeTask.class, PartialGenericSegmentMergeTask.TYPE),
-        new NamedType(PartialDimensionDistributionTask.class, PartialDimensionDistributionTask.TYPE)
+        new NamedType(PartialDimensionDistributionTask.class, PartialDimensionDistributionTask.TYPE),
+        new NamedType(PartialDimensionCardinalityTask.class, PartialDimensionCardinalityTask.TYPE)
     );
   }
 

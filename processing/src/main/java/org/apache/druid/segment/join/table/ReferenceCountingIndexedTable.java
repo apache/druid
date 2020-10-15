@@ -75,4 +75,16 @@ public class ReferenceCountingIndexedTable extends ReferenceCountingCloseableObj
   {
     return incrementReferenceAndDecrementOnceCloseable();
   }
+
+  @Override
+  public byte[] computeCacheKey()
+  {
+    return baseObject.computeCacheKey();
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return baseObject.isCacheable();
+  }
 }

@@ -57,7 +57,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.ThreadingTaskRunner;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.indexing.worker.http.ShuffleResource;
+import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -143,7 +143,6 @@ public class CliIndexer extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
-            Jerseys.addResource(binder, ShuffleResource.class);
 
             LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
@@ -201,6 +200,7 @@ public class CliIndexer extends ServerRunnable
             );
           }
         },
+        new ShuffleModule(),
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),

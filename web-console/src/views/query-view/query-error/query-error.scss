@@ -20,7 +20,9 @@
   background: #232d35;
   padding: 20px 22px;
 
-  .cursor-link {
+  .cursor-link,
+  .more-or-less,
+  .suggestion {
     color: #2aabd2;
     text-decoration: underline;
     cursor: pointer;

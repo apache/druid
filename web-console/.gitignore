@@ -16,3 +16,4 @@ lib/sql-docs.js
 tscommand-*.tmp.txt
 
 licenses.json
+.druid.pid

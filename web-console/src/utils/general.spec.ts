@@ -18,6 +18,12 @@
 
 import {
   alphanumericCompare,
+  formatBytes,
+  formatBytesCompact,
+  formatInteger,
+  formatMegabytes,
+  formatMillions,
+  formatPercent,
   sortWithPrefixSuffix,
   sqlQueryCustomTableFilter,
   swapElements,
@@ -81,6 +87,45 @@ describe('general', () => {
     it('works downward', () => {
       expect(swapElements(array, 2, 3)).toEqual(['a', 'b', 'd', 'c', 'e']);
       expect(swapElements(array, 2, 4)).toEqual(['a', 'b', 'e', 'd', 'c']);
+    });
+  });
+
+  describe('formatInteger', () => {
+    it('works', () => {
+      expect(formatInteger(10000)).toEqual('10,000');
+    });
+  });
+
+  describe('formatBytes', () => {
+    it('works', () => {
+      expect(formatBytes(10000)).toEqual('10.00 KB');
+    });
+  });
+
+  describe('formatBytesCompact', () => {
+    it('works', () => {
+      expect(formatBytesCompact(10000)).toEqual('10.00KB');
+    });
+  });
+
+  describe('formatMegabytes', () => {
+    it('works', () => {
+      expect(formatMegabytes(30000000)).toEqual('28.6');
+    });
+  });
+
+  describe('formatPercent', () => {
+    it('works', () => {
+      expect(formatPercent(2 / 3)).toEqual('66.67%');
+    });
+  });
+
+  describe('formatMillions', () => {
+    it('works', () => {
+      expect(formatMillions(1e6)).toEqual('1.000 M');
+      expect(formatMillions(1e6 + 1)).toEqual('1.000 M');
+      expect(formatMillions(1234567)).toEqual('1.235 M');
+      expect(formatMillions(345.2)).toEqual('345');
     });
   });
 });

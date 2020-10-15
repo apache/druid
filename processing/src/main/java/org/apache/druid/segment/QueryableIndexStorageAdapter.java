@@ -220,7 +220,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     // vector cursors can't iterate backwards yet
-    return virtualColumns.canVectorize(this) && !descending;
+    return !descending;
   }
 
   @Override
@@ -313,6 +313,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return null;
     }
     return columnHolder.getCapabilities();
+  }
+
+  public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
+  {
+    return new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
+      }
+    };
   }
 
   @Override

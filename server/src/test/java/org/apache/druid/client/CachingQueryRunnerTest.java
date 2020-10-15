@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Bytes;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.druid.client.cache.BackgroundCachePopulator;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -64,6 +66,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -77,6 +80,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -105,6 +109,12 @@ public class CachingQueryRunnerTest
       DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
       DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
   };
+  private static final SegmentDescriptor SEGMENT_DESCRIPTOR = new SegmentDescriptor(
+      Intervals.of("2011/2012"),
+      "version",
+      0
+  );
+  private static final String CACHE_ID = "segment";
 
   private ObjectMapper objectMapper;
   private CachePopulator cachePopulator;
@@ -193,6 +203,53 @@ public class CachingQueryRunnerTest
     }
   }
 
+  @Test
+  public void testNullCacheKeyPrefix()
+  {
+    Query query = new TopNQueryBuilder()
+        .dataSource("ds")
+        .dimension("top_dim")
+        .metric("imps")
+        .threshold(3)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(AGGS)
+        .granularity(Granularities.ALL)
+        .build();
+
+    QueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+    Cache cache = EasyMock.mock(Cache.class);
+    EasyMock.replay(cache);
+    CachingQueryRunner queryRunner = makeCachingQueryRunner(null, cache, toolchest, Sequences.empty());
+    Assert.assertFalse(queryRunner.canPopulateCache(query, toolchest.getCacheStrategy(query)));
+    Assert.assertFalse(queryRunner.canUseCache(query, toolchest.getCacheStrategy(query)));
+    queryRunner.run(QueryPlus.wrap(query));
+    EasyMock.verifyUnexpectedCalls(cache);
+  }
+
+  @Test
+  public void testNullStrategy()
+  {
+    Query query = new TopNQueryBuilder()
+        .dataSource("ds")
+        .dimension("top_dim")
+        .metric("imps")
+        .threshold(3)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(AGGS)
+        .granularity(Granularities.ALL)
+        .build();
+
+    QueryToolChest toolchest = EasyMock.mock(QueryToolChest.class);
+    Cache cache = EasyMock.mock(Cache.class);
+    EasyMock.expect(toolchest.getCacheStrategy(query)).andReturn(null);
+    EasyMock.replay(cache, toolchest);
+    CachingQueryRunner queryRunner = makeCachingQueryRunner(new byte[0], cache, toolchest, Sequences.empty());
+    Assert.assertFalse(queryRunner.canPopulateCache(query, null));
+    Assert.assertFalse(queryRunner.canUseCache(query, null));
+    queryRunner.run(QueryPlus.wrap(query));
+    EasyMock.verifyUnexpectedCalls(cache);
+  }
+
   private void testCloseAndPopulate(
       List<Result> expectedRes,
       List<Result> expectedCacheRes,
@@ -272,48 +329,21 @@ public class CachingQueryRunnerTest
       }
     };
 
-    String cacheId = "segment";
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
-
-    DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    CachingQueryRunner runner = new CachingQueryRunner(
-        cacheId,
-        segmentDescriptor,
-        objectMapper,
+    byte[] keyPrefix = RandomUtils.nextBytes(10);
+    CachingQueryRunner runner = makeCachingQueryRunner(
+        keyPrefix,
         cache,
         toolchest,
-        new QueryRunner()
-        {
-          @Override
-          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
-          {
-            return resultSeq;
-          }
-        },
-        cachePopulator,
-        new CacheConfig()
-        {
-          @Override
-          public boolean isPopulateCache()
-          {
-            return true;
-          }
-
-          @Override
-          public boolean isUseCache()
-          {
-            return true;
-          }
-        }
+        resultSeq
     );
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
-        cacheId,
-        segmentDescriptor,
-        cacheStrategy.computeCacheKey(query)
+        CACHE_ID,
+        SEGMENT_DESCRIPTOR,
+        Bytes.concat(keyPrefix, cacheStrategy.computeCacheKey(query))
     );
-
+    Assert.assertTrue(runner.canPopulateCache(query, cacheStrategy));
     Sequence res = runner.run(QueryPlus.wrap(query));
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
@@ -348,23 +378,41 @@ public class CachingQueryRunnerTest
       QueryToolChest toolchest
   ) throws IOException
   {
-    DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    String cacheId = "segment";
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
+
+    byte[] cacheKeyPrefix = RandomUtils.nextBytes(10);
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
-        cacheId,
-        segmentDescriptor,
-        cacheStrategy.computeCacheKey(query)
+        CACHE_ID,
+        SEGMENT_DESCRIPTOR,
+        Bytes.concat(cacheKeyPrefix, cacheStrategy.computeCacheKey(query))
     );
 
     Cache cache = MapCache.create(1024 * 1024);
     cache.put(cacheKey, toByteArray(Iterables.transform(expectedResults, cacheStrategy.prepareForSegmentLevelCache())));
 
-    CachingQueryRunner runner = new CachingQueryRunner(
-        cacheId,
-        segmentDescriptor,
+    CachingQueryRunner runner = makeCachingQueryRunner(
+        cacheKeyPrefix,
+        cache,
+        toolchest,
+        Sequences.empty()
+    );
+    Assert.assertTrue(runner.canUseCache(query, toolchest.getCacheStrategy(query)));
+    List<Result> results = runner.run(QueryPlus.wrap(query)).toList();
+    Assert.assertEquals(expectedResults.toString(), results.toString());
+  }
+
+  private CachingQueryRunner makeCachingQueryRunner(
+      byte[] cacheKeyPrefix,
+      Cache cache,
+      QueryToolChest toolchest,
+      Sequence<Object> results
+  )
+  {
+    return new CachingQueryRunner(
+        CACHE_ID,
+        Optional.ofNullable(cacheKeyPrefix),
+        SEGMENT_DESCRIPTOR,
         objectMapper,
         cache,
         toolchest,
@@ -374,7 +422,7 @@ public class CachingQueryRunnerTest
           @Override
           public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
-            return Sequences.empty();
+            return results;
           }
         },
         cachePopulator,
@@ -394,8 +442,6 @@ public class CachingQueryRunnerTest
         }
 
     );
-    List<Result> results = runner.run(QueryPlus.wrap(query)).toList();
-    Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 
   private List<Result> makeTopNResults(boolean cachedResults, Object... objects)

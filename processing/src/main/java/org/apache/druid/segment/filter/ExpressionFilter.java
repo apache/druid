@@ -109,6 +109,7 @@ public class ExpressionFilter implements Filter
   {
     final Expr.BindingAnalysis details = this.bindingDetails.get();
 
+
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
       return true;

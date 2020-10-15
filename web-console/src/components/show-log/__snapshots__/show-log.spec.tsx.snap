@@ -8,7 +8,7 @@ exports[`show log describe show log 1`] = `
     class="top-actions"
   >
     <label
-      class="bp3-control bp3-checkbox"
+      class="bp3-control bp3-switch tail-log"
     >
       <input
         checked=""

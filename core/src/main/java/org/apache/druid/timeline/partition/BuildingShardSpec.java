@@ -21,7 +21,6 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.data.input.InputRow;
 
 import java.util.List;
 import java.util.Map;
@@ -75,12 +74,6 @@ public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
   }
 
   // The below methods are used on the query side, and so must not be called for this shardSpec.
-
-  @Override
-  default boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    throw new UnsupportedOperationException();
-  }
 
   @JsonIgnore
   @Override

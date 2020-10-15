@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -1342,6 +1343,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     ).collect(Collectors.toList());
   }
 
+  public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
+  {
+    return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
+  }
+
   /**
    * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource} , used for read only.
    */
@@ -1545,6 +1551,61 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     synchronized (statusLock) {
       statusLock.notifyAll();
     }
+  }
+
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    long totalPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalPeons;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    long totalIdlePeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
+      totalIdlePeons += worker.getAvailableCapacity();
+    }
+
+    return totalIdlePeons;
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    long totalUsedPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalUsedPeons += worker.getCurrCapacityUsed();
+    }
+
+    return totalUsedPeons;
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    long totalLazyPeons = 0;
+    for (Worker worker : getLazyWorkers()) {
+      totalLazyPeons += worker.getCapacity();
+    }
+
+    return totalLazyPeons;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    long totalBlacklistedPeons = 0;
+    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+      totalBlacklistedPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalBlacklistedPeons;
   }
 
   private static class HttpRemoteTaskRunnerWorkItem extends RemoteTaskRunnerWorkItem

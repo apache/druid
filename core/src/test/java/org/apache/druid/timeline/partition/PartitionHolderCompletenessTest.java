@@ -47,9 +47,9 @@ public class PartitionHolderCompletenessTest
         new Object[]{
             // Simulate empty hash buckets
             ImmutableList.of(
-                new HashBasedNumberedShardSpec(2, 3, 3, 5, null, new ObjectMapper()),
-                new HashBasedNumberedShardSpec(0, 3, 0, 5, null, new ObjectMapper()),
-                new HashBasedNumberedShardSpec(1, 3, 2, 5, null, new ObjectMapper())
+                new HashBasedNumberedShardSpec(2, 3, 3, 5, null, null, new ObjectMapper()),
+                new HashBasedNumberedShardSpec(0, 3, 0, 5, null, null, new ObjectMapper()),
+                new HashBasedNumberedShardSpec(1, 3, 2, 5, null, null, new ObjectMapper())
             ),
             HashBasedNumberedShardSpec.class.getSimpleName()
         },

@@ -23,6 +23,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -53,12 +55,6 @@ abstract class ConstantExpr implements Expr
   public boolean isLiteral()
   {
     return true;
-  }
-
-  @Override
-  public void visit(Visitor visitor)
-  {
-    visitor.visit(this);
   }
 
   @Override
@@ -103,6 +99,11 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   }
 
 
+  @Override
+  public boolean isNullLiteral()
+  {
+    return true;
+  }
 }
 
 class LongExpr extends ConstantExpr
@@ -131,6 +132,18 @@ class LongExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLong(value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return true;
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorProcessors.constantLong(value, inputTypes.getMaxVectorSize());
   }
 
   @Override
@@ -164,6 +177,18 @@ class NullLongExpr extends NullNumericConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLong(null);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return true;
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorProcessors.constantLong(null, inputTypes.getMaxVectorSize());
   }
 
   @Override
@@ -236,6 +261,160 @@ class LongArrayExpr extends ConstantExpr
   }
 }
 
+class DoubleExpr extends ConstantExpr
+{
+  private final Double value;
+
+  DoubleExpr(Double value)
+  {
+    super(ExprType.DOUBLE);
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.valueOf(value);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofDouble(value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return true;
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorProcessors.constantDouble(value, inputTypes.getMaxVectorSize());
+  }
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DoubleExpr that = (DoubleExpr) o;
+    return Objects.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(value);
+  }
+}
+
+class NullDoubleExpr extends NullNumericConstantExpr
+{
+  NullDoubleExpr()
+  {
+    super(ExprType.DOUBLE);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofDouble(null);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return true;
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorProcessors.constantDouble(null, inputTypes.getMaxVectorSize());
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return NullDoubleExpr.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof NullDoubleExpr;
+  }
+}
+
+class DoubleArrayExpr extends ConstantExpr
+{
+  private final Double[] value;
+
+  DoubleArrayExpr(Double[] value)
+  {
+    super(ExprType.DOUBLE_ARRAY);
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
+  @Override
+  public String toString()
+  {
+    return Arrays.toString(value);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofDoubleArray(value);
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<DOUBLE>[]";
+    }
+    return StringUtils.format("<DOUBLE>%s", toString());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DoubleArrayExpr that = (DoubleArrayExpr) o;
+    return Arrays.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Arrays.hashCode(value);
+  }
+}
+
 class StringExpr extends ConstantExpr
 {
   @Nullable
@@ -255,6 +434,12 @@ class StringExpr extends ConstantExpr
   }
 
   @Override
+  public boolean isNullLiteral()
+  {
+    return value == null;
+  }
+
+  @Override
   public String toString()
   {
     return value;
@@ -264,6 +449,18 @@ class StringExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.of(value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingTypes inputTypes)
+  {
+    return true;
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  {
+    return VectorProcessors.constantString(value, inputTypes.getMaxVectorSize());
   }
 
   @Override
@@ -352,137 +549,6 @@ class StringArrayExpr extends ConstantExpr
       return false;
     }
     StringArrayExpr that = (StringArrayExpr) o;
-    return Arrays.equals(value, that.value);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Arrays.hashCode(value);
-  }
-}
-
-class DoubleExpr extends ConstantExpr
-{
-  private final Double value;
-
-  DoubleExpr(Double value)
-  {
-    super(ExprType.DOUBLE);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
-
-  @Override
-  public Object getLiteralValue()
-  {
-    return value;
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(value);
-  }
-
-  @Override
-  public ExprEval eval(ObjectBinding bindings)
-  {
-    return ExprEval.ofDouble(value);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DoubleExpr that = (DoubleExpr) o;
-    return Objects.equals(value, that.value);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(value);
-  }
-}
-
-class NullDoubleExpr extends NullNumericConstantExpr
-{
-  NullDoubleExpr()
-  {
-    super(ExprType.DOUBLE);
-  }
-
-  @Override
-  public ExprEval eval(ObjectBinding bindings)
-  {
-    return ExprEval.ofDouble(null);
-  }
-
-  @Override
-  public final int hashCode()
-  {
-    return NullDoubleExpr.class.hashCode();
-  }
-
-  @Override
-  public final boolean equals(Object obj)
-  {
-    return obj instanceof NullDoubleExpr;
-  }
-}
-
-class DoubleArrayExpr extends ConstantExpr
-{
-  private final Double[] value;
-
-  DoubleArrayExpr(Double[] value)
-  {
-    super(ExprType.DOUBLE_ARRAY);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
-
-  @Override
-  public Object getLiteralValue()
-  {
-    return value;
-  }
-
-  @Override
-  public String toString()
-  {
-    return Arrays.toString(value);
-  }
-
-  @Override
-  public ExprEval eval(ObjectBinding bindings)
-  {
-    return ExprEval.ofDoubleArray(value);
-  }
-
-  @Override
-  public String stringify()
-  {
-    if (value.length == 0) {
-      return "<DOUBLE>[]";
-    }
-    return StringUtils.format("<DOUBLE>%s", toString());
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DoubleArrayExpr that = (DoubleArrayExpr) o;
     return Arrays.equals(value, that.value);
   }
 

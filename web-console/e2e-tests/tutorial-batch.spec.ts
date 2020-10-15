@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
-import { v4 as uuid } from 'uuid';
+import * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';
@@ -29,10 +28,12 @@ import { LocalFileDataConnector } from './component/load-data/data-connector/loc
 import { DataLoader } from './component/load-data/data-loader';
 import { QueryOverview } from './component/query/overview';
 import { saveScreenshotIfError } from './util/debug';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
 import { UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowserNormal as createBrowser } from './util/playwright';
+import { createBrowser } from './util/playwright';
 import { createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
+import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
 
@@ -41,6 +42,7 @@ describe('Tutorial: Loading a file', () => {
   let page: playwright.Page;
 
   beforeAll(async () => {
+    await waitTillWebConsoleReady();
     browser = await createBrowser();
   });
 
@@ -53,14 +55,19 @@ describe('Tutorial: Loading a file', () => {
   });
 
   it('Loads data from local disk', async () => {
-    const datasourceName = uuid();
-    const dataConnector = new LocalFileDataConnector(
-      page,
-      'quickstart/tutorial/',
-      'wikiticker-2015-09-12-sampled.json.gz',
-    );
+    const testName = 'load-data-from-local-disk-';
+    const datasourceName = testName + new Date().toISOString();
+    const dataConnector = new LocalFileDataConnector(page, {
+      baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
+      fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
+    });
     const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
-    const partitionConfig = new PartitionConfig({ segmentGranularity: SegmentGranularity.DAY });
+    const partitionConfig = new PartitionConfig({
+      segmentGranularity: SegmentGranularity.DAY,
+      timeIntervals: null,
+      forceGuaranteedRollup: null,
+      partitionsSpec: null,
+    });
     const publishConfig = new PublishConfig({ datasourceName: datasourceName });
 
     const dataLoader = new DataLoader({
@@ -73,7 +80,7 @@ describe('Tutorial: Loading a file', () => {
       publishConfig: publishConfig,
     });
 
-    await saveScreenshotIfError('load-data-from-local-disk-', page, async () => {
+    await saveScreenshotIfError(testName, page, async () => {
       await dataLoader.load();
       await validateTaskStatus(page, datasourceName);
       await validateDatasourceStatus(page, datasourceName);

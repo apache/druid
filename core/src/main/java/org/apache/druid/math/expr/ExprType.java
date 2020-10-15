@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ValueType;
 
@@ -37,6 +36,7 @@ public enum ExprType
   LONG_ARRAY,
   STRING_ARRAY;
 
+
   public boolean isNumeric()
   {
     return isNumeric(this);
@@ -49,7 +49,7 @@ public enum ExprType
    *
    * @throws IllegalStateException
    */
-  public static ExprType fromValueType(@Nullable ValueType valueType)
+  public static ExprType fromValueTypeStrict(@Nullable ValueType valueType)
   {
     if (valueType == null) {
       throw new IllegalStateException("Unsupported unknown value type");
@@ -71,6 +71,58 @@ public enum ExprType
       case COMPLEX:
       default:
         throw new ISE("Unsupported value type[%s]", valueType);
+    }
+  }
+
+  /**
+   * The expression system does not distinguish between {@link ValueType#FLOAT} and {@link ValueType#DOUBLE}, and
+   * cannot currently handle {@link ValueType#COMPLEX} inputs. This method will convert {@link ValueType#FLOAT} to
+   * {@link #DOUBLE}, or null if a null {@link ValueType#COMPLEX} is encountered.
+   */
+  @Nullable
+  public static ExprType fromValueType(@Nullable ValueType valueType)
+  {
+    if (valueType == null) {
+      return null;
+    }
+    switch (valueType) {
+      case LONG:
+        return LONG;
+      case LONG_ARRAY:
+        return LONG_ARRAY;
+      case FLOAT:
+      case DOUBLE:
+        return DOUBLE;
+      case DOUBLE_ARRAY:
+        return DOUBLE_ARRAY;
+      case STRING:
+        return STRING;
+      case STRING_ARRAY:
+        return STRING_ARRAY;
+      case COMPLEX:
+      default:
+        return null;
+    }
+  }
+
+
+  public static ValueType toValueType(ExprType exprType)
+  {
+    switch (exprType) {
+      case LONG:
+        return ValueType.LONG;
+      case LONG_ARRAY:
+        return ValueType.LONG_ARRAY;
+      case DOUBLE:
+        return ValueType.DOUBLE;
+      case DOUBLE_ARRAY:
+        return ValueType.DOUBLE_ARRAY;
+      case STRING:
+        return ValueType.STRING;
+      case STRING_ARRAY:
+        return ValueType.STRING_ARRAY;
+      default:
+        throw new ISE("Unsupported expression type[%s]", exprType);
     }
   }
 
@@ -116,64 +168,4 @@ public enum ExprType
     return elementType;
   }
 
-  /**
-   * Given 2 'input' types, choose the most appropriate combined type, if possible
-   */
-  @Nullable
-  public static ExprType operatorAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
-  {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
-    }
-    // arrays cannot be auto converted
-    if (isArray(type) || isArray(other)) {
-      if (!type.equals(other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
-      }
-      return type;
-    }
-    // if both arguments are a string, type becomes a string
-    if (STRING.equals(type) && STRING.equals(other)) {
-      return STRING;
-    }
-
-    return numericAutoTypeConversion(type, other);
-  }
-
-  /**
-   * Given 2 'input' types, choose the most appropriate combined type, if possible
-   */
-  @Nullable
-  public static ExprType functionAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
-  {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
-    }
-    // arrays cannot be auto converted
-    if (isArray(type) || isArray(other)) {
-      if (!type.equals(other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
-      }
-      return type;
-    }
-    // if either argument is a string, type becomes a string
-    if (STRING.equals(type) || STRING.equals(other)) {
-      return STRING;
-    }
-
-    return numericAutoTypeConversion(type, other);
-  }
-
-  @Nullable
-  public static ExprType numericAutoTypeConversion(ExprType type, ExprType other)
-  {
-    // all numbers win over longs
-    if (LONG.equals(type) && LONG.equals(other)) {
-      return LONG;
-    }
-    // floats vs doubles would be handled here, but we currently only support doubles...
-    return DOUBLE;
-  }
 }

@@ -16,22 +16,16 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
-const DEBUG = true;
+const TRUE = 'true';
 const WIDTH = 1920;
 const HEIGHT = 1080;
 const PADDING = 128;
 
-export async function createBrowserNormal(): Promise<playwright.Browser> {
-  return createBrowserInternal(!DEBUG);
-}
-
-export async function createBrowserDebug(): Promise<playwright.Browser> {
-  return createBrowserInternal(DEBUG);
-}
-
-async function createBrowserInternal(debug: boolean): Promise<playwright.Browser> {
+export async function createBrowser(): Promise<playwright.Browser> {
+  const headless = process.env['DRUID_E2E_TEST_HEADLESS'] || TRUE;
+  const debug = headless !== TRUE;
   const launchOptions: any = {
     args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`],
   };
@@ -47,4 +41,70 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   const page = await context.newPage();
   await page.setViewportSize({ width: WIDTH, height: HEIGHT });
   return page;
+}
+
+export async function getLabeledInput(page: playwright.Page, label: string): Promise<string> {
+  return await page.$eval(
+    `//*[text()="${label}"]/following-sibling::div//input`,
+    el => (el as HTMLInputElement).value,
+  );
+}
+
+export async function setLabeledInput(
+  page: playwright.Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  return setLabeledElement(page, 'input', label, value);
+}
+
+export async function setLabeledTextarea(
+  page: playwright.Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  return setLabeledElement(page, 'textarea', label, value);
+}
+
+async function setLabeledElement(
+  page: playwright.Page,
+  type: string,
+  label: string,
+  value: string,
+): Promise<void> {
+  const element = await page.$(`//*[text()="${label}"]/following-sibling::div//${type}`);
+  await setInput(element!, value);
+}
+
+export async function setInput(
+  input: playwright.ElementHandle<Element>,
+  value: string,
+): Promise<void> {
+  await input.fill('');
+  await input.type(value);
+}
+
+function buttonSelector(text: string) {
+  return `//button/*[contains(text(),"${text}")]`;
+}
+
+export async function clickButton(page: playwright.Page, text: string): Promise<void> {
+  await page.click(buttonSelector(text));
+}
+
+export async function clickLabeledButton(
+  page: playwright.Page,
+  label: string,
+  text: string,
+): Promise<void> {
+  await page.click(`//*[text()="${label}"]/following-sibling::div${buttonSelector(text)}`);
+}
+
+export async function selectSuggestibleInput(
+  page: playwright.Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  await page.click(`//*[text()="${label}"]/following-sibling::div//button`);
+  await page.click(`"${value}"`);
 }

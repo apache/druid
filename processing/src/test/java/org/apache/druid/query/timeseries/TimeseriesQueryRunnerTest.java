@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -670,9 +671,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithVirtualColumn()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -2945,8 +2943,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   private Map<String, Object> makeContext(final Map<String, Object> myContext)
   {
     final Map<String, Object> context = new HashMap<>();
-    context.put("vectorize", vectorize ? "force" : "false");
-    context.put("vectorSize", 16); // Small vector size to ensure we use more than one.
+    context.put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false");
+    context.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false");
+    context.put(QueryContexts.VECTOR_SIZE_KEY, 16); // Small vector size to ensure we use more than one.
     context.putAll(myContext);
     return context;
   }

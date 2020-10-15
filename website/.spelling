@@ -306,6 +306,7 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
 partitionsSpec
 performant
 plaintext
@@ -361,6 +362,7 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
 servlet
 simple-client-sslcontext
@@ -380,6 +382,7 @@ subsecond
 substring
 subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -411,6 +414,7 @@ vCPUs
 validator
 vectorizable
 vectorize
+vectorizeVirtualColumns
 versioning
 w.r.t.
 whitelist
@@ -610,6 +614,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository
@@ -1190,6 +1195,7 @@ RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
+TaskSlotCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1499,6 +1505,7 @@ is_overshadowed
 is_published
 is_realtime
 java.sql.Types
+last_compaction_state
 max_size
 num_replicas
 num_rows
@@ -1509,6 +1516,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys
