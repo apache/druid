@@ -167,19 +167,19 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(hashedPartitionsSpec, 4);
       checkCompactionIntervals(intervalsBeforeCompaction);
 
-      LOG.info("Auto compaction test with range partitioning");
-
-      final SingleDimensionPartitionsSpec rangePartitionsSpec = new SingleDimensionPartitionsSpec(
-          5,
-          null,
-          "city",
-          false
-      );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 2);
-      forceTriggerAutoCompaction(2);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(rangePartitionsSpec, 2);
-      checkCompactionIntervals(intervalsBeforeCompaction);
+//      LOG.info("Auto compaction test with range partitioning");
+//
+//      final SingleDimensionPartitionsSpec rangePartitionsSpec = new SingleDimensionPartitionsSpec(
+//          5,
+//          null,
+//          "city",
+//          false
+//      );
+//      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 2);
+//      forceTriggerAutoCompaction(2);
+//      verifyQuery(INDEX_QUERIES_RESOURCE);
+//      verifySegmentsCompacted(rangePartitionsSpec, 2);
+//      checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
 
