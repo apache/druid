@@ -2897,7 +2897,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'spec.dataSchema.dataSource',
                 label: 'Datasource name',
                 type: 'string',
-                info: <>This is the name of the data source (table) in Druid.</>,
+                info: <>This is the name of the datasource (table) in Druid.</>,
               },
               {
                 name: 'spec.ioConfig.appendToExisting',

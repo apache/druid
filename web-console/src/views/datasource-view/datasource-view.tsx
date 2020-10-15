@@ -431,8 +431,8 @@ GROUP BY 1`;
           return resp.data;
         }}
         confirmButtonText="Mark as unused all segments"
-        successText="All segments in data source have been marked as unused"
-        failText="Failed to mark as unused all segments in data source"
+        successText="All segments in datasource have been marked as unused"
+        failText="Failed to mark as unused all segments in datasource"
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
@@ -462,8 +462,8 @@ GROUP BY 1`;
           return resp.data;
         }}
         confirmButtonText="Mark as used all segments"
-        successText="All non-overshadowed segments in data source have been marked as used"
-        failText="Failed to mark as used all non-overshadowed segments in data source"
+        successText="All non-overshadowed segments in datasource have been marked as used"
+        failText="Failed to mark as used all non-overshadowed segments in datasource"
         intent={Intent.PRIMARY}
         onClose={() => {
           this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
@@ -497,8 +497,8 @@ GROUP BY 1`;
         }}
         confirmButtonText={`Mark as ${usedWord} segments in the interval`}
         confirmButtonDisabled={!/.\/./.test(useUnuseInterval)}
-        successText={`Segments in the interval in data source have been marked as ${usedWord}`}
-        failText={`Failed to mark as ${usedWord} segments in the interval in data source`}
+        successText={`Segments in the interval in datasource have been marked as ${usedWord}`}
+        failText={`Failed to mark as ${usedWord} segments in the interval in datasource`}
         intent={Intent.PRIMARY}
         onClose={() => {
           this.setState({ datasourceToMarkSegmentsByIntervalIn: undefined });
@@ -536,7 +536,7 @@ GROUP BY 1`;
           return resp.data;
         }}
         confirmButtonText="Permanently delete unused segments"
-        successText="Kill task was issued. Unused segments in data source will be deleted"
+        successText="Kill task was issued. Unused segments in datasource will be deleted"
         failText="Failed submit kill task"
         intent={Intent.DANGER}
         onClose={() => {
