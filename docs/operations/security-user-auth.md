@@ -42,7 +42,7 @@ There are two actions:
 * READ &ndash; Used for read-only operations.
 * WRITE &ndash; Used for operations that are not read-only.
 
-In practice, most deployments will only need to define to classes of users: 
+In practice, most deployments will only need to define two classes of users: 
 
 * Admins, who have WRITE action permissions on all resource types. These users will add datasources and administer the system.  
 * Data users, who only need READ access to DATASOURCE. These users should access Query APIs only through an API gateway. Other APIs and permissions include functionality that should be limited to server admins. 
