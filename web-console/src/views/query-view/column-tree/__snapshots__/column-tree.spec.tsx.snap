@@ -63,9 +63,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   usePortal={true}
                   wrapperTagName="span"
                 >
-                  <div>
-                    __time
-                  </div>
+                  __time
                 </Blueprint3.Popover>,
               },
               Object {
@@ -98,9 +96,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   usePortal={true}
                   wrapperTagName="span"
                 >
-                  <div>
-                    added
-                  </div>
+                  added
                 </Blueprint3.Popover>,
               },
               Object {
@@ -133,9 +129,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   usePortal={true}
                   wrapperTagName="span"
                 >
-                  <div>
-                    addedBy10
-                  </div>
+                  addedBy10
                 </Blueprint3.Popover>,
               },
             ],
@@ -167,9 +161,7 @@ exports[`ColumnTree matches snapshot 1`] = `
               usePortal={true}
               wrapperTagName="span"
             >
-              <div>
-                wikipedia
-              </div>
+              wikipedia
             </Blueprint3.Popover>,
           },
         ]
