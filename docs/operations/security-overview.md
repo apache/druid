@@ -169,7 +169,7 @@ The following steps walk through a sample setup procedure:
 
 ## Configuring an LDAP authenticator
 
-As an alternative to using the basic metadata authenticator, as shown in the previous section, you can use LDAP to authorize users. The following steps provide an overview of the setup steps. For more information on these settings, see [Properties for LDAP user authentication](https://druid.apache.org/docs/latest/development/extensions-core/druid-basic-security.html#properties-for-ldap-user-authentication).
+As an alternative to using the basic metadata authenticator, as shown in the previous section, you can use LDAP to authenticate users. The following steps provide an overview of the setup steps. For more information on these settings, see [Properties for LDAP user authentication](https://druid.apache.org/docs/latest/development/extensions-core/druid-basic-security.html#properties-for-ldap-user-authentication).
 
 1. In `common.runtime.properties`, add LDAP to the authenticator chain in the order in which you want requests to be evaluated. For example:
    ```
