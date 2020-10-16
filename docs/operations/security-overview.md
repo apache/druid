@@ -99,7 +99,7 @@ The following takes you through sample configuration steps for enabling basic au
 
 3. Restart the cluster. 
 
-See [Basic Security](../development/extensions-core/druid-basic-security) for more information. For more on authentication extensions, see [Kerberos](../development/extensions-core/druid-kerberos), [Authentication and Authorization](../design/auth), and [Authentication and Authorization](../design/auth) 
+See [Authentication and Authorization](../design/auth) for more information about the Authenticator, Escalator, and Authorizer concepts. See [Basic Security](../development/extensions-core/druid-basic-security) for more information about the extension used in the examples above, and [Kerberos](../development/extensions-core/druid-kerberos) for Kerberos authentication.
 
 
 ## Enable authorizors
