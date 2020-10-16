@@ -25,6 +25,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -76,7 +77,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @BeforeMethod
   public void setup() throws Exception
   {
-    // Set comapction slot to 10
+    // Set comapction slot to 5
     updateCompactionTaskSlot(0.5, 10);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
@@ -164,6 +165,20 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(hashedPartitionsSpec, 4);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      LOG.info("Auto compaction test with range partitioning");
+
+      final SingleDimensionPartitionsSpec rangePartitionsSpec = new SingleDimensionPartitionsSpec(
+          5,
+          null,
+          "city",
+          false
+      );
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1);
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(rangePartitionsSpec, 2);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
