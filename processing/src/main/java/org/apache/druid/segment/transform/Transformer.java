@@ -115,7 +115,7 @@ public class Transformer
       for (InputRow originalRow : originalRows) {
         transformedRows.add(new TransformedInputRow(originalRow, transforms));
       }
-      inputRowListPlusRawValues = InputRowListPlusRawValues.of(transformedRows, row.getRawValues());
+      inputRowListPlusRawValues = InputRowListPlusRawValues.ofList(row.getRawValuesList(), transformedRows);
     }
 
     if (valueMatcher != null) {
@@ -127,7 +127,7 @@ public class Transformer
             filteredRows.add(inputRow);
           }
         }
-        return InputRowListPlusRawValues.of(filteredRows, row.getRawValues());
+        return InputRowListPlusRawValues.ofList(row.getRawValuesList(), filteredRows);
       }
     }
 

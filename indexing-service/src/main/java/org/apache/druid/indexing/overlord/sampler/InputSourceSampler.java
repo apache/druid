@@ -47,11 +47,11 @@ import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class InputSourceSampler
@@ -111,16 +111,16 @@ public class InputSourceSampler
     try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
          final IncrementalIndex<Aggregator> index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
          final Closer closer1 = closer) {
-      SamplerResponseRow[] responseRows = new SamplerResponseRow[nonNullSamplerConfig.getNumRows()];
-      int counter = 0, numRowsIndexed = 0;
+      List<SamplerResponseRow> responseRows = new ArrayList<>(nonNullSamplerConfig.getNumRows());
+      int numRowsIndexed = 0;
 
-      while (counter < responseRows.length && iterator.hasNext()) {
-        Map<String, Object> rawColumns = null;
+      while (responseRows.size() < nonNullSamplerConfig.getNumRows() && iterator.hasNext()) {
+        List<Map<String, Object>> rawColumnsList = null;
         try {
           final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
 
-          if (inputRowListPlusRawValues.getRawValues() != null) {
-            rawColumns = inputRowListPlusRawValues.getRawValues();
+          if (inputRowListPlusRawValues.getRawValuesList() != null) {
+            rawColumnsList = inputRowListPlusRawValues.getRawValuesList();
           }
 
           if (inputRowListPlusRawValues.getParseException() != null) {
@@ -131,17 +131,27 @@ public class InputSourceSampler
             continue;
           }
 
-          for (InputRow row : inputRowListPlusRawValues.getInputRows()) {
-            index.add(new SamplerInputRow(row, counter), true);
+          for (int i = 0; i < rawColumnsList.size(); i++) {
+            Map<String, Object> rawColumns = rawColumnsList.get(i);
+            InputRow row = inputRowListPlusRawValues.getInputRows().get(i);
+
+            //keep the index of the row to be added to responseRows for further use
+            final int rowIndex = responseRows.size();
+            index.add(new SamplerInputRow(row, rowIndex), true);
+
             // store the raw value; will be merged with the data from the IncrementalIndex later
-            responseRows[counter] = new SamplerResponseRow(rawColumns, null, null, null);
-            counter++;
+            responseRows.add(new SamplerResponseRow(rawColumns, null, null, null));
             numRowsIndexed++;
           }
         }
         catch (ParseException e) {
-          responseRows[counter] = new SamplerResponseRow(rawColumns, null, true, e.getMessage());
-          counter++;
+          if (rawColumnsList != null) {
+            responseRows.addAll(rawColumnsList.stream()
+                                              .map(rawColumns -> new SamplerResponseRow(rawColumns, null, true, e.getMessage()))
+                                              .collect(Collectors.toList()));
+          } else {
+            responseRows.add(new SamplerResponseRow(null, null, true, e.getMessage()));
+          }
         }
       }
 
@@ -156,17 +166,19 @@ public class InputSourceSampler
 
         Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
         if (sortKey != null) {
-          responseRows[sortKey.intValue()] = responseRows[sortKey.intValue()].withParsed(parsed);
+          responseRows.set(sortKey.intValue(), responseRows.get(sortKey.intValue()).withParsed(parsed));
         }
       }
 
+      // make sure size of responseRows meets the input
+      if (responseRows.size() > nonNullSamplerConfig.getNumRows()) {
+        responseRows = responseRows.subList(0, nonNullSamplerConfig.getNumRows());
+      }
+
       return new SamplerResponse(
-          counter,
+          responseRows.size(),
           numRowsIndexed,
-          Arrays.stream(responseRows)
-                .filter(Objects::nonNull)
-                .filter(x -> x.getParsed() != null || x.isUnparseable() != null)
-                .collect(Collectors.toList())
+          responseRows
       );
     }
     catch (Exception e) {

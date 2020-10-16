@@ -19,19 +19,15 @@
 
 package org.apache.druid.data.input;
 
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -107,13 +103,13 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
         rawColumnsList = toMap(row);
       }
       catch (Exception e) {
-        return Collections.singletonList(InputRowListPlusRawValues.of(null,
-                                                                      new ParseException(e, "Unable to parse row [%s] into JSON", row)));
+        return InputRowListPlusRawValues.of(null,
+                                            new ParseException(e, "Unable to parse row [%s] into JSON", row));
       }
 
       if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
-        return Collections.singletonList(InputRowListPlusRawValues.of(null,
-                                                                      new ParseException("No map object parsed for row [%s]", row)));
+        return InputRowListPlusRawValues.of(null,
+                                            new ParseException("No map object parsed for row [%s]", row));
       }
 
       List<InputRow> rows;
@@ -121,25 +117,15 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
         rows = parseInputRows(row);
       }
       catch (ParseException e) {
-        return rawColumnsList.stream().map(rawColumn -> InputRowListPlusRawValues.of(rawColumn, e)).collect(Collectors.toList());
+        return InputRowListPlusRawValues.ofList(rawColumnsList, e);
       }
       catch (IOException e) {
         ParseException exception = new ParseException(e, "Unable to parse row [%s] into inputRow", row);
-        return rawColumnsList.stream().map(rawColumn -> InputRowListPlusRawValues.of(rawColumn, exception)).collect(Collectors.toList());
+        return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
       }
 
-      if (rows.size() != rawColumnsList.size()) {
-        return Collections.singletonList(InputRowListPlusRawValues.of(null,
-                                                                      new ParseException("Size of rawColumnsList and inputRows are not the same for row [%s]", row)));
-      }
-
-      List<InputRowListPlusRawValues> list = new ArrayList<InputRowListPlusRawValues>();
-      for (int i = 0; i < rows.size(); i++) {
-        list.add(InputRowListPlusRawValues.of(rows.get(i), rawColumnsList.get(i)));
-      }
-      return list;
-
-    }).flatMap(list -> CloseableIterators.withEmptyBaggage(list.iterator()));
+      return InputRowListPlusRawValues.ofList(rawColumnsList, rows);
+    });
   }
 
   /**

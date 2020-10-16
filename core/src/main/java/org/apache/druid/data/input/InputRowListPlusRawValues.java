@@ -41,7 +41,7 @@ public class InputRowListPlusRawValues
   private final List<InputRow> inputRows;
 
   @Nullable
-  private final Map<String, Object> rawValues;
+  private final List<Map<String, Object>> rawValues;
 
   @Nullable
   private final ParseException parseException;
@@ -53,21 +53,59 @@ public class InputRowListPlusRawValues
 
   public static InputRowListPlusRawValues of(@Nullable List<InputRow> inputRows, Map<String, Object> rawColumns)
   {
-    return new InputRowListPlusRawValues(inputRows, Preconditions.checkNotNull(rawColumns, "rawColumns"), null);
+    return new InputRowListPlusRawValues(inputRows,
+                                         Collections.singletonList(Preconditions.checkNotNull(rawColumns, "rawColumns")),
+                                         null);
   }
 
   public static InputRowListPlusRawValues of(@Nullable Map<String, Object> rawColumns, ParseException parseException)
   {
     return new InputRowListPlusRawValues(
         null,
-        rawColumns,
+        rawColumns == null ? null : Collections.singletonList(rawColumns),
         Preconditions.checkNotNull(parseException, "parseException")
+    );
+  }
+
+  public static InputRowListPlusRawValues ofList(@Nullable List<Map<String, Object>> rawColumnsList, ParseException parseException)
+  {
+    return ofList(rawColumnsList, null, parseException);
+  }
+
+  /**
+   * Create an instance of {@link InputRowListPlusRawValues}
+   *
+   * Make sure the size of given rawColumnsList and inputRows are the same if both of them are not null
+   */
+  public static InputRowListPlusRawValues ofList(@Nullable List<Map<String, Object>> rawColumnsList,
+                                                 @Nullable List<InputRow> inputRows)
+  {
+    return ofList(rawColumnsList, inputRows, null);
+  }
+
+  /**
+   * Create an instance of {@link InputRowListPlusRawValues}
+   *
+   * Make sure the size of given rawColumnsList and inputRows are the same if both of them are not null
+   */
+  public static InputRowListPlusRawValues ofList(@Nullable List<Map<String, Object>> rawColumnsList,
+                                                 @Nullable List<InputRow> inputRows,
+                                                 ParseException parseException)
+  {
+    if ( rawColumnsList != null && inputRows != null && rawColumnsList.size() != inputRows.size() ) {
+      throw new ParseException("Size of rawColumnsList([%s]) does not correspond to size of inputRows([%s])", rawColumnsList, inputRows);
+    }
+
+    return new InputRowListPlusRawValues(
+        inputRows,
+        rawColumnsList,
+        parseException
     );
   }
 
   private InputRowListPlusRawValues(
       @Nullable List<InputRow> inputRows,
-      @Nullable Map<String, Object> rawValues,
+      @Nullable List<Map<String, Object>> rawValues,
       @Nullable ParseException parseException
   )
   {
@@ -82,8 +120,16 @@ public class InputRowListPlusRawValues
     return inputRows;
   }
 
+  /**
+   * This method is left here only for test cases
+   */
   @Nullable
   public Map<String, Object> getRawValues()
+  {
+    return rawValues == null || rawValues.isEmpty() ? null : rawValues.get(0);
+  }
+
+  public List<Map<String, Object>> getRawValuesList()
   {
     return rawValues;
   }
