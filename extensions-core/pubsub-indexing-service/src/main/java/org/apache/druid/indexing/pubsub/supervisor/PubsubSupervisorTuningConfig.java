@@ -51,16 +51,13 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
-      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("workerThreads") Integer workerThreads,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
       @JsonProperty("shutdownTimeout") Period shutdownTimeout,
-      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
@@ -78,9 +75,7 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
         indexSpec,
         indexSpecForIntermediatePersists,
         true,
-        reportParseExceptions,
         handoffConditionTimeout,
-        resetOffsetAutomatically,
         segmentWriteOutMediumFactory,
         intermediateHandoffPeriod,
         logParseExceptions,
@@ -100,9 +95,6 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
   public static PubsubSupervisorTuningConfig defaultConfig()
   {
     return new PubsubSupervisorTuningConfig(
-        null,
-        null,
-        null,
         null,
         null,
         null,
@@ -173,9 +165,7 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
-           ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
-           ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", workerThreads=" + workerThreads +
            ", chatThreads=" + chatThreads +
@@ -202,9 +192,7 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
         true,
-        isReportParseExceptions(),
         getHandoffConditionTimeout(),
-        isResetOffsetAutomatically(),
         getSegmentWriteOutMediumFactory(),
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),

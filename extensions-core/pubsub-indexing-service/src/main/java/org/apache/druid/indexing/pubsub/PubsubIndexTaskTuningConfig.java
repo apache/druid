@@ -47,9 +47,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
   private final int maxPendingPersists;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
-  private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
-  private final boolean resetOffsetAutomatically;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   private final Period intermediateHandoffPeriod;
@@ -71,9 +69,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
       @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @Deprecated @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
-      @Deprecated @Nullable Boolean reportParseExceptions,
       @Nullable Long handoffConditionTimeout,
-      @Nullable Boolean resetOffsetAutomatically,
       Boolean skipSequenceNumberAvailabilityCheck,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @Nullable Period intermediateHandoffPeriod,
@@ -98,15 +94,9 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
-    this.reportParseExceptions = reportParseExceptions == null
-                                 ? defaults.isReportParseExceptions()
-                                 : reportParseExceptions;
     this.handoffConditionTimeout = handoffConditionTimeout == null
                                    ? defaults.getHandoffConditionTimeout()
                                    : handoffConditionTimeout;
-    this.resetOffsetAutomatically = resetOffsetAutomatically == null
-                                    ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
-                                    : resetOffsetAutomatically;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.intermediateHandoffPeriod = intermediateHandoffPeriod == null
                                      ? new Period().withDays(Integer.MAX_VALUE)
@@ -115,17 +105,12 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
                                                ? DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK
                                                : skipSequenceNumberAvailabilityCheck;
 
-    if (this.reportParseExceptions) {
-      this.maxParseExceptions = 0;
-      this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
-    } else {
-      this.maxParseExceptions = maxParseExceptions == null
-                                ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
-                                : maxParseExceptions;
-      this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                     ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
-                                     : maxSavedParseExceptions;
-    }
+    this.maxParseExceptions = maxParseExceptions == null
+                              ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                              : maxParseExceptions;
+    this.maxSavedParseExceptions = maxSavedParseExceptions == null
+                                   ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                   : maxSavedParseExceptions;
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
@@ -144,9 +129,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
-      @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") @Nullable Long handoffConditionTimeout,
-      @JsonProperty("resetOffsetAutomatically") @Nullable Boolean resetOffsetAutomatically,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
@@ -165,9 +148,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
         indexSpec,
         indexSpecForIntermediatePersists,
         true,
-        reportParseExceptions,
         handoffConditionTimeout,
-        resetOffsetAutomatically,
         false,
         segmentWriteOutMediumFactory,
         intermediateHandoffPeriod,
@@ -175,6 +156,12 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
         maxParseExceptions,
         maxSavedParseExceptions
     );
+  }
+
+  @Override
+  public boolean isReportParseExceptions()
+  {
+    return false; // deprecated legacy code
   }
 
   @Override
@@ -258,23 +245,10 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
     return true;
   }
 
-  @Override
-  @JsonProperty
-  public boolean isReportParseExceptions()
-  {
-    return reportParseExceptions;
-  }
-
   @JsonProperty
   public long getHandoffConditionTimeout()
   {
     return handoffConditionTimeout;
-  }
-
-  @JsonProperty
-  public boolean isResetOffsetAutomatically()
-  {
-    return resetOffsetAutomatically;
   }
 
   @Override
@@ -328,9 +302,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
     return maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
            maxPendingPersists == that.maxPendingPersists &&
-           reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
-           resetOffsetAutomatically == that.resetOffsetAutomatically &&
            skipSequenceNumberAvailabilityCheck == that.skipSequenceNumberAvailabilityCheck &&
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
@@ -356,9 +328,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        reportParseExceptions,
         handoffConditionTimeout,
-        resetOffsetAutomatically,
         segmentWriteOutMediumFactory,
         intermediateHandoffPeriod,
         skipSequenceNumberAvailabilityCheck,
@@ -382,9 +352,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
         true,
-        isReportParseExceptions(),
         getHandoffConditionTimeout(),
-        isResetOffsetAutomatically(),
         getSegmentWriteOutMediumFactory(),
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
@@ -407,9 +375,7 @@ public class PubsubIndexTaskTuningConfig implements TuningConfig, AppenderatorCo
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
            ", indexSpecForIntermediatePersists=" + getIndexSpecForIntermediatePersists() +
-           ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
-           ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", logParseExceptions=" + isLogParseExceptions() +

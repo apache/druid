@@ -41,8 +41,6 @@ public class PubsubSupervisorIOConfig
   private final InputFormat inputFormat; // nullable for backward compatibility
   private final Integer taskCount;
   private final Duration taskDuration;
-  private final Duration startDelay;
-  private final Duration period;
   private final Duration completionTimeout;
 
   @JsonCreator
@@ -63,8 +61,6 @@ public class PubsubSupervisorIOConfig
     this.inputFormat = inputFormat;
     this.taskCount = taskCount != null ? taskCount : 1;
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
-    this.startDelay = defaultDuration(startDelay, "PT5S");
-    this.period = defaultDuration(period, "PT30S");
     this.completionTimeout = defaultDuration(completionTimeout, "PT30M");
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
   }
@@ -101,18 +97,6 @@ public class PubsubSupervisorIOConfig
   }
 
   @JsonProperty
-  public Duration getStartDelay()
-  {
-    return startDelay;
-  }
-
-  @JsonProperty
-  public Duration getPeriod()
-  {
-    return period;
-  }
-
-  @JsonProperty
   public Duration getCompletionTimeout()
   {
     return completionTimeout;
@@ -145,8 +129,6 @@ public class PubsubSupervisorIOConfig
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
            ", pollTimeout=" + pollTimeout +
-           ", startDelay=" + getStartDelay() +
-           ", period=" + getPeriod() +
            ", completionTimeout=" + getCompletionTimeout() +
            '}';
   }
