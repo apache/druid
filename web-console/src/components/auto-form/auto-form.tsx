@@ -99,23 +99,35 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       return `model is undefined`;
     }
 
+    // Precompute which fields are defined because fields could be defined twice and only one should do the checking
+    const definedFields: Record<string, Field<M>> = {};
+    for (const field of fields) {
+      const fieldDefined = AutoForm.evaluateFunctor(field.defined, model, true);
+      if (fieldDefined) {
+        definedFields[field.name] = field;
+      }
+    }
+
     for (const field of fields) {
       const fieldValue = deepGet(model, field.name);
       const fieldValueDefined = typeof fieldValue !== 'undefined';
-      const fieldDefined = AutoForm.evaluateFunctor(field.defined, model, true);
-      if (fieldDefined) {
-        const fieldRequired = AutoForm.evaluateFunctor(field.required, model, true);
-        if (fieldRequired) {
-          if (!fieldValueDefined) {
-            return `field ${field.name} is required`;
+      const fieldThatIsDefined = definedFields[field.name];
+      if (fieldThatIsDefined) {
+        if (fieldThatIsDefined === field) {
+          const fieldRequired = AutoForm.evaluateFunctor(field.required, model, false);
+          if (fieldRequired) {
+            if (!fieldValueDefined) {
+              return `field ${field.name} is required`;
+            }
+          }
+
+          if (fieldValueDefined && field.issueWithValue) {
+            const valueIssue = field.issueWithValue(fieldValue);
+            if (valueIssue) return `field ${field.name} has issue ${valueIssue}`;
           }
         }
-
-        if (fieldValueDefined && field.issueWithValue) {
-          const valueIssue = field.issueWithValue(fieldValue);
-          if (valueIssue) return `field ${field.name} has issue ${valueIssue}`;
-        }
       } else {
+        // The field is undefined
         if (fieldValueDefined) {
           return `field ${field.name} is defined but it should not be`;
         }

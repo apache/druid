@@ -32,8 +32,8 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
-import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
+import { LookupSpec } from '../../druid-models';
 import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage,

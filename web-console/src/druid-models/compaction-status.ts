@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { CompactionConfig } from './compaction-config';
+
 function capitalizeFirst(str: string): string {
   return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
 }
@@ -33,8 +35,6 @@ export interface CompactionStatus {
   intervalCountCompacted: number;
   intervalCountSkipped: number;
 }
-
-export type CompactionConfig = Record<string, any>;
 
 export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
   return (

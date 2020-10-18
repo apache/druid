@@ -16,11 +16,6 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './druid-lookup';
-export * from './query-state';
-export * from './query-manager';
-export * from './query-cursor';
-export * from './local-storage-keys';
-export * from './column-metadata';
+export * from './compaction-config';
+export * from './compaction-status';
+export * from './lookup-spec';

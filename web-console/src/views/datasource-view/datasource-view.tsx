@@ -39,14 +39,17 @@ import {
 } from '../../components';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
+import {
+  CompactionConfig,
+  CompactionStatus,
+  formatCompactionConfigAndStatus,
+  zeroCompactionStatus,
+} from '../../druid-models';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
-  CompactionConfig,
-  CompactionStatus,
   countBy,
   formatBytes,
-  formatCompactionConfigAndStatus,
   formatInteger,
   formatMillions,
   formatPercent,
@@ -57,7 +60,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  zeroCompactionStatus,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
