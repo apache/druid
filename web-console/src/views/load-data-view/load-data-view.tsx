@@ -70,7 +70,6 @@ import {
 import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
-  adjustIngestionSpec,
   adjustTuningConfig,
   cleanSpec,
   DimensionMode,
@@ -454,7 +453,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
-    newSpec = adjustIngestionSpec(newSpec);
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
     if (!deepGet(newSpec, 'spec.ioConfig.type')) {
       deltaState.cacheRows = undefined;
@@ -470,7 +468,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private applyPreviewSpec = () => {
     this.setState(state => {
       localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(state.specPreview));
-      return { spec: state.specPreview };
+      return { spec: Object.assign({}, state.specPreview) };
     });
   };
 
@@ -577,14 +575,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderApplyButtonBar() {
+  renderApplyButtonBar(queryState: QueryState<unknown>) {
     const previewSpecSame = this.isPreviewSpecSame();
+    const queryStateHasError = Boolean(queryState && queryState.error);
 
     return (
       <FormGroup className="control-buttons">
         <Button
           text="Apply"
-          disabled={previewSpecSame}
+          disabled={previewSpecSame && !queryStateHasError}
           intent={Intent.PRIMARY}
           onClick={this.applyPreviewSpec}
         />
@@ -1047,7 +1046,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForConnect(spec, sampleStrategy);
     } catch (e) {
       this.setState({
-        inputQueryState: new QueryState({ error: e.message }),
+        inputQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1091,7 +1090,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (inputQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (inputQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${inputQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${inputQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (inputQueryState.data) {
       const inputData = inputQueryState.data.data;
       mainFill = (
@@ -1179,7 +1178,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </HTMLSelect>
             </FormGroup>
           )}
-          {this.renderApplyButtonBar()}
+          {this.renderApplyButtonBar(inputQueryState)}
         </div>
         {this.renderNextBar({
           disabled: !inputQueryState.data,
@@ -1278,7 +1277,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForParser(spec, sampleStrategy);
     } catch (e) {
       this.setState({
-        parserQueryState: new QueryState({ error: e.message }),
+        parserQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1315,7 +1314,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (parserQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (parserQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${parserQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${parserQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (parserQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1386,7 +1385,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
                 }
               />
-              {this.renderApplyButtonBar()}
+              {this.renderApplyButtonBar(parserQueryState)}
             </>
           )}
           {this.renderFlattenControls()}
@@ -1549,7 +1548,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForTimestamp(spec, cacheRows);
     } catch (e) {
       this.setState({
-        timestampQueryState: new QueryState({ error: e.message }),
+        timestampQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1585,7 +1584,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (timestampQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (timestampQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${timestampQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${timestampQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (timestampQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1661,7 +1660,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               this.updateSpecPreview(deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec));
             }}
           />
-          {this.renderApplyButtonBar()}
+          {this.renderApplyButtonBar(timestampQueryState)}
         </div>
         {this.renderNextBar({
           disabled: !timestampQueryState.data,
@@ -1700,7 +1699,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForTransform(spec, cacheRows);
     } catch (e) {
       this.setState({
-        transformQueryState: new QueryState({ error: e.message }),
+        transformQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1734,7 +1733,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (transformQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (transformQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${transformQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${transformQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (transformQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1915,7 +1914,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForFilter(spec, cacheRows);
     } catch (e) {
       this.setState({
-        filterQueryState: new QueryState({ error: e.message }),
+        filterQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1941,7 +1940,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponseNoFilter = await sampleForFilter(specNoFilter, cacheRows);
     } catch (e) {
       this.setState({
-        filterQueryState: new QueryState({ error: e.message }),
+        filterQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1976,7 +1975,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (filterQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (filterQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${filterQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${filterQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (filterQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -2122,12 +2121,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: 'Time intervals',
                 type: 'string-array',
                 placeholder: 'ex: 2018-01-01/2018-06-01',
-                info: (
-                  <>
-                    A comma separated list of intervals for the raw data being ingested. Ignored for
-                    real-time ingestion.
-                  </>
-                ),
+                info: <>A comma separated list of intervals for the raw data being ingested.</>,
               },
             ]}
             model={spec}
@@ -2202,7 +2196,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForSchema(spec, cacheRows);
     } catch (e) {
       this.setState({
-        schemaQueryState: new QueryState({ error: e.message }),
+        schemaQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -2242,7 +2236,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (schemaQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (schemaQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${schemaQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${schemaQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (schemaQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -2394,6 +2388,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         {this.renderNextBar({
           disabled: !schemaQueryState.data,
+          onNextStep: () => {
+            let newSpec = spec;
+            if (rollup) {
+              newSpec = deepSet(newSpec, 'spec.tuningConfig.partitionsSpec', { type: 'hashed' });
+              newSpec = deepSet(newSpec, 'spec.tuningConfig.forceGuaranteedRollup', true);
+            } else {
+              newSpec = deepSet(newSpec, 'spec.tuningConfig.partitionsSpec', { type: 'dynamic' });
+              newSpec = deepDelete(newSpec, 'spec.tuningConfig.forceGuaranteedRollup');
+            }
+            this.updateSpec(newSpec);
+          },
         })}
       </>
     );
@@ -2742,6 +2747,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const tuningConfig: TuningConfig = deepGet(spec, 'spec.tuningConfig') || EMPTY_OBJECT;
     const granularitySpec: GranularitySpec =
       deepGet(spec, 'spec.dataSchema.granularitySpec') || EMPTY_OBJECT;
+    const isStreaming = spec.type === 'kafka' || spec.type === 'kinesis';
 
     return (
       <>
@@ -2774,25 +2780,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={granularitySpec}
             onChange={g => this.updateSpec(deepSet(spec, 'spec.dataSchema.granularitySpec', g))}
           />
-          <AutoForm
-            fields={[
-              {
-                name: 'spec.dataSchema.granularitySpec.intervals',
-                label: 'Time intervals',
-                type: 'string-array',
-                placeholder: 'ex: 2018-01-01/2018-06-01',
-                required: spec => Boolean(deepGet(spec, 'spec.tuningConfig.forceGuaranteedRollup')),
-                info: (
-                  <>
-                    A comma separated list of intervals for the raw data being ingested. Ignored for
-                    real-time ingestion.
-                  </>
-                ),
-              },
-            ]}
-            model={spec}
-            onChange={s => this.updateSpec(s)}
-          />
+          {!isStreaming && (
+            <AutoForm
+              fields={[
+                {
+                  name: 'spec.dataSchema.granularitySpec.intervals',
+                  label: 'Time intervals',
+                  type: 'string-array',
+                  placeholder: 'ex: 2018-01-01/2018-06-01',
+                  required: spec =>
+                    ['hashed', 'single_dim'].includes(
+                      deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'),
+                    ),
+                  info: <>A comma separated list of intervals for the raw data being ingested.</>,
+                },
+              ]}
+              model={spec}
+              onChange={s => this.updateSpec(s)}
+            />
+          )}
         </div>
         <div className="other">
           <H5>Secondary partitioning</H5>
@@ -2904,7 +2910,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: 'Append to existing',
                 type: 'boolean',
                 defaultValue: false,
-                defined: spec => !deepGet(spec, 'spec.tuningConfig.forceGuaranteedRollup'),
+                defined: spec =>
+                  deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
                 info: (
                   <>
                     Creates segments as additional shards of the latest version, effectively

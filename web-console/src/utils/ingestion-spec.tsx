@@ -77,14 +77,6 @@ export type IngestionComboTypeWithExtra =
   | 'example'
   | 'other';
 
-export function adjustIngestionSpec(spec: IngestionSpec) {
-  const tuningConfig = deepGet(spec, 'spec.tuningConfig');
-  if (tuningConfig) {
-    spec = deepSet(spec, 'spec.tuningConfig', adjustTuningConfig(tuningConfig));
-  }
-  return spec;
-}
-
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
     case 'kafka':
@@ -2096,30 +2088,29 @@ export function adjustTuningConfig(tuningConfig: TuningConfig) {
   const tuningConfigType = deepGet(tuningConfig, 'type');
   if (tuningConfigType !== 'index_parallel') return tuningConfig;
 
-  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type');
-  if (tuningConfig.forceGuaranteedRollup) {
-    if (partitionsSpecType !== 'hashed' && partitionsSpecType !== 'single_dim') {
-      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'hashed' });
-    }
-  } else {
-    if (partitionsSpecType !== 'dynamic') {
-      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'dynamic' });
-    }
+  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type') || 'dynamic';
+  if (partitionsSpecType === 'dynamic') {
+    tuningConfig = deepDelete(tuningConfig, 'forceGuaranteedRollup');
+  } else if (partitionsSpecType === 'hashed' || partitionsSpecType === 'single_dim') {
+    tuningConfig = deepSet(tuningConfig, 'forceGuaranteedRollup', true);
   }
+
   return tuningConfig;
 }
 
 export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
-  if (tuningConfig.type !== 'index_parallel' || !tuningConfig.forceGuaranteedRollup) return false;
+  if (tuningConfig.type !== 'index_parallel') return false;
 
-  if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
     case 'hashed':
+      if (!intervals) return true;
       return (
         Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
         Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
       );
+
     case 'single_dim':
+      if (!intervals) return true;
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
       const hasTargetRowsPerSegment = Boolean(
         deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
@@ -2142,24 +2133,11 @@ export function getPartitionRelatedTuningSpecFormFields(
     case 'index_parallel':
       return [
         {
-          name: 'forceGuaranteedRollup',
-          type: 'boolean',
-          defaultValue: false,
-          info: (
-            <p>
-              Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size of
-              generated segments and querying time while indexing time will be increased. If this is
-              set to true, the index task will read the entire input data twice: one for finding the
-              optimal number of partitions per time chunk and one for generating segments.
-            </p>
-          ),
-        },
-        {
           name: 'partitionsSpec.type',
           label: 'Partitioning type',
           type: 'string',
-          suggestions: (t: TuningConfig) =>
-            t.forceGuaranteedRollup ? ['hashed', 'single_dim'] : ['dynamic'],
+          required: true,
+          suggestions: ['dynamic', 'hashed', 'single_dim'],
           info: (
             <p>
               For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
@@ -2355,17 +2333,26 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'maxNumMergeTasks',
+    name: 'totalNumMergeTasks',
     type: 'number',
     defaultValue: 10,
-    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    min: 1,
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),
+      ),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
     name: 'maxNumSegmentsToMerge',
     type: 'number',
     defaultValue: 100,
-    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),
+      ),
     info: (
       <>
         Max limit for the number of segments a single task can merge at the same time after shuffle.

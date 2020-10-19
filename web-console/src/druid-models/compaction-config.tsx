@@ -205,10 +205,10 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     ),
   },
   {
-    name: 'tuningConfig.maxNumMergeTasks',
-    label: 'Max num merge tasks',
+    name: 'tuningConfig.totalNumMergeTasks',
+    label: 'Total num merge tasks',
     type: 'number',
-    defaultValue: 1,
+    defaultValue: 10,
     min: 1,
     defined: (t: CompactionConfig) =>
       ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),

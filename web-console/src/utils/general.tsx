@@ -135,6 +135,10 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
+export function oneOf<T>(thing: T, ...options: T[]): boolean {
+  return options.includes(thing);
+}
+
 // ----------------------------
 
 export function countBy<T>(
