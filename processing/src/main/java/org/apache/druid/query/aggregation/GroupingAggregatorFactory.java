@@ -134,6 +134,9 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (null == lhs) {
+      return rhs;
+    }
     return lhs;
   }
 
@@ -184,35 +187,56 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Integer.BYTES;
+    return Long.BYTES;
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.GROUPING_CACHE_TYPE_ID)
-        .appendStrings(groupings)
-        .build();
+    CacheKeyBuilder keyBuilder = new CacheKeyBuilder(AggregatorUtil.GROUPING_CACHE_TYPE_ID)
+        .appendStrings(groupings);
+    if (null != keyDimensions) {
+      keyBuilder.appendStrings(keyDimensions);
+    }
+    return keyBuilder.build();
   }
 
+  /**
+   * Gives the list of grouping dimensions, return a long value where each bit at position X in the returned value
+   * corresponds to the dimension in groupings at same position X. X is the position relative to the right end. if
+   * keyDimensions contain the grouping dimension at position X, the bit is set to 1 at position X, otherwise it is
+   * set to 0. An example adapted from Microsoft SQL documentation
+   *
+   *  groupings           keyDimensions           value (3 least significant bits)         value (long)
+   *    a,b,c                    [a]                       100                                       4
+   *    a,b,c                    [b]                       010                                       2
+   *    a,b,c                    [c]                       001                                       1
+   *    a,b,c                  [a,b]                       110                                       6
+   *    a,b,c                  [a,c]                       101                                       5
+   *    a,b,c                  [b,c]                       011                                       3
+   *    a,b,c                [a,b,c]                       111                                       7
+   *    a,b,c                     []                       000                                       0    // None included
+   *    a,b,c                 <null>                       111                                       7    // All included
+   */
   private long groupingId(List<String> groupings, @Nullable Set<String> keyDimensions)
   {
     Preconditions.checkArgument(!CollectionUtils.isNullOrEmpty(groupings), "Must have a non-empty grouping dimensions");
-    // Integer.size is just a sanity check. In practice, it will be just few dimensions.
+    // (Long.SIZE - 1) is just a sanity check. In practice, it will be just few dimensions. This limit
+    // also makes sure that values are always positive.
     Preconditions.checkArgument(
-        groupings.size() < Integer.SIZE,
+        groupings.size() < Long.SIZE,
         "Number of dimensions %s is more than supported %s",
         groupings.size(),
-        Integer.SIZE - 1
+        Long.SIZE - 1
     );
     long temp = 0L;
     for (String groupingDimension : groupings) {
+      temp = temp << 1;
       if (isDimensionIncluded(groupingDimension, keyDimensions)) {
         temp = temp | 1L;
       }
-      temp = temp << 1;
     }
-    return temp >> 1;
+    return temp;
   }
 
   private boolean isDimensionIncluded(String dimToCheck, @Nullable Set<String> keyDimensions)

@@ -555,6 +555,8 @@ public class RowBasedGrouperHelper
         }
       }
 
+      // KeyDimensionNames are the column names of dimensions. Its required since aggregators are not aware of
+      // output column names
       Set<String> keyDimensionNames = dimsToInclude.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
       for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
         AggregatorFactory aggregatorFactory = query.getAggregatorSpecs().get(i);

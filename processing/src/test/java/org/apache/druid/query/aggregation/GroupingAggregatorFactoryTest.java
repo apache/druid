@@ -128,10 +128,10 @@ public class GroupingAggregatorFactoryTest
       exception.expect(IllegalArgumentException.class);
       exception.expectMessage(StringUtils.format(
           "Number of dimensions %d is more than supported %d",
-          Integer.SIZE,
-          Integer.SIZE - 1
+          Long.SIZE,
+          Long.SIZE - 1
       ));
-      makeFactory(new String[Integer.SIZE], null);
+      makeFactory(new String[Long.SIZE], null);
     }
   }
 
@@ -150,7 +150,7 @@ public class GroupingAggregatorFactoryTest
     @Parameterized.Parameters
     public static Collection arguments()
     {
-      String[] maxGroupingList = new String[Integer.SIZE - 1];
+      String[] maxGroupingList = new String[Long.SIZE - 1];
       for (int i = 0; i < maxGroupingList.length; i++) {
         maxGroupingList[i] = String.valueOf(i);
       }
@@ -161,7 +161,7 @@ public class GroupingAggregatorFactoryTest
           {new String[]{"a", "b"}, new String[]{"b"}, 1},
           {new String[]{"a", "b"}, new String[]{"a", "b"}, 3},
           {new String[]{"b", "a"}, new String[]{"a"}, 1},
-          {maxGroupingList, null, Integer.MAX_VALUE}
+          {maxGroupingList, null, Long.MAX_VALUE}
       });
     }
 
