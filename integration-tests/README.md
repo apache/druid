@@ -394,4 +394,5 @@ required to pass for a PR to be elligible to be merged. Here are known issues an
 running in Travis machine that may cause the tests to fail:
 - Number of concurrent running tasks. Although the default Druid cluster config sets the maximum number of tasks (druid.worker.capacity) to 10,
 the actual maximum can be lower depending on the type of the tasks. For example, running 2 range partitioning compaction tasks with 2 subtasks each 
-(for a total of 6 tasks) concurrently can cause the cluster to intermittently fails.
+(for a total of 6 tasks) concurrently can cause the cluster to intermittently fail. This can cause the Travis job to become stuck until it timeouts (50 minutes) 
+and/or terminates after 10 mins of not receiving new output.
