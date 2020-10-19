@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -126,7 +127,7 @@ public class InputRowListPlusRawValues
   @Nullable
   public Map<String, Object> getRawValues()
   {
-    return rawValues == null || rawValues.isEmpty() ? null : rawValues.get(0);
+    return CollectionUtils.isNullOrEmpty(rawValues) ? null : rawValues.get(0);
   }
 
   public List<Map<String, Object>> getRawValuesList()

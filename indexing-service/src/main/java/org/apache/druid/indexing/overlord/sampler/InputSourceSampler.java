@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class InputSourceSampler
@@ -119,9 +120,7 @@ public class InputSourceSampler
         try {
           final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
 
-          if (inputRowListPlusRawValues.getRawValuesList() != null) {
-            rawColumnsList = inputRowListPlusRawValues.getRawValuesList();
-          }
+          rawColumnsList = inputRowListPlusRawValues.getRawValuesList();
 
           if (inputRowListPlusRawValues.getParseException() != null) {
             throw inputRowListPlusRawValues.getParseException();
@@ -175,10 +174,14 @@ public class InputSourceSampler
         responseRows = responseRows.subList(0, nonNullSamplerConfig.getNumRows());
       }
 
+      int numRowsRead = responseRows.size();
       return new SamplerResponse(
-          responseRows.size(),
+          numRowsRead,
           numRowsIndexed,
-          responseRows
+          responseRows.stream()
+                      .filter(Objects::nonNull)
+                      .filter(x -> x.getParsed() != null || x.isUnparseable() != null)
+                      .collect(Collectors.toList())
       );
     }
     catch (Exception e) {

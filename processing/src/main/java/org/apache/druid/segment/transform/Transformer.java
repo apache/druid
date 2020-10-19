@@ -120,14 +120,21 @@ public class Transformer
 
     if (valueMatcher != null) {
       if (inputRowListPlusRawValues.getInputRows() != null) {
-        final List<InputRow> filteredRows = new ArrayList<>(inputRowListPlusRawValues.getInputRows().size());
-        for (InputRow inputRow : inputRowListPlusRawValues.getInputRows()) {
-          rowSupplierForValueMatcher.set(inputRow);
+        // size of inputRows and rawValues are the same
+        int size = inputRowListPlusRawValues.getInputRows().size();
+        final List<InputRow> matchedRows = new ArrayList<>(size);
+        final List<Map<String, Object>> matchedVals = new ArrayList<>(size);
+
+        final List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
+        final List<Map<String, Object>> inputVals = inputRowListPlusRawValues.getRawValuesList();
+        for(int i = 0; i < size; i++) {
+          rowSupplierForValueMatcher.set(inputRows.get(i));
           if (valueMatcher.matches()) {
-            filteredRows.add(inputRow);
+            matchedRows.add(inputRows.get(i));
+            matchedVals.add(inputVals.get(i));
           }
         }
-        return InputRowListPlusRawValues.ofList(row.getRawValuesList(), filteredRows);
+        return InputRowListPlusRawValues.ofList(matchedVals, matchedRows);
       }
     }
 
