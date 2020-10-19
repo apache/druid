@@ -87,7 +87,7 @@ remote cache types such as `memcached` will be ignored by task executor processe
 
 Query caching is not available for following:
 - Queries, that involve a `union` datasource, do not support result-level caching. Refer to the 
-[related issue](https://github.com/apache/druid/issues/8713) for details. Please note that not all union SQL queries are executed using a union datasource. You can use the `explain` operation to see how the union query in sql will be executed..
+[related issue](https://github.com/apache/druid/issues/8713) for details. Please note that not all union SQL queries are executed using a union datasource. You can use the `explain` operation to see how the union query in sql will be executed.
 - Queries, that involve an `Inline` datasource or a `Lookup` datasource, do not support any caching. 
 - Queries, with a sub-query in them, do not support any caching though the output of sub-queries itself may be cached. 
 Refer to the [Query execution](query-execution.md#query) page for more details on how sub-queries are executed.
