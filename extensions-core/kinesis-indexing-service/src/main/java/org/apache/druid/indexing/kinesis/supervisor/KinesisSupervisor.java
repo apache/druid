@@ -378,6 +378,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
+  protected void collectLag(ArrayList<Long> lags)
+  {
+  }
+
+  @Override
   protected Map<String, OrderedSequenceNumber<String>> filterExpiredPartitionsFromStartingOffsets(
       Map<String, OrderedSequenceNumber<String>> startingOffsets
   )

@@ -764,6 +764,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new Period("PT30M"),
         null,
         null,
+        null,
         null
     )
     {
@@ -824,7 +825,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, null
+        null, null, null
     )
     {
     };
@@ -1174,6 +1175,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       // do nothing
     }
+
+    @Override
+    protected void collectLag(ArrayList<Long> lags)
+    {
+    }
   }
 
   private class TestEmittingTestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
@@ -1214,6 +1220,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       if (stateManager.isSteadyState()) {
         latch.countDown();
       }
+    }
+
+    @Override
+    protected void collectLag(ArrayList<Long> lags)
+    {
     }
 
     @Override

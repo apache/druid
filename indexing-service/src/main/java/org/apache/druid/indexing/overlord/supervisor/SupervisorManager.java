@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +53,11 @@ public class SupervisorManager
   public SupervisorManager(MetadataSupervisorManager metadataSupervisorManager)
   {
     this.metadataSupervisorManager = metadataSupervisorManager;
+  }
+
+  public MetadataSupervisorManager getMetadataSupervisorManager()
+  {
+    return metadataSupervisorManager;
   }
 
   public Set<String> getSupervisorIds()
