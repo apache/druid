@@ -76,7 +76,9 @@ public abstract class AbstractIndexerTest
     // Get all failed task logs
     List<TaskResponseObject> allTasks = indexer.getCompleteTasksForDataSource(dataSource);
     for (TaskResponseObject task : allTasks) {
-      LOG.error("Found failed task with log: " + indexer.getTaskLog(task.getId()));
+      if (task.getStatus().isFailure()) {
+        LOG.error("Found failed task with log: " + indexer.getTaskLog(task.getId()));
+      }
     }
 
     List<String> intervals = coordinator.getSegmentIntervals(dataSource);
