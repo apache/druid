@@ -93,7 +93,7 @@ public class InputRowListPlusRawValues
                                                  @Nullable List<InputRow> inputRows,
                                                  ParseException parseException)
   {
-    if ( rawColumnsList != null && inputRows != null && rawColumnsList.size() != inputRows.size() ) {
+    if (rawColumnsList != null && inputRows != null && rawColumnsList.size() != inputRows.size()) {
       throw new ParseException("Size of rawColumnsList([%s]) does not correspond to size of inputRows([%s])", rawColumnsList, inputRows);
     }
 

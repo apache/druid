@@ -261,31 +261,34 @@ public class JsonReaderTest
         null
     );
 
-    final int numExpectedIterations = 3;
+    int acturalRowCount = 0;
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
-      int numActualIterations = 0;
       while (iterator.hasNext()) {
 
         final InputRowListPlusRawValues rawValues = iterator.next();
 
-        Assert.assertEquals(1, rawValues.getInputRows().size());
-        InputRow row = rawValues.getInputRows().get(0);
+        // 3 rows returned together
+        Assert.assertEquals(3, rawValues.getInputRows().size());
 
-        final String msgId = String.valueOf(++numActualIterations);
-        Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        for (int i = 0; i < 3; i++) {
+          InputRow row = rawValues.getInputRows().get(i);
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+          final String msgId = String.valueOf(++acturalRowCount);
+          Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
+          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+
+          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
+          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        }
       }
-
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
+
+    Assert.assertEquals(3, acturalRowCount);
   }
 
   @Test

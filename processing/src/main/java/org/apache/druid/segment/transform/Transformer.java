@@ -127,7 +127,7 @@ public class Transformer
 
         final List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
         final List<Map<String, Object>> inputVals = inputRowListPlusRawValues.getRawValuesList();
-        for(int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
           rowSupplierForValueMatcher.set(inputRows.get(i));
           if (valueMatcher.matches()) {
             matchedRows.add(inputRows.get(i));
