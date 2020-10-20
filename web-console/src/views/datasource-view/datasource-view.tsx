@@ -76,6 +76,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment load/drop queues',
     'Total data size',
     'Segment size',
+    'Segment granularity',
     'Total rows',
     'Avg. row size',
     'Replicated size',
@@ -151,6 +152,11 @@ interface DatasourceQueryResultRow {
   readonly num_available_segments: number;
   readonly num_segments_to_load: number;
   readonly num_segments_to_drop: number;
+  readonly minutely_segments: number;
+  readonly hourly_segments: number;
+  readonly daily_segments: number;
+  readonly monthly_segments: number;
+  readonly yearly_segments: number;
   readonly total_data_size: number;
   readonly replicated_size: number;
   readonly min_segment_rows: number;
@@ -158,6 +164,17 @@ interface DatasourceQueryResultRow {
   readonly max_segment_rows: number;
   readonly total_rows: number;
   readonly avg_row_size: number;
+}
+
+function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
+  return (
+    Number(Boolean(row.num_segments)) +
+    Number(Boolean(row.minutely_segments)) +
+    Number(Boolean(row.hourly_segments)) +
+    Number(Boolean(row.daily_segments)) +
+    Number(Boolean(row.monthly_segments)) +
+    Number(Boolean(row.yearly_segments))
+  );
 }
 
 interface Datasource extends DatasourceQueryResultRow {
@@ -229,6 +246,11 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minutely_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hourly_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS daily_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS monthly_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS yearly_segments,
   SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
   SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
   MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows,
@@ -308,6 +330,11 @@ GROUP BY 1`;
                 num_segments: numSegments,
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
+                minutely_segments: -1,
+                hourly_segments: -1,
+                daily_segments: -1,
+                monthly_segments: -1,
+                yearly_segments: -1,
                 replicated_size: -1,
                 total_data_size: totalDataSize,
                 min_segment_rows: -1,
@@ -1032,6 +1059,22 @@ GROUP BY 1`;
                   />
                 </>
               ),
+            },
+            {
+              Header: twoLines('Segment', 'granularity'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment granularity'),
+              id: 'segment_granularity',
+              accessor: segmentGranularityCountsToRank,
+              filterable: false,
+              width: 100,
+              Cell: ({ original }) => {
+                if (original.yearly_segments) return 'Year';
+                if (original.monthly_segments) return 'Month';
+                if (original.daily_segments) return 'Day';
+                if (original.hourly_segments) return 'Hour';
+                if (original.minutely_segments) return 'Minute';
+                return '-';
+              },
             },
             {
               Header: twoLines('Total', 'rows'),
