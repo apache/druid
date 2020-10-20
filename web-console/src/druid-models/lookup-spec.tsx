@@ -20,6 +20,7 @@ import { Code } from '@blueprintjs/core';
 import React from 'react';
 
 import { Field } from '../components';
+import { oneOf } from '../utils';
 import { deepGet, deepSet } from '../utils/object-change';
 
 export interface ExtractionNamespaceSpec {
@@ -181,7 +182,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     defaultValue: 0,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
-      ['csv', 'tsv'].includes(deepGet(model, 'extractionNamespace.namespaceParseSpec.format')),
+      oneOf(deepGet(model, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
     info: `Number of header rows to be skipped. The default number of header rows to be skipped is 0.`,
   },
   {
@@ -191,7 +192,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     defaultValue: false,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
-      ['csv', 'tsv'].includes(deepGet(model, 'extractionNamespace.namespaceParseSpec.format')),
+      oneOf(deepGet(model, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
     info: `A flag to indicate that column information can be extracted from the input files' header row`,
   },
   {
@@ -201,7 +202,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     placeholder: `["key", "value"]`,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
-      ['csv', 'tsv'].includes(deepGet(model, 'extractionNamespace.namespaceParseSpec.format')),
+      oneOf(deepGet(model, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
     info: 'The list of columns in the csv file',
   },
   {
@@ -211,7 +212,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     placeholder: '(optional - defaults to the first column)',
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
-      ['csv', 'tsv'].includes(deepGet(model, 'extractionNamespace.namespaceParseSpec.format')),
+      oneOf(deepGet(model, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
     info: 'The name of the column containing the key',
   },
   {
@@ -221,7 +222,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     placeholder: '(optional - defaults to the second column)',
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
-      ['csv', 'tsv'].includes(deepGet(model, 'extractionNamespace.namespaceParseSpec.format')),
+      oneOf(deepGet(model, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
     info: 'The name of the column containing the value',
   },
 

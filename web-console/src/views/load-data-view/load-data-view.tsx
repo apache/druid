@@ -63,6 +63,7 @@ import {
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
+  oneOf,
   parseJson,
   pluralIfNeeded,
   QueryState,
@@ -2050,7 +2051,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             fields={getFilterFormFields()}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
-            showCustom={f => !['selector', 'in', 'regex', 'like', 'not'].includes(f.type)}
+            showCustom={f => !oneOf(f.type, 'selector', 'in', 'regex', 'like', 'not')}
           />
           <div className="control-buttons">
             <Button

@@ -29,6 +29,7 @@ import {
   DATETIME_TIME_FORMATS,
   OTHER_TIME_FORMATS,
 } from './druid-time';
+import { oneOf } from './general';
 import { deepDelete, deepGet, deepMove, deepSet } from './object-change';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
@@ -258,7 +259,7 @@ export function isTask(spec: IngestionSpec) {
   const type = String(getSpecType(spec));
   return (
     type.startsWith('index_') ||
-    ['index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge'].includes(type)
+    oneOf(type, 'index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge')
   );
 }
 
@@ -740,7 +741,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
     type: 'number',
     defaultValue: 1024,
     defined: m => {
-      return ['stringFirst', 'stringLast'].includes(m.type);
+      return oneOf(m.type, 'stringFirst', 'stringLast');
     },
   },
   {
@@ -748,7 +749,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
     type: 'boolean',
     defaultValue: false,
     defined: m => {
-      return ['stringFirst', 'stringLast'].includes(m.type);
+      return oneOf(m.type, 'stringFirst', 'stringLast');
     },
   },
   // filtered
@@ -2340,7 +2341,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     defined: (t: TuningConfig) =>
       Boolean(
         t.type === 'index_parallel' &&
-          ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),
+          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
@@ -2351,7 +2352,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     defined: (t: TuningConfig) =>
       Boolean(
         t.type === 'index_parallel' &&
-          ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),
+          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: (
       <>
@@ -2780,7 +2781,7 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'dimension',
     type: 'string',
-    defined: (df: DruidFilter) => ['selector', 'in', 'regex', 'like'].includes(df.type),
+    defined: (df: DruidFilter) => oneOf(df.type, 'selector', 'in', 'regex', 'like'),
   },
   {
     name: 'value',
@@ -2795,7 +2796,7 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'pattern',
     type: 'string',
-    defined: (df: DruidFilter) => ['regex', 'like'].includes(df.type),
+    defined: (df: DruidFilter) => oneOf(df.type, 'regex', 'like'),
   },
 
   {
@@ -2828,7 +2829,7 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
     label: 'Sub-filter pattern',
     type: 'string',
     defined: (df: DruidFilter) =>
-      df.type === 'not' && ['regex', 'like'].includes(deepGet(df, 'field.type')),
+      df.type === 'not' && oneOf(deepGet(df, 'field.type'), 'regex', 'like'),
   },
 ];
 

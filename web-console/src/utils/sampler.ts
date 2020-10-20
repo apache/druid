@@ -19,7 +19,7 @@
 import axios from 'axios';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
+import { alphanumericCompare, filterMap, oneOf, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
   getDummyTimestampSpec,
@@ -231,7 +231,8 @@ function cleanupQueryGranularity(queryGranularity: any): any {
   if (typeof queryGranularityType !== 'string') return queryGranularity;
   queryGranularityType = queryGranularityType.toUpperCase();
 
-  const knownGranularity = [
+  const knownGranularity = oneOf(
+    queryGranularityType,
     'NONE',
     'SECOND',
     'MINUTE',
@@ -240,7 +241,7 @@ function cleanupQueryGranularity(queryGranularity: any): any {
     'WEEK',
     'MONTH',
     'YEAR',
-  ].includes(queryGranularityType);
+  );
 
   return knownGranularity ? queryGranularityType : queryGranularity;
 }

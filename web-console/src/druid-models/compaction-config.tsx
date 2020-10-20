@@ -20,6 +20,7 @@ import { Code } from '@blueprintjs/core';
 import React from 'react';
 
 import { Field } from '../components';
+import { oneOf } from '../utils';
 import { deepGet, deepSet } from '../utils/object-change';
 
 export type CompactionConfig = Record<string, any>;
@@ -211,7 +212,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defaultValue: 10,
     min: 1,
     defined: (t: CompactionConfig) =>
-      ['hashed', 'single_dim'].includes(deepGet(t, 'tuningConfig.partitionsSpec.type')),
+      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
     info: <>Maximum number of merge tasks which can be run at the same time.</>,
   },
   {
