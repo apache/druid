@@ -185,6 +185,24 @@ public class OverlordResourceTestClient
     }
   }
 
+  public String getTaskLog(String taskId)
+  {
+    try {
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
+          StringUtils.format("%s%s", getIndexerURL(), StringUtils.format("task/%s/log", StringUtils.urlEncode(taskId)))
+      );
+      return jsonMapper.readValue(
+          response.getContent(), new TypeReference<String>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public void waitUntilTaskCompletes(final String taskID)
   {
     waitUntilTaskCompletes(taskID, 10000, 60);
