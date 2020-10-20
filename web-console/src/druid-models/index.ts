@@ -19,3 +19,4 @@
 export * from './compaction-config';
 export * from './compaction-status';
 export * from './lookup-spec';
+export * from './transform-spec';

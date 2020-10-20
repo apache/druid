@@ -41,6 +41,7 @@ import {
   formatBytesCompact,
   LocalStorageKeys,
   lookupBy,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -428,7 +429,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 100,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 return row.worker ? (row.currCapacityUsed || 0) / row.worker.capacity : null;
               } else {
                 return row.max_size ? row.curr_size / row.max_size : null;
@@ -488,7 +489,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 400,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
 
                 const details: string[] = [];

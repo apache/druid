@@ -18,6 +18,8 @@
 
 import axios from 'axios';
 
+import { Transform, TransformSpec } from '../druid-models';
+
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import { alphanumericCompare, filterMap, oneOf, sortWithPrefixSuffix } from './general';
 import {
@@ -32,8 +34,6 @@ import {
   isDruidSource,
   MetricSpec,
   TimestampSpec,
-  Transform,
-  TransformSpec,
   upgradeSpec,
 } from './ingestion-spec';
 import { deepGet, deepSet } from './object-change';

@@ -21,6 +21,7 @@ import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
+import { TransformSpec } from '../druid-models';
 import { getLink } from '../links';
 
 import {
@@ -313,6 +314,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     label: 'Input format',
     type: 'string',
     suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
+    required: true,
     info: (
       <>
         <p>The parser used to parse the data.</p>
@@ -342,13 +344,13 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'findColumnsFromHeader',
     type: 'boolean',
     required: true,
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
+    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv'),
   },
   {
     name: 'skipHeaderRows',
     type: 'number',
     defaultValue: 0,
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
+    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv'),
     min: 0,
     info: (
       <>
@@ -362,9 +364,9 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'columns',
     type: 'string-array',
     required: (p: InputFormat) =>
-      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
+      (oneOf(p.type, 'csv', 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
     defined: (p: InputFormat) =>
-      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
+      (oneOf(p.type, 'csv', 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
   },
   {
     name: 'delimiter',
@@ -376,14 +378,14 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
   {
     name: 'listDelimiter',
     type: 'string',
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv' || p.type === 'regex',
+    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv', 'regex'),
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc' || p.type === 'avro_ocf',
+    defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf'),
     info: (
       <>
         Specifies if the bytes parquet column which is not logically marked as a string or enum type
@@ -602,8 +604,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     name: 'expr',
     type: 'string',
     placeholder: '$.thing',
-    defined: (flattenField: FlattenField) =>
-      flattenField.type === 'path' || flattenField.type === 'jq',
+    defined: (flattenField: FlattenField) => oneOf(flattenField.type, 'path', 'jq'),
     required: true,
     info: (
       <>
@@ -616,48 +617,6 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
 
 export function getFlattenFieldFormFields() {
   return FLATTEN_FIELD_FORM_FIELDS;
-}
-
-export interface TransformSpec {
-  transforms?: Transform[];
-  filter?: any;
-}
-
-export interface Transform {
-  type: string;
-  name: string;
-  expression: string;
-}
-
-const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
-  {
-    name: 'name',
-    type: 'string',
-    placeholder: 'output_name',
-    required: true,
-  },
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: ['expression'],
-    required: true,
-  },
-  {
-    name: 'expression',
-    type: 'string',
-    placeholder: '"foo" + "bar"',
-    required: true,
-    info: (
-      <>
-        A valid Druid{' '}
-        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>.
-      </>
-    ),
-  },
-];
-
-export function getTransformFormFields() {
-  return TRANSFORM_FORM_FIELDS;
 }
 
 export interface GranularitySpec {
@@ -805,7 +764,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'lgK',
     type: 'number',
-    defined: m => m.type === 'HLLSketchBuild' || m.type === 'HLLSketchMerge',
+    defined: m => oneOf(m.type, 'HLLSketchBuild', 'HLLSketchMerge'),
     defaultValue: 12,
     info: (
       <>
@@ -820,7 +779,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'tgtHllType',
     type: 'string',
-    defined: m => m.type === 'HLLSketchBuild' || m.type === 'HLLSketchMerge',
+    defined: m => oneOf(m.type, 'HLLSketchBuild', 'HLLSketchMerge'),
     defaultValue: 'HLL_4',
     suggestions: ['HLL_4', 'HLL_6', 'HLL_8'],
     info: (
@@ -2092,7 +2051,7 @@ export function adjustTuningConfig(tuningConfig: TuningConfig) {
   const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
     tuningConfig = deepDelete(tuningConfig, 'forceGuaranteedRollup');
-  } else if (partitionsSpecType === 'hashed' || partitionsSpecType === 'single_dim') {
+  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
     tuningConfig = deepSet(tuningConfig, 'forceGuaranteedRollup', true);
   }
 
@@ -2364,7 +2323,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -2376,14 +2335,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -2417,7 +2376,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
@@ -2477,7 +2436,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
@@ -2486,14 +2445,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
     name: 'chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -2505,14 +2464,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.

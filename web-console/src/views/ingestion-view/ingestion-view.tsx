@@ -50,6 +50,7 @@ import {
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -385,7 +386,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     const { goToDatasource, goToLoadData } = this.props;
 
     const actions: BasicAction[] = [];
-    if (type === 'kafka' || type === 'kinesis') {
+    if (oneOf(type, 'kafka', 'kinesis')) {
       actions.push(
         {
           icon: IconNames.MULTI_SELECT,
@@ -659,14 +660,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         onAction: () => goToDatasource(datasource),
       });
     }
-    if (type === 'index' || type === 'index_parallel') {
+    if (oneOf(type, 'index', 'index_parallel')) {
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
         onAction: () => goToLoadData(undefined, id),
       });
     }
-    if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
+    if (oneOf(status, 'RUNNING', 'WAITING', 'PENDING')) {
       actions.push({
         icon: IconNames.CROSS,
         title: 'Kill',

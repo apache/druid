@@ -54,6 +54,7 @@ import {
 } from '../../components';
 import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
+import { Transform, TRANSFORM_FIELDS } from '../../druid-models';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -100,7 +101,6 @@ import {
   getRollup,
   getSpecType,
   getTimestampSpecFormFields,
-  getTransformFormFields,
   getTuningSpecFormFields,
   GranularitySpec,
   IngestionComboTypeWithExtra,
@@ -121,7 +121,6 @@ import {
   normalizeSpec,
   splitFilter,
   TimestampSpec,
-  Transform,
   TuningConfig,
   updateIngestionType,
   upgradeSpec,
@@ -1168,7 +1167,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Callout>
             </FormGroup>
           )}
-          {(specType === 'kafka' || specType === 'kinesis') && (
+          {oneOf(specType, 'kafka', 'kinesis') && (
             <FormGroup label="Where should the data be sampled from?">
               <HTMLSelect
                 value={sampleStrategy}
@@ -1834,7 +1833,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getTransformFormFields()}
+            fields={TRANSFORM_FIELDS}
             model={selectedTransform}
             onChange={selectedTransform => this.setState({ selectedTransform })}
           />
@@ -2748,7 +2747,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const tuningConfig: TuningConfig = deepGet(spec, 'spec.tuningConfig') || EMPTY_OBJECT;
     const granularitySpec: GranularitySpec =
       deepGet(spec, 'spec.dataSchema.granularitySpec') || EMPTY_OBJECT;
-    const isStreaming = spec.type === 'kafka' || spec.type === 'kinesis';
+    const isStreaming = oneOf(spec.type, 'kafka', 'kinesis');
 
     return (
       <>
