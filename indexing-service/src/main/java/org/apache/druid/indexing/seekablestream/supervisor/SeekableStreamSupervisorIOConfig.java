@@ -30,6 +30,8 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 
+import java.util.Map;
+
 
 public abstract class SeekableStreamSupervisorIOConfig
 {
@@ -37,7 +39,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable
   private final InputFormat inputFormat; // nullable for backward compatibility
   private final Integer replicas;
-  private final Integer taskCount;
+  private Integer taskCount;
   private final Duration taskDuration;
   private final Duration startDelay;
   private final Duration period;
@@ -46,6 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
+  private final Map<String, Object> dynamicAllocationTasksProperties;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -59,6 +62,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
+      Map<String, Object> dynamicAllocationTasksProperties,
       DateTime lateMessageRejectionStartDateTime
   )
   {
@@ -87,6 +91,8 @@ public abstract class SeekableStreamSupervisorIOConfig
                 + "both properties lateMessageRejectionStartDateTime "
           + "and lateMessageRejectionPeriod.");
     }
+    // Could be null
+    this.dynamicAllocationTasksProperties = dynamicAllocationTasksProperties;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -114,9 +120,20 @@ public abstract class SeekableStreamSupervisorIOConfig
   }
 
   @JsonProperty
+  public Map<String, Object> getDynamicAllocationTasksProperties()
+  {
+    return dynamicAllocationTasksProperties;
+  }
+
+  @JsonProperty
   public Integer getTaskCount()
   {
     return taskCount;
+  }
+
+  public void setTaskCount(final int taskCount)
+  {
+    this.taskCount = taskCount;
   }
 
   @JsonProperty

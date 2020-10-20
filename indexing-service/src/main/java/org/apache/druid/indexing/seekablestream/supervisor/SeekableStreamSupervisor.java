@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -55,6 +56,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -81,12 +83,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -143,6 +147,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final int MAX_INITIALIZATION_RETRIES = 20;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
+  private static ReentrantLock lock = new ReentrantLock(true);
 
   // Internal data structures
   // --------------------------------------------------------
@@ -317,6 +322,157 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  // same as submit supervisor logic
+  private class DynamicAllocationTasksNotice implements Notice
+  {
+    @Override
+    public void handle()
+    {
+      lock.lock();
+      try {
+        long nowTime = System.currentTimeMillis();
+        long minTriggerDynamicFrequency = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("minTriggerDynamicFrequencyMillis", 1200000)));
+        // Only queue is full and over minTriggerDynamicFrequency can trigger scale out/in
+        // max(minTriggerDynamicFrequency, metricsCollectionRangeMillis)
+        if (spec.isSuspended()) {
+          log.info("[%s] supervisor is suspended, skip to check dynamic allocate task logic", dataSource);
+          return;
+        }
+        log.info("PendingCompletionTaskGroups is : " + pendingCompletionTaskGroups);
+        for (CopyOnWriteArrayList list : pendingCompletionTaskGroups.values()) {
+          if (!list.isEmpty()) {
+            log.info("Still hand off tasks unfinished, skip to do scale action [" + pendingCompletionTaskGroups + "]");
+            return;
+          }
+        }
+        if (nowTime - dynamicTriggerLastRunTime < minTriggerDynamicFrequency) {
+          log.info("NowTime - dynamicTriggerLastRunTime is [" + (nowTime - dynamicTriggerLastRunTime) + "]. Defined minTriggerDynamicFrequency is [" + minTriggerDynamicFrequency + "] , CLAM DOWN NOW !");
+          return;
+        }
+        if (!queue.isAtFullCapacity()) {
+          log.info("Metrics collection is not at full capacity, skip to check dynamic allocate task : [" + queue.size() + " vs " + queue.maxSize() + "]");
+          return;
+        }
+        List<Long> lags = collectTotalLags();
+        boolean allocationSuccess = dynamicAllocate(lags);
+        if (allocationSuccess) {
+          dynamicTriggerLastRunTime = nowTime;
+          queue.clear();
+        }
+      }
+      catch (Exception e) {
+        log.error(e, "Error, when parse DynamicAllocationTasksNotice");
+      }
+      finally {
+        lock.unlock();
+      }
+    }
+  }
+
+  private boolean dynamicAllocate(List<Long> lags) throws InterruptedException, ExecutionException, TimeoutException
+  {
+    // if supervisor is not suspended, ensure required tasks are running
+    // if suspended, ensure tasks have been requested to gracefully stop
+    log.info("[%s] supervisor is running, start to check dynamic allocate task logic", dataSource);
+    long scaleOutThreshold = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleOutThreshold", 5000000)));
+    long scaleInThreshold = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleInThreshold", 1000000)));
+    double triggerSaleOutThresholdFrequency = Double.parseDouble(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("triggerSaleOutThresholdFrequency", 0.3)));
+    double triggerSaleInThresholdFrequency = Double.parseDouble(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("triggerSaleInThresholdFrequency", 0.8)));
+    int taskCountMax = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMax", 8)));
+    int taskCountMin = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMin", 1)));
+    int scaleInStep = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleInStep", 1)));
+    int scaleOutStep = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleOutStep", 2)));
+    int beyond = 0;
+    int within = 0;
+    int metricsCount = lags.size();
+    for (Long lag : lags) {
+      if (lag >= scaleOutThreshold) {
+        beyond++;
+      }
+      if (lag <= scaleInThreshold) {
+        within++;
+      }
+    }
+    double beyondProportion = beyond * 1.0 / metricsCount;
+    double withinProportion = within * 1.0 / metricsCount;
+    log.info("triggerSaleOutThresholdFrequency is [ " + triggerSaleOutThresholdFrequency + " ] and triggerSaleInThresholdFrequency is [ " + triggerSaleInThresholdFrequency + " ]");
+    log.info("beyondProportion is [ " + beyondProportion + " ] and withinProportion is [ " + withinProportion + " ]");
+
+    int currentActiveTaskCount = 0;
+    int desireActiveTaskCount;
+    Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
+    currentActiveTaskCount = activeTaskGroups.size();
+
+    if (beyondProportion >= triggerSaleOutThresholdFrequency) {
+      // Do Scale out
+      int taskCount = currentActiveTaskCount + scaleOutStep;
+      if (currentActiveTaskCount == taskCountMax) {
+        log.info("CurrentActiveTaskCount reach task count Max limit, skip to scale out tasks");
+        return false;
+      } else {
+        desireActiveTaskCount = Math.min(taskCount, taskCountMax);
+      }
+      log.info("Start to scale out tasks , current active task number [ " + currentActiveTaskCount + " ] and desire task number is [ " + desireActiveTaskCount + " ] ");
+      gracefulShutdownInternal();
+      // clear everything
+      clearAllocationInfos();
+      log.info("Set Task Count : " + desireActiveTaskCount);
+      setTaskCount(desireActiveTaskCount);
+      return true;
+    }
+
+    if (withinProportion >= triggerSaleInThresholdFrequency) {
+      // Do Scale in
+      int taskCount = currentActiveTaskCount - scaleInStep;
+      if (currentActiveTaskCount == taskCountMin) {
+        log.info("CurrentActiveTaskCount reach task count Min limit, skip to scale in tasks");
+        return false;
+      } else {
+        desireActiveTaskCount = Math.max(taskCount, taskCountMin);
+      }
+      log.info("Start to scale in tasks , current active task number [ " + currentActiveTaskCount + " ] and desire task number is [ " + desireActiveTaskCount + " ] ");
+      gracefulShutdownInternal();
+      // clear everything
+      clearAllocationInfos();
+      log.info("Set Task Count : " + desireActiveTaskCount);
+      setTaskCount(desireActiveTaskCount);
+      return true;
+    }
+    return false;
+  }
+
+  private void setTaskCount(int desireActiveTaskCount)
+  {
+    ioConfig.setTaskCount(desireActiveTaskCount);
+    try {
+      Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
+      if (supervisorManager.isPresent()) {
+        MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
+        metadataSupervisorManager.insert(dataSource, spec);
+      } else {
+        log.error("supervisorManager is null in taskMaster, skip to do scale action");
+      }
+    }
+    catch (Exception e) {
+      log.error("Failed to sync taskCount to RDS");
+    }
+  }
+
+  private void clearAllocationInfos()
+  {
+    activelyReadingTaskGroups.clear();
+    partitionGroups.clear();
+    partitionOffsets.clear();
+
+    pendingCompletionTaskGroups.clear();
+    partitionIds.clear();
+  }
+
+  private List<Long> collectTotalLags()
+  {
+    return queue.stream().collect(Collectors.toList());
+  }
+
   private class GracefulShutdownNotice extends ShutdownNotice
   {
     @Override
@@ -469,6 +625,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
   private final SeekableStreamSupervisorIOConfig ioConfig;
+  private final Map<String, Object> dynamicAllocationTasksProperties;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
@@ -478,6 +635,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
+  private final ScheduledExecutorService allocationExec;
+  private final ScheduledExecutorService lagComputationExec;
   private final ListeningExecutorService workerExec;
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
@@ -487,6 +646,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final boolean useExclusiveStartingSequence;
   private boolean listenerRegistered = false;
   private long lastRunTime;
+  private long dynamicTriggerLastRunTime;
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
@@ -495,6 +655,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
+  private final boolean enableDynamicAllocationTasks;
+  private volatile long metricsCollectionIntervalMillis;
+  private volatile long metricsCollectionRangeMillis;
+  private volatile long dynamicCheckStartDelayMillis;
+  private volatile long dynamicCheckPeriod;
+  private volatile CircularFifoQueue<Long> queue;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -518,20 +684,52 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
+    this.dynamicAllocationTasksProperties = ioConfig.getDynamicAllocationTasksProperties();
+    log.info("Get dynamicAllocationTasksProperties from IOConfig : " + dynamicAllocationTasksProperties);
+
+    if (dynamicAllocationTasksProperties != null && !dynamicAllocationTasksProperties.isEmpty() && Boolean.parseBoolean(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("enableDynamicAllocationTasks", false)))) {
+      log.info("EnableDynamicAllocationTasks for datasource " + dataSource);
+      this.enableDynamicAllocationTasks = true;
+    } else {
+      log.info("Disable Dynamic Allocate Tasks");
+      this.enableDynamicAllocationTasks = false;
+    }
+    int taskCountMax = 0;
+    if (enableDynamicAllocationTasks) {
+      this.metricsCollectionIntervalMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionIntervalMillis", 10000)));
+      this.metricsCollectionRangeMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionRangeMillis", 6 * 10 * 1000)));
+      int slots = (int) (metricsCollectionRangeMillis / metricsCollectionIntervalMillis) + 1;
+      log.info(" The interval of metrics collection is " + metricsCollectionIntervalMillis + ", " + metricsCollectionRangeMillis + " timeRange will collect " + slots + " data points at most.");
+      this.queue = new CircularFifoQueue<>(slots);
+      taskCountMax = Integer.parseInt(String.valueOf(this.dynamicAllocationTasksProperties.getOrDefault("taskCountMax", 8)));
+      this.dynamicCheckStartDelayMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("dynamicCheckStartDelayMillis", 300000)));
+      this.dynamicCheckPeriod = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("dynamicCheckPeriod", 600000)));
+      this.metricsCollectionRangeMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionRangeMillis", 600000)));
+    }
+
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
+    this.allocationExec = Execs.scheduledSingleThreaded(supervisorId + "-Allocation-%d");
+    this.lagComputationExec = Execs.scheduledSingleThreaded(supervisorId + "-Computation-%d");
     this.stateManager = new SeekableStreamSupervisorStateManager(
         spec.getSupervisorStateManagerConfig(),
         spec.isSuspended()
     );
 
-    int workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                         ? this.tuningConfig.getWorkerThreads()
-                         : Math.min(10, this.ioConfig.getTaskCount()));
+    int workerThreads = 0;
+    if (enableDynamicAllocationTasks) {
+      workerThreads = (this.tuningConfig.getWorkerThreads() != null
+              ? this.tuningConfig.getWorkerThreads()
+              : Math.min(10, taskCountMax));
+    } else {
+      workerThreads = (this.tuningConfig.getWorkerThreads() != null
+              ? this.tuningConfig.getWorkerThreads()
+              : Math.min(10, this.ioConfig.getTaskCount()));
+    }
 
     this.workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(workerThreads, supervisorId + "-Worker-%d"));
     log.info("Created worker pool with [%d] threads for dataSource [%s]", workerThreads, this.dataSource);
@@ -571,10 +769,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
                                          + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
+    int chatThreads;
+    if (enableDynamicAllocationTasks) {
+      chatThreads = (this.tuningConfig.getChatThreads() != null
+              ? this.tuningConfig.getChatThreads()
+              : Math.min(10, taskCountMax * this.ioConfig.getReplicas()));
+    } else {
+      chatThreads = (this.tuningConfig.getChatThreads() != null
+              ? this.tuningConfig.getChatThreads()
+              : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+    }
 
-    int chatThreads = (this.tuningConfig.getChatThreads() != null
-                       ? this.tuningConfig.getChatThreads()
-                       : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
     this.taskClient = taskClientFactory.build(
         taskInfoProvider,
         dataSource,
@@ -652,6 +857,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
         reportingExec.shutdownNow();
+        log.info("Shut Down allocationExec now");
+        allocationExec.shutdownNow();
+        log.info("Shut Down lagComputationExec now");
+        lagComputationExec.shutdownNow();
+
 
         if (started) {
           Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
@@ -768,7 +978,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
 
         scheduleReporting(reportingExec);
-
+        if (enableDynamicAllocationTasks) {
+          log.info("Collect and compute lags at fixed rate of " + metricsCollectionIntervalMillis);
+          lagComputationExec.scheduleAtFixedRate(
+                  collectAndcollectLags(),
+                  dynamicCheckStartDelayMillis, // wait for tasks to start up
+                  metricsCollectionIntervalMillis,
+                  TimeUnit.MILLISECONDS
+          );
+          log.info("allocate task at fixed rate of " + dynamicCheckPeriod);
+          allocationExec.scheduleAtFixedRate(
+                  buildDynamicAllocationTask(),
+                  dynamicCheckStartDelayMillis + metricsCollectionRangeMillis,
+                  dynamicCheckPeriod,
+                  TimeUnit.MILLISECONDS
+          );
+        }
         started = true;
         log.info(
             "Started SeekableStreamSupervisor[%s], first run in [%s], with spec: [%s]",
@@ -789,6 +1014,38 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         throw new RuntimeException(e);
       }
     }
+  }
+
+  private Runnable collectAndcollectLags()
+  {
+    return new Runnable() {
+      @Override
+      public void run()
+      {
+        lock.lock();
+        try {
+          if (!spec.isSuspended()) {
+            ArrayList<Long> metricsInfo = new ArrayList<>(3);
+            collectLag(metricsInfo);
+            long totalLags = metricsInfo.size() < 3 ? 0 : metricsInfo.get(1);
+            queue.offer(totalLags > 0 ? totalLags : 0);
+            log.info("Current lag metric points : " + queue.stream().collect(Collectors.toList()));
+          } else {
+            log.info("[%s] supervisor is suspended, skip to collect kafka lags", dataSource);
+          }
+        }
+        catch (Exception e) {
+          log.error(e, "Error, When collect kafka lags");
+        }
+        finally {
+          lock.unlock();
+        }
+      }
+    };
+  }
+  private Runnable buildDynamicAllocationTask()
+  {
+    return () -> notices.add(new DynamicAllocationTasksNotice());
   }
 
   private Runnable buildRunTask()
@@ -1137,6 +1394,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
+    // clear queue for kafka lags
+    if (enableDynamicAllocationTasks && queue != null) {
+      try {
+        lock.lock();
+        queue.clear();
+      }
+      catch (Exception e) {
+        log.warn(e, "Error,when clear queue in rest action");
+      }
+      finally {
+        lock.unlock();
+      }
+    }
+
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
@@ -3487,33 +3758,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final String type = spec.getType();
 
       BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
-        if (partitionLags == null) {
+        ArrayList<Long> lags = new ArrayList<>(3);
+        computeLags(partitionLags, lags);
+        if (lags.size() < 3) {
           return;
         }
-
-        long maxLag = 0, totalLag = 0, avgLag;
-        for (long lag : partitionLags.values()) {
-          if (lag > maxLag) {
-            maxLag = lag;
-          }
-          totalLag += lag;
-        }
-        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
-
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), totalLag)
+                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lags.get(1))
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), maxLag)
+                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lags.get(0))
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), avgLag)
+                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lags.get(2))
         );
       };
 
@@ -3524,6 +3787,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     catch (Exception e) {
       log.warn(e, "Unable to compute lag");
     }
+  }
+
+
+  protected void computeLags(Map<PartitionIdType, Long> partitionLags, ArrayList<Long> lags)
+  {
+    if (partitionLags == null) {
+      return;
+    }
+    long maxLag = 0, totalLag = 0, avgLag;
+    for (long lag : partitionLags.values()) {
+      if (lag > maxLag) {
+        maxLag = lag;
+      }
+      totalLag += lag;
+    }
+    avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
+    lags.add(maxLag);
+    lags.add(totalLag);
+    lags.add(avgLag);
   }
 
   /**
@@ -3561,4 +3843,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * sequences. In Kafka, start offsets are always inclusive.
    */
   protected abstract boolean useExclusiveStartSequenceNumberForNonFirstSequence();
+
+  protected abstract void collectLag(ArrayList<Long> lags);
 }
