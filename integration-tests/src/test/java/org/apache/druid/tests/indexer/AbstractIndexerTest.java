@@ -77,7 +77,9 @@ public abstract class AbstractIndexerTest
     List<TaskResponseObject> allTasks = indexer.getCompleteTasksForDataSource(dataSource);
     for (TaskResponseObject task : allTasks) {
       if (task.getStatus().isFailure()) {
-        LOG.error("Found failed task with log: " + indexer.getTaskLog(task.getId()));
+        LOG.info("------- Found failed task. Start log:");
+        LOG.info(indexer.getTaskLog(task.getId()));
+        LOG.info("End failed task log. -------");
       }
     }
 

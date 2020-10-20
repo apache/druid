@@ -192,11 +192,7 @@ public class OverlordResourceTestClient
           HttpMethod.GET,
           StringUtils.format("%s%s", getIndexerURL(), StringUtils.format("task/%s/log", StringUtils.urlEncode(taskId)))
       );
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<String>()
-          {
-          }
-      );
+      return response.getContent();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
