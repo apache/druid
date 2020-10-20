@@ -36,8 +36,6 @@ import java.util.Arrays;
 
 public class DoublesSketchSizeAdjustStrategyTest extends InitializedNullHandlingTest
 {
-  private static final int MAX_ROWS = 100000;
-  private static final int MAX_BYTES = 100_000_000;
   private static final int K_SIZE = 1024;
 
   @Before

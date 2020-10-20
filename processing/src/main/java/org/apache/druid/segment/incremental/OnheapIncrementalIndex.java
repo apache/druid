@@ -80,7 +80,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private final BlockingQueue<List<Integer>> indexReadyListQueue = new LinkedBlockingQueue<>(2);
   private final AtomicLong atomicCurrentNeedAppendBytes = new AtomicLong(0);
   protected volatile List<Integer> indexReadyAdjustRecorder = Collections.synchronizedList(new ArrayList<>());
-  private volatile ListeningExecutorService adjustExecutor = null;
+  @Nullable
+  private volatile ListeningExecutorService adjustExecutor;
   private volatile long adjustBeforeTime;
 
   @Nullable
@@ -217,7 +218,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
             long startTime = System.currentTimeMillis();
             List<Integer> tempReadyAdjustList;
             int totalIndexSize = 0;
-            int totalNeedAppendBytes = 0;
+            long totalNeedAppendBytes = 0;
             while ((tempReadyAdjustList = indexReadyListQueue.poll()) != null) {
               final HashSet<Integer> distinctIndex;
               final int indexSize = tempReadyAdjustList.size();
@@ -255,13 +256,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     for (int ai = 0; ai < rowNeedAdjustAggIndex.length; ai++) { // current row aggs adjust
       final AggregatorFactory[] metrics = getMetrics();
       final Aggregator[] aggs = concurrentGet(index);
-
-      if (aggs == null) {
-        log.debug("Aggregators maybe concurrent changed,index:[%s],aggregators.size[%s],metrics:%s",
-            index, aggregators.size(), Arrays.toString(metrics)
-        );
-        continue;
-      }
       final MaxIntermediateSizeAdjustStrategy strategy = metrics[rowNeedAdjustAggIndex[ai]]
           .getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
       if (strategy.isSyncAjust()) {
@@ -342,14 +336,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       // check adjust required
       final long currTime = System.currentTimeMillis();
       if (isAdjustmentRequired()) {
-        synchronized (indexReadyListQueue) {
+        synchronized (indexReadyAdjustRecorder) {
           if (!isAdjustmentRequired()) {
             return;
           }
           adjustBeforeTime = currTime;
           try {
-            indexReadyListQueue.put(indexReadyAdjustRecorder);
-            indexReadyAdjustRecorder = Collections.synchronizedList(new ArrayList<>());
+            indexReadyListQueue.put(new ArrayList<>(indexReadyAdjustRecorder));
+            indexReadyAdjustRecorder.clear();
           }
           catch (InterruptedException e) {
             log.warn(e, "Add ready adjust index list to queue fail.");

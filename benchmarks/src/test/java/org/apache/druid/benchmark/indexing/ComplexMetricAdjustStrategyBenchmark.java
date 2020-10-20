@@ -69,16 +69,18 @@ public class ComplexMetricAdjustStrategyBenchmark
   private long maxBytesInMemory;
   @Param({"75000"})
   private int rowsPerSegment;
-  @Param({"rollupHigh", "rollupModerate", "rollupLow"})
+  @Param({"complex"})
   private String schema;
   @Param({"true"})
   private boolean rollup;
   @Param({"true", "false"})
   private boolean adjustFlag;
-  @Param({"1000", "10000"})
-  private int adjustMaxRows;
   @Param({"1000"})
+  private int adjustMaxRows;
+  @Param({"1000", "10000"})
   private int adjustMaxTimeMs;
+  @Param({"low", "moderate", "high"})
+  private String rollupOpportunity;
 
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
@@ -100,30 +102,44 @@ public class ComplexMetricAdjustStrategyBenchmark
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
     SketchModule.registerSerde();
     DoublesSketchModule.registerSerde();
-  }
 
-  @Setup(Level.Invocation)
-  public void setup2()
-  {
+
     schemaInfo = GeneratorComplexSchemas.SCHEMA_MAP.get(schema);
-    incIndex = makeIncIndex();
-
     rows = new ArrayList<InputRow>();
+
+    int valuesPerTimestamp = 500;
+    switch (rollupOpportunity) {
+      case "moderate":
+        valuesPerTimestamp = 5000;
+        break;
+      case "high":
+        valuesPerTimestamp = 50000;
+        break;
+
+    }
 
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+        schemaInfo.getDataInterval().getStartMillis(),
+        valuesPerTimestamp,
+        1000.0
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = gen.nextRow();
+      // System.out.println("S-ROW: " + row);
       if (i % 10000 == 0) {
         log.info(i + " rows generated.");
       }
       rows.add(row);
     }
+  }
+
+  @Setup(Level.Invocation)
+  public void setup2()
+  {
+    incIndex = makeIncIndex();
   }
 
   private IncrementalIndex makeIncIndex()

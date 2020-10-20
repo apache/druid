@@ -52,28 +52,10 @@ public class GeneratorComplexSchemas
         Arrays.asList("Hello", "World", "Foo", "Bar", "Baz"),
         Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
     );
-    List<GeneratorColumnSchema> rolloColumnsHigh = ImmutableList.of(
+    List<GeneratorColumnSchema> rolloColumns = ImmutableList.of(
         // dims
         generatorColumnSchema,
         GeneratorColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 100, 2.0),
-
-        // metrics
-        GeneratorColumnSchema.makeZipf("theta01", ValueType.LONG, true, 1, null, 0, 10000, 2.0),
-        GeneratorColumnSchema.makeDiscreteUniform("quantilies01", ValueType.LONG, true, 1, null, 0, 500)
-    );
-    List<GeneratorColumnSchema> rolloColumnsModerate = ImmutableList.of(
-        // dims
-        generatorColumnSchema,
-        GeneratorColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 1000, 2.0),
-
-        // metrics
-        GeneratorColumnSchema.makeZipf("theta01", ValueType.LONG, true, 1, null, 0, 10000, 2.0),
-        GeneratorColumnSchema.makeDiscreteUniform("quantilies01", ValueType.LONG, true, 1, null, 0, 500)
-    );
-    List<GeneratorColumnSchema> rolloColumnsLow = ImmutableList.of(
-        // dims
-        generatorColumnSchema,
-        GeneratorColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 10000, 2.0),
 
         // metrics
         GeneratorColumnSchema.makeZipf("theta01", ValueType.LONG, true, 1, null, 0, 10000, 2.0),
@@ -89,27 +71,13 @@ public class GeneratorComplexSchemas
 
     Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
-    GeneratorSchemaInfo rolloSchemaLow = new GeneratorSchemaInfo(
-        rolloColumnsLow,
+    GeneratorSchemaInfo rolloSchema = new GeneratorSchemaInfo(
+        rolloColumns,
         rolloSchemaIngestAggs,
         basicSchemaDataInterval,
         true
     );
-    GeneratorSchemaInfo rolloSchemaModerate = new GeneratorSchemaInfo(
-        rolloColumnsModerate,
-        rolloSchemaIngestAggs,
-        basicSchemaDataInterval,
-        true
-    );
-    GeneratorSchemaInfo rolloSchemaHigh = new GeneratorSchemaInfo(
-        rolloColumnsHigh,
-        rolloSchemaIngestAggs,
-        basicSchemaDataInterval,
-        true
-    );
-    SCHEMA_INFO_BUILDER.put("rollupLow", rolloSchemaLow);
-    SCHEMA_INFO_BUILDER.put("rollupModerate", rolloSchemaModerate);
-    SCHEMA_INFO_BUILDER.put("rollupHigh", rolloSchemaHigh);
+    SCHEMA_INFO_BUILDER.put("complex", rolloSchema);
   }
 
 
