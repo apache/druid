@@ -65,6 +65,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final String version;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean adjustmentBytesInMemoryFlag;
+  private final int adjustmentBytesInMemoryMaxRollupRows;
+  private final int adjustmentBytesInMemoryMaxTimeMs;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
@@ -81,6 +84,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
+      boolean adjustmentBytesInMemoryFlag,
+      int adjustmentBytesInMemoryMaxRollupRows,
+      int adjustmentBytesInMemoryMaxTimeMs,
       String dedupColumn
   )
   {
@@ -91,6 +97,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         version,
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         dedupColumn,
         Collections.emptyList()
     );
@@ -103,6 +112,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
+      boolean adjustmentBytesInMemoryFlag,
+      int adjustmentBytesInMemoryMaxRollupRows,
+      int adjustmentBytesInMemoryMaxTimeMs,
       String dedupColumn,
       List<FireHydrant> hydrants
   )
@@ -113,6 +125,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
+    this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows;
+    this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs;
     this.dedupColumn = dedupColumn;
 
     int maxCount = -1;
@@ -336,6 +351,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
+        .setAdjustmentBytesInMemoryFlag(adjustmentBytesInMemoryFlag)
+        .setAdjustmentBytesInMemoryMaxRollupRows(adjustmentBytesInMemoryMaxRollupRows)
+        .setadjustmentBytesInMemoryMaxTimeMs(adjustmentBytesInMemoryMaxTimeMs)
         .buildOnheap();
 
     final FireHydrant old;

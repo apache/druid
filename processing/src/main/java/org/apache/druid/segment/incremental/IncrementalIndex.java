@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -239,8 +238,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
-  protected final int[] rowNeedAsyncAdjustAggIndex;
-  protected final int[] rowNeedSyncAdjustAggIndex;
 
   private volatile DateTime maxIngestedEventTime;
 
@@ -283,30 +280,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
-    int syncCount = 0;
-    int asyncCount = 0;
-    int index = -1;
-    int[] syncIndex = new int[metrics.length];
-    int[] asyncIndex = new int[metrics.length];
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
       timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
-      index++;
-      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric.getMaxIntermediateSizeAdjustStrategy();
-      if (maxIntermediateSizeAdjustStrategy != null) {
-        if (maxIntermediateSizeAdjustStrategy.isSyncAjust()) {
-          syncIndex[syncCount++] = index;
-        } else {
-          asyncIndex[asyncCount++] = index;
-        }
-      }
     }
-    rowNeedSyncAdjustAggIndex = new int[syncCount];
-    System.arraycopy(syncIndex, 0, rowNeedSyncAdjustAggIndex, 0, syncCount);
-
-    rowNeedAsyncAdjustAggIndex = new int[asyncCount];
-    System.arraycopy(asyncIndex, 0, rowNeedAsyncAdjustAggIndex, 0, asyncCount);
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
     this.dimensionDescs = Maps.newLinkedHashMap();
@@ -342,16 +320,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  public int[] getRowNeedAsyncAdjustAggIndex()
-  {
-    return rowNeedAsyncAdjustAggIndex;
-  }
-
-  public int[] getRowNeedSyncAdjustAggIndex()
-  {
-    return rowNeedSyncAdjustAggIndex;
-  }
-
   public static class Builder
   {
     @Nullable
@@ -361,6 +329,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private boolean sortFacts;
     private int maxRowCount;
     private long maxBytesInMemory;
+    private boolean adjustmentBytesInMemoryFlag;
+    private int adjustmentBytesInMemoryMaxRollupRows;
+    private int adjustmentBytesInMemoryMaxTimeMs;
 
     public Builder()
     {
@@ -370,6 +341,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       sortFacts = true;
       maxRowCount = 0;
       maxBytesInMemory = 0;
+      adjustmentBytesInMemoryFlag = false;
+      adjustmentBytesInMemoryMaxRollupRows = 1000;
+      adjustmentBytesInMemoryMaxTimeMs = 1000;
     }
 
     public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
@@ -442,6 +416,25 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
+    // adjustmentBytesInMemoryFlag only applies to OnHeapIncrementalIndex
+    public Builder setAdjustmentBytesInMemoryFlag(final boolean adjustmentBytesInMemoryFlag)
+    {
+      this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
+      return this;
+    }
+
+    public Builder setAdjustmentBytesInMemoryMaxRollupRows(final int adjustmentBytesInMemoryMaxRollupRows)
+    {
+      this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows;
+      return this;
+    }
+
+    public Builder setadjustmentBytesInMemoryMaxTimeMs(final int adjustmentBytesInMemoryMaxTimeMs)
+    {
+      this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs;
+      return this;
+    }
+
     public OnheapIncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
@@ -454,7 +447,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          adjustmentBytesInMemoryFlag,
+          adjustmentBytesInMemoryMaxRollupRows,
+          adjustmentBytesInMemoryMaxTimeMs
       );
     }
 
@@ -541,26 +537,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private final int rowCount;
     private final long bytesInMemory;
     private final List<String> parseExceptionMessages;
-    private final long nextRedundantBytes;
 
     public AddToFactsResult(
         int rowCount,
         long bytesInMemory,
         List<String> parseExceptionMessages)
     {
-      this(rowCount, bytesInMemory, parseExceptionMessages, 0);
-    }
-
-    public AddToFactsResult(
-        int rowCount,
-        long bytesInMemory,
-        List<String> parseExceptionMessages,
-        long nextRedundantBytes)
-    {
       this.rowCount = rowCount;
       this.bytesInMemory = bytesInMemory;
       this.parseExceptionMessages = parseExceptionMessages;
-      this.nextRedundantBytes = nextRedundantBytes;
     }
 
     int getRowCount()
@@ -576,11 +561,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public List<String> getParseExceptionMessages()
     {
       return parseExceptionMessages;
-    }
-
-    public long getNextRedundantBytes()
-    {
-      return nextRedundantBytes;
     }
   }
 
@@ -655,8 +635,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexAddResult(
         addToFactsResult.getRowCount(),
         addToFactsResult.getBytesInMemory(),
-        parseException,
-        addToFactsResult.getNextRedundantBytes()
+        parseException
     );
   }
 

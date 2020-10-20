@@ -25,6 +25,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 public interface AppenderatorConfig
@@ -40,6 +41,34 @@ public interface AppenderatorConfig
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage
    */
   long getMaxBytesInMemory();
+
+  /**
+   * Whether open adjust bytes in memory strategy
+   */
+  default boolean isAdjustmentBytesInMemoryFlag()
+  {
+    return false;
+  }
+
+  /**
+   * Adjustment strategy trigger adjust condition: reached max rollup rows,when
+   * {@link #isAdjustmentBytesInMemoryFlag()} is
+   * true.
+   */
+  default int getAdjustmentBytesInMemoryMaxRollupRows()
+  {
+    return 1000;
+  }
+
+  /**
+   * Adjustment strategy trigger adjust condition: reached max milliseconds time,when
+   * {@link #isAdjustmentBytesInMemoryFlag()}
+   * is true.
+   */
+  default int getAdjustmentBytesInMemoryMaxTimeMs()
+  {
+    return 1000;
+  }
 
   int getMaxPendingPersists();
 

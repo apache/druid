@@ -32,32 +32,19 @@ public class IncrementalIndexAddResult
   private final ParseException parseException;
   @Nullable
   private final String reasonOfNotAdded;
-  private final long nextRedundantBytes;
 
 
   private IncrementalIndexAddResult(
       int rowCount,
       long bytesInMemory,
       @Nullable ParseException parseException,
-      @Nullable String reasonOfNotAdded,
-      long nextRedundantBytes
+      @Nullable String reasonOfNotAdded
   )
   {
     this.rowCount = rowCount;
     this.bytesInMemory = bytesInMemory;
     this.parseException = parseException;
     this.reasonOfNotAdded = reasonOfNotAdded;
-    this.nextRedundantBytes = nextRedundantBytes;
-  }
-
-  public IncrementalIndexAddResult(
-      int rowCount,
-      long bytesInMemory,
-      @Nullable ParseException parseException,
-      @Nullable String reasonOfNotAdded
-  )
-  {
-    this(rowCount, bytesInMemory, parseException, reasonOfNotAdded, 0);
   }
 
   public IncrementalIndexAddResult(
@@ -66,17 +53,7 @@ public class IncrementalIndexAddResult
       @Nullable ParseException parseException
   )
   {
-    this(rowCount, bytesInMemory, parseException, null, 0);
-  }
-
-  public IncrementalIndexAddResult(
-      int rowCount,
-      long bytesInMemory,
-      @Nullable ParseException parseException,
-      long nextRedundantBytes
-  )
-  {
-    this(rowCount, bytesInMemory, parseException, null, nextRedundantBytes);
+    this(rowCount, bytesInMemory, parseException, null);
   }
 
   public IncrementalIndexAddResult(
@@ -126,10 +103,5 @@ public class IncrementalIndexAddResult
   public String getReasonOfNotAdded()
   {
     return reasonOfNotAdded;
-  }
-
-  public long getNextRedundantBytes()
-  {
-    return nextRedundantBytes;
   }
 }

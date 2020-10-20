@@ -139,6 +139,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -1395,6 +1396,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     );
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
         1000,
+        null,
+        null,
+        null,
         null,
         maxRowsPerSegment,
         maxTotalRows,

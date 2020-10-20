@@ -262,6 +262,9 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
+          config.isAdjustmentBytesInMemoryFlag(),
+          config.getAdjustmentBytesInMemoryMaxRollupRows(),
+          config.getAdjustmentBytesInMemoryMaxTimeMs(),
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -725,6 +728,9 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
+          config.isAdjustmentBytesInMemoryFlag(),
+          config.getAdjustmentBytesInMemoryMaxRollupRows(),
+          config.getAdjustmentBytesInMemoryMaxTimeMs(),
           config.getDedupColumn(),
           hydrants
       );

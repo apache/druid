@@ -2741,6 +2741,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KinesisIndexTaskTuningConfig tuningConfig = new KinesisIndexTaskTuningConfig(
         maxRowsInMemory,
         null,
+        null,
+        null,
+        null,
         maxRowsPerSegment,
         maxTotalRows,
         new Period("P1Y"),

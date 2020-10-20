@@ -2499,6 +2499,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         1000,
         null,
+        null,
+        null,
+        null,
         maxRowsPerSegment,
         maxTotalRows,
         new Period("P1Y"),

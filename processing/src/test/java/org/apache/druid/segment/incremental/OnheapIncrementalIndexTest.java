@@ -161,7 +161,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 
       @Nullable
       @Override
-      public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy()
+      public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
       {
         return customAggStrategy;
       }
@@ -301,7 +301,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     initCustomAggAdjustStrategy(false);
     final AggregatorFactory[] metrics = {new LongSumAggregatorFactory("sum1", "sum1"),
         new LongMinAggregatorFactory("min1", "min1"), customMetric};
-    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "false");
     final OnheapIncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -325,8 +324,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     index.close();
 
     initCustomAggAdjustStrategy(false);
-    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "true");
-    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_PERIOD, "5");
     final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -336,8 +333,11 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
+        .setAdjustmentBytesInMemoryFlag(true)
+        .setAdjustmentBytesInMemoryMaxRollupRows(1000)
+        .setadjustmentBytesInMemoryMaxTimeMs(1000)
         .buildOnheap();
-    Thread.sleep(indexAdjust.adjustBytesInMemoryPeriod);
+    Thread.sleep(indexAdjust.getAdjustBytesInMemoryPeriod());
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -362,7 +362,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       addThreads[t].start();
     }
     downLatch.await();
-    Thread.sleep(indexAdjust.adjustBytesInMemoryPeriod);
+    Thread.sleep(indexAdjust.getAdjustBytesInMemoryPeriod());
     indexAdjust.add(new MapBasedInputRow(
         0,
         Collections.singletonList("billy"),
@@ -385,7 +385,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     initCustomAggAdjustStrategy(true);
     final AggregatorFactory[] metrics = {new LongSumAggregatorFactory("sum1", "sum1"),
         new LongMinAggregatorFactory("min1", "min1"), customMetric};
-    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "false");
     final OnheapIncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -395,6 +394,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
+        .setAdjustmentBytesInMemoryFlag(false)
+        .setAdjustmentBytesInMemoryMaxRollupRows(1000)
+        .setadjustmentBytesInMemoryMaxTimeMs(1000)
         .buildOnheap();
     IncrementalIndexAddResult addResult1 = null;
     for (int i = 0; i < MAX_ROWS; i++) {
@@ -408,8 +410,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     index.stopAdjust();
 
     initCustomAggAdjustStrategy(true);
-    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "true");
-    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_PERIOD, "5");
     final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -419,6 +419,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
+        .setAdjustmentBytesInMemoryFlag(true)
+        .setAdjustmentBytesInMemoryMaxRollupRows(1000)
+        .setadjustmentBytesInMemoryMaxTimeMs(1000)
         .buildOnheap();
 
     final int addThreadCount = 2;

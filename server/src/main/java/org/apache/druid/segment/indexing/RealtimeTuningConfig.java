@@ -36,6 +36,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 /**
@@ -67,6 +68,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return new RealtimeTuningConfig(
         DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
+        DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_FLAG,
+        DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_MAX_ROLLUP_ROWS,
+        DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_MAX_TIME_MS,
         DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
         DEFAULT_WINDOW_PERIOD,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
@@ -89,6 +93,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean adjustmentBytesInMemoryFlag;
+  private final int adjustmentBytesInMemoryMaxRollupRows;
+  private final int adjustmentBytesInMemoryMaxTimeMs;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -112,6 +119,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public RealtimeTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
+      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
+      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -136,6 +146,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
+    this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows == null
+        ? 1000
+        : adjustmentBytesInMemoryMaxRollupRows;
+    this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs == null
+        ? 1000
+        : adjustmentBytesInMemoryMaxTimeMs;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
@@ -306,6 +323,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return new RealtimeTuningConfig(
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         intermediatePersistPeriod,
         windowPeriod,
         basePersistDirectory,
@@ -332,6 +352,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return new RealtimeTuningConfig(
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         intermediatePersistPeriod,
         windowPeriod,
         dir,

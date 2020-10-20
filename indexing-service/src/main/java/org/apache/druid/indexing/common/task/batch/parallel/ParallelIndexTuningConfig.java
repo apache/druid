@@ -33,6 +33,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 public class ParallelIndexTuningConfig extends IndexTuningConfig
@@ -97,6 +98,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -107,6 +111,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
+      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
+      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
@@ -136,6 +143,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         maxTotalRows,
         null,
         numShards,
@@ -250,6 +260,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isAdjustmentBytesInMemoryFlag(),
+        getAdjustmentBytesInMemoryMaxRollupRows(),
+        getAdjustmentBytesInMemoryMaxTimeMs(),
         null,
         null,
         getSplitHintSpec(),

@@ -270,6 +270,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
+            null,
+            null,
             null
         ),
         null
@@ -3072,6 +3075,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaSupervisorTuningConfig(
             1000,
             null,
+            null,
+            null,
+            null,
             50000,
             null,
             new Period("P1Y"),
@@ -3110,6 +3116,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaSupervisorTuningConfig modifiedTuningConfig = new KafkaSupervisorTuningConfig(
         42, // This is different
+        null,
+        null,
+        null,
         null,
         50000,
         null,
@@ -3406,6 +3415,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
         1000,
         null,
+        null,
+        null,
+        null,
         50000,
         null,
         new Period("P1Y"),
@@ -3515,6 +3527,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
         1000,
+        null,
+        null,
+        null,
         null,
         50000,
         null,

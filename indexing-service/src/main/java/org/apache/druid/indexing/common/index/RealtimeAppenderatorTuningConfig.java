@@ -34,6 +34,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 @JsonTypeName("realtime_appenderator")
@@ -55,6 +56,9 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean adjustmentBytesInMemoryFlag;
+  private final int adjustmentBytesInMemoryMaxRollupRows;
+  private final int adjustmentBytesInMemoryMaxTimeMs;
   private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -76,6 +80,9 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   public RealtimeAppenderatorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
+      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
+      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -97,6 +104,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     // initializing this to 0, it will be lazily intialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
+    this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows == null
+        ? 1000
+        : adjustmentBytesInMemoryMaxRollupRows;
+    this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs == null
+        ? 1000
+        : adjustmentBytesInMemoryMaxTimeMs;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
@@ -262,6 +276,9 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return new RealtimeAppenderatorTuningConfig(
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         partitionsSpec.getMaxRowsPerSegment(),
         partitionsSpec.getMaxTotalRows(),
         intermediatePersistPeriod,

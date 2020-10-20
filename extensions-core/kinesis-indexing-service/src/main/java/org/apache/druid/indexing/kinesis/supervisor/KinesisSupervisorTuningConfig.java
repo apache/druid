@@ -28,6 +28,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
@@ -75,6 +76,9 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -82,6 +86,9 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public KinesisSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
+      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
+      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -117,6 +124,9 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     super(
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -214,6 +224,9 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     return "KinesisSupervisorTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
+        ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
+        ", adjustmentBytesInMemoryMaxRollupRows=" + getAdjustmentBytesInMemoryMaxRollupRows() +
+        ", adjustmentBytesInMemoryMaxTimeMs=" + getAdjustmentBytesInMemoryMaxTimeMs() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
@@ -250,6 +263,9 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     return new KinesisIndexTaskTuningConfig(
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isAdjustmentBytesInMemoryFlag(),
+        getAdjustmentBytesInMemoryMaxRollupRows(),
+        getAdjustmentBytesInMemoryMaxTimeMs(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),

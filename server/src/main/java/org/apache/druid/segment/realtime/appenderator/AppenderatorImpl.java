@@ -258,13 +258,11 @@ public class AppenderatorImpl implements Appenderator
     final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
     final long bytesInMemoryAfterAdd;
     final IncrementalIndexAddResult addResult;
-    final long nextRedundantBytes;
 
     try {
       addResult = sink.add(row, !allowIncrementalPersists);
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
-      nextRedundantBytes = addResult.getNextRedundantBytes();
     }
     catch (IndexSizeExceededException e) {
       // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
@@ -313,12 +311,11 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (bytesCurrentlyInMemory.get() + nextRedundantBytes >= maxBytesTuningConfig) {
+    if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          "bytesCurrentlyInMemory[%d] + nextRedundantBytes[%s] is greater than maxBytesInMemory[%d]",
+          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
-          nextRedundantBytes,
           maxBytesTuningConfig
       ));
     }
@@ -411,6 +408,9 @@ public class AppenderatorImpl implements Appenderator
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
+          tuningConfig.isAdjustmentBytesInMemoryFlag(),
+          tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+          tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
           null
       );
 
@@ -1128,6 +1128,9 @@ public class AppenderatorImpl implements Appenderator
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
+            tuningConfig.isAdjustmentBytesInMemoryFlag(),
+            tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+            tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
             null,
             hydrants
         );

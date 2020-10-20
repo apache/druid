@@ -275,7 +275,7 @@ public abstract class AggregatorFactory implements Cacheable
    * @return
    */
   @Nullable
-  public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy()
+  public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
   {
     return null;
   }

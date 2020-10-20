@@ -52,7 +52,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   protected final int size;
   private final byte cacheId;
   @Nullable
-  private final ThetaSketchSizeAdjustStrategy strategy;
+  private ThetaSketchSizeAdjustStrategy strategy;
 
   public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
   {
@@ -63,17 +63,15 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     Util.checkIfPowerOf2(this.size, "size");
 
     this.cacheId = cacheId;
-    String adjustBytesInMemoryFlag = System.getProperty("adjustBytesInMemoryFlag");
-    if (adjustBytesInMemoryFlag == null || "true".equalsIgnoreCase(adjustBytesInMemoryFlag)) {
-      strategy = new ThetaSketchSizeAdjustStrategy(this.size);
-    } else {
-      strategy = null;
-    }
   }
 
+  @Nullable
   @Override
-  public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy()
+  public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
   {
+    if (adjustBytesInMemoryFlag && strategy == null) {
+      strategy = new ThetaSketchSizeAdjustStrategy(this.size);
+    }
     return strategy;
   }
 
