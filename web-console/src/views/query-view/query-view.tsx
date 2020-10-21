@@ -426,9 +426,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         hoverOpenDelay={800}
       >
         <Switch
-          className="smart-query-limit"
+          className="auto-limit"
           checked={Boolean(wrapQueryLimit)}
-          label="Smart query limit"
+          label="Auto limit"
           onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
         />
       </Tooltip>
