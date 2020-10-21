@@ -327,8 +327,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             show: hiddenColumns.exists('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -349,8 +348,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
             },
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -552,10 +550,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: row => {
-              if (!row.value) return null;
-              const disabled = row.value.version === '';
-              const workerActions = this.getWorkerActions(row.value.host, disabled);
+            Cell: ({ value }) => {
+              if (!value) return null;
+              const disabled = value.version === '';
+              const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
           },

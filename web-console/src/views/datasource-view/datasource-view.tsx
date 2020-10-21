@@ -103,6 +103,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment load/drop queues',
     'Total data size',
     'Segment size',
+    'Segment granularity',
     'Total rows',
     'Avg. row size',
     'Replicated size',

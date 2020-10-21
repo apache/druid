@@ -99,7 +99,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={row.value} />,
+            Cell: ({ value }) => <TableCell value={value} />,
           };
         } else {
           const timestamp = columnName === '__time';

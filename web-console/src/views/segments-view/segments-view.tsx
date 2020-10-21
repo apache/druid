@@ -19,6 +19,7 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import { SqlExpression, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -65,6 +66,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Size',
     'Num rows',
     'Replicas',
+    'Partitioning',
     'Is published',
     'Is realtime',
     'Is available',
@@ -91,6 +93,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Size',
     'Num rows',
     'Replicas',
+    'Partitioning',
     'Is published',
     'Is realtime',
     'Is available',
@@ -131,6 +134,7 @@ interface SegmentQueryResultRow {
   partition_num: number;
   num_rows: number;
   num_replicas: number;
+  partitioning: string;
   is_available: number;
   is_published: number;
   is_realtime: number;
@@ -152,6 +156,22 @@ export interface SegmentsViewState {
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   static PAGE_SIZE = 25;
+
+  static WITH_QUERY = `WITH s AS (
+  SELECT
+    "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows",    
+    CASE
+      WHEN "shardSpec" LIKE 'NumberedShardSpec%' THEN 'dynamic'
+      WHEN "shardSpec" LIKE 'HashBasedNumberedShardSpec%' THEN 'hashed'
+      WHEN "shardSpec" LIKE 'SingleDimensionShardSpec%' THEN 'single_dim'
+      WHEN "shardSpec" LIKE 'NoneShardSpec%' THEN 'none'
+      WHEN "shardSpec" LIKE 'LinearShardSpec%' THEN 'linear'
+      WHEN "shardSpec" LIKE 'NumberedOverwriteShardSpec%' THEN 'numbered_overwrite'
+      ELSE '-'
+    END AS "partitioning",
+    "is_published", "is_available", "is_realtime", "is_overshadowed"
+  FROM sys.segments
+)`;
 
   private segmentsSqlQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
   private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
@@ -183,7 +203,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         const whereParts = filterMap(query.filtered, (f: Filter) => {
           if (f.id.startsWith('is_')) {
             if (f.value === 'all') return;
-            return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
+            return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
           } else {
             return sqlQueryCustomTableFilter(f);
           }
@@ -193,7 +213,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
         let whereClause = '';
         if (whereParts.length) {
-          whereClause = whereParts.join(' AND ');
+          whereClause = SqlExpression.and(...whereParts).toString();
         }
 
         if (query.groupByInterval) {
@@ -211,10 +231,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             .join(', ');
 
           queryParts = compact([
-            `SELECT`,
-            `  ("start" || '/' || "end") AS "interval",`,
-            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed"`,
-            `FROM sys.segments`,
+            SegmentsView.WITH_QUERY,
+            `SELECT "start" || '/' || "end" AS "interval", *`,
+            `FROM s`,
             `WHERE`,
             intervals ? `  ("start" || '/' || "end") IN (${intervals})` : 'FALSE',
             whereClause ? `  AND ${whereClause}` : '',
@@ -231,10 +250,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
           queryParts.push(`LIMIT ${totalQuerySize * 1000}`);
         } else {
-          queryParts = [
-            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed"`,
-            `FROM sys.segments`,
-          ];
+          queryParts = [SegmentsView.WITH_QUERY, `SELECT *`, `FROM s`];
 
           if (whereClause) {
             queryParts.push(`WHERE ${whereClause}`);
@@ -421,8 +437,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             Header: 'Datasource',
             show: hiddenColumns.exists('Datasource'),
             accessor: 'datasource',
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -440,8 +455,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'interval',
             width: 120,
             defaultSortDesc: true,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -459,8 +473,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'start',
             width: 120,
             defaultSortDesc: true,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -478,8 +491,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'end',
             defaultSortDesc: true,
             width: 120,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -542,6 +554,26 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 60,
             filterable: false,
             defaultSortDesc: true,
+          },
+          {
+            Header: 'Partitioning',
+            show: capabilities.hasSql() && hiddenColumns.exists('Partitioning'),
+            accessor: 'partitioning',
+            width: 100,
+            filterable: true,
+            Cell: ({ value }) => {
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({
+                      segmentFilter: addFilter(segmentFilter, 'partitioning', value),
+                    });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
           },
           {
             Header: 'Is published',
