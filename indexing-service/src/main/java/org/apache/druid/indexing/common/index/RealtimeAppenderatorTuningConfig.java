@@ -97,8 +97,8 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    /** initializing this to 0, it will be lazily initialized to a value
-     * @see #getMaxBytesInMemoryOrDefault() */
+    // initializing this to 0, it will be lazily initialized to a value
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
