@@ -301,6 +301,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         1000,
         null,
         null,
+        null,
         false
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
@@ -4716,6 +4717,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -4856,6 +4858,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         fetchDelayMillis,
         null,
         null,
+        null,
         false
     );
 
@@ -4941,6 +4944,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         recordsPerFetch,
         fetchDelayMillis,
+        null,
         null,
         null,
         false
@@ -5030,6 +5034,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         recordsPerFetch,
         fetchDelayMillis,
+        null,
         null,
         null,
         false

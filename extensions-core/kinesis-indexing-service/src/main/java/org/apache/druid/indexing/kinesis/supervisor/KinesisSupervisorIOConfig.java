@@ -29,6 +29,8 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
+import java.util.Map;
+
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
   private final String endpoint;
@@ -70,6 +72,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
+      @JsonProperty("dynamicAllocationTasksProperties") Map<String, Object> dynamicAllocationTasksProperties,
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
@@ -85,7 +88,9 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        dynamicAllocationTasksProperties,
         lateMessageRejectionStartDateTime
+
     );
     this.endpoint = endpoint != null
                     ? endpoint
