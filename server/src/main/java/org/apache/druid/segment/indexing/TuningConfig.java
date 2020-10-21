@@ -39,7 +39,7 @@ public interface TuningConfig
   // tracks active index and not the index being flushed to disk, to account for that
   // we halved default to 1/6(max jvm memory)
   long DEFAULT_MAX_BYTES_IN_MEMORY = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
-  boolean DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_FLAG = true;
+  boolean DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_FLAG = false;
   int DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_MAX_ROLLUP_ROWS = 1000;
   int DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_MAX_TIME_MS = 1000;
 }

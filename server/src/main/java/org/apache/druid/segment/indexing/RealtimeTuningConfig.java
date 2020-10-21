@@ -146,12 +146,12 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_FLAG : adjustmentBytesInMemoryFlag;
     this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows == null
-        ? 1000
+        ? DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_MAX_ROLLUP_ROWS
         : adjustmentBytesInMemoryMaxRollupRows;
     this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs == null
-        ? 1000
+        ? DEFAULT_ADJUSTMENT_BYTES_IN_MEMORY_MAX_TIME_MS
         : adjustmentBytesInMemoryMaxTimeMs;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
