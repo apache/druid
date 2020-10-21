@@ -24,17 +24,20 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DataGenerator
 {
   private final List<GeneratorColumnSchema> columnSchemas;
-  private final long seed;
 
   private List<ColumnValueGenerator> columnGenerators;
   private final long startTime;
@@ -55,7 +58,6 @@ public class DataGenerator
   )
   {
     this.columnSchemas = columnSchemas;
-    this.seed = seed;
 
     this.startTime = startTime;
     this.endTime = Long.MAX_VALUE;
@@ -63,7 +65,7 @@ public class DataGenerator
     this.timestampIncrement = timestampIncrement;
     this.currentTime = startTime;
 
-    init();
+    reset(seed);
   }
 
   public DataGenerator(
@@ -74,7 +76,6 @@ public class DataGenerator
   )
   {
     this.columnSchemas = columnSchemas;
-    this.seed = seed;
 
     this.startTime = interval.getStartMillis();
     this.endTime = interval.getEndMillis() - 1;
@@ -85,7 +86,7 @@ public class DataGenerator
     this.timestampIncrement = timeDelta / (numRows * 1.0);
     this.numConsecutiveTimestamps = 0;
 
-    init();
+    reset(seed);
   }
 
   public InputRow nextRow()
@@ -98,7 +99,12 @@ public class DataGenerator
     return row;
   }
 
-  private void init()
+  /**
+   * Reset this generator to start from the begining of the interval with a new seed.
+   *
+   * @param seed the new seed to generate rows from
+   */
+  public DataGenerator reset(long seed)
   {
     this.timeCounter = 0;
     this.currentTime = startTime;
@@ -126,6 +132,8 @@ public class DataGenerator
             }
         )
     );
+
+    return this;
   }
 
   private long nextTimestamp()
@@ -143,4 +151,54 @@ public class DataGenerator
     }
   }
 
+  /**
+   * Initialize a Java Stream generator for InputRow from this DataGenerator.
+   *
+   * @param numOfRows the number of rows to generate
+   * @return a generator
+   */
+  private Stream<InputRow> generator(int numOfRows)
+  {
+    return Stream.generate(this::nextRow).limit(numOfRows);
+  }
+
+  /**
+   * Add rows form any generator to an index.
+   *
+   * @param stream the stream of rows to add
+   * @param index the index to add rows to
+   */
+  public static void addStreamToIndex(Stream<InputRow> stream, IncrementalIndex<?> index)
+  {
+    stream.forEachOrdered(row -> {
+      try {
+        index.add(row);
+      }
+      catch (IndexSizeExceededException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  /**
+   * Add rows form this generator to an index.
+   *
+   * @param index the index to add rows to
+   * @param numOfRows the number of rows to add
+   */
+  public void addToIndex(IncrementalIndex<?> index, int numOfRows)
+  {
+    addStreamToIndex(generator(numOfRows), index);
+  }
+
+  /**
+   * Put rows form this generator to an list.
+   *
+   * @param numOfRows the number of rows to put in the list
+   * @return a List of InputRow
+   */
+  public List<InputRow> toList(int numOfRows)
+  {
+    return generator(numOfRows).collect(Collectors.toList());
+  }
 }

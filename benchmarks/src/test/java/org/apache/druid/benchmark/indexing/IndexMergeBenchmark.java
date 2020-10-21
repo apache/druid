@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.indexing;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -132,15 +131,9 @@ public class IndexMergeBenchmark
           rowsPerSegment
       );
 
-      IncrementalIndex incIndex = makeIncIndex();
+      IncrementalIndex<?> incIndex = makeIncIndex();
 
-      for (int j = 0; j < rowsPerSegment; j++) {
-        InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
-        incIndex.add(row);
-      }
+      gen.addToIndex(incIndex, rowsPerSegment);
 
       tmpDir = FileUtils.createTempDir();
       log.info("Using temp dir: " + tmpDir.getAbsolutePath());

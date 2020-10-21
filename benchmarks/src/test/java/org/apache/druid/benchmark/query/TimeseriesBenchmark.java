@@ -19,9 +19,9 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
@@ -68,7 +68,10 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCreator;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -103,14 +106,14 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class TimeseriesBenchmark
 {
-  @Param({"1"})
-  private int numSegments;
-
   @Param({"750000"})
   private int rowsPerSegment;
 
   @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
+
+  @Param({"true", "false"})
+  private boolean descending;
 
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -122,15 +125,11 @@ public class TimeseriesBenchmark
     NullHandling.initializeForTests();
   }
 
-  private List<IncrementalIndex> incIndexes;
-  private List<QueryableIndex> qIndexes;
-  private File tmpDir;
-
+  private AppendableIndexSpec appendableIndexSpec;
+  private DataGenerator generator;
   private QueryRunnerFactory factory;
   private GeneratorSchemaInfo schemaInfo;
   private TimeseriesQuery query;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -172,7 +171,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("A", queryA);
@@ -192,7 +191,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("timeFilterNumeric", timeFilterQuery);
@@ -212,7 +211,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("timeFilterAlphanumeric", timeFilterQuery);
@@ -229,7 +228,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("timeFilterByInterval", timeFilterQuery);
@@ -240,13 +239,11 @@ public class TimeseriesBenchmark
   }
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
-
-    executorService = Execs.multiThreaded(numSegments, "TimeseriesThreadPool");
 
     setupQueries();
 
@@ -257,44 +254,12 @@ public class TimeseriesBenchmark
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
     query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
 
-    incIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      log.info("Generating rows for segment " + i);
-      DataGenerator gen = new DataGenerator(
-          schemaInfo.getColumnSchemas(),
-          RNG_SEED + i,
-          schemaInfo.getDataInterval(),
-          rowsPerSegment
-      );
-
-      IncrementalIndex incIndex = makeIncIndex();
-
-      for (int j = 0; j < rowsPerSegment; j++) {
-        InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
-        incIndex.add(row);
-      }
-      log.info(rowsPerSegment + " rows generated");
-      incIndexes.add(incIndex);
-    }
-
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
-    qIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndexes.get(i),
-          tmpDir,
-          new IndexSpec(),
-          null
-      );
-
-      QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
-      qIndexes.add(qIndex);
-    }
+    generator = new DataGenerator(
+        schemaInfo.getColumnSchemas(),
+        RNG_SEED,
+        schemaInfo.getDataInterval(),
+        rowsPerSegment
+    );
 
     factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(),
@@ -303,15 +268,80 @@ public class TimeseriesBenchmark
     );
   }
 
-  @TearDown
-  public void tearDown() throws IOException
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexState
   {
-    FileUtils.deleteDirectory(tmpDir);
+    @Param({"onheap", "offheap"})
+    private String indexType;
+
+    IncrementalIndex<?> incIndex;
+
+    @Setup
+    public void setup(TimeseriesBenchmark global) throws IndexSizeExceededException, JsonProcessingException
+    {
+      global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
+      incIndex = global.makeIncIndex();
+      global.generator.addToIndex(incIndex, global.rowsPerSegment);
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      incIndex.close();
+    }
   }
 
-  private IncrementalIndex makeIncIndex()
+  @State(Scope.Benchmark)
+  public static class QueryableIndexState
   {
-    return new OnheapIncrementalIndex.Builder()
+    @Param({"1"})
+    private int numSegments;
+
+    private ExecutorService executorService;
+    private File qIndexesDir;
+    private List<QueryableIndex> qIndexes;
+
+    @Setup
+    public void setup(TimeseriesBenchmark global) throws IOException
+    {
+      global.appendableIndexSpec = new OnheapIncrementalIndex.Spec();
+
+      executorService = Execs.multiThreaded(numSegments, "TimeseriesThreadPool");
+
+      qIndexesDir = FileUtils.createTempDir();
+      qIndexes = new ArrayList<>();
+
+      for (int i = 0; i < numSegments; i++) {
+        log.info("Generating rows for segment " + i);
+
+        IncrementalIndex<?> incIndex = global.makeIncIndex();
+        global.generator.reset(RNG_SEED + i).addToIndex(incIndex, global.rowsPerSegment);
+
+        File indexFile = INDEX_MERGER_V9.persist(
+            incIndex,
+            new File(qIndexesDir, String.valueOf(i)),
+            new IndexSpec(),
+            null
+        );
+        incIndex.close();
+
+        qIndexes.add(INDEX_IO.loadIndex(indexFile));
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      for (QueryableIndex index : qIndexes) {
+        index.close();
+      }
+      qIndexesDir.delete();
+    }
+  }
+
+  private IncrementalIndex<?> makeIncIndex()
+  {
+    return appendableIndexSpec.builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setMaxRowCount(rowsPerSegment)
         .build();
@@ -332,12 +362,12 @@ public class TimeseriesBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole)
+  public void querySingleIncrementalIndex(Blackhole blackhole, IncrementalIndexState state)
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
-        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
+        new IncrementalIndexSegment(state.incIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
@@ -347,12 +377,12 @@ public class TimeseriesBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole)
+  public void querySingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
@@ -362,12 +392,12 @@ public class TimeseriesBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryFilteredSingleQueryableIndex(Blackhole blackhole)
+  public void queryFilteredSingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     DimFilter filter = new SelectorDimFilter("dimSequential", "399", null);
@@ -380,23 +410,23 @@ public class TimeseriesBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole)
+  public void queryMultiQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       SegmentId segmentId = SegmentId.dummy("qIndex " + i);
       QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           segmentId,
-          new QueryableIndexSegment(qIndexes.get(i), segmentId)
+          new QueryableIndexSegment(state.qIndexes.get(i), segmentId)
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
+            toolChest.mergeResults(factory.mergeRunners(state.executorService, singleSegmentRunners)),
             toolChest
         )
     );

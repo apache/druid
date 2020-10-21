@@ -35,7 +35,7 @@ public abstract class AppendableIndexBuilder
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
 
-  protected final Logger log = new Logger(this.getClass().getName());
+  protected final Logger log = new Logger(this.getClass());
 
   public AppendableIndexBuilder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
   {
