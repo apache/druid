@@ -146,7 +146,7 @@ public class TaskLockbox
         final TaskLock savedTaskLock = Preconditions.checkNotNull(taskAndLock.rhs, "savedTaskLock");
         if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
           // "Impossible", but you never know what crazy stuff can be restored from storage.
-          log.warn("WTF?! Got lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
+          log.warn("Ignoring lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
           continue;
         }
 

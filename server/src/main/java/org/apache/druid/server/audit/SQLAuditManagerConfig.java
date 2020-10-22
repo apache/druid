@@ -28,8 +28,16 @@ public class SQLAuditManagerConfig
   @JsonProperty
   private long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
 
+  @JsonProperty
+  private boolean includePayloadAsDimensionInMetric = false;
+
   public long getAuditHistoryMillis()
   {
     return auditHistoryMillis;
+  }
+
+  public boolean getIncludePayloadAsDimensionInMetric()
+  {
+    return includePayloadAsDimensionInMetric;
   }
 }

@@ -22,9 +22,8 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -50,6 +50,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +68,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   private final ObjectMapper objectMapper;
   private final Map<String, DataSourceCompactionConfig> compactionConfigs;
-  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
+  private final Map<String, CompactionStatistics> compactedSegments = new HashMap<>();
+  private final Map<String, CompactionStatistics> skippedSegments = new HashMap<>();
 
   // dataSource -> intervalToFind
   // searchIntervals keeps track of the current state of which interval should be considered to search segments to
@@ -87,7 +89,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     this.objectMapper = objectMapper;
     this.compactionConfigs = compactionConfigs;
-    this.dataSources = dataSources;
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
@@ -111,27 +112,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
-  public Object2LongOpenHashMap<String> totalRemainingSegmentsSizeBytes()
+  public Map<String, CompactionStatistics> totalCompactedStatistics()
   {
-    final Object2LongOpenHashMap<String> resultMap = new Object2LongOpenHashMap<>();
-    resultMap.defaultReturnValue(UNKNOWN_TOTAL_REMAINING_SEGMENTS_SIZE);
-    for (QueueEntry entry : queue) {
-      final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(entry.getDataSource());
-      final Interval interval = new Interval(timeline.first().getInterval().getStart(), entry.interval.getEnd());
+    return compactedSegments;
+  }
 
-      final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(interval);
-
-      long size = 0;
-      for (DataSegment segment : FluentIterable
-          .from(holders)
-          .transformAndConcat(TimelineObjectHolder::getObject)
-          .transform(PartitionChunk::getObject)) {
-        size += segment.getSize();
-      }
-
-      resultMap.put(entry.getDataSource(), size);
-    }
-    return resultMap;
+  @Override
+  public Map<String, CompactionStatistics> totalSkippedStatistics()
+  {
+    return skippedSegments;
   }
 
   @Override
@@ -158,6 +147,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     Preconditions.checkState(!resultSegments.isEmpty(), "Queue entry must not be empty");
 
     final String dataSource = resultSegments.get(0).getDataSource();
+
     updateQueue(dataSource, compactionConfigs.get(dataSource));
 
     return resultSegments;
@@ -180,6 +170,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(
+        dataSourceName,
         compactibleTimelineObjectHolderCursor,
         config
     );
@@ -247,17 +238,30 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
   }
 
-  private boolean needsCompaction(DataSourceCompactionConfig config, SegmentsToCompact candidates)
+  @VisibleForTesting
+  static PartitionsSpec findPartitinosSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  {
+    final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
+    if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
+      return new DynamicPartitionsSpec(
+          partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
+          ((DynamicPartitionsSpec) partitionsSpecFromTuningConfig).getMaxTotalRowsOr(Long.MAX_VALUE)
+      );
+    } else {
+      final long maxTotalRows = tuningConfig.getMaxTotalRows() != null
+                                ? tuningConfig.getMaxTotalRows()
+                                : Long.MAX_VALUE;
+      return partitionsSpecFromTuningConfig == null
+             ? new DynamicPartitionsSpec(tuningConfig.getMaxRowsPerSegment(), maxTotalRows)
+             : partitionsSpecFromTuningConfig;
+    }
+  }
+
+  private boolean needsCompaction(ClientCompactionTaskQueryTuningConfig tuningConfig, SegmentsToCompact candidates)
   {
     Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
-    final int maxRowsPerSegment = config.getMaxRowsPerSegment() == null
-                                  ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
-                                  : config.getMaxRowsPerSegment();
-    @Nullable Long maxTotalRows = config.getTuningConfig() == null
-                                        ? null
-                                        : config.getTuningConfig().getMaxTotalRows();
-    maxTotalRows = maxTotalRows == null ? Long.MAX_VALUE : maxTotalRows;
 
+    final PartitionsSpec partitionsSpecFromConfig = findPartitinosSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
       log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
@@ -283,30 +287,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     final PartitionsSpec segmentPartitionsSpec = lastCompactionState.getPartitionsSpec();
-    if (!(segmentPartitionsSpec instanceof DynamicPartitionsSpec)) {
-      log.info(
-          "Candidate segment[%s] was compacted with a non dynamic partitions spec. Needs compaction.",
-          candidates.segments.get(0).getId()
-      );
-      return true;
-    }
-    final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) segmentPartitionsSpec;
     final IndexSpec segmentIndexSpec = objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class);
     final IndexSpec configuredIndexSpec;
-    if (config.getTuningConfig() == null || config.getTuningConfig().getIndexSpec() == null) {
+    if (tuningConfig.getIndexSpec() == null) {
       configuredIndexSpec = new IndexSpec();
     } else {
-      configuredIndexSpec = config.getTuningConfig().getIndexSpec();
+      configuredIndexSpec = tuningConfig.getIndexSpec();
     }
     boolean needsCompaction = false;
-    if (!Objects.equals(maxRowsPerSegment, dynamicPartitionsSpec.getMaxRowsPerSegment())
-        || !Objects.equals(maxTotalRows, dynamicPartitionsSpec.getMaxTotalRows())) {
+    if (!Objects.equals(partitionsSpecFromConfig, segmentPartitionsSpec)) {
       log.info(
-          "Configured maxRowsPerSegment[%s] and maxTotalRows[%s] are differenet from "
+          "Configured partitionsSpec[%s] is differenet from "
           + "the partitionsSpec[%s] of segments. Needs compaction.",
-          maxRowsPerSegment,
-          maxTotalRows,
-          dynamicPartitionsSpec
+          partitionsSpecFromConfig,
+          segmentPartitionsSpec
       );
       needsCompaction = true;
     }
@@ -332,6 +326,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    * @return segments to compact
    */
   private SegmentsToCompact findSegmentsToCompact(
+      final String dataSourceName,
       final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor,
       final DataSourceCompactionConfig config
   )
@@ -343,12 +338,21 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
       if (!candidates.isEmpty()) {
         final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
-        final boolean needsCompaction = needsCompaction(config, candidates);
+        final boolean needsCompaction = needsCompaction(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            candidates
+        );
 
         if (isCompactibleSize && needsCompaction) {
           return candidates;
         } else {
-          if (!isCompactibleSize) {
+          if (!needsCompaction) {
+            // Collect statistic for segments that is already compacted
+            collectSegmentStatistics(compactedSegments, dataSourceName, candidates);
+          } else {
+            // Collect statistic for segments that is skipped
+            // Note that if segments does not need compaction then we do not double count here
+            collectSegmentStatistics(skippedSegments, dataSourceName, candidates);
             log.warn(
                 "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
                 + " Continue to the next interval.",
@@ -365,6 +369,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
     log.info("All segments look good! Nothing to compact");
     return new SegmentsToCompact();
+  }
+
+  private void collectSegmentStatistics(
+      Map<String, CompactionStatistics> statisticsMap,
+      String dataSourceName,
+      SegmentsToCompact segments)
+  {
+    CompactionStatistics statistics = statisticsMap.computeIfAbsent(
+        dataSourceName,
+        v -> CompactionStatistics.initializeCompactionStatistics()
+    );
+    statistics.incrementCompactedByte(segments.getTotalSize());
+    statistics.incrementCompactedIntervals(segments.getNumberOfIntervals());
+    statistics.incrementCompactedSegments(segments.getNumberOfSegments());
   }
 
   /**
@@ -554,6 +572,16 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private long getTotalSize()
     {
       return totalSize;
+    }
+
+    private long getNumberOfSegments()
+    {
+      return segments.size();
+    }
+
+    private long getNumberOfIntervals()
+    {
+      return segments.stream().map(DataSegment::getInterval).distinct().count();
     }
 
     @Override

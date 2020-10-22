@@ -33,7 +33,6 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -43,7 +42,6 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -104,19 +102,6 @@ import java.util.stream.Stream;
 
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
-  // Used to discover ValueType based on the class of values in a row
-  // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
-  public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
-      .put(Long.class, ValueType.LONG)
-      .put(Double.class, ValueType.DOUBLE)
-      .put(Float.class, ValueType.FLOAT)
-      .put(String.class, ValueType.STRING)
-      .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
-      .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
-      .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
-      .put(DimensionSchema.ValueType.DOUBLE, ValueType.DOUBLE)
-      .build();
-
   /**
    * Column selector used at ingestion time for inputs to aggregators.
    *
@@ -145,10 +130,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
-        final String typeName = agg.getTypeName();
-        final boolean isComplexMetric =
-            GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) == null ||
-            typeName.equalsIgnoreCase(ValueType.COMPLEX.name());
+        final boolean isComplexMetric = ValueType.COMPLEX.equals(agg.getType());
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
@@ -158,10 +140,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-
-          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+          final String complexTypeName = agg.getComplexTypeName();
+          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
-            throw new ISE("Don't know how to handle type[%s]", typeName);
+            throw new ISE("Don't know how to handle type[%s]", complexTypeName);
           }
 
           final ComplexMetricExtractor extractor = serde.getExtractor();
@@ -241,7 +223,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
-  private final boolean reportParseExceptions; // only used by OffHeapIncrementalIndex
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -270,14 +251,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * @param incrementalIndexSchema    the schema to use for incremental index
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
-   * @param reportParseExceptions     flag whether or not to report ParseExceptions that occur while extracting values
-   *                                  from input rows
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions,
       final boolean concurrentEventAdd
   )
   {
@@ -288,7 +266,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
-    this.reportParseExceptions = reportParseExceptions;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
@@ -313,7 +290,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
-      ValueType type = TYPE_MAP.get(dimSchema.getValueType());
+      ValueType type = dimSchema.getValueType();
       String dimName = dimSchema.getName();
       ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type);
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
@@ -347,7 +324,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Nullable
     private IncrementalIndexSchema incrementalIndexSchema;
     private boolean deserializeComplexMetrics;
-    private boolean reportParseExceptions;
     private boolean concurrentEventAdd;
     private boolean sortFacts;
     private int maxRowCount;
@@ -357,7 +333,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       incrementalIndexSchema = null;
       deserializeComplexMetrics = true;
-      reportParseExceptions = true;
       concurrentEventAdd = false;
       sortFacts = true;
       maxRowCount = 0;
@@ -409,12 +384,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
-    public Builder setReportParseExceptions(final boolean reportParseExceptions)
-    {
-      this.reportParseExceptions = reportParseExceptions;
-      return this;
-    }
-
     public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
     {
       this.concurrentEventAdd = concurrentEventAdd;
@@ -449,7 +418,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return new OnheapIncrementalIndex(
           Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
           deserializeComplexMetrics,
-          reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
@@ -466,7 +434,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return new OffheapIncrementalIndex(
           Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
           deserializeComplexMetrics,
-          reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
@@ -628,7 +595,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
-    ParseException parseException = getCombinedParseException(
+    @Nullable ParseException parseException = getCombinedParseException(
         row,
         incrementalIndexRowResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
@@ -771,13 +738,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (numAdded == 0) {
       return null;
     }
-    ParseException pe = new ParseException(
+    return new ParseException(
+        true,
         "Found unparseable columns in row: [%s], exceptions: [%s]",
         row,
         stringBuilder.toString()
     );
-    pe.setFromPartiallyValidRow(true);
-    return pe;
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)
@@ -800,11 +766,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   boolean getDeserializeComplexMetrics()
   {
     return deserializeComplexMetrics;
-  }
-
-  boolean getReportParseExceptions()
-  {
-    return reportParseExceptions;
   }
 
   AtomicInteger getNumEntries()
@@ -1135,21 +1096,25 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.index = index;
       this.name = factory.getName();
 
-      String typeInfo = factory.getTypeName();
-      if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
-        this.type = typeInfo;
-      } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
-        this.type = typeInfo;
-      } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
-        this.type = typeInfo;
-      } else {
-        // in an ideal world complex type reports its actual column capabilities...
+      ValueType valueType = factory.getType();
+
+      if (valueType.isNumeric()) {
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+        this.type = valueType.toString();
+      } else if (ValueType.COMPLEX.equals(valueType)) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
-        this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
+        String complexTypeName = factory.getComplexTypeName();
+        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
+        if (serde != null) {
+          this.type = serde.getTypeName();
+        } else {
+          throw new ISE("Unable to handle complex type[%s] of type[%s]", complexTypeName, valueType);
+        }
+      } else {
+        // if we need to handle non-numeric and non-complex types (e.g. strings, arrays) it should be done here
+        // and we should determine the appropriate ColumnCapabilities
+        throw new ISE("Unable to handle type[%s] for AggregatorFactory[%s]", valueType, factory.getClass());
       }
     }
 

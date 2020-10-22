@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
@@ -47,8 +46,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
     super(
@@ -56,8 +54,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
         taskId,
         groupId,
         ingestionSchema.getTuningConfig(),
-        context,
-        indexingServiceClient
+        context
     );
     this.ingestionSchema = ingestionSchema;
     this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(

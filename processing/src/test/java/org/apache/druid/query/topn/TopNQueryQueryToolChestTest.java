@@ -319,7 +319,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
                     .add("rows", ValueType.LONG)
                     .add("index", ValueType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", null)
+                    .add("const", ValueType.LONG)
                     .build(),
         new TopNQueryQueryToolChest(null, null).resultArraySignature(query)
     );

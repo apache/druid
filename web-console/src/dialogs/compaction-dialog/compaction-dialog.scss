@@ -18,13 +18,21 @@
 
 .compaction-dialog {
   &.bp3-dialog {
-    top: 5%;
+    height: 80vh;
   }
 
-  .auto-form {
-    margin: 10px 15px;
-    padding: 0 5px 0 5px;
-    max-height: 70vh;
-    overflow: scroll;
+  .form-json-selector {
+    margin: 15px;
+  }
+
+  .content {
+    margin: 0 15px 10px 0;
+    padding: 0 5px 0 15px;
+    flex: 1;
+    overflow: auto;
+  }
+
+  .ace-solarized-dark {
+    background-color: #232c35;
   }
 }

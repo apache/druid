@@ -80,12 +80,11 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const aceEditor = useRef<Editor | undefined>();
 
   useEffect(() => {
-    if (!deepEqual(value, internalValue.value)) {
-      setInternalValue({
-        value,
-        stringified: stringifyJson(value),
-      });
-    }
+    if (deepEqual(value, internalValue.value)) return;
+    setInternalValue({
+      value,
+      stringified: stringifyJson(value),
+    });
   }, [value]);
 
   const internalValueError = internalValue.error;
@@ -149,8 +148,8 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
             const rc = extractRowColumnFromHjsonError(internalValueError);
             if (!rc) return;
 
+            aceEditor.current.focus(); // Grab the focus
             aceEditor.current.getSelection().moveCursorTo(rc.row, rc.column);
-            aceEditor.current.focus(); // Grab the focus also
           }}
         >
           {internalValueError.message}

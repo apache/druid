@@ -21,6 +21,7 @@ package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -83,7 +84,9 @@ public class LookupJoinable implements Joinable
   public JoinMatcher makeJoinMatcher(
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
-      final boolean remainderNeeded
+      final boolean remainderNeeded,
+      boolean descending,
+      Closer closer
   )
   {
     return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded);

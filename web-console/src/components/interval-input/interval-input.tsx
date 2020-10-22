@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
+import { Button, InputGroup, Intent, Popover, Position } from '@blueprintjs/core';
 import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
@@ -33,14 +33,14 @@ function removeLocalTimezone(localDate: Date): Date {
 function parseInterval(interval: string): DateRange {
   const dates = interval.split('/');
   if (dates.length !== 2) {
-    return [undefined, undefined];
+    return [null, null];
   }
-  const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : undefined;
-  const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : undefined;
+  const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : null;
+  const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : null;
   // Must check if the start and end dates are within range
   return [
-    startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? undefined : startDate,
-    endDate && endDate.getFullYear() > CURRENT_YEAR ? undefined : endDate,
+    startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? null : startDate,
+    endDate && endDate.getFullYear() > CURRENT_YEAR ? null : endDate,
   ];
 }
 function stringifyDateRange(localRange: DateRange): string {
@@ -66,10 +66,11 @@ export interface IntervalInputProps {
   interval: string;
   placeholder: string | undefined;
   onValueChange: (interval: string) => void;
+  intent?: Intent;
 }
 
 export const IntervalInput = React.memo(function IntervalInput(props: IntervalInputProps) {
-  const { interval, placeholder, onValueChange } = props;
+  const { interval, placeholder, onValueChange, intent } = props;
 
   return (
     <InputGroup
@@ -99,6 +100,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
         const value = e.target.value.replace(/[^\-0-9T:/]/g, '').substring(0, 39);
         onValueChange(value);
       }}
+      intent={intent}
     />
   );
 });

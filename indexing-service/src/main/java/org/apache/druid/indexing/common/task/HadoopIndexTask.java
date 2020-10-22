@@ -49,12 +49,12 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -444,10 +444,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
-        return TaskStatus.success(
-            getId(),
-            null
-        );
+        return TaskStatus.success(getId());
       } else {
         errorMsg = buildSegmentsStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());

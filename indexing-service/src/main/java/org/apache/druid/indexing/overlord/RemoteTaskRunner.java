@@ -770,7 +770,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final RemoteTaskRunnerWorkItem removed = completeTasks.remove(taskId);
     final Worker worker;
     if (removed == null || (worker = removed.getWorker()) == null) {
-      log.makeAlert("WTF?! Asked to cleanup nonexistent task")
+      log.makeAlert("Asked to cleanup nonexistent task")
          .addData("taskId", taskId)
          .emit();
     } else {
@@ -823,17 +823,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         synchronized (workersWithUnacknowledgedTask) {
           immutableZkWorker = strategy.findWorkerForTask(
               config,
-              ImmutableMap.copyOf(
-                  Maps.transformEntries(
-                      Maps.filterEntries(
-                          zkWorkers,
-                          input -> !lazyWorkers.containsKey(input.getKey()) &&
-                                   !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                                   !blackListedWorkers.contains(input.getValue())
-                      ),
-                      (String key, ZkWorker value) -> value.toImmutable()
-                  )
-              ),
+              ImmutableMap.copyOf(getWorkersEligibleToRunTasks()),
               task
           );
 
@@ -865,6 +855,19 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
       }
     }
+  }
+
+  Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
+  {
+    return Maps.transformEntries(
+        Maps.filterEntries(
+            zkWorkers,
+            input -> !lazyWorkers.containsKey(input.getKey()) &&
+                     !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                     !blackListedWorkers.contains(input.getValue())
+        ),
+        (String key, ZkWorker value) -> value.toImmutable()
+    );
   }
 
   /**
@@ -901,7 +904,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(task.getId());
       if (workItem == null) {
-        log.makeAlert("WTF?! Got a null work item from pending tasks?! How can this be?!")
+        log.makeAlert("Ignoring null work item from pending task queue")
            .addData("taskId", task.getId())
            .emit();
         return false;
@@ -1119,7 +1122,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       zkWorker.setWorker(worker);
     } else {
       log.warn(
-          "WTF, worker[%s] updated its announcement but we didn't have a ZkWorker for it. Ignoring.",
+          "Worker[%s] updated its announcement but we didn't have a ZkWorker for it. Ignoring.",
           worker.getHost()
       );
     }
@@ -1433,5 +1436,60 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   Map<String, String> getWorkersWithUnacknowledgedTask()
   {
     return workersWithUnacknowledgedTask;
+  }
+
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    long totalPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalPeons;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    long totalIdlePeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
+      totalIdlePeons += worker.getAvailableCapacity();
+    }
+
+    return totalIdlePeons;
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    long totalUsedPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalUsedPeons += worker.getCurrCapacityUsed();
+    }
+
+    return totalUsedPeons;
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    long totalLazyPeons = 0;
+    for (Worker worker : getLazyWorkers()) {
+      totalLazyPeons += worker.getCapacity();
+    }
+
+    return totalLazyPeons;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    long totalBlacklistedPeons = 0;
+    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+      totalBlacklistedPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalBlacklistedPeons;
   }
 }

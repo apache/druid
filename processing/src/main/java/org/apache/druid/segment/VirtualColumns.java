@@ -29,12 +29,20 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -107,6 +115,15 @@ public class VirtualColumns implements Cacheable
     return virtualColumns == null ? EMPTY : virtualColumns;
   }
 
+  public static boolean shouldVectorize(Query<?> query, VirtualColumns virtualColumns, ColumnInspector inspector)
+  {
+    if (virtualColumns.getVirtualColumns().length > 0) {
+      return QueryContexts.getVectorizeVirtualColumns(query).shouldVectorize(virtualColumns.canVectorize(inspector));
+    } else {
+      return true;
+    }
+  }
+
   private VirtualColumns(
       List<VirtualColumn> virtualColumns,
       Map<String, VirtualColumn> withDotSupport,
@@ -152,42 +169,36 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
+  @Nullable
+  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
+        columnName,
+        columnSelector
+    ) : null;
+  }
+
   /**
    * Create a dimension (string) selector.
-   *
-   * @param dimensionSpec the dimensionSpec for this selector
-   * @param factory       base column selector factory
-   *
-   * @return selector
    *
    * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
    */
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
-    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
-    } else {
-      final DimensionSelector selector = virtualColumn.makeDimensionSelector(dimensionSpec, factory);
-      Preconditions.checkNotNull(selector, "selector");
-      return selector;
-    }
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(dimensionSpec.getDimension());
+    final DimensionSelector selector = virtualColumn.makeDimensionSelector(dimensionSpec, factory);
+    Preconditions.checkNotNull(selector, "selector");
+    return selector;
   }
 
-  @Nullable
-  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
-          columnName,
-          columnSelector
-      ) : null;
-    }
-  }
-
+  /**
+   * Try to create an optimized dimension (string) selector directly from a {@link ColumnSelector}. If this method
+   * returns null, callers should try to fallback to
+   * {@link #makeDimensionSelector(DimensionSpec, ColumnSelectorFactory)} instead.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
   @Nullable
   public DimensionSelector makeDimensionSelector(
       DimensionSpec dimensionSpec,
@@ -195,14 +206,29 @@ public class VirtualColumns implements Cacheable
       ReadableOffset offset
   )
   {
-    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
-    } else {
-      return virtualColumn.makeDimensionSelector(dimensionSpec, columnSelector, offset);
-    }
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(dimensionSpec.getDimension());
+    return virtualColumn.makeDimensionSelector(dimensionSpec, columnSelector, offset);
   }
 
+  /**
+   * Create a column value selector.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    final ColumnValueSelector<?> selector = virtualColumn.makeColumnValueSelector(columnName, factory);
+    Preconditions.checkNotNull(selector, "selector");
+    return selector;
+  }
+
+  /**
+   * Try to create an optimized value selector directly from a {@link ColumnSelector}. If this method returns null,
+   * callers should try to fallback to {@link #makeColumnValueSelector(String, ColumnSelectorFactory)} instead.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
   @Nullable
   public ColumnValueSelector<?> makeColumnValueSelector(
       String columnName,
@@ -210,43 +236,158 @@ public class VirtualColumns implements Cacheable
       ReadableOffset offset
   )
   {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      return virtualColumn.makeColumnValueSelector(columnName, columnSelector, offset);
-    }
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    return virtualColumn.makeColumnValueSelector(columnName, columnSelector, offset);
+  }
+
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(columnInspector));
   }
 
   /**
-   * Create a column value selector.
-   *
-   * @param columnName column mame
-   * @param factory    base column selector factory
-   *
-   * @return selector
+   * Create a single value dimension vector (string) selector.
    *
    * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
    */
-  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
+  public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
   {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      final ColumnValueSelector<?> selector = virtualColumn.makeColumnValueSelector(columnName, factory);
-      Preconditions.checkNotNull(selector, "selector");
-      return selector;
-    }
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(dimensionSpec.getDimension());
+    final SingleValueDimensionVectorSelector selector = virtualColumn.makeSingleValueVectorDimensionSelector(
+        dimensionSpec,
+        factory
+    );
+    Preconditions.checkNotNull(selector, "selector");
+    return selector;
+  }
+
+  /**
+   * Try to create an optimized single value dimension (string) vector selector, directly from a
+   * {@link ColumnSelector}. If this method returns null, callers should try to fallback to
+   * {@link #makeSingleValueDimensionVectorSelector(DimensionSpec, VectorColumnSelectorFactory)}  instead.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  @Nullable
+  public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(dimensionSpec.getDimension());
+    return virtualColumn.makeSingleValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
+  }
+
+  /**
+   * Create a multi value dimension vector (string) selector.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(dimensionSpec.getDimension());
+    final MultiValueDimensionVectorSelector selector = virtualColumn.makeMultiValueVectorDimensionSelector(
+        dimensionSpec,
+        factory
+    );
+    Preconditions.checkNotNull(selector, "selector");
+    return selector;
+  }
+
+  /**
+   * Try to create an optimized multi value dimension (string) vector selector, directly from a
+   * {@link ColumnSelector}. If this method returns null, callers should try to fallback to
+   * {@link #makeMultiValueDimensionVectorSelector(DimensionSpec, VectorColumnSelectorFactory)}  instead.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  @Nullable
+  public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(dimensionSpec.getDimension());
+    return virtualColumn.makeMultiValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
+  }
+
+  /**
+   * Create a column vector value selector.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    final VectorValueSelector selector = virtualColumn.makeVectorValueSelector(columnName, factory);
+    Preconditions.checkNotNull(selector, "selector");
+    return selector;
+  }
+
+  /**
+   * Try to create an optimized vector value selector directly from a {@link ColumnSelector}. If this method returns
+   * null, callers should try to fallback to {@link #makeVectorValueSelector(String, VectorColumnSelectorFactory)}
+   * instead.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  @Nullable
+  public VectorValueSelector makeVectorValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    return virtualColumn.makeVectorValueSelector(columnName, columnSelector, offset);
+  }
+
+  /**
+   * Create a column vector object selector.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    final VectorObjectSelector selector = virtualColumn.makeVectorObjectSelector(columnName, factory);
+    Preconditions.checkNotNull(selector, "selector");
+    return selector;
+  }
+
+  /**
+   * Try to create an optimized vector object selector directly from a {@link ColumnSelector}.If this method returns
+   * null, callers should try to fallback to {@link #makeVectorObjectSelector(String, VectorColumnSelectorFactory)}
+   * instead.
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  @Nullable
+  public VectorObjectSelector makeVectorObjectSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    return virtualColumn.makeVectorObjectSelector(columnName, columnSelector, offset);
   }
 
   @Nullable
-  public ColumnCapabilities getColumnCapabilities(String columnName)
+  public ColumnCapabilities getColumnCapabilities(ColumnInspector inspector, String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn != null) {
       return Preconditions.checkNotNull(
-          virtualColumn.capabilities(columnName),
+          virtualColumn.capabilities(inspector, columnName),
           "capabilities for column[%s]",
           columnName
       );
@@ -256,13 +397,13 @@ public class VirtualColumns implements Cacheable
   }
 
   @Nullable
-  public ColumnCapabilities getColumnCapabilitiesWithFallback(StorageAdapter adapter, String columnName)
+  public ColumnCapabilities getColumnCapabilitiesWithFallback(ColumnInspector inspector, String columnName)
   {
-    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(columnName);
+    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(inspector, columnName);
     if (virtualColumnCapabilities != null) {
       return virtualColumnCapabilities;
     } else {
-      return adapter.getColumnCapabilities(columnName);
+      return inspector.getColumnCapabilities(columnName);
     }
   }
 
@@ -271,11 +412,6 @@ public class VirtualColumns implements Cacheable
   {
     // VirtualColumn[] instead of List<VirtualColumn> to aid Jackson serialization.
     return virtualColumns.toArray(new VirtualColumn[0]);
-  }
-
-  public int size()
-  {
-    return virtualColumns.size();
   }
 
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
@@ -292,6 +428,15 @@ public class VirtualColumns implements Cacheable
   {
     // id doesn't matter as there is only one kind of "VirtualColumns", so use 0.
     return new CacheKeyBuilder((byte) 0).appendCacheablesIgnoringOrder(virtualColumns).build();
+  }
+
+  private VirtualColumn getVirtualColumnForSelector(String columnName)
+  {
+    VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    }
+    return virtualColumn;
   }
 
   private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> columnNames)

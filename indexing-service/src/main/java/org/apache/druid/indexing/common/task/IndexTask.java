@@ -19,9 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -39,9 +37,7 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -60,8 +56,6 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
@@ -72,7 +66,6 @@ import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -80,9 +73,9 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -94,20 +87,18 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.utils.CircularBuffer;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -124,7 +115,6 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -136,12 +126,14 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
+  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+
   private static final Logger log = new Logger(IndexTask.class);
-  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private static final String TYPE = "index";
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema)
@@ -160,46 +152,35 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  @JsonIgnore
   private final IndexIngestionSpec ingestionSchema;
 
-  @JsonIgnore
   private IngestionState ingestionState;
 
-  @JsonIgnore
-  private final AuthorizerMapper authorizerMapper;
+  @MonotonicNonNull
+  private ParseExceptionHandler determinePartitionsParseExceptionHandler;
 
-  @JsonIgnore
-  private final Optional<ChatHandlerProvider> chatHandlerProvider;
+  @MonotonicNonNull
+  private ParseExceptionHandler buildSegmentsParseExceptionHandler;
 
-  @JsonIgnore
-  private final RowIngestionMeters determinePartitionsMeters;
+  @MonotonicNonNull
+  private AuthorizerMapper authorizerMapper;
 
-  @JsonIgnore
-  private final RowIngestionMeters buildSegmentsMeters;
+  @MonotonicNonNull
+  private RowIngestionMeters determinePartitionsMeters;
 
-  @JsonIgnore
-  private final CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
+  @MonotonicNonNull
+  private RowIngestionMeters buildSegmentsMeters;
 
-  @JsonIgnore
-  private final CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
-
-  @JsonIgnore
+  @Nullable
   private String errorMsg;
 
-  @JsonIgnore
-  private final AppenderatorsManager appenderatorsManager;
 
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     this(
@@ -208,11 +189,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
         ingestionSchema,
-        context,
-        authorizerMapper,
-        chatHandlerProvider,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        context
     );
   }
 
@@ -222,11 +199,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       TaskResource resource,
       String dataSource,
       IndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      AuthorizerMapper authorizerMapper,
-      ChatHandlerProvider chatHandlerProvider,
-      RowIngestionMetersFactory rowIngestionMetersFactory,
-      AppenderatorsManager appenderatorsManager
+      Map<String, Object> context
   )
   {
     super(
@@ -237,24 +210,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         context
     );
     this.ingestionSchema = ingestionSchema;
-    this.authorizerMapper = authorizerMapper;
-    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
-    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
-      );
-
-      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
-      );
-    } else {
-      determinePartitionsSavedParseExceptions = null;
-      buildSegmentsSavedParseExceptions = null;
-    }
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
-    this.buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
-    this.appenderatorsManager = appenderatorsManager;
   }
 
   @Override
@@ -347,14 +303,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsDeterminePartitions) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions)
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(
+              determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+          )
       );
     }
 
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions)
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(
+              buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+          )
       );
     }
 
@@ -462,21 +422,33 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
     try {
-      if (chatHandlerProvider.isPresent()) {
-        log.debug("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
+      log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 
-        if (chatHandlerProvider.get().get(getId()).isPresent()) {
-          // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
-          // sequential mode. See ParallelIndexSupervisorTask.runSequential().
-          // Note that all HTTP endpoints are not available in this case. This works only for
-          // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
-          log.warn("Chat handler is already registered. Skipping chat handler registration.");
-        } else {
-          chatHandlerProvider.get().register(getId(), this, false);
-        }
+      if (toolbox.getChatHandlerProvider().get(getId()).isPresent()) {
+        // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
+        // sequential mode. See ParallelIndexSupervisorTask.runSequential().
+        // Note that all HTTP endpoints are not available in this case. This works only for
+        // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
+        log.warn("Chat handler is already registered. Skipping chat handler registration.");
       } else {
-        log.warn("No chat handler detected");
+        toolbox.getChatHandlerProvider().register(getId(), this, false);
       }
+
+      this.authorizerMapper = toolbox.getAuthorizerMapper();
+      this.determinePartitionsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+      this.buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+      this.determinePartitionsParseExceptionHandler = new ParseExceptionHandler(
+          determinePartitionsMeters,
+          ingestionSchema.getTuningConfig().isLogParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
+      this.buildSegmentsParseExceptionHandler = new ParseExceptionHandler(
+          buildSegmentsMeters,
+          ingestionSchema.getTuningConfig().isLogParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
 
       final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                          .getGranularitySpec()
@@ -536,9 +508,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     finally {
-      if (chatHandlerProvider.isPresent()) {
-        chatHandlerProvider.get().unregister(getId());
-      }
+      toolbox.getChatHandlerProvider().unregister(getId());
     }
   }
 
@@ -561,9 +531,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsSavedParseExceptions);
+        determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+    );
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsSavedParseExceptions);
+        buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+    );
 
     if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
@@ -628,7 +600,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (partitionsSpec.getType() == SecondaryPartitionType.HASH) {
         return PartialHashSegmentGenerateTask.createHashPartitionAnalysisFromPartitionsSpec(
             granularitySpec,
-            (HashedPartitionsSpec) partitionsSpec
+            (HashedPartitionsSpec) partitionsSpec,
+            null // not overriding numShards
         );
       } else if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
         return createLinearPartitionAnalysis(granularitySpec, (DynamicPartitionsSpec) partitionsSpec);
@@ -740,82 +713,54 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
-    final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
-                                            .map(AggregatorFactory::getName)
-                                            .collect(Collectors.toList());
-    final InputSourceReader inputSourceReader = ingestionSchema.getDataSchema().getTransformSpec().decorate(
-        inputSource.reader(
-            new InputRowSchema(
-                ingestionSchema.getDataSchema().getTimestampSpec(),
-                ingestionSchema.getDataSchema().getDimensionsSpec(),
-                metricsNames
-            ),
-            inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
-            tmpDir
-        )
-    );
+    final Predicate<InputRow> rowFilter = inputRow -> {
+      if (inputRow == null) {
+        return false;
+      }
+      if (determineIntervals) {
+        return true;
+      }
+      final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+      return optInterval.isPresent();
+    };
 
-    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
+    try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+        tmpDir,
+        ingestionSchema.getDataSchema(),
+        inputSource,
+        inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
+        rowFilter,
+        determinePartitionsMeters,
+        determinePartitionsParseExceptionHandler
+    )) {
       while (inputRowIterator.hasNext()) {
-        try {
-          final InputRow inputRow = inputRowIterator.next();
+        final InputRow inputRow = inputRowIterator.next();
 
-          // The null inputRow means the caller must skip this row.
-          if (inputRow == null) {
-            determinePartitionsMeters.incrementThrownAway();
-            continue;
-          }
-
-          final Interval interval;
-          if (determineIntervals) {
-            interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
-          } else {
-            if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
-              final String errorMsg = StringUtils.format(
-                  "Encountered row with timestamp that cannot be represented as a long: [%s]",
-                  inputRow
-              );
-              throw new ParseException(errorMsg);
-            }
-
-            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-            if (!optInterval.isPresent()) {
-              determinePartitionsMeters.incrementThrownAway();
-              continue;
-            }
-            interval = optInterval.get();
-          }
-
-          if (partitionsSpec.needsDeterminePartitions(false)) {
-            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
-
-            List<Object> groupKey = Rows.toGroupKey(
-                queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
-                inputRow
-            );
-            hllCollectors.get(interval).get()
-                         .add(HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
-          } else {
-            // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
-            // for the interval and don't instantiate a HLL collector
-            hllCollectors.putIfAbsent(interval, Optional.absent());
-          }
-          determinePartitionsMeters.incrementProcessed();
+        final Interval interval;
+        if (determineIntervals) {
+          interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+        } else {
+          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+          // this interval must exist since it passed the rowFilter
+          assert optInterval.isPresent();
+          interval = optInterval.get();
         }
-        catch (ParseException e) {
-          if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
-            log.error(e, "Encountered parse exception");
-          }
 
-          if (determinePartitionsSavedParseExceptions != null) {
-            determinePartitionsSavedParseExceptions.add(e);
-          }
+        if (partitionsSpec.needsDeterminePartitions(false)) {
+          hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
-          determinePartitionsMeters.incrementUnparseable();
-          if (determinePartitionsMeters.getUnparseable() > ingestionSchema.getTuningConfig().getMaxParseExceptions()) {
-            throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
-          }
+          List<Object> groupKey = Rows.toGroupKey(
+              queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+              inputRow
+          );
+          hllCollectors.get(interval).get()
+                       .add(HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+        } else {
+          // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
+          // for the interval and don't instantiate a HLL collector
+          hllCollectors.putIfAbsent(interval, Optional.absent());
         }
+        determinePartitionsMeters.incrementProcessed();
       }
     }
 
@@ -916,33 +861,30 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         effectiveId,
-        appenderatorsManager,
+        toolbox.getAppenderatorsManager(),
         buildSegmentsFireDepartmentMetrics,
         toolbox,
         dataSchema,
         tuningConfig,
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        buildSegmentsMeters,
+        buildSegmentsParseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final InputSourceProcessor inputSourceProcessor = new InputSourceProcessor(
-          buildSegmentsMeters,
-          buildSegmentsSavedParseExceptions,
-          tuningConfig.isLogParseExceptions(),
-          tuningConfig.getMaxParseExceptions(),
-          pushTimeout,
-          new DefaultIndexTaskInputRowIteratorBuilder()
-      );
-      inputSourceProcessor.process(
+      InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
           inputSource,
           inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
           tmpDir,
-          sequenceNameFunction
+          sequenceNameFunction,
+          new DefaultIndexTaskInputRowIteratorBuilder(),
+          buildSegmentsMeters,
+          buildSegmentsParseExceptionHandler,
+          pushTimeout
       );
 
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
@@ -950,9 +892,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final Set<DataSegment> inputSegments = getTaskLockHelper().isUseSegmentLock()
                                              ? getTaskLockHelper().getLockedExistingSegments()
                                              : null;
+      final boolean storeCompactionState = getContextValue(
+          Tasks.STORE_COMPACTION_STATE_KEY,
+          Tasks.DEFAULT_STORE_COMPACTION_STATE
+      );
+      final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
+          compactionStateAnnotateFunction(
+              storeCompactionState,
+              toolbox,
+              ingestionSchema.getTuningConfig()
+          );
+
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
+          awaitPublish(driver.publishAll(inputSegments, publisher, annotateFunction), pushTimeout);
       appenderator.close();
 
       ingestionState = IngestionState.COMPLETED;

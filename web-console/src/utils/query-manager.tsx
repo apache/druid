@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
+import axios from 'axios';
+import { CancelToken } from 'axios';
 import debounce from 'lodash.debounce';
 
-export interface QueryStateInt<R> {
-  result?: R;
-  loading: boolean;
-  error?: string;
-}
+import { QueryState } from './query-state';
 
 export interface QueryManagerOptions<Q, R> {
-  processQuery: (query: Q, setIntermediateQuery: (intermediateQuery: any) => void) => Promise<R>;
-  onStateChange?: (queryResolve: QueryStateInt<R>) => void;
+  processQuery: (
+    query: Q,
+    cancelToken: CancelToken,
+    setIntermediateQuery: (intermediateQuery: any) => void,
+  ) => Promise<R>;
+  onStateChange?: (queryResolve: QueryState<R>) => void;
   debounceIdle?: number;
   debounceLoading?: number;
 }
@@ -34,18 +36,17 @@ export interface QueryManagerOptions<Q, R> {
 export class QueryManager<Q, R> {
   private processQuery: (
     query: Q,
+    cancelToken: CancelToken,
     setIntermediateQuery: (intermediateQuery: any) => void,
   ) => Promise<R>;
-  private onStateChange?: (queryResolve: QueryStateInt<R>) => void;
+  private onStateChange?: (queryResolve: QueryState<R>) => void;
 
   private terminated = false;
   private nextQuery: Q | undefined;
   private lastQuery: Q | undefined;
   private lastIntermediateQuery: any;
-  private actuallyLoading = false;
-  private state: QueryStateInt<R> = {
-    loading: false,
-  };
+  private currentRunCancelFn: (() => void) | undefined;
+  private state: QueryState<R> = QueryState.INIT;
   private currentQueryId = 0;
 
   private runWhenIdle: () => void;
@@ -66,7 +67,7 @@ export class QueryManager<Q, R> {
     }
   }
 
-  private setState(queryState: QueryStateInt<R>) {
+  private setState(queryState: QueryState<R>) {
     this.state = queryState;
     if (this.onStateChange && !this.terminated) {
       this.onStateChange(queryState);
@@ -79,41 +80,49 @@ export class QueryManager<Q, R> {
     this.currentQueryId++;
     const myQueryId = this.currentQueryId;
 
-    this.actuallyLoading = true;
-    this.processQuery(this.lastQuery, (intermediateQuery: any) => {
+    if (this.currentRunCancelFn) {
+      this.currentRunCancelFn();
+    }
+    const cancelToken = new axios.CancelToken(cancelFn => {
+      this.currentRunCancelFn = cancelFn;
+    });
+    this.processQuery(this.lastQuery, cancelToken, (intermediateQuery: any) => {
       this.lastIntermediateQuery = intermediateQuery;
     }).then(
-      result => {
+      data => {
         if (this.currentQueryId !== myQueryId) return;
-        this.actuallyLoading = false;
-        this.setState({
-          result,
-          loading: false,
-          error: undefined,
-        });
+        this.currentRunCancelFn = undefined;
+        this.setState(
+          new QueryState<R>({
+            data,
+          }),
+        );
       },
-      (e: Error) => {
+      (e: any) => {
         if (this.currentQueryId !== myQueryId) return;
-        this.actuallyLoading = false;
-        this.setState({
-          result: undefined,
-          loading: false,
-          error: e.message,
-        });
+        this.currentRunCancelFn = undefined;
+        if (axios.isCancel(e)) {
+          e = new Error(`canceled.`); // ToDo: fix!
+        }
+        this.setState(
+          new QueryState<R>({
+            error: e,
+          }),
+        );
       },
     );
   }
 
   private trigger() {
-    const currentActuallyLoading = this.actuallyLoading;
+    const currentlyLoading = Boolean(this.currentRunCancelFn);
 
-    this.setState({
-      result: undefined,
-      loading: true,
-      error: undefined,
-    });
+    this.setState(
+      new QueryState<R>({
+        loading: true,
+      }),
+    );
 
-    if (currentActuallyLoading) {
+    if (currentlyLoading) {
       this.runWhenLoading();
     } else {
       this.runWhenIdle();
@@ -136,6 +145,12 @@ export class QueryManager<Q, R> {
     }
   }
 
+  public cancelCurrent(): void {
+    if (!this.currentRunCancelFn) return;
+    this.currentRunCancelFn();
+    this.currentRunCancelFn = undefined;
+  }
+
   public getLastQuery(): Q | undefined {
     return this.lastQuery;
   }
@@ -144,7 +159,7 @@ export class QueryManager<Q, R> {
     return this.lastIntermediateQuery;
   }
 
-  public getState(): QueryStateInt<R> {
+  public getState(): QueryState<R> {
     return this.state;
   }
 
