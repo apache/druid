@@ -59,7 +59,7 @@ and update the script tag top level html file, [unified-console.html](../web-con
 <script src="public/web-console-0.18.0.js"></script>
 ```
 
-Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the upcoming release:
+Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
 
 ```yaml
 ...
