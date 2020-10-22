@@ -1,32 +1,41 @@
 ---
 id: auth-ldap
-title: "Using LDAP auth"
+title: "LDAP auth"
 ---
 
-To rely on LDAP as the user authentication and authorization mechanism for Druid, follow these steps. 
+This page describes how to set up Druid user authentication and authorizion through LDAP. The first step is to enable LDAP authentication and authorization for Druid. You can then map an LDAP group to roles and assign permissions and users to roles.
 
-1. Verify the LDAP connection from druid cluster
-Before you start
+## Enable LDAP in Druid
 
-Verify that AD can be reached from the druid Master nodes.  A command-line tool which comes handy for this is ldapsearch and ldapwhoami.  This command-line tool is part of  OpenLDAP. To install this in RHEL
+Before starting, verify that the active directory is reachable from the Druid Master servers. Command line tools such as `ldapsearch` and `ldapwhoami`, a part of OpenLDAP, are useful for this testing. 
 
-yum install openldap*
-Test the credential works by the following command 
+### Check the connection
 
-ldapwhoami -vv -H ldap://<ip address>:389  -D"uuser1@example.com" -W
-The following result will be displayed:
+First test that the basic connection and user credential works. For example, given a user `uuser1@example.com`, try:
+
+```bash
+ldapwhoami -vv -H ldap://<ip_address>:389  -D"uuser1@example.com" -W
+```
+
+Enter the password associated with the user when prompted and verify command success. If unsuccessful, note the following frequently occuring issues:  
+
+* Verify that you've used the correct port for your LDAP instance. By default, the LDAP port is 389, but doublecheck with your LDAP admin if unable to connect. 
+* Check whether a network firewall is not preventing connections to the LDAP port.
+* Check whether LDAP clients need to be specifically whitelisted at the LDAP server to be able to reach it. If so, add the Druid Coordinator server to the AD whitelist. 
 
 
-Please refer to the troubleshooting section if the above command is not working.
+### Check the search criteria
 
-Make sure to execute the ldapsearch command to verify the search criteria is proper.
+After verifying basic connectivity, check your search criteria. For example, the command for searching for user `uuser1@example.com ` is the following: 
 
-eg . The command for searching for user uuser1@example.com  is shown as below
+```bash
+ldapsearch -x -W -H ldap://<ldap_server>  -D"uuser1@example.com" -b "dc=example,dc=com" "(sAMAccountName=uuser1)"
+```
 
-ldapsearch -x -W -H ldap://<ldap server ip>  -D"uuser1@example.com" -b "dc=example,dc=com" "(sAMAccountName=uuser1)"
- Following results are displayed.  memberOf attribute shows the list of groups the user belongs. This value is used in the groupmapping which is covered later in the article. LDAP authentication search for value in attribute  sAMAccountName for authentication 
+In the results, note the `memberOf` attribute; it shows the groups the user belongs. You will use this value to map from the LDAP group to the Druid roles later. The sAMAccountName attribute provides for user authentication. 
 
-2. How to configure Druid to authenticate a user with LDAP/Active Directory  
+## Configure Druid user authentication with LDAP/Active Directory 
+
 Enable druid-basic-security  under common.runtime.properties and need to be updated in all the nodes in the druid cluster.  This file is located under conf dir . For the quickstart , this file is present under conf-quickstart/druid/_common/common.runtime.properties
 Make sure druid.extensions.loadList have druid-basic-security 
 Update the following properties  in the common.runtime.properties 

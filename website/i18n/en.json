@@ -309,6 +309,9 @@
       "operations/api-reference": {
         "title": "API reference"
       },
+      "operations/auth-ldap": {
+        "title": "LDAP auth"
+      },
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
       },

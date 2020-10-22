@@ -8,7 +8,7 @@ title: "Security overview"
 
 By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features including TLS, authentication, and authorization.
 
-To implement Druid security, you configure authenticators and authorizors. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves consideration of your datasource scheme, given they represent the granularity at which data access permissions are allocated. 
+To implement Druid security, you configure authenticators and authorizers. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves consideration of your datasource scheme, given they represent the granularity at which data access permissions are allocated. 
 
 The following graphic depicts the course of request through the authentication process: 
 
@@ -102,7 +102,7 @@ The following takes you through sample configuration steps for enabling basic au
 See [Authentication and Authorization](../design/auth) for more information about the Authenticator, Escalator, and Authorizer concepts. See [Basic Security](../development/extensions-core/druid-basic-security) for more information about the extension used in the examples above, and [Kerberos](../development/extensions-core/druid-kerberos) for Kerberos authentication.
 
 
-## Enable authorizors
+## Enable authorizers
 
 After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint. Note that you cannot assign permissions directly to individual users. They must be assigned through roles. 
 
