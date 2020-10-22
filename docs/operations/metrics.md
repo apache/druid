@@ -252,10 +252,10 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
 |`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
 
-If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](
-../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class
+If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.md#dynamic-configuration), then [log entries](../configuration/logging.md) for class
 `org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing
 decisions.
+
 
 ## General Health
 
@@ -287,7 +287,7 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
 |`jvm/gc/count`|Garbage collection count.|gcName (cms/g1/parallel/etc.), gcGen (old/young)|Varies.|
-|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle|gcName, gcGen|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.html#enabling-metrics)) |
+|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle|gcName, gcGen|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)) |
 
 ### EventReceiverFirehose
 

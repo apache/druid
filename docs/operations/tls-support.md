@@ -35,9 +35,9 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 ## Jetty server configuration
 
 Apache Druid uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
-reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html) might be helpful.
+reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.32.v20200930/configuring-ssl) might be helpful.
 To get more in depth knowledge of TLS/SSL support in Java in general, please refer to this [guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html#configuring-sslcontextfactory)
+The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.32.v20200930/configuring-ssl.html#configuring-sslcontextfactory)
 can help in understanding TLS/SSL configurations listed below. This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the below mentioned configs among others provided by Java implementation.
 
@@ -75,7 +75,7 @@ The following table contains non-mandatory advanced configuration options, use c
 ## Internal communication over TLS
 
 Whenever possible Druid processes will use HTTPS to talk to each other. To enable this communication Druid's HttpClient needs to
-be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) that is able
+be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext) that is able
 to validate the Server Certificates, otherwise communication will fail.
 
 Since, there are various ways to configure SSLContext, by default, Druid looks for an instance of SSLContext Guice binding

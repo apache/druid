@@ -41,9 +41,8 @@ You can also enter them directly in the Druid console's Query view. Simply pasti
 
 ![Native query](../assets/native-queries-01.png "Native query")
 
-
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different
-[client libraries](/libraries.html) in other languages to query Druid.
+[client libraries](https://druid.apache.org/libraries.html) in other languages to query Druid.
 
 The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 

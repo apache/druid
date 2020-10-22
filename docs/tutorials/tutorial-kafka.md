@@ -29,7 +29,7 @@ sidebar_label: "Load from Apache Kafka"
 This tutorial demonstrates how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
-the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
+the [quickstart](index.md) using the `micro-quickstart` single-machine configuration and have it
 running on your local machine. You don't need to have loaded any data yet.
 
 ## Download and start Kafka
@@ -254,7 +254,7 @@ If the supervisor was successfully created, you will get a response containing t
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.md).
 
-You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.html#tasks](http://localhost:8888/unified-console.html#tasks).
+You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
 
 ## Querying your data
 
