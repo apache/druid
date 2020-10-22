@@ -59,7 +59,17 @@ and update the script tag top level html file, [unified-console.html](../web-con
 <script src="public/web-console-0.18.0.js"></script>
 ```
 
-and open a PR to the master branch.
+Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the upcoming release:
+
+```yaml
+...
+  coordinator:
+    image: apache/druid:0.18.0
+    container_name: coordinator
+...
+```
+
+Once this is completed, open a PR to the master branch. Also be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the relese branch.
 
 ### Release branch hygiene
 
