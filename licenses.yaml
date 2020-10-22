@@ -4495,7 +4495,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.19.1
+version: 3.33.0
 
 ---
 
@@ -4504,7 +4504,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.14.0
+version: 3.19.2
 
 ---
 
@@ -4513,7 +4513,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.11.0
+version: 3.22.0
 
 ---
 
@@ -4687,6 +4687,26 @@ license_file_path: licenses/bin/debug.MIT
 
 ---
 
+name: "deep-equal"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: James Halliday
+version: 1.1.1
+license_file_path: licenses/bin/deep-equal.MIT
+
+---
+
+name: "define-properties"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.1.3
+license_file_path: licenses/bin/define-properties.MIT
+
+---
+
 name: "diff-match-patch"
 license_category: binary
 module: web-console
@@ -4745,6 +4765,26 @@ license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
 
+name: "fontsource-open-sans"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Lotus
+version: 3.0.9
+license_file_path: licenses/bin/fontsource-open-sans.MIT
+
+---
+
+name: "function-bind"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Raynos
+version: 1.1.1
+license_file_path: licenses/bin/function-bind.MIT
+
+---
+
 name: "gud"
 license_category: binary
 module: web-console
@@ -4762,6 +4802,16 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 2.0.0
 license_file_path: licenses/bin/has-own-prop.MIT
+
+---
+
+name: "has"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Thiago de Arruda
+version: 1.0.3
+license_file_path: licenses/bin/has.MIT
 
 ---
 
@@ -4795,6 +4845,16 @@ license_file_path: licenses/bin/hoist-non-react-statics.BSD3
 
 ---
 
+name: "is-arguments"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.4
+license_file_path: licenses/bin/is-arguments.MIT
+
+---
+
 name: "is-buffer"
 license_category: binary
 module: web-console
@@ -4802,6 +4862,26 @@ license_name: MIT License
 copyright: Feross Aboukhadijeh
 version: 2.0.3
 license_file_path: licenses/bin/is-buffer.MIT
+
+---
+
+name: "is-date-object"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.1
+license_file_path: licenses/bin/is-date-object.MIT
+
+---
+
+name: "is-regex"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.4
+license_file_path: licenses/bin/is-regex.MIT
 
 ---
 
@@ -4935,6 +5015,35 @@ license_file_path: licenses/bin/object-assign.MIT
 
 ---
 
+name: "object-is"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.1
+license_file_path: licenses/bin/object-is.MIT
+
+---
+
+name: "object-keys"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.1.1
+license_file_path: licenses/bin/object-keys.MIT
+
+---
+
+name: "opensans"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Google
+version: 1.101.0
+
+---
+
 name: "path-to-regexp"
 license_category: binary
 module: web-console
@@ -4950,7 +5059,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Federico Zivolo
-version: 1.15.0
+version: 1.16.1
 license_file_path: licenses/bin/popper.js.MIT
 
 ---
@@ -4980,7 +5089,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Giampaolo Bellavite
-version: 7.4.0
+version: 7.4.8
 license_file_path: licenses/bin/react-day-picker.MIT
 
 ---
@@ -5020,7 +5129,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Travis Arnold
-version: 1.3.4
+version: 1.3.7
 license_file_path: licenses/bin/react-popper.MIT
 
 ---
@@ -5092,6 +5201,16 @@ license_name: MIT License
 copyright: Ben Newman
 version: 0.13.3
 license_file_path: licenses/bin/regenerator-runtime.MIT
+
+---
+
+name: "regexp.prototype.flags"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.2.0
+license_file_path: licenses/bin/regexp.prototype.flags.MIT
 
 ---
 

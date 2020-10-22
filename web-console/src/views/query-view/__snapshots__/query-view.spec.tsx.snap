@@ -53,8 +53,8 @@ exports[`sql view matches snapshot 1`] = `
         >
           <Blueprint3.Switch
             checked={true}
-            className="smart-query-limit"
-            label="Smart query limit"
+            className="auto-limit"
+            label="Auto limit"
             onChange={[Function]}
           />
         </Blueprint3.Tooltip>
@@ -130,8 +130,8 @@ exports[`sql view matches snapshot with query 1`] = `
         >
           <Blueprint3.Switch
             checked={true}
-            className="smart-query-limit"
-            label="Smart query limit"
+            className="auto-limit"
+            label="Auto limit"
             onChange={[Function]}
           />
         </Blueprint3.Tooltip>

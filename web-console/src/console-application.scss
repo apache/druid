@@ -26,9 +26,14 @@
     right: 0;
     bottom: 0;
     padding: $standard-padding;
+    overflow-y: auto;
 
     &.narrow-pad {
-      padding: $standard-padding 10px;
+      padding: $standard-padding $thin-padding;
+    }
+
+    &.thin {
+      padding: 10px;
     }
 
     .app-view {
@@ -40,5 +45,9 @@
     width: 100%;
     height: 22px;
     border-top: 2px solid #6d8ea9;
+  }
+
+  .ace-solarized-dark {
+    background-color: rgba($dark-gray1, 0.5);
   }
 }
