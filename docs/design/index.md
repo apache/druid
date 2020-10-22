@@ -77,7 +77,7 @@ summarization partially pre-aggregates your data, and can lead to big costs savi
 ## When should I use Druid?
 
 Druid is used by many companies of various sizes for many different use cases. Check out the
-[Powered by Apache Druid](https://druid.apache.org/druid-powered) page
+[Powered by Apache Druid](/druid-powered) page
 
 Druid is likely a good choice if your use case fits a few of the following descriptors:
 
