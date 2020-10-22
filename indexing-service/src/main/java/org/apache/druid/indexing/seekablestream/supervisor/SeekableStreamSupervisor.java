@@ -398,7 +398,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     log.info("triggerSaleOutThresholdFrequency is [ " + triggerSaleOutThresholdFrequency + " ] and triggerSaleInThresholdFrequency is [ " + triggerSaleInThresholdFrequency + " ]");
     log.info("beyondProportion is [ " + beyondProportion + " ] and withinProportion is [ " + withinProportion + " ]");
 
-    int currentActiveTaskCount = 0;
+    int currentActiveTaskCount;
     int desireActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
     currentActiveTaskCount = activeTaskGroups.size();
@@ -470,7 +470,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private List<Long> collectTotalLags()
   {
-    return queue.stream().collect(Collectors.toList());
+    return new ArrayList<>(queue);
   }
 
   private class GracefulShutdownNotice extends ShutdownNotice
@@ -720,7 +720,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
-    int workerThreads = 0;
+    int workerThreads;
     if (enableDynamicAllocationTasks) {
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
@@ -1029,7 +1029,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             collectLag(metricsInfo);
             long totalLags = metricsInfo.size() < 3 ? 0 : metricsInfo.get(1);
             queue.offer(totalLags > 0 ? totalLags : 0);
-            log.info("Current lag metric points : " + queue.stream().collect(Collectors.toList()));
+            log.info("Current lag metric points : " + new ArrayList<>(queue));
           } else {
             log.info("[%s] supervisor is suspended, skip to collect kafka lags", dataSource);
           }

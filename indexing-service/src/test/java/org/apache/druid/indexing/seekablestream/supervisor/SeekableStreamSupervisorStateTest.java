@@ -81,9 +81,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -825,10 +827,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, null, null
+        null, getDynamicAllocationTasksProperties(), null
     )
     {
     };
+  }
+
+  private static Map<String, Object> getDynamicAllocationTasksProperties()
+  {
+    HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
+    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
+    dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
+    dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
+    dynamicAllocationTasksProperties.put("scaleOutThreshold", 5000000);
+    dynamicAllocationTasksProperties.put("triggerSaleOutThresholdFrequency", 0.3);
+    dynamicAllocationTasksProperties.put("scaleInThreshold", 1000000);
+    dynamicAllocationTasksProperties.put("triggerSaleInThresholdFrequency", 0.8);
+    dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
+    dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
+    dynamicAllocationTasksProperties.put("taskCountMax", 8);
+    dynamicAllocationTasksProperties.put("taskCountMin", 1);
+    dynamicAllocationTasksProperties.put("scaleInStep", 1);
+    dynamicAllocationTasksProperties.put("scaleOutStep", 2);
+    dynamicAllocationTasksProperties.put("minTriggerDynamicFrequencyMillis", 1200000);
+    return dynamicAllocationTasksProperties;
   }
 
   private static SeekableStreamSupervisorTuningConfig getTuningConfig()
