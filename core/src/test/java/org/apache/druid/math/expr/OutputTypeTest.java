@@ -409,8 +409,8 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.DOUBLE, ExprType.DOUBLE));
     Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.DOUBLE, ExprType.STRING));
     Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.STRING, ExprType.DOUBLE));
-    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(ExprType.STRING, ExprType.LONG));
-    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.operator(ExprType.LONG, ExprType.STRING));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.STRING, ExprType.LONG));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.operator(ExprType.LONG, ExprType.STRING));
     // unless it is an array, and those have to be the same
     Assert.assertEquals(ExprType.LONG_ARRAY, ExprTypeConversion.operator(ExprType.LONG_ARRAY, ExprType.LONG_ARRAY));
     Assert.assertEquals(

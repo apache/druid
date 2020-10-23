@@ -50,18 +50,19 @@ public class ExprTypeConversion
   /**
    * Given 2 'input' types, which might not be fully trustable, choose the most appropriate combined type for
    * non-vectorized, per-row type detection. In this mode, null values are {@link ExprType#STRING} typed, despite
-   * potentially coming from an underlying numeric column. This method is not well suited for array handling
+   * potentially coming from an underlying numeric column, or when an underlying column was completely missing and so
+   * all values are null. This method is not well suited for array handling.
    */
-  public static ExprType autoDetect(ExprEval result, ExprEval other)
+  public static ExprType autoDetect(ExprEval eval, ExprEval otherEval)
   {
-    ExprType type = result.type();
-    ExprType otherType = other.type();
+    ExprType type = eval.type();
+    ExprType otherType = otherEval.type();
     if (type == ExprType.STRING && otherType == ExprType.STRING) {
       return ExprType.STRING;
     }
 
-    type = result.value() != null ? type : otherType;
-    otherType = other.value() != null ? otherType : type;
+    type = eval.value() != null ? type : otherType;
+    otherType = otherEval.value() != null ? otherType : type;
     return numeric(type, otherType);
   }
 
@@ -71,7 +72,7 @@ public class ExprTypeConversion
    * arrays must be the same type
    * if both types are {@link ExprType#STRING}, the output type will be preserved as string
    * if both types are {@link ExprType#LONG}, the output type will be preserved as long
-   *
+   * otherwise, output is {@link ExprType#DOUBLE}
    */
   @Nullable
   public static ExprType operator(@Nullable ExprType type, @Nullable ExprType other)
@@ -91,15 +92,6 @@ public class ExprTypeConversion
     // if both arguments are a string, type becomes a string
     if (ExprType.STRING.equals(type) && ExprType.STRING.equals(other)) {
       return ExprType.STRING;
-    }
-
-    // non-vectorized expressions
-    if (type == ExprType.STRING) {
-      return other;
-    }
-
-    if (other == ExprType.STRING) {
-      return type;
     }
 
     // otherwise a decimal or integer number

@@ -152,14 +152,14 @@ public class ExpressionPlanner
     }
 
     // only set output type if we are pretty confident about input types
-    final boolean shoulComputeOutput = ExpressionPlan.none(
+    final boolean shouldComputeOutput = ExpressionPlan.none(
         traits,
         ExpressionPlan.Trait.UNKNOWN_INPUTS,
         ExpressionPlan.Trait.INCOMPLETE_INPUTS,
         ExpressionPlan.Trait.NEEDS_APPLIED
     );
 
-    if (shoulComputeOutput) {
+    if (shouldComputeOutput) {
       outputType = expression.getOutputType(inspector);
     }
 
