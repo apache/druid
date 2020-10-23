@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -58,6 +60,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   private final String fieldName;
   private final int k;
   private final byte cacheTypeId;
+  private MaxIntermediateSizeAdjustStrategy strategy;
 
   @JsonCreator
   public DoublesSketchAggregatorFactory(
@@ -81,6 +84,16 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     this.k = k == null ? DEFAULT_K : k;
     Util.checkIfPowerOf2(this.k, "k");
     this.cacheTypeId = cacheTypeId;
+  }
+
+  @Nullable
+  @Override
+  public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
+  {
+    if (adjustBytesInMemoryFlag && strategy == null) {
+      strategy = new DoublesSketchSizeAdjustStrategy(this.k, this.getMaxIntermediateSize());
+    }
+    return strategy;
   }
 
   @Override
@@ -248,9 +261,24 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return DoublesSketchModule.DOUBLES_SKETCH;
+  }
+
+  /**
+   * actual type is {@link DoublesSketch}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.LONG;
   }
 
   @Override

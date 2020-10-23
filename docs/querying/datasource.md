@@ -131,6 +131,9 @@ Union datasources allow you to treat two or more table datasources as a single d
 do not need to have identical schemas. If they do not fully match up, then columns that exist in one table but not
 another will be treated as if they contained all null values in the tables where they do not exist.
 
+The list of "dataSources" must be nonempty. If you want to query an empty dataset, use an [`inline` datasource](#inline)
+instead.
+
 Union datasources are not available in Druid SQL.
 
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import org.apache.druid.query.DataSource;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.Optional;
@@ -29,10 +28,10 @@ public class DruidRels
   /**
    * Returns the DataSource involved in a leaf query of class {@link DruidQueryRel}.
    */
-  public static Optional<DataSource> dataSourceIfLeafRel(final DruidRel<?> druidRel)
+  public static Optional<DruidTable> druidTableIfLeafRel(final DruidRel<?> druidRel)
   {
     if (druidRel instanceof DruidQueryRel) {
-      return Optional.of(druidRel.getTable().unwrap(DruidTable.class).getDataSource());
+      return Optional.of(druidRel.getTable().unwrap(DruidTable.class));
     } else {
       return Optional.empty();
     }
@@ -42,12 +41,13 @@ public class DruidRels
    * Check if a druidRel is a simple table scan, or a projection that merely remaps columns without transforming them.
    * Like {@link #isScanOrProject} but more restrictive: only remappings are allowed.
    *
-   * @param druidRel  the rel to check
-   * @param canBeJoin consider a 'join' that doesn't do anything fancy to be a scan-or-mapping too.
+   * @param druidRel         the rel to check
+   * @param canBeJoinOrUnion consider a {@link DruidJoinQueryRel} or {@link DruidUnionDataSourceRel} as possible
+   *                         scans-and-mappings too.
    */
-  public static boolean isScanOrMapping(final DruidRel<?> druidRel, final boolean canBeJoin)
+  public static boolean isScanOrMapping(final DruidRel<?> druidRel, final boolean canBeJoinOrUnion)
   {
-    if (isScanOrProject(druidRel, canBeJoin)) {
+    if (isScanOrProject(druidRel, canBeJoinOrUnion)) {
       // Like isScanOrProject, but don't allow transforming projections.
       final PartialDruidQuery partialQuery = druidRel.getPartialDruidQuery();
       return partialQuery.getSelectProject() == null || partialQuery.getSelectProject().isMapping();
@@ -59,12 +59,14 @@ public class DruidRels
   /**
    * Check if a druidRel is a simple table scan or a scan + projection.
    *
-   * @param druidRel  the rel to check
-   * @param canBeJoin consider a 'join' that doesn't do anything fancy to be a scan-or-mapping too.
+   * @param druidRel         the rel to check
+   * @param canBeJoinOrUnion consider a {@link DruidJoinQueryRel} or {@link DruidUnionDataSourceRel} as possible
+   *                         scans-and-mappings too.
    */
-  private static boolean isScanOrProject(final DruidRel<?> druidRel, final boolean canBeJoin)
+  private static boolean isScanOrProject(final DruidRel<?> druidRel, final boolean canBeJoinOrUnion)
   {
-    if (druidRel instanceof DruidQueryRel || (canBeJoin && druidRel instanceof DruidJoinQueryRel)) {
+    if (druidRel instanceof DruidQueryRel || (canBeJoinOrUnion && (druidRel instanceof DruidJoinQueryRel
+                                                                   || druidRel instanceof DruidUnionDataSourceRel))) {
       final PartialDruidQuery partialQuery = druidRel.getPartialDruidQuery();
       final PartialDruidQuery.Stage stage = partialQuery.stage();
       return (stage == PartialDruidQuery.Stage.SCAN || stage == PartialDruidQuery.Stage.SELECT_PROJECT)

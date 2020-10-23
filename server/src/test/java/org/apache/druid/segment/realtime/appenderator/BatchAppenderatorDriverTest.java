@@ -44,6 +44,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class BatchAppenderatorDriverTest extends EasyMockSupport
@@ -121,7 +122,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, makeOkPublisher()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -155,7 +156,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     }
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, makeOkPublisher()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(

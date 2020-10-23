@@ -168,6 +168,22 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return builder;
   }
 
+  /**
+   * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasMultipleValues} is explicitly true
+   * and {@link #hasNulls} is not set
+   */
+  public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(ValueType valueType)
+  {
+    ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
+                                                                 .setHasMultipleValues(true)
+                                                                 .setHasBitmapIndexes(false)
+                                                                 .setDictionaryEncoded(false)
+                                                                 .setDictionaryValuesSorted(false)
+                                                                 .setDictionaryValuesUnique(false)
+                                                                 .setHasSpatialIndexes(false);
+    return builder;
+  }
+
   @Nullable
   private ValueType type = null;
 

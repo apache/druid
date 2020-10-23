@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
@@ -112,21 +111,25 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     public MapIncrementalIndex(
         IncrementalIndexSchema incrementalIndexSchema,
         boolean deserializeComplexMetrics,
-        boolean reportParseExceptions,
         boolean concurrentEventAdd,
         boolean sortFacts,
         int maxRowCount,
-        long maxBytesInMemory
+        long maxBytesInMemory,
+        boolean adjustmentBytesInMemoryFlag,
+        int adjustmentBytesInMemoryMaxRollupRows,
+        int adjustmentBytesInMemoryMaxTimeMs
     )
     {
       super(
           incrementalIndexSchema,
           deserializeComplexMetrics,
-          reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          adjustmentBytesInMemoryFlag,
+          adjustmentBytesInMemoryMaxRollupRows,
+          adjustmentBytesInMemoryMaxTimeMs
       );
     }
 
@@ -135,7 +138,10 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         Granularity gran,
         AggregatorFactory[] metrics,
         int maxRowCount,
-        long maxBytesInMemory
+        long maxBytesInMemory,
+        boolean adjustmentBytesInMemoryFlag,
+        int adjustmentBytesInMemoryMaxRollupRows,
+        int adjustmentBytesInMemoryMaxTimeMs
     )
     {
       super(
@@ -145,11 +151,13 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
               .withMetrics(metrics)
               .build(),
           true,
-          true,
           false,
           true,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          adjustmentBytesInMemoryFlag,
+          adjustmentBytesInMemoryMaxRollupRows,
+          adjustmentBytesInMemoryMaxTimeMs
       );
     }
 
@@ -222,15 +230,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       for (Aggregator agg : aggs) {
         synchronized (agg) {
-          try {
-            agg.aggregate();
-          }
-          catch (ParseException e) {
-            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (getReportParseExceptions()) {
-              throw e;
-            }
-          }
+          agg.aggregate();
         }
       }
 

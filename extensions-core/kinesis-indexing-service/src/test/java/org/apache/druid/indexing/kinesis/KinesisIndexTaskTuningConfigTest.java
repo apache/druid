@@ -138,6 +138,9 @@ public class KinesisIndexTaskTuningConfigTest
     KinesisIndexTaskTuningConfig base = new KinesisIndexTaskTuningConfig(
         1,
         3L,
+        null,
+        null,
+        null,
         2,
         100L,
         new Period("PT3S"),
@@ -197,6 +200,9 @@ public class KinesisIndexTaskTuningConfigTest
     KinesisIndexTaskTuningConfig base = new KinesisIndexTaskTuningConfig(
         1,
         3L,
+        null,
+        null,
+        null,
         2,
         100L,
         new Period("PT3S"),
@@ -284,6 +290,9 @@ public class KinesisIndexTaskTuningConfigTest
     KinesisSupervisorTuningConfig original = new KinesisSupervisorTuningConfig(
         1,
         (long) 3,
+        null,
+        null,
+        null,
         2,
         100L,
         new Period("PT3S"),

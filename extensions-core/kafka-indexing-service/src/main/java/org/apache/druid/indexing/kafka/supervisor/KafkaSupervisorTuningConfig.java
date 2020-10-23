@@ -29,6 +29,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
@@ -67,6 +68,9 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -74,6 +78,9 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public KafkaSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
+      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
+      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -102,6 +109,9 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     super(
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
+        adjustmentBytesInMemoryMaxRollupRows,
+        adjustmentBytesInMemoryMaxTimeMs,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -194,6 +204,9 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", maxBytesInMemory=" + TuningConfigs.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory()) +
+        ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
+        ", adjustmentBytesInMemoryMaxRollupRows=" + getAdjustmentBytesInMemoryMaxRollupRows() +
+        ", adjustmentBytesInMemoryMaxTimeMs=" + getAdjustmentBytesInMemoryMaxTimeMs() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
@@ -221,6 +234,9 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     return new KafkaIndexTaskTuningConfig(
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isAdjustmentBytesInMemoryFlag(),
+        getAdjustmentBytesInMemoryMaxRollupRows(),
+        getAdjustmentBytesInMemoryMaxTimeMs(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),

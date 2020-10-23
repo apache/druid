@@ -31,32 +31,20 @@ public class IncrementalIndexAddResult
   @Nullable
   private final ParseException parseException;
   @Nullable
-  private String reasonOfNotAdded;
-  private final long nextRedundantBytes;
+  private final String reasonOfNotAdded;
 
-  public IncrementalIndexAddResult(
-      int rowCount,
-      long bytesInMemory,
-      @Nullable ParseException parseException,
-      @Nullable String reasonOfNotAdded,
-      long nextRedundantBytes
-  )
-  {
-    this.rowCount = rowCount;
-    this.bytesInMemory = bytesInMemory;
-    this.parseException = parseException;
-    this.reasonOfNotAdded = reasonOfNotAdded;
-    this.nextRedundantBytes = nextRedundantBytes;
-  }
 
-  public IncrementalIndexAddResult(
+  private IncrementalIndexAddResult(
       int rowCount,
       long bytesInMemory,
       @Nullable ParseException parseException,
       @Nullable String reasonOfNotAdded
   )
   {
-    this(rowCount, bytesInMemory, parseException, reasonOfNotAdded, 0);
+    this.rowCount = rowCount;
+    this.bytesInMemory = bytesInMemory;
+    this.parseException = parseException;
+    this.reasonOfNotAdded = reasonOfNotAdded;
   }
 
   public IncrementalIndexAddResult(
@@ -65,17 +53,24 @@ public class IncrementalIndexAddResult
       @Nullable ParseException parseException
   )
   {
-    this(rowCount, bytesInMemory, parseException, null, 0);
+    this(rowCount, bytesInMemory, parseException, null);
   }
 
   public IncrementalIndexAddResult(
       int rowCount,
       long bytesInMemory,
-      @Nullable ParseException parseException,
-      long nextRedundantBytes
+      String reasonOfNotAdded
   )
   {
-    this(rowCount, bytesInMemory, parseException, null, nextRedundantBytes);
+    this(rowCount, bytesInMemory, null, reasonOfNotAdded);
+  }
+
+  public IncrementalIndexAddResult(
+      int rowCount,
+      long bytesInMemory
+  )
+  {
+    this(rowCount, bytesInMemory, null, null);
   }
 
   public int getRowCount()
@@ -88,20 +83,25 @@ public class IncrementalIndexAddResult
     return bytesInMemory;
   }
 
+  public boolean hasParseException()
+  {
+    return parseException != null;
+  }
+
   @Nullable
   public ParseException getParseException()
   {
     return parseException;
   }
 
+  public boolean isRowAdded()
+  {
+    return reasonOfNotAdded == null && parseException == null;
+  }
+
   @Nullable
   public String getReasonOfNotAdded()
   {
     return reasonOfNotAdded;
-  }
-
-  public long getNextRedundantBytes()
-  {
-    return nextRedundantBytes;
   }
 }

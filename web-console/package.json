@@ -1,12 +1,12 @@
 {
   "name": "web-console",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/apache/druid/"
+    "url": "https://github.com/apache/druid"
   },
   "jest": {
     "preset": "ts-jest",
@@ -39,7 +39,7 @@
     "test-base": "npm run tslint && npm run sasslint && npm run jest",
     "test": "npm run test-base -- --silent 2>&1",
     "test-ci": "npm run test-base -- --coverage",
-    "test-e2e": "jest --config jest.e2e.config.js --detectOpenHandles e2e-tests",
+    "test-e2e": "jest --config jest.e2e.config.js e2e-tests",
     "codecov": "codecov --disable=gcov -p ..",
     "coverage": "jest --coverage src",
     "update-snapshots": "jest -u",
@@ -68,7 +68,7 @@
     "d3-axis": "^1.0.12",
     "d3-scale": "^3.2.0",
     "d3-selection": "^1.4.0",
-    "druid-query-toolkit": "^0.8.4",
+    "druid-query-toolkit": "^0.9.15",
     "file-saver": "^2.0.2",
     "has-own-prop": "^2.0.0",
     "hjson": "^3.2.1",
@@ -126,7 +126,7 @@
     "license-checker": "^25.0.1",
     "node-sass": "^4.13.1",
     "node-sass-chokidar": "^1.4.0",
-    "playwright-chromium": "^0.11.1",
+    "playwright-chromium": "^1.4.2",
     "postcss-cli": "^6.1.3",
     "postcss-loader": "^3.0.0",
     "postcss-preset-env": "^6.7.0",

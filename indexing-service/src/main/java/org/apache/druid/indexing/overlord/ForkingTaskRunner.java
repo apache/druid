@@ -174,7 +174,7 @@ public class ForkingTaskRunner
                         final ForkingTaskRunnerWorkItem taskWorkItem = tasks.get(task.getId());
 
                         if (taskWorkItem == null) {
-                          LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                          LOGGER.makeAlert("TaskInfo disappeared!").addData("task", task.getId()).emit();
                           throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                         }
 
@@ -183,7 +183,7 @@ public class ForkingTaskRunner
                         }
 
                         if (taskWorkItem.processHolder != null) {
-                          LOGGER.makeAlert("WTF?! TaskInfo already has a processHolder")
+                          LOGGER.makeAlert("TaskInfo already has a processHolder")
                                 .addData("task", task.getId())
                                 .emit();
                           throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
@@ -647,6 +647,39 @@ public class ForkingTaskRunner
       return element;
     }).iterator();
     return Joiner.on(" ").join(maskedIterator);
+  }
+
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
+      return config.getPorts().size();
+    }
+    return config.getEndPort() - config.getStartPort() + 1;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    return portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    return 0;
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

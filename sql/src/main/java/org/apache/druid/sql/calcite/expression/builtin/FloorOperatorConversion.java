@@ -23,6 +23,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -59,8 +60,7 @@ public class FloorOperatorConversion implements SqlOperatorConversion
           TimeFloorOperatorConversion.toTimestampFloorOrCeilArgs(plannerContext, rowSignature, call.getOperands())
       );
     } else {
-      // WTF? FLOOR with the wrong number of arguments?
-      return null;
+      throw new ISE("Unexpected number of arguments");
     }
   }
 }

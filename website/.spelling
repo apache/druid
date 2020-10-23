@@ -19,6 +19,7 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 32-bit
+500MiB
 64-bit
 ACL
 APIs
@@ -178,6 +179,7 @@ UTF-8
 UTF8
 XMLs
 ZK
+ZSTD
 accessor
 ad-hoc
 aggregator
@@ -281,6 +283,8 @@ lookback
 lookups
 mapreduce
 masse
+maxNumFiles
+maxNumSegments
 max_map_count
 memcached
 mergeable
@@ -302,6 +306,8 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
+partitionsSpec
 performant
 plaintext
 pluggable
@@ -356,6 +362,7 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
 servlet
 simple-client-sslcontext
@@ -373,7 +380,9 @@ subqueries
 subquery
 subsecond
 substring
+subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -405,6 +414,7 @@ vCPUs
 validator
 vectorizable
 vectorize
+vectorizeVirtualColumns
 versioning
 w.r.t.
 whitelist
@@ -533,6 +543,7 @@ MeanNoNulls
 P1D
 cycleSize
 doubleMax
+doubleAny
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -540,6 +551,7 @@ doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
+longAny
 longMean
 longMeanNoNulls
 longMin
@@ -553,6 +565,8 @@ namespacePrefix
 src
  - ../docs/development/extensions-contrib/redis-cache.md
 loadList
+pull-deps
+PT2S
  - ../docs/development/extensions-contrib/sqlserver.md
 com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
@@ -589,6 +603,7 @@ url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
+fixedBucketsHistogram
 bucketNum
 lowerLimit
 numBuckets
@@ -599,6 +614,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository
@@ -961,7 +977,6 @@ overwriteFiles
 partitionDimension
 partitionDimensions
 partitionSpec
-partitionsSpec
 pathFormat
 segmentOutputPath
 segmentTable
@@ -1087,6 +1102,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint
@@ -1097,6 +1114,7 @@ signum
 str1
 str2
 string_to_array
+stringAny
 strlen
 strpos
 timestamp_ceil
@@ -1176,6 +1194,7 @@ RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
+TaskSlotCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1485,6 +1504,7 @@ is_overshadowed
 is_published
 is_realtime
 java.sql.Types
+last_compaction_state
 max_size
 num_replicas
 num_rows
@@ -1662,6 +1682,7 @@ file.encoding
 fillCapacity
 first_location
 floatMax
+floatAny
 floatMin
 floatSum
 freeSpacePercent

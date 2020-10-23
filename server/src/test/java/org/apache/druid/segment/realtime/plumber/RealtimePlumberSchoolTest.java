@@ -205,6 +205,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,
@@ -280,7 +283,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.isAdjustmentBytesInMemoryFlag(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -326,7 +331,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.isAdjustmentBytesInMemoryFlag(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -377,7 +384,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.isAdjustmentBytesInMemoryFlag(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
         tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);

@@ -312,6 +312,52 @@ public class GeneratorBasicSchemas
   }
 
   static {
+    // schema for benchmarking expressions
+    List<GeneratorColumnSchema> expressionsTestsSchemaColumns = ImmutableList.of(
+        // string dims
+        GeneratorColumnSchema.makeSequential("string1", ValueType.STRING, false, 1, null, 0, 10000),
+        GeneratorColumnSchema.makeLazyZipf("string2", ValueType.STRING, false, 1, null, 1, 100, 1.5),
+        GeneratorColumnSchema.makeLazyZipf("string3", ValueType.STRING, false, 1, 0.1, 1, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("string4", ValueType.STRING, false, 1, null, 1, 10_000),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("string5", ValueType.STRING, false, 1, 0.3, 1, 1_000_000),
+
+        // numeric dims
+        GeneratorColumnSchema.makeSequential("long1", ValueType.LONG, false, 1, null, 0, 10000),
+        GeneratorColumnSchema.makeLazyZipf("long2", ValueType.LONG, false, 1, null, 1, 101, 1.5),
+        GeneratorColumnSchema.makeLazyZipf("long3", ValueType.LONG, false, 1, 0.1, -1_000_000, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("long4", ValueType.LONG, false, 1, null, -10_000, 10000),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("long5", ValueType.LONG, false, 1, 0.3, -1_000_000, 1_000_000),
+
+        GeneratorColumnSchema.makeLazyZipf("double1", ValueType.DOUBLE, false, 1, null, 1, 101, 1.5),
+        GeneratorColumnSchema.makeLazyZipf("double2", ValueType.DOUBLE, false, 1, 0.1, -1_000_000, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeContinuousUniform("double3", ValueType.DOUBLE, false, 1, null, -9000.0, 9000.0),
+        GeneratorColumnSchema.makeContinuousUniform("double4", ValueType.DOUBLE, false, 1, null, -1_000_000, 1_000_000),
+        GeneratorColumnSchema.makeLazyZipf("double5", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
+
+        GeneratorColumnSchema.makeLazyZipf("float1", ValueType.FLOAT, false, 1, null, 1, 101, 1.5),
+        GeneratorColumnSchema.makeLazyZipf("float2", ValueType.FLOAT, false, 1, 0.1, -1_000_000, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeContinuousUniform("float3", ValueType.FLOAT, false, 1, null, -9000.0, 9000.0),
+        GeneratorColumnSchema.makeContinuousUniform("float4", ValueType.FLOAT, false, 1, null, -1_000_000, 1_000_000),
+        GeneratorColumnSchema.makeLazyZipf("float5", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
+
+    );
+
+    List<AggregatorFactory> aggs = new ArrayList<>();
+    aggs.add(new CountAggregatorFactory("rows"));
+
+    Interval interval = Intervals.of("2000-01-01/P1D");
+
+    GeneratorSchemaInfo expressionsTestsSchema = new GeneratorSchemaInfo(
+        expressionsTestsSchemaColumns,
+        aggs,
+        interval,
+        false
+    );
+
+    SCHEMA_INFO_BUILDER.put("expression-testbench", expressionsTestsSchema);
+  }
+
+  static {
     // simple 'wide' schema with null valued rows, high cardinality columns, no aggs on numeric columns
     // essentially 'nulls-and-non-nulls' with a ton of extra zipf columns of each type with a variety of value
     // distributions

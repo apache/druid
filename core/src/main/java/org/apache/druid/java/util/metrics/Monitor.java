@@ -29,5 +29,10 @@ public interface Monitor
 
   void stop();
 
+  /**
+   * Emit metrics using the given emitter.
+   *
+   * @return true if this monitor needs to continue monitoring. False otherwise.
+   */
   boolean monitor(ServiceEmitter emitter);
 }

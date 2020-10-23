@@ -74,6 +74,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
@@ -92,7 +93,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class GroupByLimitPushDownInsufficientBufferTest
+public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullHandlingTest
 {
   public static final ObjectMapper JSON_MAPPER;
 
@@ -146,7 +147,6 @@ public class GroupByLimitPushDownInsufficientBufferTest
                 .withRollup(withRollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .buildOnheap();

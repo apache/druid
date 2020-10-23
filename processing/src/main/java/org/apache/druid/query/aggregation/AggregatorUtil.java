@@ -19,18 +19,25 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -191,7 +198,7 @@ public class AggregatorUtil
   )
   {
     if ((fieldName == null) == (fieldExpression == null)) {
-      throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
+      throw new IllegalArgumentException("Only one of fieldName or expression should be non-null");
     }
     if (fieldName != null) {
       return metricFactory.makeColumnValueSelector(fieldName);
@@ -309,5 +316,41 @@ public class AggregatorUtil
       }
       return new ExpressionDoubleColumnSelector();
     }
+  }
+
+  public static boolean canVectorize(
+      ColumnInspector columnInspector,
+      @Nullable String fieldName,
+      @Nullable String expression,
+      Supplier<Expr> fieldExpression
+  )
+  {
+    if (fieldName != null) {
+      final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+      return capabilities == null || ValueType.isNumeric(capabilities.getType());
+    }
+    if (expression != null) {
+      return fieldExpression.get().canVectorize(columnInspector);
+    }
+    return false;
+  }
+
+  /**
+   * Make a {@link VectorValueSelector} for primitive numeric or expression virtual column inputs.
+   */
+  public static VectorValueSelector makeVectorValueSelector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      @Nullable String fieldName,
+      @Nullable String expression,
+      Supplier<Expr> fieldExpression
+  )
+  {
+    if ((fieldName == null) == (expression == null)) {
+      throw new IllegalArgumentException("Only one of fieldName or expression should be non-null");
+    }
+    if (expression != null) {
+      return ExpressionVectorSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
+    }
+    return columnSelectorFactory.makeValueSelector(fieldName);
   }
 }

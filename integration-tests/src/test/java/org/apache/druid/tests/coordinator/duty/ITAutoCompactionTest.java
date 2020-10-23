@@ -21,12 +21,17 @@ package org.apache.druid.tests.coordinator.duty;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -49,7 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Test(groups = {TestNGGroup.OTHER_INDEX})
+@Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAutoCompactionTest extends AbstractIndexerTest
 {
@@ -57,7 +62,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
-  private static final Period SKIP_OFFSET_FROM_LATEST = Period.seconds(0);
+  private static final Period NO_SKIP_OFFSET = Period.seconds(0);
 
   @Inject
   protected CompactionResourceTestClient compactionResource;
@@ -93,7 +98,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -114,16 +119,41 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // Dummy compaction config which will be overwritten
-      submitCompactionConfig(10000, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(10000, NO_SKIP_OFFSET);
       // New compaction config should overwrites the existing compaction config
-      submitCompactionConfig(1, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(1, NO_SKIP_OFFSET);
+
+      LOG.info("Auto compaction test with dynamic partitioning");
 
       // Instead of merging segments, the updated config will split segments!
       //...compacted into 10 new segments across 2 days. 5 new segments each day (10 total)
       forceTriggerAutoCompaction(10);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(10, 1);
+      checkCompactionIntervals(intervalsBeforeCompaction);
 
+      LOG.info("Auto compaction test with hash partitioning");
+
+      final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1);
+      // 2 segments published per day after compaction.
+      forceTriggerAutoCompaction(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(hashedPartitionsSpec, 4);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      LOG.info("Auto compaction test with range partitioning");
+
+      final SingleDimensionPartitionsSpec rangePartitionsSpec = new SingleDimensionPartitionsSpec(
+          5,
+          null,
+          "city",
+          false
+      );
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 2);
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(rangePartitionsSpec, 2);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -139,7 +169,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       deleteCompactionConfig();
 
       // ...should remains unchanged (4 total)
@@ -164,7 +194,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       // ...should remains unchanged (4 total)
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -224,13 +254,42 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
   {
-    DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(fullDatasourceName,
-                                                                                 null,
-                                                                                 null,
-                                                                                 maxRowsPerSegment,
-                                                                                 skipOffsetFromLatest,
-                                                                                 null,
-                                                                                 null);
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1);
+  }
+
+  private void submitCompactionConfig(
+      PartitionsSpec partitionsSpec,
+      Period skipOffsetFromLatest,
+      int maxNumConcurrentSubTasks
+  ) throws Exception
+  {
+    DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
+        fullDatasourceName,
+        null,
+        null,
+        null,
+        skipOffsetFromLatest,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            new MaxSizeSplitHintSpec(null, 1),
+            partitionsSpec,
+            null,
+            null,
+            null,
+            null,
+            null,
+            maxNumConcurrentSubTasks,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1
+        ),
+        null
+    );
     compactionResource.submitCompactionConfig(compactionConfig);
 
     // Wait for compaction config to persist
@@ -245,12 +304,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       }
     }
     Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getMaxRowsPerSegment(), maxRowsPerSegment);
+    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
+    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
     Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
 
     foundDataSourceCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
     Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getMaxRowsPerSegment(), maxRowsPerSegment);
+    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
+    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
     Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
   }
 
@@ -306,6 +367,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void verifySegmentsCompacted(int expectedCompactedSegmentCount, Integer expectedMaxRowsPerSegment)
   {
+    verifySegmentsCompacted(
+        new DynamicPartitionsSpec(expectedMaxRowsPerSegment, Long.MAX_VALUE),
+        expectedCompactedSegmentCount
+    );
+  }
+
+  private void verifySegmentsCompacted(PartitionsSpec partitionsSpec, int expectedCompactedSegmentCount)
+  {
     List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
     List<DataSegment> foundCompactedSegments = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -317,11 +386,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     for (DataSegment compactedSegment : foundCompactedSegments) {
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getMaxRowsPerSegment(),
-                          expectedMaxRowsPerSegment);
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
-                          SecondaryPartitionType.LINEAR
-      );
+      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec(), partitionsSpec);
     }
   }
 

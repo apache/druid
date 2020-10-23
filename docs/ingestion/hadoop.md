@@ -387,7 +387,18 @@ The configuration options are:
 |maxRowsPerSegment|Deprecated. Renamed to `targetRowsPerSegment`. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or `numShards`|
 |numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or `maxRowsPerSegment`|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `targetRowsPerSegment` is set.|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
 
+##### Hash partition function
+
+In hash partitioning, the partition function is used to compute hash of partition dimensions. The partition dimension
+values are first serialized into a byte array as a whole, and then the partition function is applied to compute hash of
+the byte array.
+Druid currently supports only one partition function.
+
+|name|description|
+|----|-----------|
+|`murmur3_32_abs`|Applies an absolute value function to the result of [`murmur3_32`](https://guava.dev/releases/16.0/api/docs/com/google/common/hash/Hashing.html#murmur3_32()).|
 
 ### Single-dimension range partitioning
 

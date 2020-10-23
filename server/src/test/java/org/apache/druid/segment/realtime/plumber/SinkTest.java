@@ -68,6 +68,9 @@ public class SinkTest extends InitializedNullHandlingTest
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         100,
         null,
+        null,
+        null,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -93,7 +96,9 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.isAdjustmentBytesInMemoryFlag(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
         tuningConfig.getDedupColumn()
     );
 
@@ -223,6 +228,9 @@ public class SinkTest extends InitializedNullHandlingTest
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         100,
         null,
+        null,
+        null,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -248,7 +256,9 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.isAdjustmentBytesInMemoryFlag(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
+        tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
         tuningConfig.getDedupColumn()
     );
 
