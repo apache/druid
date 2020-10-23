@@ -390,6 +390,42 @@ public class OutputTypeTest extends InitializedNullHandlingTest
 
 
   @Test
+  public void testEvalAutoConversion()
+  {
+    final ExprEval nullStringEval = ExprEval.of(null);
+    final ExprEval stringEval = ExprEval.of("wat");
+    final ExprEval longEval = ExprEval.of(1L);
+    final ExprEval doubleEval = ExprEval.of(1.0);
+    final ExprEval arrayEval = ExprEval.ofLongArray(new Long[]{1L, 2L, 3L});
+
+    // only long stays long
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.autoDetect(longEval, longEval));
+    // only string stays string
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.autoDetect(nullStringEval, nullStringEval));
+    Assert.assertEquals(ExprType.STRING, ExprTypeConversion.autoDetect(stringEval, stringEval));
+    // if only 1 argument is a string, preserve the other type
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.autoDetect(nullStringEval, longEval));
+    Assert.assertEquals(ExprType.LONG, ExprTypeConversion.autoDetect(longEval, nullStringEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(doubleEval, nullStringEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(nullStringEval, doubleEval));
+    // for operators, doubles is the catch all
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(longEval, doubleEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(doubleEval, longEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(doubleEval, doubleEval));
+    // ... even when non-null strings are used with non-double types
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(longEval, stringEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(doubleEval, stringEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(stringEval, doubleEval));
+    // arrays are not a good idea to use with this method
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(arrayEval, nullStringEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(arrayEval, doubleEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(arrayEval, longEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(nullStringEval, arrayEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(doubleEval, arrayEval));
+    Assert.assertEquals(ExprType.DOUBLE, ExprTypeConversion.autoDetect(longEval, arrayEval));
+  }
+
+  @Test
   public void testOperatorAutoConversion()
   {
     // nulls output other
