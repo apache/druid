@@ -392,11 +392,11 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   @Test
   public void testEvalAutoConversion()
   {
-    final ExprEval nullStringEval = ExprEval.of(null);
-    final ExprEval stringEval = ExprEval.of("wat");
-    final ExprEval longEval = ExprEval.of(1L);
-    final ExprEval doubleEval = ExprEval.of(1.0);
-    final ExprEval arrayEval = ExprEval.ofLongArray(new Long[]{1L, 2L, 3L});
+    final ExprEval<?> nullStringEval = ExprEval.of(null);
+    final ExprEval<?> stringEval = ExprEval.of("wat");
+    final ExprEval<?> longEval = ExprEval.of(1L);
+    final ExprEval<?> doubleEval = ExprEval.of(1.0);
+    final ExprEval<?> arrayEval = ExprEval.ofLongArray(new Long[]{1L, 2L, 3L});
 
     // only long stays long
     Assert.assertEquals(ExprType.LONG, ExprTypeConversion.autoDetect(longEval, longEval));
