@@ -113,6 +113,16 @@ use table datasources.
 ### `union`
 
 <!--DOCUSAURUS_CODE_TABS-->
+<!--SQL-->
+```sql
+SELECT col1, COUNT(*)
+FROM (
+  SELECT col1, col2, col3 FROM tbl1
+  UNION ALL
+  SELECT col1, col2, col3 FROM tbl2
+)
+GROUP BY col1
+```
 <!--Native-->
 ```json
 {
@@ -133,8 +143,6 @@ another will be treated as if they contained all null values in the tables where
 
 The list of "dataSources" must be nonempty. If you want to query an empty dataset, use an [`inline` datasource](#inline)
 instead.
-
-Union datasources are not available in Druid SQL.
 
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.

@@ -305,7 +305,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     />
                   }
                 >
-                  <div>{tableName}</div>
+                  {tableName}
                 </Popover>
               ),
               childNodes: metadata
@@ -384,7 +384,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           />
                         }
                       >
-                        <div>{columnData.COLUMN_NAME}</div>
+                        {columnData.COLUMN_NAME}
                       </Popover>
                     ),
                   }),

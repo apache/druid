@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.worker;
+package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.Iterators;
 import com.google.common.io.Files;
@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -67,7 +68,7 @@ import java.util.stream.IntStream;
 /**
  * This class manages intermediary segments for data shuffle between native parallel index tasks.
  * In native parallel indexing, phase 1 tasks store segment files in local storage of middleManagers (or indexer)
- * and phase 2 tasks read those files via HTTP.
+ * and phase 2 tasks read those files over HTTP.
  *
  * The directory where segment files are placed is structured as
  * {@link StorageLocation#path}/supervisorTaskId/startTimeOfSegment/endTimeOfSegment/bucketIdOfSegment.
@@ -100,7 +101,7 @@ public class IntermediaryDataManager
   // but middleManager or indexer could miss the request. This executor is to automatically clean up unused intermediary
   // partitions.
   // This can be null until IntermediaryDataManager is started.
-  @Nullable
+  @MonotonicNonNull
   private ScheduledExecutorService supervisorTaskChecker;
 
   @Inject

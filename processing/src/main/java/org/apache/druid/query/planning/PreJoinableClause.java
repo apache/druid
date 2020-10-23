@@ -22,8 +22,8 @@ package org.apache.druid.query.planning;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.Joinables;
 
 import java.util.Objects;
 
@@ -46,7 +46,7 @@ public class PreJoinableClause
       final JoinConditionAnalysis condition
   )
   {
-    this.prefix = Joinables.validatePrefix(prefix);
+    this.prefix = JoinPrefixUtils.validatePrefix(prefix);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.condition = Preconditions.checkNotNull(condition, "condition");

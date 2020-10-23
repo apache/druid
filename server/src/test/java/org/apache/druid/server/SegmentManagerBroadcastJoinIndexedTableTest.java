@@ -59,7 +59,9 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,6 +72,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -79,6 +82,11 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
 {
   private static final String TABLE_NAME = "test";
   private static final String PREFIX = "j0";
+  private static final JoinConditionAnalysis JOIN_CONDITION_ANALYSIS = JoinConditionAnalysis.forExpression(
+      StringUtils.format("market == \"%s.market\"", PREFIX),
+      PREFIX,
+      ExprMacroTable.nil()
+  );
   private static final Set<String> KEY_COLUMNS =
       ImmutableSet.of("market", "longNumericNull", "doubleNumericNull", "floatNumericNull", "partial_null_column");
 
@@ -170,6 +178,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertTrue(bytes.isPresent());
+    assertSegmentIdEquals(segment.getId(), bytes.get());
 
     // dropping the segment should make the table no longer available
     segmentManager.dropSegment(segment);
@@ -177,6 +188,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     maybeJoinable = makeJoinable(dataSource);
 
     Assert.assertFalse(maybeJoinable.isPresent());
+
+    bytes = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertFalse(bytes.isPresent());
   }
 
   @Test
@@ -215,6 +229,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    Optional<byte[]> cacheKey = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertTrue(cacheKey.isPresent());
+    assertSegmentIdEquals(segment2.getId(), cacheKey.get());
 
     segmentManager.dropSegment(segment2);
 
@@ -236,6 +253,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    cacheKey = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertTrue(cacheKey.isPresent());
+    assertSegmentIdEquals(segment1.getId(), cacheKey.get());
   }
 
 
@@ -287,16 +307,19 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     makeJoinable(dataSource);
   }
 
+  @Test
+  public void emptyCacheKeyForUnsupportedCondition()
+  {
+    final DataSource dataSource = new GlobalTableDataSource(TABLE_NAME);
+    JoinConditionAnalysis condition = EasyMock.mock(JoinConditionAnalysis.class);
+    EasyMock.expect(condition.canHashJoin()).andReturn(false);
+    EasyMock.replay(condition);
+    Assert.assertNull(joinableFactory.build(dataSource, condition).orElse(null));
+  }
+
   private Optional<Joinable> makeJoinable(DataSource dataSource)
   {
-    return joinableFactory.build(
-        dataSource,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("market == \"%s.market\"", PREFIX),
-            PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
+    return joinableFactory.build(dataSource, JOIN_CONDITION_ANALYSIS);
   }
 
   private DataSegment createSegment(IncrementalIndex data, String interval, String version) throws IOException
@@ -339,5 +362,23 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     return tmpSegment.withLoadSpec(
         ImmutableMap.of("type", "local", "path", segmentDir.getAbsolutePath())
     );
+  }
+
+  private void assertSegmentIdEquals(SegmentId id, byte[] bytes)
+  {
+    // Call byteBuffer.get to skip the type keys
+    ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+    byteBuffer.get(); // skip the cache key prefix
+    byteBuffer.get();
+    long start = byteBuffer.getLong();
+    byteBuffer.get();
+    long end = byteBuffer.getLong();
+    byteBuffer.get();
+    String version = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getVersion()));
+    byteBuffer.get();
+    String dataSource = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getDataSource()));
+    byteBuffer.get();
+    int partition = byteBuffer.getInt();
+    Assert.assertEquals(id, SegmentId.of(dataSource, Intervals.utc(start, end), version, partition));
   }
 }

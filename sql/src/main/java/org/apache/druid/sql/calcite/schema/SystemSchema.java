@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -142,7 +143,7 @@ public class SystemSchema extends AbstractSchema
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
       .add("is_overshadowed", ValueType.LONG)
-      .add("shardSpec", ValueType.STRING)
+      .add("shard_spec", ValueType.STRING)
       .add("dimensions", ValueType.STRING)
       .add("metrics", ValueType.STRING)
       .add("last_compaction_state", ValueType.STRING)
@@ -213,7 +214,7 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, authorizerMapper),
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
@@ -233,17 +234,20 @@ public class SystemSchema extends AbstractSchema
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
     private final DruidSchema druidSchema;
+    private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
+        ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
       this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
+      this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -296,25 +300,30 @@ public class SystemSchema extends AbstractSchema
               isAvailable = partialSegmentData.isAvailable();
               isRealtime = partialSegmentData.isRealtime();
             }
-            return new Object[]{
-                segment.getId(),
-                segment.getDataSource(),
-                segment.getInterval().getStart().toString(),
-                segment.getInterval().getEnd().toString(),
-                segment.getSize(),
-                segment.getVersion(),
-                (long) segment.getShardSpec().getPartitionNum(),
-                numReplicas,
-                numRows,
-                IS_PUBLISHED_TRUE, //is_published is true for published segments
-                isAvailable,
-                isRealtime,
-                val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
-                segment.getShardSpec(),
-                segment.getDimensions(),
-                segment.getMetrics(),
-                segment.getLastCompactionState()
-            };
+            try {
+              return new Object[]{
+                  segment.getId(),
+                  segment.getDataSource(),
+                  segment.getInterval().getStart().toString(),
+                  segment.getInterval().getEnd().toString(),
+                  segment.getSize(),
+                  segment.getVersion(),
+                  (long) segment.getShardSpec().getPartitionNum(),
+                  numReplicas,
+                  numRows,
+                  IS_PUBLISHED_TRUE, //is_published is true for published segments
+                  isAvailable,
+                  isRealtime,
+                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
+                  segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
+                  segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
+                  segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
+                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
+              };
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
           });
 
       final FluentIterable<Object[]> availableSegments = FluentIterable
@@ -328,26 +337,33 @@ public class SystemSchema extends AbstractSchema
             }
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
             final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
-            return new Object[]{
-                val.getKey(),
-                val.getKey().getDataSource(),
-                val.getKey().getInterval().getStart().toString(),
-                val.getKey().getInterval().getEnd().toString(),
-                val.getValue().getSegment().getSize(),
-                val.getKey().getVersion(),
-                (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
-                numReplicas,
-                val.getValue().getNumRows(),
-                IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
-                // is_available is assumed to be always true for segments announced by historicals or realtime tasks
-                IS_AVAILABLE_TRUE,
-                val.getValue().isRealtime(),
-                IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
-                val.getValue().getSegment().getShardSpec(),
-                val.getValue().getSegment().getDimensions(),
-                val.getValue().getSegment().getMetrics(),
-                null // unpublished segments from realtime tasks will not be compacted yet
-            };
+            try {
+              return new Object[]{
+                  val.getKey(),
+                  val.getKey().getDataSource(),
+                  val.getKey().getInterval().getStart().toString(),
+                  val.getKey().getInterval().getEnd().toString(),
+                  val.getValue().getSegment().getSize(),
+                  val.getKey().getVersion(),
+                  (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
+                  numReplicas,
+                  val.getValue().getNumRows(),
+                  IS_PUBLISHED_FALSE,
+                  // is_published is false for unpublished segments
+                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                  IS_AVAILABLE_TRUE,
+                  val.getValue().isRealtime(),
+                  IS_OVERSHADOWED_FALSE,
+                  // there is an assumption here that unpublished segments are never overshadowed
+                  val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
+                  val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
+                  val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
+                  null // unpublished segments from realtime tasks will not be compacted yet
+              };
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
           });
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(

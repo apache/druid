@@ -224,6 +224,12 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   }
 
   @Test
+  public void testIsCacheable()
+  {
+    Assert.assertTrue(broadcastTable.isCacheable());
+  }
+
+  @Test
   public void testNonexistentColumn()
   {
     expectedException.expect(IAE.class);

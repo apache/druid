@@ -21,6 +21,8 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.InlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -28,7 +30,9 @@ import org.easymock.Mock;
 import org.easymock.MockType;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.Optional;
@@ -45,6 +49,8 @@ public class MapJoinableFactoryTest
   private JoinConditionAnalysis condition;
   @Mock
   private Joinable mockJoinable;
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private MapJoinableFactory target;
 
@@ -83,6 +89,41 @@ public class MapJoinableFactoryTest
     EasyMock.replay(noopJoinableFactory);
     Optional<Joinable> joinable = target.build(noopDataSource, condition);
     Assert.assertEquals(mockJoinable, joinable.get());
+
+  }
+
+  @Test
+  public void testComputeJoinCacheKey()
+  {
+    Optional<byte[]> expected = Optional.of(new byte[]{1, 2, 3});
+    EasyMock.expect(noopJoinableFactory.computeJoinCacheKey(noopDataSource, condition)).andReturn(expected);
+    EasyMock.replay(noopJoinableFactory);
+    Optional<byte[]> actual = target.computeJoinCacheKey(noopDataSource, condition);
+    Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testBuildExceptionWhenTwoJoinableFactoryForSameDataSource()
+  {
+    JoinableFactory anotherNoopJoinableFactory = EasyMock.mock(MapJoinableFactory.class);
+    target = new MapJoinableFactory(
+        ImmutableSet.of(noopJoinableFactory, anotherNoopJoinableFactory),
+        ImmutableMap.of(
+            noopJoinableFactory.getClass(),
+            NoopDataSource.class,
+            anotherNoopJoinableFactory.getClass(),
+            NoopDataSource.class
+        )
+    );
+    EasyMock.expect(noopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
+    EasyMock.expect(anotherNoopJoinableFactory.build(noopDataSource, condition)).andReturn(Optional.of(mockJoinable));
+    EasyMock.replay(noopJoinableFactory, anotherNoopJoinableFactory);
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage(StringUtils.format(
+        "Multiple joinable factories are valid for table[%s]",
+        noopDataSource
+    ));
+    target.build(noopDataSource, condition);
   }
 
   @Test

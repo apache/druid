@@ -382,6 +382,7 @@ subsecond
 substring
 subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -1514,6 +1515,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys

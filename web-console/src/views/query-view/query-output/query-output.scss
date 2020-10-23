@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
+
 .query-output {
   .ReactTable {
     position: absolute;
@@ -25,10 +28,12 @@
     font-feature-settings: tnum;
     font-variant-numeric: tabular-nums;
 
-    .rt-thead {
+    .rt-thead.-header {
+      box-shadow: 0 1px 0 0 rgba(black, 0.2); // This is a hack! this line is sometimes too weak in tables.
+
       .rt-th {
         &.aggregate-header {
-          background: rgb(75, 122, 148);
+          background: rgba($druid-brand, 0.06);
         }
 
         &.renaming {
@@ -64,6 +69,6 @@
   }
 
   .aggregate-column {
-    background-color: rgba(98, 205, 255, 0.1);
+    background-color: rgba($druid-brand, 0.06);
   }
 }

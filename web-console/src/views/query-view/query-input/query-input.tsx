@@ -238,7 +238,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               name="ace-editor"
               onChange={this.handleChange}
               focus
-              fontSize={14}
+              fontSize={13}
               width="100%"
               height={`${editorHeight}px`}
               showPrintMargin={false}
@@ -255,6 +255,8 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               style={{}}
               placeholder="SELECT * FROM ..."
               onLoad={(editor: any) => {
+                editor.renderer.setPadding(10);
+                editor.renderer.setScrollMargin(10);
                 this.aceEditor = editor;
               }}
             />
