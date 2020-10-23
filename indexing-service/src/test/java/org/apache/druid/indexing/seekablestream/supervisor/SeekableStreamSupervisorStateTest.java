@@ -827,13 +827,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, getDynamicAllocationTasksProperties(), null
+        null, getProperties(), null
     )
     {
     };
   }
 
-  private static Map<String, Object> getDynamicAllocationTasksProperties()
+  private static Map<String, Object> getProperties()
   {
     HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
     dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
