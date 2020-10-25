@@ -18,24 +18,26 @@
 
 import axios from 'axios';
 
-import { Transform, TransformSpec } from '../druid-models';
-
-import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { alphanumericCompare, filterMap, oneOf, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
-  getDummyTimestampSpec,
+  EMPTY_ARRAY,
   getSpecType,
+  getTimestampSchema,
   IngestionSpec,
   IngestionType,
   InputFormat,
   IoConfig,
-  isColumnTimestampSpec,
   isDruidSource,
   MetricSpec,
+  PLACEHOLDER_TIMESTAMP_SPEC,
   TimestampSpec,
+  Transform,
+  TransformSpec,
   upgradeSpec,
-} from './ingestion-spec';
+} from '../druid-models';
+
+import { getDruidErrorMessage, queryDruidRune } from './druid-query';
+import { alphanumericCompare, filterMap, oneOf, sortWithPrefixSuffix } from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -273,7 +275,7 @@ export async function sampleForConnect(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: getDummyTimestampSpec(),
+        timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     } as any,
@@ -327,7 +329,7 @@ export async function sampleForParser(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: getDummyTimestampSpec(),
+        timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     },
@@ -343,7 +345,7 @@ export async function sampleForTimestamp(
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
-  const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
+  const timestampSchema = getTimestampSchema(spec);
 
   // First do a query with a static timestamp spec
   const sampleSpecColumns: SampleSpec = {
@@ -353,7 +355,7 @@ export async function sampleForTimestamp(
       dataSchema: {
         dataSource: 'sample',
         dimensionsSpec: {},
-        timestampSpec: columnTimestampSpec ? getDummyTimestampSpec() : timestampSpec,
+        timestampSpec: timestampSchema === 'column' ? PLACEHOLDER_TIMESTAMP_SPEC : timestampSpec,
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -365,7 +367,10 @@ export async function sampleForTimestamp(
   );
 
   // If we are not parsing a column then there is nothing left to do
-  if (!columnTimestampSpec) return sampleColumns;
+  if (timestampSchema === 'none') return sampleColumns;
+
+  const transforms: Transform[] =
+    deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
   // If we are trying to parts a column then get a bit fancy:
   // Query the same sample again (same cache key)
@@ -377,6 +382,9 @@ export async function sampleForTimestamp(
         dataSource: 'sample',
         dimensionsSpec: {},
         timestampSpec,
+        transformSpec: {
+          transforms: transforms.filter(transform => transform.name === '__time'),
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,

@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './druid-lookup';
-export * from './query-state';
-export * from './query-manager';
-export * from './query-cursor';
-export * from './local-storage-keys';
-export * from './column-metadata';
-export * from './object-change';
+import { getDimensionSpecs } from './dimension-spec';
+
+describe('dimension-spec', () => {
+  it('getDimensionSpecs', () => {
+    expect(getDimensionSpecs({ header: ['header'], rows: [] }, true)).toMatchInlineSnapshot(`
+      Array [
+        "header",
+      ]
+    `);
+  });
+});

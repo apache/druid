@@ -21,7 +21,6 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { caseInsensitiveContains, filterMap, sortWithPrefixSuffix } from '../../../utils';
 import {
   DimensionSpec,
   DimensionsSpec,
@@ -30,7 +29,8 @@ import {
   getMetricSpecName,
   inflateDimensionSpec,
   MetricSpec,
-} from '../../../utils/ingestion-spec';
+} from '../../../druid-models';
+import { caseInsensitiveContains, filterMap, sortWithPrefixSuffix } from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './schema-table.scss';

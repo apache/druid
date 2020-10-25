@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
+import { DimensionMode, getDimensionSpecs, getMetricSpecs, IngestionSpec } from '../druid-models';
+
 import { filterMap } from './general';
-import { DimensionMode, DimensionSpec, IngestionSpec, MetricSpec } from './ingestion-spec';
 import { deepDelete, deepSet } from './object-change';
 import { HeaderAndRows } from './sampler';
 
@@ -43,39 +44,6 @@ export function getColumnTypeFromHeaderAndRows(
 ): string {
   return guessTypeFromSample(
     filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
-  );
-}
-
-export function getDimensionSpecs(
-  headerAndRows: HeaderAndRows,
-  hasRollup: boolean,
-): (string | DimensionSpec)[] {
-  return filterMap(headerAndRows.header, h => {
-    if (h === '__time') return;
-    const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
-    if (guessedType === 'string') return h;
-    if (hasRollup) return;
-    return {
-      type: guessedType,
-      name: h,
-    };
-  });
-}
-
-export function getMetricSpecs(headerAndRows: HeaderAndRows): MetricSpec[] {
-  return [{ name: 'count', type: 'count' }].concat(
-    filterMap(headerAndRows.header, h => {
-      if (h === '__time') return;
-      const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
-      switch (guessedType) {
-        case 'double':
-          return { name: `sum_${h}`, type: 'doubleSum', fieldName: h };
-        case 'long':
-          return { name: `sum_${h}`, type: 'longSum', fieldName: h };
-        default:
-          return;
-      }
-    }),
   );
 }
 

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Code } from '@blueprintjs/core';
 import React from 'react';
 
 import { ExternalLink, Field } from '../components';
@@ -58,3 +59,45 @@ export const TRANSFORM_FIELDS: Field<Transform>[] = [
     ),
   },
 ];
+
+export function getTimestampExpressionFields(transforms: Transform[]): Field<Transform[]>[] {
+  const timeTransformIndex = transforms.findIndex(transform => transform.name === '__time');
+  if (timeTransformIndex < 0) return [];
+
+  return [
+    {
+      name: `${timeTransformIndex}.expression`,
+      label: 'Expression',
+      type: 'string',
+      placeholder: `timestamp_parse(concat("date", ' ', "time"))`,
+      required: true,
+      suggestions: [
+        `timestamp_parse(concat("date", ' ', "time"))`,
+        `timestamp_parse(concat("year", '-', "month", '-', "day"))`,
+      ],
+      info: (
+        <>
+          A valid Druid{' '}
+          <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>{' '}
+          that should output a millis timestamp. You most likely want to use the{' '}
+          <Code>timestamp_parse</Code> function at the outer level.
+        </>
+      ),
+    },
+  ];
+}
+
+export function addTimestampTransform(transforms: Transform[]): Transform[] {
+  return [
+    {
+      name: '__time',
+      type: 'expression',
+      expression: '',
+    },
+  ].concat(transforms);
+}
+
+export function removeTimestampTransform(transforms: Transform[]): Transform[] | undefined {
+  const newTransforms = transforms.filter(transform => transform.name !== '__time');
+  return newTransforms.length ? newTransforms : undefined;
+}

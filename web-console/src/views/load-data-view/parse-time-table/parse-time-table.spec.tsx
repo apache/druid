@@ -19,7 +19,7 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { getDummyTimestampSpec } from '../../../utils/ingestion-spec';
+import { PLACEHOLDER_TIMESTAMP_SPEC } from '../../../druid-models';
 
 import { ParseTimeTable } from './parse-time-table';
 
@@ -39,7 +39,7 @@ describe('parse time table', () => {
       <ParseTimeTable
         sampleBundle={{
           headerAndRows: sampleData,
-          timestampSpec: getDummyTimestampSpec(),
+          timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
         }}
         columnFilter=""
         possibleTimestampColumnsOnly={false}

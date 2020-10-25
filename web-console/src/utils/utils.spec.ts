@@ -16,15 +16,13 @@
  * limitations under the License.
  */
 
-import { getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
+import { IngestionSpec } from '../druid-models';
+
 import {
   getColumnTypeFromHeaderAndRows,
-  getDimensionSpecs,
-  getMetricSpecs,
   guessTypeFromSample,
   updateSchemaWithSample,
 } from './druid-type';
-import { IngestionSpec } from './ingestion-spec';
 import { applyCache, headerFromSampleResponse } from './sampler';
 
 describe('test-utils', () => {
@@ -198,25 +196,6 @@ describe('druid-type.ts', () => {
     ).toMatchInlineSnapshot(`"string"`);
   });
 
-  it('spec-utils getDimensionSpecs', () => {
-    expect(getDimensionSpecs({ header: ['header'], rows: [] }, true)).toMatchInlineSnapshot(`
-      Array [
-        "header",
-      ]
-    `);
-  });
-
-  it('spec-utils getMetricSecs', () => {
-    expect(getMetricSpecs({ header: ['header'], rows: [] })).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "name": "count",
-          "type": "count",
-        },
-      ]
-    `);
-  });
-
   it('spec-utils updateSchemaWithSample', () => {
     expect(
       updateSchemaWithSample(ingestionSpec, { header: ['header'], rows: [] }, 'specific', true),
@@ -266,18 +245,5 @@ describe('druid-type.ts', () => {
         "type": "index_parallel",
       }
     `);
-  });
-});
-describe('druid-query.ts', () => {
-  it('spec-utils parseHtmlError', () => {
-    expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
-  });
-
-  it('spec-utils parseHtmlError', () => {
-    expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-  });
-
-  it('spec-utils parseQueryPlan', () => {
-    expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
   });
 });

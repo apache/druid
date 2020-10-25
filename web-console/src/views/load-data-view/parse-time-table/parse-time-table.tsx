@@ -22,13 +22,13 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import {
   getTimestampSpecColumn,
   isColumnTimestampSpec,
   TimestampSpec,
-} from '../../../utils/ingestion-spec';
+} from '../../../druid-models';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';

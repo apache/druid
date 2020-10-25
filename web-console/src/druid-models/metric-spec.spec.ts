@@ -16,12 +16,17 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './druid-lookup';
-export * from './query-state';
-export * from './query-manager';
-export * from './query-cursor';
-export * from './local-storage-keys';
-export * from './column-metadata';
-export * from './object-change';
+import { getMetricSpecs } from './metric-spec';
+
+describe('metric-spec', () => {
+  it('getMetricSecs', () => {
+    expect(getMetricSpecs({ header: ['header'], rows: [] })).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "name": "count",
+          "type": "count",
+        },
+      ]
+    `);
+  });
+});

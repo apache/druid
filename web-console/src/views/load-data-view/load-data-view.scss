@@ -19,6 +19,8 @@
 @import '~@blueprintjs/core/src/common/colors';
 @import '../../variables';
 
+$control-bar-width: 300px;
+
 @mixin sunk-panel {
   background: rgba($dark-gray1, 0.5);
   border-radius: $pt-border-radius;
@@ -30,7 +32,7 @@
   height: 100%;
   display: grid;
   grid-gap: $thin-padding 5px;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr $control-bar-width;
   grid-template-rows: 60px 1fr 28px;
   grid-template-areas:
     'navi navi'
@@ -144,7 +146,7 @@
   &.tuning,
   &.publish {
     grid-gap: 20px 40px;
-    grid-template-columns: 1fr 1fr 280px;
+    grid-template-columns: 1fr 1fr $control-bar-width;
     grid-template-areas:
       'navi navi navi'
       'main othr ctrl'

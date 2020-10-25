@@ -54,11 +54,77 @@ import {
 } from '../../components';
 import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
-import { Transform, TRANSFORM_FIELDS } from '../../druid-models';
+import {
+  addTimestampTransform,
+  CONSTANT_TIMESTAMP_SPEC,
+  CONSTANT_TIMESTAMP_SPEC_FIELDS,
+  DIMENSION_SPEC_FIELDS,
+  FLATTEN_FIELD_FIELDS,
+  getTimestampExpressionFields,
+  getTimestampSchema,
+  INPUT_FORMAT_FIELDS,
+  METRIC_SPEC_FIELDS,
+  removeTimestampTransform,
+  TIMESTAMP_SPEC_FIELDS,
+  TimestampSpec,
+  Transform,
+  TRANSFORM_FIELDS,
+} from '../../druid-models';
+import {
+  adjustTuningConfig,
+  cleanSpec,
+  computeFlattenPathsForData,
+  DimensionMode,
+  DimensionSpec,
+  DimensionsSpec,
+  DruidFilter,
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
+  fillDataSourceNameIfNeeded,
+  fillInputFormat,
+  FlattenField,
+  getDimensionMode,
+  getFilterFormFields,
+  getIngestionComboType,
+  getIngestionDocLink,
+  getIngestionImage,
+  getIngestionTitle,
+  getIoConfigFormFields,
+  getIoConfigTuningFormFields,
+  getPartitionRelatedTuningSpecFormFields,
+  getRequiredModule,
+  getRollup,
+  getSpecType,
+  getTuningSpecFormFields,
+  GranularitySpec,
+  IngestionComboTypeWithExtra,
+  IngestionSpec,
+  InputFormat,
+  inputFormatCanFlatten,
+  invalidIoConfig,
+  invalidTuningConfig,
+  IoConfig,
+  isDruidSource,
+  isEmptyIngestionSpec,
+  issueWithIoConfig,
+  isTask,
+  joinFilter,
+  MAX_INLINE_DATA_LENGTH,
+  MetricSpec,
+  normalizeSpec,
+  splitFilter,
+  TuningConfig,
+  updateIngestionType,
+  upgradeSpec,
+} from '../../druid-models';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
+  deepDelete,
+  deepGet,
+  deepSet,
+  deepSetMulti,
   filterMap,
   getDruidErrorMessage,
   localStorageGet,
@@ -71,61 +137,6 @@ import {
 } from '../../utils';
 import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
 import { updateSchemaWithSample } from '../../utils/druid-type';
-import {
-  adjustTuningConfig,
-  cleanSpec,
-  DimensionMode,
-  DimensionSpec,
-  DimensionsSpec,
-  DruidFilter,
-  EMPTY_ARRAY,
-  EMPTY_OBJECT,
-  fillDataSourceNameIfNeeded,
-  fillInputFormat,
-  FlattenField,
-  getConstantTimestampSpec,
-  getDimensionMode,
-  getDimensionSpecFormFields,
-  getFilterFormFields,
-  getFlattenFieldFormFields,
-  getIngestionComboType,
-  getIngestionDocLink,
-  getIngestionImage,
-  getIngestionTitle,
-  getInputFormatFormFields,
-  getIoConfigFormFields,
-  getIoConfigTuningFormFields,
-  getMetricSpecFormFields,
-  getPartitionRelatedTuningSpecFormFields,
-  getRequiredModule,
-  getRollup,
-  getSpecType,
-  getTimestampSpecFormFields,
-  getTuningSpecFormFields,
-  GranularitySpec,
-  IngestionComboTypeWithExtra,
-  IngestionSpec,
-  InputFormat,
-  inputFormatCanFlatten,
-  invalidIoConfig,
-  invalidTuningConfig,
-  IoConfig,
-  isColumnTimestampSpec,
-  isDruidSource,
-  isEmptyIngestionSpec,
-  issueWithIoConfig,
-  isTask,
-  joinFilter,
-  MAX_INLINE_DATA_LENGTH,
-  MetricSpec,
-  normalizeSpec,
-  splitFilter,
-  TimestampSpec,
-  TuningConfig,
-  updateIngestionType,
-  upgradeSpec,
-} from '../../utils/ingestion-spec';
-import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import {
   CacheRows,
   ExampleManifest,
@@ -145,7 +156,6 @@ import {
   SampleResponseWithExtraInfo,
   SampleStrategy,
 } from '../../utils/sampler';
-import { computeFlattenPathsForData } from '../../utils/spec-utils';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
@@ -186,7 +196,7 @@ function showBlankLine(line: SampleEntry): string {
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
-  if (!headerAndRows) return getConstantTimestampSpec();
+  if (!headerAndRows) return CONSTANT_TIMESTAMP_SPEC;
 
   const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
     const possibleFormat = possibleDruidFormatForValues(
@@ -203,7 +213,7 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
     timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
     timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
     timestampSpecs[0] || // Fall back to the first one
-    getConstantTimestampSpec() // Ok, empty it is...
+    CONSTANT_TIMESTAMP_SPEC // Ok, empty it is...
   );
 }
 
@@ -1379,7 +1389,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {!selectedFlattenField && (
             <>
               <AutoForm
-                fields={getInputFormatFormFields()}
+                fields={INPUT_FORMAT_FIELDS}
                 model={inputFormat}
                 onChange={p =>
                   this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
@@ -1460,7 +1470,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getFlattenFieldFormFields()}
+            fields={FLATTEN_FIELD_FIELDS}
             model={selectedFlattenField}
             onChange={f => this.setState({ selectedFlattenField: f })}
           />
@@ -1569,9 +1579,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderTimestampStep() {
     const { specPreview: spec, columnFilter, specialColumnsOnly, timestampQueryState } = this.state;
+    const timestampSchema = getTimestampSchema(spec);
     const timestampSpec: TimestampSpec =
       deepGet(spec, 'spec.dataSchema.timestampSpec') || EMPTY_OBJECT;
-    const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
+    const transforms: Transform[] =
+      deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
     let mainFill: JSX.Element | string = '';
     if (timestampQueryState.isInit()) {
@@ -1621,45 +1633,87 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p>
               Druid partitions data based on the primary time column of your data. This column is
-              stored internally in Druid as <Code>__time</Code>. Please specify the primary time
-              column. If you do not have any time columns, you can choose "Constant value" to create
-              a default one.
+              stored internally in Druid as <Code>__time</Code>.
+            </p>
+            <p>Configure how to define the time column for this data.</p>
+            <p>
+              If your data does not have a time column, you can select "None" to use a placeholder
+              value. If the time information is spread across multiple columns you can combine them
+              into one by selecting "Multi-column" and defining a transform.
             </p>
             <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#timestampspec`} />
           </Callout>
-          <FormGroup label="Timestamp spec">
+          <FormGroup label="Parse timestamp from">
             <ButtonGroup>
               <Button
-                text="From column"
-                active={timestampSpecFromColumn}
+                text="None"
+                active={timestampSchema === 'none'}
+                onClick={() => {
+                  this.updateSpecPreview(
+                    deepSetMulti(spec, {
+                      'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
+                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
+                        transforms,
+                      ),
+                    }),
+                  );
+                }}
+              />
+              <Button
+                text="Column"
+                active={timestampSchema === 'column'}
                 onClick={() => {
                   const timestampSpec = {
                     column: 'timestamp',
                     format: 'auto',
                   };
                   this.updateSpecPreview(
-                    deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec),
+                    deepSetMulti(spec, {
+                      'spec.dataSchema.timestampSpec': timestampSpec,
+                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
+                        transforms,
+                      ),
+                    }),
                   );
                 }}
               />
               <Button
-                text="Constant value"
-                active={!timestampSpecFromColumn}
+                text="Multi-column"
+                active={timestampSchema === 'expression'}
                 onClick={() => {
                   this.updateSpecPreview(
-                    deepSet(spec, 'spec.dataSchema.timestampSpec', getConstantTimestampSpec()),
+                    deepSetMulti(spec, {
+                      'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
+                      'spec.dataSchema.transformSpec.transforms': addTimestampTransform(transforms),
+                    }),
                   );
                 }}
               />
             </ButtonGroup>
           </FormGroup>
-          <AutoForm
-            fields={getTimestampSpecFormFields(timestampSpec)}
-            model={timestampSpec}
-            onChange={timestampSpec => {
-              this.updateSpecPreview(deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec));
-            }}
-          />
+          {timestampSchema === 'expression' ? (
+            <AutoForm
+              fields={getTimestampExpressionFields(transforms)}
+              model={transforms}
+              onChange={transforms => {
+                this.updateSpecPreview(
+                  deepSet(spec, 'spec.dataSchema.transformSpec.transforms', transforms),
+                );
+              }}
+            />
+          ) : (
+            <AutoForm
+              fields={
+                timestampSchema === 'none' ? CONSTANT_TIMESTAMP_SPEC_FIELDS : TIMESTAMP_SPEC_FIELDS
+              }
+              model={timestampSpec}
+              onChange={timestampSpec => {
+                this.updateSpecPreview(
+                  deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec),
+                );
+              }}
+            />
+          )}
           {this.renderApplyButtonBar(timestampQueryState)}
         </div>
         {this.renderNextBar({
@@ -2549,7 +2603,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getDimensionSpecFormFields()}
+            fields={DIMENSION_SPEC_FIELDS}
             model={selectedDimensionSpec}
             onChange={selectedDimensionSpec => this.setState({ selectedDimensionSpec })}
           />
@@ -2672,7 +2726,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getMetricSpecFormFields()}
+            fields={METRIC_SPEC_FIELDS}
             model={selectedMetricSpec}
             onChange={selectedMetricSpec => this.setState({ selectedMetricSpec })}
           />
