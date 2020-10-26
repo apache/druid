@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
+import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,8 +33,10 @@ public class CountAdjustmentHolder
 {
   private static final Logger log = new Logger(CountAdjustmentHolder.class);
   private final HashMap<String, OnheapIncrementalIndex.MetricAdjustmentHolder> metricTypeAndHolderMap;
-  private int[] appendBytesAll = null;
-  private int[] rollupRowsAll = null;
+  @Nullable
+  private int[] appendBytesAll;
+  @Nullable
+  private int[] rollupRowsAll;
 
   public CountAdjustmentHolder(HashMap<String, OnheapIncrementalIndex.MetricAdjustmentHolder> metricTypeAndHolderMap)
   {
