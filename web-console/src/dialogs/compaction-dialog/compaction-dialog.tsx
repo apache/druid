@@ -19,46 +19,10 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, JsonInput } from '../../components';
-import {
-  FormJsonSelector,
-  FormJsonTabs,
-} from '../../components/form-json-selector/form-json-selector';
+import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
 import { COMPACTION_CONFIG_FIELDS, CompactionConfig } from '../../druid-models';
 
 import './compaction-dialog.scss';
-
-/*
-function validCompactionConfig(compactionConfig: CompactionConfig): boolean {
-  const partitionsSpecType =
-    deepGet(compactionConfig, 'tuningConfig.partitionsSpec.type') || 'dynamic';
-  switch (partitionsSpecType) {
-    // case 'dynamic': // Nothing to check for dynamic
-    case 'hashed':
-      return !(
-        Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment')) &&
-        Boolean(deepGet(compactionConfig, 'tuningConfig.partitionsSpec.numShards'))
-      );
-      break;
-    case 'single_dim':
-      if (!deepGet(compactionConfig, 'tuningConfig.partitionsSpec.partitionDimension')) {
-        return false;
-      }
-      const hasTargetRowsPerSegment = Boolean(
-        deepGet(compactionConfig, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
-      );
-      const hasMaxRowsPerSegment = Boolean(
-        deepGet(compactionConfig, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
-      );
-      if (hasTargetRowsPerSegment === hasMaxRowsPerSegment) {
-        return false;
-      }
-      break;
-  }
-
-  return true;
-}
-*/
 
 export interface CompactionDialogProps {
   onClose: () => void;

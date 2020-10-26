@@ -18,7 +18,6 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import classNames from 'classnames';
 import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
@@ -56,10 +55,6 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationState
 > {
   private capabilitiesQueryManager: QueryManager<null, Capabilities>;
-
-  static getAxios() {
-    return axios;
-  }
 
   static shownNotifications() {
     AppToaster.show({
