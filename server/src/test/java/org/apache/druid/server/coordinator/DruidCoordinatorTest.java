@@ -694,7 +694,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
-        null,
+        () -> null,
         null,
         scheduledExecutorFactory,
         null,
