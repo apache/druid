@@ -28,6 +28,10 @@ import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons/toaster';
 
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);

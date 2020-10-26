@@ -18,8 +18,9 @@
 
 import { Field } from '../components';
 import { filterMap } from '../utils';
-import { getColumnTypeFromHeaderAndRows } from '../utils/druid-type';
 import { HeaderAndRows } from '../utils/sampler';
+
+import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface DimensionsSpec {
   dimensions?: (string | DimensionSpec)[];
@@ -67,15 +68,16 @@ export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): Dim
 
 export function getDimensionSpecs(
   headerAndRows: HeaderAndRows,
+  typeHints: Record<string, string>,
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(headerAndRows.header, h => {
     if (h === '__time') return;
-    const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
-    if (guessedType === 'string') return h;
+    const type = typeHints[h] || getColumnTypeFromHeaderAndRows(headerAndRows, h);
+    if (type === 'string') return h;
     if (hasRollup) return;
     return {
-      type: guessedType,
+      type,
       name: h,
     };
   });

@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { cleanSpec, downgradeSpec, guessInputFormat, upgradeSpec } from './ingestion-spec';
+import {
+  cleanSpec,
+  downgradeSpec,
+  getColumnTypeFromHeaderAndRows,
+  guessInputFormat,
+  guessTypeFromSample,
+  IngestionSpec,
+  updateSchemaWithSample,
+  upgradeSpec,
+} from './ingestion-spec';
 
 describe('ingestion-spec', () => {
   const oldSpec = {
@@ -150,5 +159,100 @@ describe('ingestion-spec', () => {
     it('works for regex', () => {
       expect(guessInputFormat(['A|B|X|Y']).type).toEqual('regex');
     });
+  });
+});
+
+describe('spec utils', () => {
+  const ingestionSpec: IngestionSpec = {
+    type: 'index_parallel',
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        inputSource: {
+          type: 'http',
+          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+        },
+        inputFormat: {
+          type: 'json',
+        },
+      },
+      tuningConfig: {
+        type: 'index_parallel',
+      },
+      dataSchema: {
+        dataSource: 'wikipedia',
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'DAY',
+          queryGranularity: 'HOUR',
+        },
+        timestampSpec: {
+          column: 'timestamp',
+          format: 'iso',
+        },
+        dimensionsSpec: {},
+      },
+    },
+  };
+
+  it('guessTypeFromSample', () => {
+    expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
+  });
+
+  it('getColumnTypeFromHeaderAndRows', () => {
+    expect(
+      getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
+    ).toMatchInlineSnapshot(`"string"`);
+  });
+
+  it('updateSchemaWithSample', () => {
+    expect(
+      updateSchemaWithSample(ingestionSpec, { header: ['header'], rows: [] }, 'specific', true),
+    ).toMatchInlineSnapshot(`
+      Object {
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "header",
+              ],
+            },
+            "granularitySpec": Object {
+              "queryGranularity": "HOUR",
+              "rollup": true,
+              "segmentGranularity": "DAY",
+              "type": "uniform",
+            },
+            "metricsSpec": Array [
+              Object {
+                "name": "count",
+                "type": "count",
+              },
+            ],
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://static.imply.io/data/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "type": "index_parallel",
+          },
+        },
+        "type": "index_parallel",
+      }
+    `);
   });
 });

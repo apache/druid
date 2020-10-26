@@ -22,8 +22,9 @@ import React from 'react';
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import { filterMap, oneOf } from '../utils';
-import { getColumnTypeFromHeaderAndRows } from '../utils/druid-type';
 import { HeaderAndRows } from '../utils/sampler';
+
+import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface MetricSpec {
   type: string;
@@ -309,14 +310,33 @@ export function getMetricSpecName(metricSpec: MetricSpec): string {
   );
 }
 
-export function getMetricSpecs(headerAndRows: HeaderAndRows): MetricSpec[] {
+export function getMetricSpecSingleFieldName(metricSpec: MetricSpec): string | undefined {
+  return (
+    metricSpec.fieldName ||
+    (metricSpec.aggregator ? getMetricSpecSingleFieldName(metricSpec.aggregator) : undefined)
+  );
+}
+
+export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefined {
+  if (metricSpec.aggregator) return getMetricSpecOutputType(metricSpec.aggregator);
+  const m = String(metricSpec.type).match(/^(long|float|double)/);
+  if (!m) return;
+  return m[1];
+}
+
+export function getMetricSpecs(
+  headerAndRows: HeaderAndRows,
+  typeHints: Record<string, string>,
+): MetricSpec[] {
   return [{ name: 'count', type: 'count' }].concat(
     filterMap(headerAndRows.header, h => {
       if (h === '__time') return;
-      const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
-      switch (guessedType) {
+      const type = typeHints[h] || getColumnTypeFromHeaderAndRows(headerAndRows, h);
+      switch (type) {
         case 'double':
           return { name: `sum_${h}`, type: 'doubleSum', fieldName: h };
+        case 'float':
+          return { name: `sum_${h}`, type: 'floatSum', fieldName: h };
         case 'long':
           return { name: `sum_${h}`, type: 'longSum', fieldName: h };
         default:

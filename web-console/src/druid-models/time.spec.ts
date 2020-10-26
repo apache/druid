@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { timeFormatMatches } from './druid-time';
+import { timeFormatMatches } from './time';
 
 describe('timeFormatMatches', () => {
   it('works for auto', () => {

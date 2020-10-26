@@ -20,7 +20,6 @@ import axios from 'axios';
 
 import {
   DimensionsSpec,
-  EMPTY_ARRAY,
   getSpecType,
   getTimestampSchema,
   IngestionSpec,
@@ -37,7 +36,13 @@ import {
 } from '../druid-models';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { alphanumericCompare, filterMap, oneOf, sortWithPrefixSuffix } from './general';
+import {
+  alphanumericCompare,
+  EMPTY_ARRAY,
+  filterMap,
+  oneOf,
+  sortWithPrefixSuffix,
+} from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;

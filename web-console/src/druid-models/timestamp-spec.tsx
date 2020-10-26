@@ -19,15 +19,15 @@
 import React from 'react';
 
 import { ExternalLink, Field } from '../components';
-import { deepGet } from '../utils';
+import { deepGet, EMPTY_ARRAY, EMPTY_OBJECT } from '../utils';
+
+import { IngestionSpec } from './ingestion-spec';
 import {
   BASIC_TIME_FORMATS,
   DATE_ONLY_TIME_FORMATS,
   DATETIME_TIME_FORMATS,
   OTHER_TIME_FORMATS,
-} from '../utils/druid-time';
-
-import { EMPTY_ARRAY, EMPTY_OBJECT, IngestionSpec } from './ingestion-spec';
+} from './time';
 import { Transform } from './transform-spec';
 
 const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';

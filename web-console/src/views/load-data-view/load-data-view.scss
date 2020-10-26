@@ -21,6 +21,10 @@
 
 $control-bar-width: 300px;
 
+$icon-width: 100px;
+$actual-icon-width: 520px;
+$actual-icon-height: 400px;
+
 @mixin sunk-panel {
   background: rgba($dark-gray1, 0.5);
   border-radius: $pt-border-radius;
@@ -135,7 +139,8 @@ $control-bar-width: 300px;
         }
 
         img {
-          width: 100px;
+          width: $icon-width;
+          height: $icon-width * ($actual-icon-height / $actual-icon-width);
           display: inline-block;
         }
       }

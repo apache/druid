@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { jodaFormatToRegExp } from './joda-to-regexp';
+import { jodaFormatToRegExp } from '../utils/joda-to-regexp';
 
 export const NUMERIC_TIME_FORMATS: string[] = ['posix', 'millis', 'micro', 'nano'];
 export const BASIC_TIME_FORMATS: string[] = ['auto', 'iso'].concat(NUMERIC_TIME_FORMATS);

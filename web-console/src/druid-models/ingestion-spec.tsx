@@ -21,20 +21,36 @@ import React from 'react';
 
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { deepDelete, deepGet, deepMove, deepSet, oneOf } from '../utils';
+import {
+  deepDelete,
+  deepGet,
+  deepMove,
+  deepSet,
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
+  filterMap,
+  oneOf,
+} from '../utils';
+import { HeaderAndRows } from '../utils/sampler';
 
-import { DimensionsSpec } from './dimension-spec';
+import {
+  DimensionsSpec,
+  getDimensionSpecName,
+  getDimensionSpecs,
+  getDimensionSpecType,
+} from './dimension-spec';
 import { InputFormat, issueWithInputFormat } from './input-format';
 import { InputSource, issueWithInputSource } from './input-source';
-import { MetricSpec } from './metric-spec';
+import {
+  getMetricSpecOutputType,
+  getMetricSpecs,
+  getMetricSpecSingleFieldName,
+  MetricSpec,
+} from './metric-spec';
 import { PLACEHOLDER_TIMESTAMP_SPEC, TimestampSpec } from './timestamp-spec';
 import { TransformSpec } from './transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
-
-// These constants are used to make sure that they are not constantly recreated thrashing the pure components
-export const EMPTY_OBJECT: any = {};
-export const EMPTY_ARRAY: any[] = [];
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
@@ -2005,110 +2021,90 @@ function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): Inp
   return inputFormat;
 }
 
-export type DruidFilter = Record<string, any>;
+// ------------------------
 
-export interface DimensionFiltersWithRest {
-  dimensionFilters: DruidFilter[];
-  restFilter?: DruidFilter;
+export function guessTypeFromSample(sample: any[]): string {
+  const definedValues = sample.filter(v => v != null);
+  if (
+    definedValues.length &&
+    definedValues.every(v => !isNaN(v) && (typeof v === 'number' || typeof v === 'string'))
+  ) {
+    if (definedValues.every(v => v % 1 === 0)) {
+      return 'long';
+    } else {
+      return 'double';
+    }
+  } else {
+    return 'string';
+  }
 }
 
-export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
-  const inputAndFilters: DruidFilter[] = filter
-    ? filter.type === 'and' && Array.isArray(filter.fields)
-      ? filter.fields
-      : [filter]
-    : EMPTY_ARRAY;
-  const dimensionFilters: DruidFilter[] = inputAndFilters.filter(
-    f => typeof f.dimension === 'string',
+export function getColumnTypeFromHeaderAndRows(
+  headerAndRows: HeaderAndRows,
+  column: string,
+): string {
+  return guessTypeFromSample(
+    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
   );
-  const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
-
-  return {
-    dimensionFilters,
-    restFilter: restFilters.length
-      ? restFilters.length > 1
-        ? { type: 'and', filters: restFilters }
-        : restFilters[0]
-      : undefined,
-  };
 }
 
-export function joinFilter(
-  dimensionFiltersWithRest: DimensionFiltersWithRest,
-): DruidFilter | undefined {
-  const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
-  let newFields = dimensionFilters || EMPTY_ARRAY;
-  if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
+function getTypeHintsFromSpec(spec: IngestionSpec): Record<string, string> {
+  const typeHints: Record<string, string> = {};
+  const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
+  for (const currentDimension of currentDimensions) {
+    typeHints[getDimensionSpecName(currentDimension)] = getDimensionSpecType(currentDimension);
+  }
 
-  if (!newFields.length) return;
-  if (newFields.length === 1) return newFields[0];
-  return { type: 'and', fields: newFields };
+  const currentMetrics = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
+  for (const currentMetric of currentMetrics) {
+    const singleFieldName = getMetricSpecSingleFieldName(currentMetric);
+    const metricOutputType = getMetricSpecOutputType(currentMetric);
+    if (singleFieldName && metricOutputType) {
+      typeHints[singleFieldName] = metricOutputType;
+    }
+  }
+
+  return typeHints;
 }
 
-const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: ['selector', 'in', 'regex', 'like', 'not'],
-  },
-  {
-    name: 'dimension',
-    type: 'string',
-    defined: (df: DruidFilter) => oneOf(df.type, 'selector', 'in', 'regex', 'like'),
-  },
-  {
-    name: 'value',
-    type: 'string',
-    defined: (df: DruidFilter) => df.type === 'selector',
-  },
-  {
-    name: 'values',
-    type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'in',
-  },
-  {
-    name: 'pattern',
-    type: 'string',
-    defined: (df: DruidFilter) => oneOf(df.type, 'regex', 'like'),
-  },
+export function updateSchemaWithSample(
+  spec: IngestionSpec,
+  headerAndRows: HeaderAndRows,
+  dimensionMode: DimensionMode,
+  rollup: boolean,
+): IngestionSpec {
+  const typeHints = getTypeHintsFromSpec(spec);
 
-  {
-    name: 'field.type',
-    label: 'Sub-filter type',
-    type: 'string',
-    suggestions: ['selector', 'in', 'regex', 'like'],
-    defined: (df: DruidFilter) => df.type === 'not',
-  },
-  {
-    name: 'field.dimension',
-    label: 'Sub-filter dimension',
-    type: 'string',
-    defined: (df: DruidFilter) => df.type === 'not',
-  },
-  {
-    name: 'field.value',
-    label: 'Sub-filter value',
-    type: 'string',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'selector',
-  },
-  {
-    name: 'field.values',
-    label: 'Sub-filter values',
-    type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'in',
-  },
-  {
-    name: 'field.pattern',
-    label: 'Sub-filter pattern',
-    type: 'string',
-    defined: (df: DruidFilter) =>
-      df.type === 'not' && oneOf(deepGet(df, 'field.type'), 'regex', 'like'),
-  },
-];
+  let newSpec = spec;
 
-export function getFilterFormFields() {
-  return FILTER_FORM_FIELDS;
+  if (dimensionMode === 'auto-detect') {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', []);
+  } else {
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
+
+    const dimensions = getDimensionSpecs(headerAndRows, typeHints, rollup);
+    if (dimensions) {
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
+    }
+  }
+
+  if (rollup) {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'HOUR');
+
+    const metrics = getMetricSpecs(headerAndRows, typeHints);
+    if (metrics) {
+      newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
+    }
+  } else {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'NONE');
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
+  }
+
+  newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);
+  return newSpec;
 }
+
+// ------------------------
 
 export function upgradeSpec(spec: any): any {
   if (deepGet(spec, 'spec.ioConfig.firehose')) {

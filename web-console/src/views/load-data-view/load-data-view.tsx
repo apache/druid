@@ -59,6 +59,7 @@ import {
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
+  FILTER_FIELDS,
   FLATTEN_FIELD_FIELDS,
   getTimestampExpressionFields,
   getTimestampSchema,
@@ -69,6 +70,7 @@ import {
   TimestampSpec,
   Transform,
   TRANSFORM_FIELDS,
+  updateSchemaWithSample,
 } from '../../druid-models';
 import {
   adjustTuningConfig,
@@ -78,13 +80,10 @@ import {
   DimensionSpec,
   DimensionsSpec,
   DruidFilter,
-  EMPTY_ARRAY,
-  EMPTY_OBJECT,
   fillDataSourceNameIfNeeded,
   fillInputFormat,
   FlattenField,
   getDimensionMode,
-  getFilterFormFields,
   getIngestionComboType,
   getIngestionDocLink,
   getIngestionImage,
@@ -112,6 +111,8 @@ import {
   MAX_INLINE_DATA_LENGTH,
   MetricSpec,
   normalizeSpec,
+  NUMERIC_TIME_FORMATS,
+  possibleDruidFormatForValues,
   splitFilter,
   TuningConfig,
   updateIngestionType,
@@ -125,6 +126,8 @@ import {
   deepGet,
   deepSet,
   deepSetMulti,
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
   filterMap,
   getDruidErrorMessage,
   localStorageGet,
@@ -135,8 +138,6 @@ import {
   pluralIfNeeded,
   QueryState,
 } from '../../utils';
-import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
-import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
   CacheRows,
   ExampleManifest,
@@ -2101,7 +2102,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getFilterFormFields()}
+            fields={FILTER_FIELDS}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
             showCustom={f => !oneOf(f.type, 'selector', 'in', 'regex', 'like', 'not')}
@@ -2410,7 +2411,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 <Switch
                   checked={rollup}
                   onChange={() => this.setState({ newRollup: !rollup })}
-                  labelElement="Rollup"
+                  label="Rollup"
                 />
               </FormGroupWithInfo>
               <AutoForm

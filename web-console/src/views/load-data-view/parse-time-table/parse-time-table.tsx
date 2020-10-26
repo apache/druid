@@ -25,10 +25,10 @@ import { TableCellUnparseable } from '../../../components/table-cell-unparseable
 import {
   getTimestampSpecColumn,
   isColumnTimestampSpec,
+  possibleDruidFormatForValues,
   TimestampSpec,
 } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
