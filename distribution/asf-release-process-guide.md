@@ -69,7 +69,7 @@ Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/
 ...
 ```
 
-Once this is completed, open a PR to the master branch. Also be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the relese branch.
+Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
 
 ### Release branch hygiene
 
