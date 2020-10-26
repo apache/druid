@@ -705,7 +705,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
 
     DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0);
