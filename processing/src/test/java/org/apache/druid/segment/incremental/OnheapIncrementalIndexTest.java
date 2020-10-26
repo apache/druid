@@ -306,7 +306,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       ));
     }
     final long notAdjustBytes = addResult1.getBytesInMemory();
-    index.stopAdjust();
+    index.close();
 
     initCustomAggAdjustStrategy();
     final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
@@ -349,7 +349,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         ImmutableMap.of("billy", 1, "sum1", 1, "min1", 1, "custom", 1)
     ));
     final long adjustBytes = addResult.getBytesInMemory();
-    indexAdjust.stopAdjust();
     indexAdjust.close();
 
     final long actualAppendBytes = adjustBytes - notAdjustBytes;

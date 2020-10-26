@@ -341,7 +341,6 @@ public class AppenderatorImpl implements Appenderator
         );
       } else {
         isPersistRequired = true;
-        sink.stopAdjust();
       }
     }
     return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);

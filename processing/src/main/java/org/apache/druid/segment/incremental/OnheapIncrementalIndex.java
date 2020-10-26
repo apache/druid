@@ -254,16 +254,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
   }
 
-  @Override
-  public void stopAdjust()
-  {
-    if (!canAdjust()) {
-      return;
-    }
-    metricTypeAndHolderMap.clear();
-    adjustmentHolder = null;
-  }
-
   /**
    * Gives an estimated size of row in bytes, it accounts for:
    * <ul>

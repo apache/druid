@@ -284,16 +284,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     }
   }
 
-  public void stopAdjust()
-  {
-    synchronized (hydrantLock) {
-      IncrementalIndex index = currHydrant.getIndex();
-      if (index != null) {
-        index.stopAdjust();
-      }
-    }
-  }
-
   private boolean checkInDedupSet(InputRow row)
   {
     if (dedupColumn != null) {

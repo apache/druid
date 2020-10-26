@@ -181,8 +181,6 @@ public class DoublesSketchSizeAdjustStrategyTest extends InitializedNullHandling
       final long actualTotalBytes = (adjustIndex.getBytesInMemory().get() - initBytes);
       Assert.assertEquals(expectedTotalBytes, actualTotalBytes);
       // System.out.println(expectedTotalBytes + "," + actualTotalBytes + "," + notAdjustIndex.getBytesInMemory().get() + "," + adjustIndex.getBytesInMemory().get() + "," + initBytes);
-      notAdjustIndex.stopAdjust();
-      adjustIndex.stopAdjust();
       notAdjustIndex.close();
       adjustIndex.close();
     }

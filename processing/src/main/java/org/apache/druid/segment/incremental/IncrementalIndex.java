@@ -485,10 +485,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   {
   }
 
-  public void stopAdjust()
-  {
-  }
-
   public InputRow formatRow(InputRow row)
   {
     for (Function<InputRow, InputRow> rowTransformer : rowTransformers) {
