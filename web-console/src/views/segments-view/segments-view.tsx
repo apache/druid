@@ -62,11 +62,11 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
+    'Partitioning',
     'Partition',
     'Size',
     'Num rows',
     'Replicas',
-    'Partitioning',
     'Is published',
     'Is realtime',
     'Is available',
@@ -89,11 +89,11 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
+    'Partitioning',
     'Partition',
     'Size',
     'Num rows',
     'Replicas',
-    'Partitioning',
     'Is published',
     'Is realtime',
     'Is available',
@@ -511,6 +511,26 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
           },
           {
+            Header: 'Partitioning',
+            show: capabilities.hasSql() && hiddenColumns.exists('Partitioning'),
+            accessor: 'partitioning',
+            width: 100,
+            filterable: true,
+            Cell: ({ value }) => {
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({
+                      segmentFilter: addFilter(segmentFilter, 'partitioning', value),
+                    });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
+          },
+          {
             Header: 'Partition',
             show: hiddenColumns.exists('Partition'),
             accessor: 'partition_num',
@@ -554,26 +574,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 60,
             filterable: false,
             defaultSortDesc: true,
-          },
-          {
-            Header: 'Partitioning',
-            show: capabilities.hasSql() && hiddenColumns.exists('Partitioning'),
-            accessor: 'partitioning',
-            width: 100,
-            filterable: true,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({
-                      segmentFilter: addFilter(segmentFilter, 'partitioning', value),
-                    });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
           },
           {
             Header: 'Is published',

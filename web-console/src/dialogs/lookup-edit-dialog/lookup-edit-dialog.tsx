@@ -29,7 +29,7 @@ import React, { useState } from 'react';
 
 import { AutoForm, JsonInput } from '../../components';
 import { FormJsonSelector, FormJsonTabs } from '../../components';
-import { LOOKUP_FIELDS, LookupSpec } from '../../druid-models';
+import { isLookupInvalid, LOOKUP_FIELDS, LookupSpec } from '../../druid-models';
 
 import './lookup-edit-dialog.scss';
 
@@ -43,57 +43,6 @@ export interface LookupEditDialogProps {
   lookupSpec: LookupSpec;
   isEdit: boolean;
   allLookupTiers: string[];
-}
-
-export function isLookupSubmitDisabled(
-  lookupName: string | undefined,
-  lookupVersion: string | undefined,
-  lookupTier: string | undefined,
-  lookupSpec: LookupSpec | undefined,
-) {
-  console.log(AutoForm.issueWithModel(lookupSpec, LOOKUP_FIELDS));
-  return (
-    !lookupName ||
-    !lookupVersion ||
-    !lookupTier ||
-    Boolean(AutoForm.issueWithModel(lookupSpec, LOOKUP_FIELDS))
-  );
-
-  // if (
-  //   !disableSubmit &&
-  //   lookupSpec &&
-  //   lookupSpec.type === 'cachedNamespace' &&
-  //   lookupSpec.extractionNamespace
-  // ) {
-  //   switch (lookupSpec.extractionNamespace.type) {
-  //     case 'uri':
-  //       const namespaceParseSpec = lookupSpec.extractionNamespace.namespaceParseSpec;
-  //       disableSubmit = !namespaceParseSpec;
-  //       if (!namespaceParseSpec) break;
-  //       switch (namespaceParseSpec.format) {
-  //         case 'csv':
-  //           disableSubmit = !namespaceParseSpec.columns && !namespaceParseSpec.skipHeaderRows;
-  //           break;
-  //         case 'tsv':
-  //           disableSubmit = !namespaceParseSpec.columns;
-  //           break;
-  //         case 'customJson':
-  //           disableSubmit = !namespaceParseSpec.keyFieldName || !namespaceParseSpec.valueFieldName;
-  //           break;
-  //       }
-  //       break;
-  //     case 'jdbc':
-  //       const extractionNamespace = lookupSpec.extractionNamespace;
-  //       disableSubmit =
-  //         !extractionNamespace.namespace ||
-  //         !extractionNamespace.connectorConfig ||
-  //         !extractionNamespace.table ||
-  //         !extractionNamespace.keyColumn ||
-  //         !extractionNamespace.valueColumn;
-  //       break;
-  //   }
-  // }
-  // return disableSubmit;
 }
 
 export const LookupEditDialog = React.memo(function LookupEditDialog(props: LookupEditDialogProps) {
@@ -190,7 +139,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             onClick={() => {
               onSubmit(updateVersionOnSubmit && isEdit);
             }}
-            disabled={isLookupSubmitDisabled(lookupName, lookupVersion, lookupTier, lookupSpec)}
+            disabled={isLookupInvalid(lookupName, lookupVersion, lookupTier, lookupSpec)}
           />
         </div>
       </div>

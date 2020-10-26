@@ -52,6 +52,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Size",
             "Num rows",
             "Replicas",
+            "Partitioning",
             "Is published",
             "Is realtime",
             "Is available",
@@ -193,6 +194,14 @@ exports[`segments-view matches snapshot 1`] = `
             "filterable": false,
             "show": true,
             "width": 60,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Partitioning",
+            "accessor": "partitioning",
+            "filterable": true,
+            "show": true,
+            "width": 100,
           },
           Object {
             "Filter": [Function],

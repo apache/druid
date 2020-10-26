@@ -19,9 +19,8 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../components';
-import { oneOf } from '../utils';
-import { deepGet, deepSet } from '../utils/object-change';
+import { AutoForm, Field } from '../components';
+import { deepGet, deepSet, oneOf } from '../utils';
 
 export interface ExtractionNamespaceSpec {
   type?: string;
@@ -163,6 +162,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     defaultValue: 'csv',
     suggestions: ['csv', 'tsv', 'simpleJson', 'customJson'],
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'uri',
+    required: true,
     info: (
       <>
         <p>The format of the data in the lookup files.</p>
@@ -203,6 +203,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
       oneOf(deepGet(model, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    required: (model: LookupSpec) =>
+      !deepGet(model, 'extractionNamespace.namespaceParseSpec.hasHeaderRow'),
     info: 'The list of columns in the csv file',
   },
   {
@@ -439,3 +441,17 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     info: `If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true`,
   },
 ];
+
+export function isLookupInvalid(
+  lookupName: string | undefined,
+  lookupVersion: string | undefined,
+  lookupTier: string | undefined,
+  lookupSpec: LookupSpec | undefined,
+) {
+  return (
+    !lookupName ||
+    !lookupVersion ||
+    !lookupTier ||
+    Boolean(AutoForm.issueWithModel(lookupSpec, LOOKUP_FIELDS))
+  );
+}
