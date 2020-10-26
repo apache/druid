@@ -21,20 +21,11 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.java.util.common.logger.Logger;
 
-import java.util.Comparator;
-
 /**
  */
 public class InternalCountAdjustmentAggregator implements Aggregator
 {
   private static final Logger log = new Logger(InternalCountAdjustmentAggregator.class);
-  static final Comparator COMPARATOR = LongSumAggregator.COMPARATOR;
-
-  static Object combineValues(Object lhs, Object rhs)
-  {
-    return ((Number) lhs).longValue() + ((Number) rhs).longValue();
-  }
-
 
   private long count = 0;
   private final int[] appendingBytesOnRollupRows;
