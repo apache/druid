@@ -1639,7 +1639,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <p>
               If your data does not have a time column, you can select "None" to use a placeholder
               value. If the time information is spread across multiple columns you can combine them
-              into one by selecting "Multi-column" and defining a transform.
+              into one by selecting "Expression" and defining a transform expression.
             </p>
             <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#timestampspec`} />
           </Callout>
@@ -1678,7 +1678,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
               <Button
-                text="Multi-column"
+                text="Expression"
                 active={timestampSchema === 'expression'}
                 onClick={() => {
                   this.updateSpecPreview(
