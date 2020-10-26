@@ -51,13 +51,11 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
         && (request.getHttpURI().toString().contains(COORDINATOR)
         || request.getHttpURI().toString().contains(OVERLORD))) {
       logger.info(
-          "%s %s %s %s %s",
+          "%s %s %s %s",
           request.getRemoteAddr(),
           request.getMethod(),
           request.getHttpURI().toString(),
-          request.getProtocol(),
-          ((request.getRemoteUser() != null) ? request.getRemoteUser() :
-              (request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : ""))
+          request.getProtocol()
       );
     }
   }

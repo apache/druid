@@ -29,16 +29,12 @@ import org.junit.Test;
 
 import javax.ws.rs.HttpMethod;
 
-import java.security.Principal;
-
 public class JettyRequestLogTest
 {
   private static final String COORDINATOR = "/coordinator";
   private static final String OVERLORD = "/indexer";
   private static final String WORKER = "/worker";
   private static final String HTTP_PROTOCOL = "HTTP";
-  private static final String REMOTE_USER = "remote_user";
-  private static final String CERT_USER = "cert_user";
   private static final String REMOTE_ADDRESS = "druid.apache.org";
   private static final String INFO = "INFO";
   private static final String ERROR = "ERROR";
@@ -52,11 +48,9 @@ public class JettyRequestLogTest
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(COORDINATOR);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.GET).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(ERROR));
     JettyRequestLog logger = new JettyRequestLog();
@@ -73,11 +67,8 @@ public class JettyRequestLogTest
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.GET).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
@@ -86,7 +77,7 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithPostDebugEnabled()
+  public void testRequestLogWithPostDebugEnabledCoordinator()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
@@ -94,11 +85,8 @@ public class JettyRequestLogTest
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
@@ -107,108 +95,53 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithPostDebugDisabledNonNullRemoteUserNonCoordinator()
+  public void testRequestLogWithPostDebugEnabledOverlord()
+  {
+    Request req = EasyMock.createMock(Request.class);
+    Response resp = EasyMock.createMock(Response.class);
+    HttpURI foo = new HttpURI(OVERLORD);
+    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
+    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
+    EasyMock.replay(req, resp);
+    Configurator.setLevel(REQUEST_LOG,
+        Level.getLevel(DEBUG));
+    JettyRequestLog logger = new JettyRequestLog();
+    logger.log(req, resp);
+    EasyMock.verify(req);
+  }
+
+
+  @Test
+  public void testRequestLogWithPostDebugEnabledNonCoordinatorOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(WORKER);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
+        Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
     logger.log(req, resp);
     EasyMock.verify(req);
   }
 
   @Test
-  public void testRequestLogWithPostDebugDisabledNonNullRemoteUserCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPostDebugDisabledNullRemoteUserNonNullCertCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPostDebugDisabledNullRemoteUserNullCertCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(req.getUserPrincipal()).andReturn(null).anyTimes();
-    EasyMock.expect(p.getName()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPostDebugDisabledNonNullRemoteUserNonOverlord()
+  public void testRequestLogWithPostDebugDisabledNonCoordinatorOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(WORKER);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -217,20 +150,34 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithPostDebugDisabledNonNullRemoteUserOverlord()
+  public void testRequestLogWithPostDebugDisabledCoordinator()
+  {
+    Request req = EasyMock.createMock(Request.class);
+    Response resp = EasyMock.createMock(Response.class);
+    HttpURI foo = new HttpURI(COORDINATOR);
+    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
+    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
+    EasyMock.replay(req, resp);
+    Configurator.setLevel(REQUEST_LOG,
+        Level.getLevel(INFO));
+    JettyRequestLog logger = new JettyRequestLog();
+    logger.log(req, resp);
+    EasyMock.verify(req);
+  }
+
+  @Test
+  public void testRequestLogWithPostDebugDisabledOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(OVERLORD);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -239,151 +186,70 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithPostDebugDisabledNullRemoteUserNonNullCertOverlord()
+  public void testRequestLogWithDeleteDebugEnabledCoordinator()
+  {
+    Request req = EasyMock.createMock(Request.class);
+    Response resp = EasyMock.createMock(Response.class);
+    HttpURI foo = new HttpURI(COORDINATOR);
+    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
+    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
+    EasyMock.replay(req, resp);
+    Configurator.setLevel(REQUEST_LOG,
+        Level.getLevel(DEBUG));
+    JettyRequestLog logger = new JettyRequestLog();
+    logger.log(req, resp);
+    EasyMock.verify(req);
+  }
+
+  @Test
+  public void testRequestLogWithDeleteDebugEnabledOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(OVERLORD);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
+        Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
     logger.log(req, resp);
     EasyMock.verify(req);
   }
 
   @Test
-  public void testRequestLogWithPostDebugDisabledNullRemoteUserNullCertOverlord()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(OVERLORD);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(req.getUserPrincipal()).andReturn(null).anyTimes();
-    EasyMock.expect(p.getName()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithDeleteDebugDisabledNonNullRemoteUserNonCoordinator()
+  public void testRequestLogWithDeleteDebugEnabledNonCoordinatorOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(WORKER);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
+        Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
     logger.log(req, resp);
     EasyMock.verify(req);
   }
 
   @Test
-  public void testRequestLogWithDeleteDebugDisabledNonNullRemoteUserCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithDeleteDebugDisabledNullRemoteUserNonNullCertCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithDeleteDebugDisabledNullRemoteUserNullCertCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(req.getUserPrincipal()).andReturn(null).anyTimes();
-    EasyMock.expect(p.getName()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-  @Test
-  public void testRequestLogWithDeleteDebugDisabledNonNullRemoteUserNonOverlord()
+  public void testRequestLogWithDeleteDebugDisabledNonCoordinatorOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(WORKER);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -392,20 +258,34 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithDeleteDebugDisabledNonNullRemoteUserOverlord()
+  public void testRequestLogWithDeleteDebugDisabledCoordinator()
+  {
+    Request req = EasyMock.createMock(Request.class);
+    Response resp = EasyMock.createMock(Response.class);
+    HttpURI foo = new HttpURI(COORDINATOR);
+    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
+    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
+    EasyMock.replay(req, resp);
+    Configurator.setLevel(REQUEST_LOG,
+        Level.getLevel(INFO));
+    JettyRequestLog logger = new JettyRequestLog();
+    logger.log(req, resp);
+    EasyMock.verify(req);
+  }
+
+  @Test
+  public void testRequestLogWithDeleteDebugDisabledOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(OVERLORD);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -414,151 +294,70 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithDeleteDebugDisabledNullRemoteUserNonNullCertOverlord()
+  public void testRequestLogWithPutDebugEnabledCoordinator()
+  {
+    Request req = EasyMock.createMock(Request.class);
+    Response resp = EasyMock.createMock(Response.class);
+    HttpURI foo = new HttpURI(COORDINATOR);
+    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
+    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
+    EasyMock.replay(req, resp);
+    Configurator.setLevel(REQUEST_LOG,
+        Level.getLevel(DEBUG));
+    JettyRequestLog logger = new JettyRequestLog();
+    logger.log(req, resp);
+    EasyMock.verify(req);
+  }
+
+  @Test
+  public void testRequestLogWithPutDebugEnabledOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(OVERLORD);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
+        Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
     logger.log(req, resp);
     EasyMock.verify(req);
   }
 
   @Test
-  public void testRequestLogWithDeleteDebugDisabledNullRemoteUserNullCertOverlord()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(OVERLORD);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(req.getUserPrincipal()).andReturn(null).anyTimes();
-    EasyMock.expect(p.getName()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.DELETE).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPutDebugDisabledNonNullRemoteUserNonCoordinator()
+  public void testRequestLogWithPutDebugEnabledNonCoordinatorOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(WORKER);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
+        Level.getLevel(DEBUG));
     JettyRequestLog logger = new JettyRequestLog();
     logger.log(req, resp);
     EasyMock.verify(req);
   }
 
   @Test
-  public void testRequestLogWithPutDebugDisabledNonNullRemoteUserCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPutDebugDisabledNullRemoteUserNonNullCertCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPutDebugDisabledNullRemoteUserNullCertCoordinator()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(COORDINATOR);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(req.getUserPrincipal()).andReturn(null).anyTimes();
-    EasyMock.expect(p.getName()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-  @Test
-  public void testRequestLogWithPutDebugDisabledNonNullRemoteUserNonOverlord()
+  public void testRequestLogWithPutDebugDisabledNonCoordinatorOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(WORKER);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -567,20 +366,16 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithPutDebugDisabledNonNullRemoteUserOverlord()
+  public void testRequestLogWithPutDebugDisabledCoordinator()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(OVERLORD);
+    HttpURI foo = new HttpURI(COORDINATOR);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(REMOTE_USER).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -589,42 +384,16 @@ public class JettyRequestLogTest
   }
 
   @Test
-  public void testRequestLogWithPutDebugDisabledNullRemoteUserNonNullCertOverlord()
+  public void testRequestLogWithPutDebugDisabledOverlord()
   {
     Request req = EasyMock.createMock(Request.class);
     Response resp = EasyMock.createMock(Response.class);
     HttpURI foo = new HttpURI(OVERLORD);
     EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(p.getName()).andReturn(CERT_USER).anyTimes();
-    EasyMock.expect(req.getUserPrincipal()).andReturn(p).anyTimes();
     EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
     EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
     EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
-    Configurator.setLevel(REQUEST_LOG,
-        Level.getLevel(INFO));
-    JettyRequestLog logger = new JettyRequestLog();
-    logger.log(req, resp);
-    EasyMock.verify(req);
-  }
-
-  @Test
-  public void testRequestLogWithPutDebugDisabledNullRemoteUserNullCertOverlord()
-  {
-    Request req = EasyMock.createMock(Request.class);
-    Response resp = EasyMock.createMock(Response.class);
-    HttpURI foo = new HttpURI(OVERLORD);
-    EasyMock.expect(req.getHttpURI()).andReturn(foo).anyTimes();
-    Principal p = EasyMock.createMock(Principal.class);
-    EasyMock.expect(req.getUserPrincipal()).andReturn(null).anyTimes();
-    EasyMock.expect(p.getName()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(REMOTE_ADDRESS).anyTimes();
-    EasyMock.expect(req.getRemoteUser()).andReturn(null).anyTimes();
-    EasyMock.expect(req.getProtocol()).andReturn(HTTP_PROTOCOL).anyTimes();
-    EasyMock.expect(req.getMethod()).andReturn(HttpMethod.PUT).anyTimes();
-    EasyMock.replay(p, req, resp);
+    EasyMock.replay(req, resp);
     Configurator.setLevel(REQUEST_LOG,
         Level.getLevel(INFO));
     JettyRequestLog logger = new JettyRequestLog();
@@ -632,4 +401,3 @@ public class JettyRequestLogTest
     EasyMock.verify(req);
   }
 }
-
