@@ -54,9 +54,11 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -90,7 +92,8 @@ public class PubsubSupervisor implements Supervisor
   private final PubsubSupervisorTuningConfig tuningConfig;
   private final PubsubIndexTaskTuningConfig taskTuningConfig;
   private volatile Integer taskCount = 1;
-  private volatile List<String> taskIds = new ArrayList<>();
+  private volatile List<String> activeTaskIds = new ArrayList<>();
+  private volatile Map<String, DateTime> startTimes = new HashMap<>();
 
   public PubsubSupervisor(
       final TaskStorage taskStorage,
@@ -205,11 +208,11 @@ public class PubsubSupervisor implements Supervisor
       exec.submit(() -> {
         try {
           while (true) {
-            while (taskIds.size() < taskCount) {
+            while (activeTaskIds.size() < taskCount) {
               String taskId = IdUtils.getRandomIdWithPrefix(subscriptionName);
               PubsubIndexTask pubsubIndexTask = new PubsubIndexTask(
                   taskId,
-                  new TaskResource(subscriptionName, 1),
+                  new TaskResource(taskId, 1),
                   this.spec.getDataSchema(),
                   this.tuningConfig,
                   newIoConfig,
@@ -225,13 +228,31 @@ public class PubsubSupervisor implements Supervisor
               catch (EntryExistsException e) {
                 log.error("EntryExistsException");
               }
-              taskIds.add(taskId);
-              // log.info(StringUtils.format("[Task %s] Status: %s", taskId, taskStorage.getStatus(taskId)));
+              activeTaskIds.add(taskId);
+              startTimes.put(taskId, DateTimes.MAX);
             }
-            taskIds = taskIds
+            activeTaskIds = activeTaskIds
                 .stream().filter(t -> taskStorage.getStatus(t).isPresent() && !taskStorage.getStatus(t).get().isComplete())
                 .collect(Collectors.toList());
-            Thread.sleep(100);
+            HashMap<String, DateTime> updatedStartTimes = new HashMap<>(startTimes);
+            for (String taskId: startTimes.keySet()) {
+              if (!activeTaskIds.contains(taskId)) {
+                updatedStartTimes.remove(taskId);
+              } else if (startTimes.get(taskId).isEqual(DateTimes.MAX)) {
+                DateTime startTime = taskClient.getStartTime(taskId);
+                if (startTime != null) {
+                  updatedStartTimes.put(taskId, startTime);
+                }
+              } else if (startTimes.get(taskId).withDurationAdded(ioConfig.getTaskDuration(), 1).isBeforeNow()) {
+                if (taskClient.finalize(taskId)) {
+                  updatedStartTimes.remove(taskId);
+                }
+              }
+            }
+            startTimes = updatedStartTimes;
+            stateManager.markRunFinished();
+            stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
+            Thread.sleep(500);
           }
         }
         catch (Exception e) {

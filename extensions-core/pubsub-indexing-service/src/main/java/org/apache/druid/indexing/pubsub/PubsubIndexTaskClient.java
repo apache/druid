@@ -26,9 +26,12 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.net.ConnectException;
 
 public class PubsubIndexTaskClient extends IndexTaskClient
 {
@@ -99,6 +102,45 @@ public class PubsubIndexTaskClient extends IndexTaskClient
     }
     catch (NoTaskLocationException | IOException e) {
       log.warn(e, "Exception while stopping task [%s]", id);
+      return false;
+    }
+  }
+
+  @Nullable
+  public DateTime getStartTime(final String id)
+  {
+    log.info("GetStartTime task[%s]", id);
+
+    try {
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, false);
+      return response.getContent() == null || response.getContent().isEmpty()
+             ? null
+             : deserialize(response.getContent(), DateTime.class);
+    }
+    catch (NoTaskLocationException | ConnectException e) {
+      return null;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public boolean finalize(final String id)
+  {
+    log.debug("Finalize task[%s]", id);
+
+    try {
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.POST,
+          "finalize",
+          null,
+          false
+      );
+      return isSuccess(response);
+    }
+    catch (NoTaskLocationException | IOException e) {
+      log.warn(e, "Exception while finalizing task [%s]", id);
       return false;
     }
   }

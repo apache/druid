@@ -94,15 +94,12 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
   )
   {
     super(
-        id,
+        getOrMakeId(id, dataSchema.getDataSource(), TYPE),
         StringUtils.format("%s_%s", TYPE, dataSchema.getDataSource()),
         taskResource,
         dataSchema.getDataSource(),
         context
     );
-    log.error("creating pubsub task");
-    log.error(dataSchema.toString());
-    log.error(dataSchema.getDataSource());
 
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");

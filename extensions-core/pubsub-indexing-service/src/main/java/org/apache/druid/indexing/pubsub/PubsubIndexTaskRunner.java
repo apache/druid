@@ -49,6 +49,7 @@ import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -65,12 +66,22 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -108,6 +119,8 @@ public class PubsubIndexTaskRunner implements ChatHandler
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private final String sequenceName;
+  private volatile DateTime startTime = DateTimes.MAX;
+  private volatile boolean isFinalized = false;
 
   PubsubIndexTaskRunner(
       PubsubIndexTask task,
@@ -187,13 +200,9 @@ public class PubsubIndexTaskRunner implements ChatHandler
 
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
+    startTime = DateTimes.nowUtc();
     setToolbox(toolbox);
-    log.info("pubsub attempt");
     PubsubRecordSupplier recordSupplier = task.newTaskRecordSupplier();
-    List<ReceivedMessage> records = getRecords(recordSupplier, toolbox);
-    log.info("pubsub success");
-    log.info(records.size() + "");
-    log.info(records.toString());
 
     // Now we can initialize StreamChunkReader with the given toolbox.
     final StreamChunkParser parser = new StreamChunkParser(
@@ -203,6 +212,13 @@ public class PubsubIndexTaskRunner implements ChatHandler
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir()
     );
+
+    if (chatHandlerProvider.isPresent()) {
+      log.debug("prefix: Found chat handler of class[%s] registering [%s]", chatHandlerProvider.get().getClass().getName(), task.getId());
+      chatHandlerProvider.get().register(task.getId(), this, true);
+    } else {
+      log.warn("prefix: No chat handler detected.");
+    }
 
     // Set up FireDepartmentMetrics
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
@@ -281,32 +297,45 @@ public class PubsubIndexTaskRunner implements ChatHandler
         }
       };
     };
-    for (ReceivedMessage record : records) {
-      final List<byte[]> valueBytess = Collections.singletonList(record.getMessage().getData().toByteArray());
-      final List<InputRow> rows;
-      if (valueBytess == null || valueBytess.isEmpty()) {
-        rows = Utils.nullableListOf((InputRow) null);
-      } else {
-        rows = parser.parse(valueBytess);
-      }
-      for (InputRow row : rows) {
-        final AppenderatorDriverAddResult addResult = driver.add(
-            row,
-            getSequenceName(),
-            committerSupplier,
-            true,
-            // do not allow incremental persists to happen until all the rows from this batch
-            // of rows are indexed
-            false
-        );
-        if (!addResult.isOk()) {
-          throw new ISE("failed to add row %s", row);
+    while (!isFinalized) {
+      boolean isPersistRequired = false;
+      List<ReceivedMessage> records = getRecords(recordSupplier, toolbox);
+      for (ReceivedMessage record : records) {
+        final List<byte[]> valueBytess = Collections.singletonList(record.getMessage().getData().toByteArray());
+        final List<InputRow> rows;
+        if (valueBytess == null || valueBytess.isEmpty()) {
+          rows = Utils.nullableListOf((InputRow) null);
+        } else {
+          rows = parser.parse(valueBytess);
         }
+        log.debug("got %s rows from pubsub", rows.size());
+        for (InputRow row : rows) {
+          final AppenderatorDriverAddResult addResult = driver.add(
+              row,
+              getSequenceName(),
+              committerSupplier,
+              true,
+              // do not allow incremental persists to happen until all the rows from this batch
+              // of rows are indexed
+              false
+          );
+          if (addResult.isOk()) {
+            isPersistRequired |= addResult.isPersistRequired();
+          } else {
+            throw new ISE("failed to add row %s", row);
+          }
+        }
+      }
+      if (isPersistRequired) {
+        driver.persist(committerSupplier.get());
       }
     }
     driver.persist(committerSupplier.get());
     publishAndRegisterHandoff(committerSupplier.get());
     driver.close();
+    if (chatHandlerProvider.isPresent()) {
+      chatHandlerProvider.get().unregister(task.getId());
+    }
     return TaskStatus.success(task.getId());
   }
 
@@ -387,6 +416,24 @@ public class PubsubIndexTaskRunner implements ChatHandler
     catch (ExecutionException e) {
       log.error(e, "pubsub error");
     }
+  }
+
+  @GET
+  @Path("/time/start")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getStartTime(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, task.getDataSource(), authorizerMapper);
+    return Response.ok(startTime).build();
+  }
+
+  @POST
+  @Path("/finalize")
+  public Response finalize(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, task.getDataSource(), authorizerMapper);
+    isFinalized = true;
+    return Response.status(Response.Status.OK).build();
   }
 }
 
