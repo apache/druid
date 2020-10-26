@@ -223,7 +223,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   /**
    * Marks sink as 'finished', preventing further writes.
-   *
    * @return 'true' if sink was sucessfully finished, 'false' if sink was already finished
    */
   public boolean finishWriting()
@@ -405,9 +404,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   public String toString()
   {
     return "Sink{" +
-        "interval=" + interval +
-        ", schema=" + schema +
-        '}';
+           "interval=" + interval +
+           ", schema=" + schema +
+           '}';
   }
 
   @Override
