@@ -1243,6 +1243,94 @@ public class FixedBucketsHistogramTest
   }
 
   @Test
+  public void testCombineBase64()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 18}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{3, 8, 9, 19, 99, -50}
+    );
+
+    h.combine(h2.toBase64());
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(20, h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{2, 3, 1, 1, 2}, h.getHistogram());
+    Assert.assertEquals(9, h.getCount());
+    Assert.assertEquals(1, h.getMin(), 0.01);
+    Assert.assertEquals(18, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(1, h.getLowerOutlierCount());
+    Assert.assertEquals(1, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testCombineAnotherHistogram()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 18}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{3, 8, 9, 19, 99, -50}
+    );
+
+    h.combine(h2);
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(20, h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{2, 3, 1, 1, 2}, h.getHistogram());
+    Assert.assertEquals(9, h.getCount());
+    Assert.assertEquals(1, h.getMin(), 0.01);
+    Assert.assertEquals(18, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(1, h.getLowerOutlierCount());
+    Assert.assertEquals(1, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testCombineNumber()
+  {
+    FixedBucketsHistogram h = new FixedBucketsHistogram(
+        0,
+        200,
+        200,
+        FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+    );
+
+    h.combine(10);
+    h.combine(20);
+
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(2, h.getCount());
+    Assert.assertEquals(10, h.getMin(), 0.01);
+    Assert.assertEquals(20, h.getMax(), 0.01);
+  }
+
+  @Test
   public void testMissing()
   {
     FixedBucketsHistogram h = new FixedBucketsHistogram(

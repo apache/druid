@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -32,11 +33,12 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig implements AppenderatorConfig
 {
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
+  private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final DynamicPartitionsSpec partitionsSpec;
@@ -59,6 +61,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private final int maxSavedParseExceptions;
 
   public SeekableStreamIndexTaskTuningConfig(
+      @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
       @Nullable Integer maxRowsPerSegment,
@@ -84,10 +87,11 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     // Cannot be a static because default basePersistDirectory is unique per-instance
     final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
 
+    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
@@ -128,6 +132,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+  }
+
+  @Override
+  @JsonProperty
+  public AppendableIndexSpec getAppendableIndexSpec()
+  {
+    return appendableIndexSpec;
   }
 
   @Override
@@ -281,7 +292,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       return false;
     }
     SeekableStreamIndexTaskTuningConfig that = (SeekableStreamIndexTaskTuningConfig) o;
-    return maxRowsInMemory == that.maxRowsInMemory &&
+    return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
+           maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
@@ -304,6 +316,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public int hashCode()
   {
     return Objects.hash(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
         partitionsSpec,

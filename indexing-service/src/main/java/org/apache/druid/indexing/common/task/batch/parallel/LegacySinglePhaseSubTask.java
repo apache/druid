@@ -19,13 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -40,10 +36,7 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(
@@ -53,10 +46,7 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
         supervisorTaskId,
         numAttempts,
         ingestionSchema,
-        context,
-        indexingServiceClient,
-        taskClientFactory,
-        appenderatorsManager
+        context
     );
   }
 

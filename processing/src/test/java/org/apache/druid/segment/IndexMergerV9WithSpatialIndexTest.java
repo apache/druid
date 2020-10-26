@@ -48,6 +48,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,7 +67,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  */
 @RunWith(Parameterized.class)
-public class IndexMergerV9WithSpatialIndexTest
+public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTest
 {
 
   public static final int NUM_POINTS = 5000;
@@ -124,7 +125,6 @@ public class IndexMergerV9WithSpatialIndexTest
                     )
                 ).build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
         .buildOnheap();
 
@@ -300,7 +300,6 @@ public class IndexMergerV9WithSpatialIndexTest
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
           .buildOnheap();
 
@@ -328,7 +327,6 @@ public class IndexMergerV9WithSpatialIndexTest
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
           .buildOnheap();
 
@@ -356,7 +354,6 @@ public class IndexMergerV9WithSpatialIndexTest
                       )
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
           .buildOnheap();
 

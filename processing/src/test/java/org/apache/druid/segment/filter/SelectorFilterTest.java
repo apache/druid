@@ -312,7 +312,7 @@ public class SelectorFilterTest extends BaseFilterTest
   @Test
   public void testNumericColumnNullsAndDefaults()
   {
-    if (NullHandling.replaceWithDefault()) {
+    if (canTestNumericNullsAsDefaultValues) {
       assertFilterMatches(new SelectorDimFilter("f0", "0", null), ImmutableList.of("0", "4"));
       assertFilterMatches(new SelectorDimFilter("d0", "0", null), ImmutableList.of("0", "2"));
       assertFilterMatches(new SelectorDimFilter("l0", "0", null), ImmutableList.of("0", "3"));

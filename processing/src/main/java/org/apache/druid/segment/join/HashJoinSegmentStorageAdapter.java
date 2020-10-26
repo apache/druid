@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
@@ -33,10 +34,12 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -47,7 +50,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -58,13 +60,13 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
   /**
-   * @param baseAdapter          A StorageAdapter for the left-hand side base segment
-   * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                             duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param baseAdapter           A StorageAdapter for the left-hand side base segment
+   * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
+   * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this storage adapter
    */
   HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses,
+      final StorageAdapter baseAdapter,
+      final List<JoinableClause> clauses,
       final JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
@@ -209,13 +211,25 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    if (!Objects.equals(joinFilterPreAnalysis.getOriginalFilter(), filter)) {
-      throw new ISE(
-          "Filter provided to cursor [%s] does not match join pre-analysis filter [%s]",
-          filter,
-          joinFilterPreAnalysis.getOriginalFilter()
-      );
+    // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
+    // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
+    // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
+    // in the cached key.)
+    final JoinFilterPreAnalysisKey keyIn =
+        new JoinFilterPreAnalysisKey(
+            joinFilterPreAnalysis.getKey().getRewriteConfig(),
+            clauses,
+            virtualColumns,
+            filter
+        );
+
+    final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
+
+    if (!keyIn.equals(keyCached)) {
+      // It is a bug if this happens. The implied key and the cached key should always match.
+      throw new ISE("Pre-analysis mismatch, cannot execute query");
     }
+
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
@@ -242,14 +256,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         queryMetrics
     );
 
-    return Sequences.map(
+    Closer joinablesCloser = Closer.create();
+    return Sequences.<Cursor, Cursor>map(
         baseCursorSequence,
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
 
           for (JoinableClause clause : clauses) {
-            retVal = HashJoinEngine.makeJoinCursor(retVal, clause);
+            retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
           }
 
           return PostJoinCursor.wrap(
@@ -258,7 +273,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
               joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
           );
         }
-    );
+    ).withBaggage(joinablesCloser);
   }
 
   /**
@@ -291,6 +306,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   )
   {
     final Set<String> baseColumns = new HashSet<>();
+    baseColumns.add(ColumnHolder.TIME_COLUMN_NAME);
     Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
     Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
 

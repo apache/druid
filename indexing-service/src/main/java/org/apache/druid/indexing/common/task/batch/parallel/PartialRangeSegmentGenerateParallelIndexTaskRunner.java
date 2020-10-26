@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -29,8 +28,6 @@ import java.util.Map;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to create range partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialRangeSegmentGenerateParallelIndexTaskRunner
     extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
@@ -45,11 +42,10 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient,
       Map<Interval, PartitionBoundaries> intervalToPartitions
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient);
+    super(toolbox, taskId, groupId, ingestionSchema, context);
     this.intervalToPartitions = intervalToPartitions;
   }
 
@@ -88,10 +84,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
             numAttempts,
             subTaskIngestionSpec,
             context,
-            intervalToPartitions,
-            null,
-            null,
-            null
+            intervalToPartitions
         );
       }
     };

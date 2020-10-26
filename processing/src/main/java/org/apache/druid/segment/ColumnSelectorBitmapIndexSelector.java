@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
@@ -157,14 +158,26 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   }
 
   @Override
-  public boolean hasMultipleValues(final String dimension)
+  public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues();
+      VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimension);
+      ColumnCapabilities virtualCapabilities = null;
+      if (virtualColumn != null) {
+        virtualCapabilities = virtualColumn.capabilities(
+            QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
+            dimension
+        );
+      }
+      return virtualCapabilities != null ? virtualCapabilities.hasMultipleValues() : ColumnCapabilities.Capable.FALSE;
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
-    return columnHolder != null && columnHolder.getCapabilities().hasMultipleValues();
+    // if ColumnHolder is null, the column doesn't exist, but report as not having multiple values so that
+    // the empty bitmap will be used
+    return columnHolder != null
+           ? columnHolder.getCapabilities().hasMultipleValues()
+           : ColumnCapabilities.Capable.FALSE;
   }
 
   @Override

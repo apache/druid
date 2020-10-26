@@ -1,766 +1,944 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`compaction dialog matches snapshot 1`] = `
-<div
-  class="bp3-portal"
+exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
+<Blueprint3.Dialog
+  canOutsideClickClose={false}
+  className="compaction-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Compaction config: test1"
 >
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
-    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+    className="content"
+  >
+    <AutoForm
+      fields={
+        Array [
+          Object {
+            "defaultValue": "P1D",
+            "info": <p>
+              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+            </p>,
+            "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
+            "type": "string",
+          },
+          Object {
+            "info": <p>
+              For perfect rollup, you should use either 
+              <Unknown>
+                hashed
+              </Unknown>
+               (partitioning based on the hash of dimensions in each row) or 
+              <Unknown>
+                single_dim
+              </Unknown>
+               (based on ranges of a single dimension). For best-effort rollup, you should use 
+              <Unknown>
+                dynamic
+              </Unknown>
+              .
+            </p>,
+            "label": "Partitioning type",
+            "name": "tuningConfig.partitionsSpec.type",
+            "suggestions": Array [
+              "dynamic",
+              "hashed",
+              "single_dim",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": 5000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Determines how many rows are in each segment.
+            </React.Fragment>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 20000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Total number of rows in segments waiting for being pushed.
+            </React.Fragment>,
+            "label": "Max total rows",
+            "name": "tuningConfig.partitionsSpec.maxTotalRows",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "label": "Num shards",
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimensions to partition on. Leave blank to select all dimensions.
+            </p>,
+            "label": "Partition dimensions",
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimension to partition on.
+            </p>,
+            "label": "Partition dimension",
+            "name": "tuningConfig.partitionsSpec.partitionDimension",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+            </p>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Maximum number of rows to include in a partition.
+            </p>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": <p>
+              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+            </p>,
+            "label": "Assume grouped",
+            "name": "tuningConfig.partitionsSpec.assumeGrouped",
+            "type": "boolean",
+          },
+          Object {
+            "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "label": "Max num concurrent sub tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 419430400,
+            "info": <p>
+              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
+            </p>,
+            "name": "inputSegmentSizeBytes",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 1,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Maximum number of merge tasks which can be run at the same time.
+            </React.Fragment>,
+            "label": "Max num merge tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumMergeTasks",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 500000000,
+            "info": <React.Fragment>
+              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+            </React.Fragment>,
+            "label": "Max input segment bytes per task",
+            "min": 1000000,
+            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "type": "number",
+          },
+        ]
+      }
+      model={
+        Object {
+          "dataSource": "test1",
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "dynamic",
+            },
+          },
+        }
+      }
+      onChange={[Function]}
+    />
+  </div>
+  <div
+    className="bp3-dialog-footer"
   >
     <div
-      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
-    />
-    <div
-      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
-      tabindex="0"
+      className="bp3-dialog-footer-actions"
     >
-      <div
-        class="bp3-dialog compaction-dialog"
-      >
-        <div
-          class="bp3-dialog-header"
-        >
-          <h4
-            class="bp3-heading"
-          >
-            Compaction config: test
-          </h4>
-          <button
-            aria-label="Close"
-            class="bp3-button bp3-minimal bp3-dialog-close-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-small-cross"
-              icon="small-cross"
-            >
-              <svg
-                data-icon="small-cross"
-                height="20"
-                viewBox="0 0 20 20"
-                width="20"
-              >
-                <desc>
-                  small-cross
-                </desc>
-                <path
-                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-        </div>
-        <div
-          class="auto-form"
-        >
-          <div
-            class="bp3-form-group form-group-with-info"
-          >
-            <label
-              class="bp3-label"
-            >
-              Input segment size bytes
-               
-              <span
-                class="bp3-text-muted"
-              >
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-info-sign"
-                      icon="info-sign"
-                    >
-                      <svg
-                        data-icon="info-sign"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          info-sign
-                        </desc>
-                        <path
-                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class="bp3-control-group bp3-fill bp3-numeric-input"
-              >
-                <div
-                  class="bp3-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp3-input"
-                    min="0"
-                    placeholder=""
-                    style="padding-right: 10px;"
-                    type="text"
-                    value="419430400"
-                  />
-                </div>
-                <div
-                  class="bp3-button-group bp3-vertical bp3-fixed"
-                >
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-up"
-                      icon="chevron-up"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-up
-                        </desc>
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-down"
-                      icon="chevron-down"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-down
-                        </desc>
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bp3-form-group form-group-with-info"
-          >
-            <label
-              class="bp3-label"
-            >
-              Skip offset from latest
-               
-              <span
-                class="bp3-text-muted"
-              >
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-info-sign"
-                      icon="info-sign"
-                    >
-                      <svg
-                        data-icon="info-sign"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          info-sign
-                        </desc>
-                        <path
-                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class="bp3-input-group suggestible-input"
-              >
-                <input
-                  class="bp3-input"
-                  placeholder=""
-                  style="padding-right: 10px;"
-                  type="text"
-                  value="P1D"
-                />
-              </div>
-            </div>
-          </div>
-          <div
-            class="bp3-form-group form-group-with-info"
-          >
-            <label
-              class="bp3-label"
-            >
-              Max rows per segment
-               
-              <span
-                class="bp3-text-muted"
-              >
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-info-sign"
-                      icon="info-sign"
-                    >
-                      <svg
-                        data-icon="info-sign"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          info-sign
-                        </desc>
-                        <path
-                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class="bp3-control-group bp3-fill bp3-numeric-input"
-              >
-                <div
-                  class="bp3-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp3-input"
-                    min="0"
-                    placeholder=""
-                    style="padding-right: 10px;"
-                    type="text"
-                    value="5000000"
-                  />
-                </div>
-                <div
-                  class="bp3-button-group bp3-vertical bp3-fixed"
-                >
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-up"
-                      icon="chevron-up"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-up
-                        </desc>
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-down"
-                      icon="chevron-down"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-down
-                        </desc>
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bp3-form-group form-group-with-info"
-          >
-            <label
-              class="bp3-label"
-            >
-              Task context
-               
-              <span
-                class="bp3-text-muted"
-              >
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-info-sign"
-                      icon="info-sign"
-                    >
-                      <svg
-                        data-icon="info-sign"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          info-sign
-                        </desc>
-                        <path
-                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class=" ace_editor ace-tm json-input"
-                id="brace-editor"
-                style="width: 100%; height: 8vh;"
-              >
-                <textarea
-                  autocapitalize="off"
-                  autocorrect="off"
-                  class="ace_text-input"
-                  spellcheck="false"
-                  style="opacity: 0;"
-                  wrap="off"
-                />
-                <div
-                  aria-hidden="true"
-                  class="ace_gutter"
-                  style="display: none;"
-                >
-                  <div
-                    class="ace_layer ace_gutter-layer ace_folding-enabled"
-                  />
-                  <div
-                    class="ace_gutter-active-line"
-                  />
-                </div>
-                <div
-                  class="ace_scroller"
-                >
-                  <div
-                    class="ace_content"
-                  >
-                    <div
-                      class="ace_layer ace_print-margin-layer"
-                    >
-                      <div
-                        class="ace_print-margin"
-                        style="left: 4px; visibility: hidden;"
-                      />
-                    </div>
-                    <div
-                      class="ace_layer ace_marker-layer"
-                    />
-                    <div
-                      class="ace_layer ace_text-layer"
-                      style="padding: 0px 4px;"
-                    />
-                    <div
-                      class="ace_layer ace_marker-layer"
-                    />
-                    <div
-                      class="ace_layer ace_cursor-layer ace_hidden-cursors"
-                    >
-                      <div
-                        class="ace_cursor"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div
-                  class="ace_scrollbar ace_scrollbar-v"
-                  style="display: none; width: 20px;"
-                >
-                  <div
-                    class="ace_scrollbar-inner"
-                    style="width: 20px;"
-                  />
-                </div>
-                <div
-                  class="ace_scrollbar ace_scrollbar-h"
-                  style="display: none; height: 20px;"
-                >
-                  <div
-                    class="ace_scrollbar-inner"
-                    style="height: 20px;"
-                  />
-                </div>
-                <div
-                  style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
-                >
-                  <div
-                    style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-                  />
-                  <div
-                    style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-                  >
-                    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bp3-form-group form-group-with-info"
-          >
-            <label
-              class="bp3-label"
-            >
-              Task priority
-               
-              <span
-                class="bp3-text-muted"
-              >
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-info-sign"
-                      icon="info-sign"
-                    >
-                      <svg
-                        data-icon="info-sign"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          info-sign
-                        </desc>
-                        <path
-                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class="bp3-control-group bp3-fill bp3-numeric-input"
-              >
-                <div
-                  class="bp3-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp3-input"
-                    min="0"
-                    placeholder=""
-                    style="padding-right: 10px;"
-                    type="text"
-                    value="25"
-                  />
-                </div>
-                <div
-                  class="bp3-button-group bp3-vertical bp3-fixed"
-                >
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-up"
-                      icon="chevron-up"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-up
-                        </desc>
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-down"
-                      icon="chevron-down"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-down
-                        </desc>
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bp3-form-group form-group-with-info"
-          >
-            <label
-              class="bp3-label"
-            >
-              Tuning config
-               
-              <span
-                class="bp3-text-muted"
-              >
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-info-sign"
-                      icon="info-sign"
-                    >
-                      <svg
-                        data-icon="info-sign"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          info-sign
-                        </desc>
-                        <path
-                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class=" ace_editor ace-tm json-input"
-                id="brace-editor"
-                style="width: 100%; height: 8vh;"
-              >
-                <textarea
-                  autocapitalize="off"
-                  autocorrect="off"
-                  class="ace_text-input"
-                  spellcheck="false"
-                  style="opacity: 0;"
-                  wrap="off"
-                />
-                <div
-                  aria-hidden="true"
-                  class="ace_gutter"
-                  style="display: none;"
-                >
-                  <div
-                    class="ace_layer ace_gutter-layer ace_folding-enabled"
-                  />
-                  <div
-                    class="ace_gutter-active-line"
-                  />
-                </div>
-                <div
-                  class="ace_scroller"
-                >
-                  <div
-                    class="ace_content"
-                  >
-                    <div
-                      class="ace_layer ace_print-margin-layer"
-                    >
-                      <div
-                        class="ace_print-margin"
-                        style="left: 4px; visibility: hidden;"
-                      />
-                    </div>
-                    <div
-                      class="ace_layer ace_marker-layer"
-                    />
-                    <div
-                      class="ace_layer ace_text-layer"
-                      style="padding: 0px 4px;"
-                    />
-                    <div
-                      class="ace_layer ace_marker-layer"
-                    />
-                    <div
-                      class="ace_layer ace_cursor-layer ace_hidden-cursors"
-                    >
-                      <div
-                        class="ace_cursor"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div
-                  class="ace_scrollbar ace_scrollbar-v"
-                  style="display: none; width: 20px;"
-                >
-                  <div
-                    class="ace_scrollbar-inner"
-                    style="width: 20px;"
-                  />
-                </div>
-                <div
-                  class="ace_scrollbar ace_scrollbar-h"
-                  style="display: none; height: 20px;"
-                >
-                  <div
-                    class="ace_scrollbar-inner"
-                    style="height: 20px;"
-                  />
-                </div>
-                <div
-                  style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
-                >
-                  <div
-                    style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-                  />
-                  <div
-                    style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-                  >
-                    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div
-          class="bp3-dialog-footer"
-        >
-          <div
-            class="bp3-dialog-footer-actions"
-          >
-            <button
-              class="bp3-button bp3-intent-danger"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Delete
-              </span>
-            </button>
-            <button
-              class="bp3-button"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Close
-              </span>
-            </button>
-            <button
-              class="bp3-button bp3-intent-primary"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Submit
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <Blueprint3.Button
+        intent="danger"
+        onClick={[Function]}
+        text="Delete"
+      />
+      <Blueprint3.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint3.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Submit"
+      />
     </div>
   </div>
-</div>
+</Blueprint3.Dialog>
+`;
+
+exports[`CompactionDialog matches snapshot with compactionConfig (hashed partitionsSpec) 1`] = `
+<Blueprint3.Dialog
+  canOutsideClickClose={false}
+  className="compaction-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Compaction config: test1"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <AutoForm
+      fields={
+        Array [
+          Object {
+            "defaultValue": "P1D",
+            "info": <p>
+              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+            </p>,
+            "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
+            "type": "string",
+          },
+          Object {
+            "info": <p>
+              For perfect rollup, you should use either 
+              <Unknown>
+                hashed
+              </Unknown>
+               (partitioning based on the hash of dimensions in each row) or 
+              <Unknown>
+                single_dim
+              </Unknown>
+               (based on ranges of a single dimension). For best-effort rollup, you should use 
+              <Unknown>
+                dynamic
+              </Unknown>
+              .
+            </p>,
+            "label": "Partitioning type",
+            "name": "tuningConfig.partitionsSpec.type",
+            "suggestions": Array [
+              "dynamic",
+              "hashed",
+              "single_dim",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": 5000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Determines how many rows are in each segment.
+            </React.Fragment>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 20000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Total number of rows in segments waiting for being pushed.
+            </React.Fragment>,
+            "label": "Max total rows",
+            "name": "tuningConfig.partitionsSpec.maxTotalRows",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "label": "Num shards",
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimensions to partition on. Leave blank to select all dimensions.
+            </p>,
+            "label": "Partition dimensions",
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimension to partition on.
+            </p>,
+            "label": "Partition dimension",
+            "name": "tuningConfig.partitionsSpec.partitionDimension",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+            </p>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Maximum number of rows to include in a partition.
+            </p>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": <p>
+              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+            </p>,
+            "label": "Assume grouped",
+            "name": "tuningConfig.partitionsSpec.assumeGrouped",
+            "type": "boolean",
+          },
+          Object {
+            "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "label": "Max num concurrent sub tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 419430400,
+            "info": <p>
+              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
+            </p>,
+            "name": "inputSegmentSizeBytes",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 1,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Maximum number of merge tasks which can be run at the same time.
+            </React.Fragment>,
+            "label": "Max num merge tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumMergeTasks",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 500000000,
+            "info": <React.Fragment>
+              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+            </React.Fragment>,
+            "label": "Max input segment bytes per task",
+            "min": 1000000,
+            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "type": "number",
+          },
+        ]
+      }
+      model={
+        Object {
+          "dataSource": "test1",
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "hashed",
+            },
+          },
+        }
+      }
+      onChange={[Function]}
+    />
+  </div>
+  <div
+    className="bp3-dialog-footer"
+  >
+    <div
+      className="bp3-dialog-footer-actions"
+    >
+      <Blueprint3.Button
+        intent="danger"
+        onClick={[Function]}
+        text="Delete"
+      />
+      <Blueprint3.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint3.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Submit"
+      />
+    </div>
+  </div>
+</Blueprint3.Dialog>
+`;
+
+exports[`CompactionDialog matches snapshot with compactionConfig (single_dim partitionsSpec) 1`] = `
+<Blueprint3.Dialog
+  canOutsideClickClose={false}
+  className="compaction-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Compaction config: test1"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <AutoForm
+      fields={
+        Array [
+          Object {
+            "defaultValue": "P1D",
+            "info": <p>
+              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+            </p>,
+            "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
+            "type": "string",
+          },
+          Object {
+            "info": <p>
+              For perfect rollup, you should use either 
+              <Unknown>
+                hashed
+              </Unknown>
+               (partitioning based on the hash of dimensions in each row) or 
+              <Unknown>
+                single_dim
+              </Unknown>
+               (based on ranges of a single dimension). For best-effort rollup, you should use 
+              <Unknown>
+                dynamic
+              </Unknown>
+              .
+            </p>,
+            "label": "Partitioning type",
+            "name": "tuningConfig.partitionsSpec.type",
+            "suggestions": Array [
+              "dynamic",
+              "hashed",
+              "single_dim",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": 5000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Determines how many rows are in each segment.
+            </React.Fragment>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 20000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Total number of rows in segments waiting for being pushed.
+            </React.Fragment>,
+            "label": "Max total rows",
+            "name": "tuningConfig.partitionsSpec.maxTotalRows",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "label": "Num shards",
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimensions to partition on. Leave blank to select all dimensions.
+            </p>,
+            "label": "Partition dimensions",
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimension to partition on.
+            </p>,
+            "label": "Partition dimension",
+            "name": "tuningConfig.partitionsSpec.partitionDimension",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+            </p>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Maximum number of rows to include in a partition.
+            </p>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": <p>
+              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+            </p>,
+            "label": "Assume grouped",
+            "name": "tuningConfig.partitionsSpec.assumeGrouped",
+            "type": "boolean",
+          },
+          Object {
+            "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "label": "Max num concurrent sub tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 419430400,
+            "info": <p>
+              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
+            </p>,
+            "name": "inputSegmentSizeBytes",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 1,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Maximum number of merge tasks which can be run at the same time.
+            </React.Fragment>,
+            "label": "Max num merge tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumMergeTasks",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 500000000,
+            "info": <React.Fragment>
+              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+            </React.Fragment>,
+            "label": "Max input segment bytes per task",
+            "min": 1000000,
+            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "type": "number",
+          },
+        ]
+      }
+      model={
+        Object {
+          "dataSource": "test1",
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "single_dim",
+            },
+          },
+        }
+      }
+      onChange={[Function]}
+    />
+  </div>
+  <div
+    className="bp3-dialog-footer"
+  >
+    <div
+      className="bp3-dialog-footer-actions"
+    >
+      <Blueprint3.Button
+        intent="danger"
+        onClick={[Function]}
+        text="Delete"
+      />
+      <Blueprint3.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint3.Button
+        disabled={true}
+        intent="primary"
+        onClick={[Function]}
+        text="Submit"
+      />
+    </div>
+  </div>
+</Blueprint3.Dialog>
+`;
+
+exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
+<Blueprint3.Dialog
+  canOutsideClickClose={false}
+  className="compaction-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Compaction config: test1"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <AutoForm
+      fields={
+        Array [
+          Object {
+            "defaultValue": "P1D",
+            "info": <p>
+              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+            </p>,
+            "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
+            "type": "string",
+          },
+          Object {
+            "info": <p>
+              For perfect rollup, you should use either 
+              <Unknown>
+                hashed
+              </Unknown>
+               (partitioning based on the hash of dimensions in each row) or 
+              <Unknown>
+                single_dim
+              </Unknown>
+               (based on ranges of a single dimension). For best-effort rollup, you should use 
+              <Unknown>
+                dynamic
+              </Unknown>
+              .
+            </p>,
+            "label": "Partitioning type",
+            "name": "tuningConfig.partitionsSpec.type",
+            "suggestions": Array [
+              "dynamic",
+              "hashed",
+              "single_dim",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": 5000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Determines how many rows are in each segment.
+            </React.Fragment>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 20000000,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Total number of rows in segments waiting for being pushed.
+            </React.Fragment>,
+            "label": "Max total rows",
+            "name": "tuningConfig.partitionsSpec.maxTotalRows",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "label": "Num shards",
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimensions to partition on. Leave blank to select all dimensions.
+            </p>,
+            "label": "Partition dimensions",
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimension to partition on.
+            </p>,
+            "label": "Partition dimension",
+            "name": "tuningConfig.partitionsSpec.partitionDimension",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+            </p>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              Maximum number of rows to include in a partition.
+            </p>,
+            "label": "Max rows per segment",
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+            "required": [Function],
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": <p>
+              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+            </p>,
+            "label": "Assume grouped",
+            "name": "tuningConfig.partitionsSpec.assumeGrouped",
+            "type": "boolean",
+          },
+          Object {
+            "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "label": "Max num concurrent sub tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 419430400,
+            "info": <p>
+              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
+            </p>,
+            "name": "inputSegmentSizeBytes",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 1,
+            "defined": [Function],
+            "info": <React.Fragment>
+              Maximum number of merge tasks which can be run at the same time.
+            </React.Fragment>,
+            "label": "Max num merge tasks",
+            "min": 1,
+            "name": "tuningConfig.maxNumMergeTasks",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 500000000,
+            "info": <React.Fragment>
+              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+            </React.Fragment>,
+            "label": "Max input segment bytes per task",
+            "min": 1000000,
+            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "type": "number",
+          },
+        ]
+      }
+      model={
+        Object {
+          "dataSource": "test1",
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "dynamic",
+            },
+          },
+        }
+      }
+      onChange={[Function]}
+    />
+  </div>
+  <div
+    className="bp3-dialog-footer"
+  >
+    <div
+      className="bp3-dialog-footer-actions"
+    >
+      <Blueprint3.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint3.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Submit"
+      />
+    </div>
+  </div>
+</Blueprint3.Dialog>
 `;

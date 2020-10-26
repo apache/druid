@@ -28,13 +28,22 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 
 import java.util.List;
 
+/**
+ * Rule that creates a {@link DruidUnionRel} from some {@link DruidRel} inputs.
+ */
 public class DruidUnionRule extends RelOptRule
 {
   private static final DruidUnionRule INSTANCE = new DruidUnionRule();
 
   private DruidUnionRule()
   {
-    super(operand(Union.class, unordered(operand(DruidRel.class, any()))));
+    super(
+        operand(
+            Union.class,
+            operand(DruidRel.class, none()),
+            operand(DruidRel.class, none())
+        )
+    );
   }
 
   public static DruidUnionRule instance()
@@ -43,20 +52,29 @@ public class DruidUnionRule extends RelOptRule
   }
 
   @Override
+  public boolean matches(RelOptRuleCall call)
+  {
+    // Make DruidUnionRule and DruidUnionDataSourceRule mutually exclusive.
+    return !DruidUnionDataSourceRule.instance().matches(call);
+  }
+
+  @Override
   public void onMatch(final RelOptRuleCall call)
   {
     final Union unionRel = call.rel(0);
-    final DruidRel someDruidRel = call.rel(1);
+    final DruidRel<?> someDruidRel = call.rel(1);
     final List<RelNode> inputs = unionRel.getInputs();
 
+    // Can only do UNION ALL.
     if (unionRel.all) {
-      // Can only do UNION ALL.
-      call.transformTo(DruidUnionRel.create(
-          someDruidRel.getQueryMaker(),
-          unionRel.getRowType(),
-          inputs,
-          -1
-      ));
+      call.transformTo(
+          DruidUnionRel.create(
+              someDruidRel.getQueryMaker(),
+              unionRel.getRowType(),
+              inputs,
+              -1
+          )
+      );
     }
   }
 }

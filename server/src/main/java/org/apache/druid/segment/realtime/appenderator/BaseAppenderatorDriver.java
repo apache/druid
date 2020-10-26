@@ -131,7 +131,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
       // There should be only one appending segment at any time
       Preconditions.checkState(
           this.appendingSegment == null,
-          "WTF?! Current appendingSegment[%s] is not null. "
+          "Current appendingSegment[%s] is not null. "
           + "Its state must be changed before setting a new appendingSegment[%s]",
           this.appendingSegment,
           appendingSegment
@@ -345,7 +345,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
           for (SegmentIdWithShardSpec identifier : appenderator.getSegments()) {
             if (identifier.equals(newSegment)) {
               throw new ISE(
-                  "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
+                  "Allocated segment[%s] which conflicts with existing segment[%s].",
                   newSegment,
                   identifier
               );
@@ -413,12 +413,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
             identifier,
             result.getNumRowsInSegment(),
             appenderator.getTotalRowCount(),
-            result.isPersistRequired(),
-            result.getParseException()
+            result.isPersistRequired()
         );
       }
       catch (SegmentNotWritableException e) {
-        throw new ISE(e, "WTF?! Segment[%s] not writable when it should have been.", identifier);
+        throw new ISE(e, "Segment[%s] not writable when it should have been.", identifier);
       }
     } else {
       return AppenderatorDriverAddResult.fail();
@@ -426,9 +425,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
   }
 
   /**
-   * Returns a stream of {@link SegmentWithState} for the given sequenceNames.
+   * Returns a stream of {@link SegmentIdWithShardSpec} for the given sequenceNames.
    */
-  Stream<SegmentWithState> getSegmentWithStates(Collection<String> sequenceNames)
+  List<SegmentIdWithShardSpec> getSegmentIdsWithShardSpecs(Collection<String> sequenceNames)
   {
     synchronized (segments) {
       return sequenceNames
@@ -436,11 +435,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
           .map(segments::get)
           .filter(Objects::nonNull)
           .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
-          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream())
+          .map(SegmentWithState::getSegmentIdentifier)
+          .collect(Collectors.toList());
     }
   }
 
-  Stream<SegmentWithState> getAppendingSegments(Collection<String> sequenceNames)
+  Set<SegmentIdWithShardSpec> getAppendingSegments(Collection<String> sequenceNames)
   {
     synchronized (segments) {
       return sequenceNames
@@ -449,7 +450,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
           .filter(Objects::nonNull)
           .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
           .map(segmentsOfInterval -> segmentsOfInterval.appendingSegment)
-          .filter(Objects::nonNull);
+          .filter(Objects::nonNull)
+          .map(SegmentWithState::getSegmentIdentifier)
+          .collect(Collectors.toSet());
     }
   }
 
@@ -553,7 +556,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
-      TransactionalSegmentPublisher publisher
+      TransactionalSegmentPublisher publisher,
+      java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
     if (segmentsAndCommitMetadata.getSegments().isEmpty()) {
@@ -587,6 +591,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             final SegmentPublishResult publishResult = publisher.publishSegments(
                 segmentsToBeOverwritten,
                 ourSegments,
+                outputSegmentsAnnotateFunction,
                 callerMetadata
             );
 

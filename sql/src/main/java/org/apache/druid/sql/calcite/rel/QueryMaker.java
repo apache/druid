@@ -100,9 +100,8 @@ public class QueryMaker
     if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
       // Hack for timeseries queries: when generating them, DruidQuery.toTimeseriesQuery translates a dimension
       // based on a timestamp_floor expression into a 'granularity'. This is not reflected in the druidQuery's
-      // output row signature, so we have to account for it here. When groupBy on timestamp_floor expressions is
-      // just as fast as a timeseries query (a noble goal) we can remove timeseries queries from the SQL layer and
-      // also remove this hack.
+      // output row signature, so we have to account for it here.
+      // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
       final String timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions()).getOutputName();
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames().stream()
                            .map(f -> timeDimension.equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
@@ -127,7 +126,7 @@ public class QueryMaker
     return DataSourceAnalysis.forDataSource(query.getDataSource())
                              .getBaseQuerySegmentSpec()
                              .map(QuerySegmentSpec::getIntervals)
-                             .orElse(query.getIntervals());
+                             .orElseGet(query::getIntervals);
   }
 
   private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
@@ -308,11 +307,17 @@ public class QueryMaker
         coercedValue = value.getClass().getName();
       }
     } else if (sqlType == SqlTypeName.ARRAY) {
-      try {
-        coercedValue = jsonMapper.writeValueAsString(value);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
+      if (value instanceof String) {
+        coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
+      } else if (value instanceof NlsString) {
+        coercedValue = ((NlsString) value).getValue();
+      } else {
+        try {
+          coercedValue = jsonMapper.writeValueAsString(value);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
     } else {
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);

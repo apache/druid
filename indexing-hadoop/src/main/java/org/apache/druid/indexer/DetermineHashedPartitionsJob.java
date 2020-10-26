@@ -29,6 +29,8 @@ import com.google.common.io.Closeables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,6 +38,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -169,6 +172,15 @@ public class DetermineHashedPartitionsJob implements Jobby
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
+      PartitionsSpec partitionsSpec = config.getPartitionsSpec();
+      if (!(partitionsSpec instanceof HashedPartitionsSpec)) {
+        throw new ISE(
+            "%s is expected, but got %s",
+            HashedPartitionsSpec.class.getName(),
+            partitionsSpec.getClass().getName()
+        );
+      }
+      HashPartitionFunction partitionFunction = ((HashedPartitionsSpec) partitionsSpec).getPartitionFunction();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
@@ -196,7 +208,10 @@ public class DetermineHashedPartitionsJob implements Jobby
                     new HashBasedNumberedShardSpec(
                         i,
                         numberOfShards,
+                        i,
+                        numberOfShards,
                         null,
+                        partitionFunction,
                         HadoopDruidIndexerConfig.JSON_MAPPER
                     ),
                     shardCount++
@@ -237,7 +252,8 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
-          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER)
+                     .getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
       );
@@ -316,7 +332,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                                                        .bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
         if (!maybeInterval.isPresent()) {
-          throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
+          throw new ISE("No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
         }
         interval = maybeInterval.get();
       }
@@ -385,7 +401,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
 
         if (!intervalOptional.isPresent()) {
-          throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+          throw new ISE("No bucket found for timestamp: %s", key.get());
         }
         interval = intervalOptional.get();
       }

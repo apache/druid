@@ -76,7 +76,10 @@ The following built-in functions are available.
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
-|regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
+|regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
+|regexp_like|regexp_like(expr, pattern) returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. |
+|contains_string|contains_string(expr, string) returns whether `expr` contains `string` as a substring. This method is case-sensitive.|
+|icontains_string|contains_string(expr, string) returns whether `expr` contains `string` as a substring. This method is case-insensitive.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
 |right|right(expr, length) returns the rightmost length characters from a string|
@@ -90,8 +93,8 @@ The following built-in functions are available.
 |upper|upper(expr) converts a string to uppercase|
 |reverse|reverse(expr) reverses a string|
 |repeat|repeat(expr, N) repeats a string N times|
-|lpad|lpad(expr, length, chars) returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. If either `expr` or `chars` are null, the result will be null.|
-|rpad|rpad(expr, length, chars) returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. If either `expr` or `chars` are null, the result will be null.|
+|lpad|lpad(expr, length, chars) returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|rpad|rpad(expr, length, chars) returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 ## Time functions
 
@@ -140,7 +143,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |pow|pow(x, y) would return the value of the x raised to the power of y|
 |remainder|remainder(x, y) would return the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) would return value that is closest in value to x and is equal to a mathematical integer|
-|round|round(x, y) would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points.|
+|round|round(x, y) would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x will return 0. If x is infinity, x will be converted to the nearest finite double. |
 |scalb|scalb(d, sf) would return d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
 |signum|signum(x) would return the signum function of the argument x|
 |sin|sin(x) would return the trigonometric sine of an angle x|
@@ -186,7 +189,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
 
-### Reduction functions
+## Reduction functions
 
 Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
 arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
@@ -211,3 +214,16 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+
+
+## Vectorization Support
+A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
+
+supported features:
+* constants and identifiers are supported for any column type
+* `cast` is supported for numeric and string types
+* math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
+* time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* other: `parse_long` is supported for numeric and string types

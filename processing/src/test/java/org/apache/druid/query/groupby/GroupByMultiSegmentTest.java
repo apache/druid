@@ -45,7 +45,6 @@ import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -142,7 +141,6 @@ public class GroupByMultiSegmentTest
                 .withRollup(withRollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .buildOnheap();
@@ -275,7 +273,6 @@ public class GroupByMultiSegmentTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            Suppliers.ofInstance(new QueryConfig()),
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),

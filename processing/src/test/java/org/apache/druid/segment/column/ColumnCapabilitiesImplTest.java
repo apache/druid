@@ -37,6 +37,7 @@ public class ColumnCapabilitiesImplTest
                                                 .setHasMultipleValues(true)
                                                 .setHasSpatialIndexes(true)
                                                 .setType(ValueType.COMPLEX)
+                                                .setHasNulls(true)
                                                 .setFilterable(true));
 
     Assert.assertFalse(json.contains("filterable"));
@@ -44,11 +45,12 @@ public class ColumnCapabilitiesImplTest
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
     Assert.assertEquals(ValueType.COMPLEX, cc.getType());
-    Assert.assertTrue(cc.isDictionaryEncoded());
-    Assert.assertFalse(cc.isRunLengthEncoded());
+    Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
     Assert.assertTrue(cc.hasSpatialIndexes());
-    Assert.assertTrue(cc.hasMultipleValues());
+    Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
+    // hasNulls and isFilterable are computed, these should not be set
+    Assert.assertFalse(cc.hasNulls().isTrue());
     Assert.assertFalse(cc.isFilterable());
   }
 
@@ -62,6 +64,7 @@ public class ColumnCapabilitiesImplTest
                   + "  \"hasSpatialIndexes\":true,\n"
                   + "  \"hasMultipleValues\":true,\n"
                   + "  \"hasBitmapIndexes\":true,\n"
+                  + "  \"hasNulls\":true,\n"
                   + "  \"filterable\":true\n"
                   + "}";
 
@@ -69,11 +72,12 @@ public class ColumnCapabilitiesImplTest
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
     Assert.assertEquals(ValueType.COMPLEX, cc.getType());
-    Assert.assertTrue(cc.isDictionaryEncoded());
-    Assert.assertTrue(cc.isRunLengthEncoded());
+    Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
     Assert.assertTrue(cc.hasSpatialIndexes());
-    Assert.assertTrue(cc.hasMultipleValues());
+    Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
+    // hasNulls and isFilterable are computed, these should not be set
+    Assert.assertFalse(cc.hasNulls().isTrue());
     Assert.assertFalse(cc.isFilterable());
   }
 }

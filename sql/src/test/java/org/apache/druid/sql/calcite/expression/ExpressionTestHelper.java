@@ -30,12 +30,21 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -46,8 +55,10 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 class ExpressionTestHelper
@@ -197,11 +208,11 @@ class ExpressionTestHelper
   }
 
   void testExpression(
-      SqlTypeName sqlTypeName,
-      SqlOperator op,
-      List<RexNode> exprs,
-      DruidExpression expectedExpression,
-      Object expectedResult
+      final SqlTypeName sqlTypeName,
+      final SqlOperator op,
+      final List<RexNode> exprs,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
   )
   {
     RelDataType returnType = createSqlType(sqlTypeName);
@@ -209,36 +220,82 @@ class ExpressionTestHelper
   }
 
   void testExpression(
-      SqlOperator op,
-      RexNode expr,
-      DruidExpression expectedExpression,
-      Object expectedResult
+      final SqlOperator op,
+      final RexNode expr,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
   )
   {
     testExpression(op, Collections.singletonList(expr), expectedExpression, expectedResult);
   }
 
   void testExpression(
-      SqlOperator op,
-      List<? extends RexNode> exprs,
-      DruidExpression expectedExpression,
-      Object expectedResult
+      final SqlOperator op,
+      final List<? extends RexNode> exprs,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
   )
   {
     testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult);
   }
 
   void testExpression(
-      RexNode rexNode,
-      DruidExpression expectedExpression,
-      Object expectedResult
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
   )
   {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
     Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
-    ExprEval result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                            .eval(Parser.withMap(bindings));
+    ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
+                               .eval(Parser.withMap(bindings));
+
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
+  }
+
+  void testFilter(
+      final SqlOperator op,
+      final List<? extends RexNode> exprs,
+      final List<VirtualColumn> expectedVirtualColumns,
+      final DimFilter expectedFilter,
+      final boolean expectedResult
+  )
+  {
+    final RexNode rexNode = rexBuilder.makeCall(op, exprs);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature);
+
+    final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
+    Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);
+
+    final List<VirtualColumn> virtualColumns =
+        filter.getRequiredColumns()
+              .stream()
+              .map(virtualColumnRegistry::getVirtualColumn)
+              .filter(Objects::nonNull)
+              .sorted(Comparator.comparing(VirtualColumn::getOutputName))
+              .collect(Collectors.toList());
+
+    Assert.assertEquals(
+        "Virtual columns for: " + rexNode,
+        expectedVirtualColumns.stream()
+                              .sorted(Comparator.comparing(VirtualColumn::getOutputName))
+                              .collect(Collectors.toList()),
+        virtualColumns
+    );
+
+    final ValueMatcher matcher = expectedFilter.toFilter().makeMatcher(
+        new VirtualizedColumnSelectorFactory(
+            RowBasedColumnSelectorFactory.create(
+                RowAdapters.standardRow(),
+                () -> new MapBasedRow(0L, bindings),
+                rowSignature,
+                false
+            ),
+            VirtualColumns.create(virtualColumns)
+        )
+    );
+
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, matcher.matches());
   }
 }

@@ -20,29 +20,26 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
-import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
@@ -60,7 +57,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 {
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final SegmentWrangler segmentWrangler;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
 
@@ -75,7 +72,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   {
     this.conglomerate = conglomerate;
     this.segmentWrangler = segmentWrangler;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.scheduler = scheduler;
     this.emitter = emitter;
   }
@@ -89,23 +86,21 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
       throw new IAE("Cannot query dataSource locally: %s", analysis.getDataSource());
     }
 
-    final Iterable<Segment> segments = segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals);
-    final Query<T> prioritizedAndLaned = prioritizeAndLaneQuery(query, segments);
+    // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
+    // matter, but at least some or all will be in a future PR
+    final Iterable<ReferenceCountingSegment> segments =
+        FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals))
+                          .transform(ReferenceCountingSegment::wrapRootGenerationSegment);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(prioritizedAndLaned),
-        QueryContexts.getEnableJoinFilterRewrite(prioritizedAndLaned),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(prioritizedAndLaned),
-        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned),
-        prioritizedAndLaned.getFilter() == null ? null : prioritizedAndLaned.getFilter().toFilter(),
-        prioritizedAndLaned.getVirtualColumns()
+        analysis.getBaseQuery().orElse(query)
     );
 
-    final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(prioritizedAndLaned);
+    final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(
         Execs.directExecutor(),
         () -> StreamSupport.stream(segments.spliterator(), false)
@@ -122,19 +117,11 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
     // SegmentWranglers only work based on intervals and cannot run with specific segments.
     throw new ISE("Cannot run with specific segments");
-  }
-
-  private <T> Query<T> prioritizeAndLaneQuery(Query<T> query, Iterable<Segment> segments)
-  {
-    Set<SegmentServerSelector> segmentServerSelectors = new HashSet<>();
-    for (Segment s : segments) {
-      segmentServerSelectors.add(new SegmentServerSelector(s.getId().toDescriptor()));
-    }
-    return scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(query), segmentServerSelectors);
   }
 }

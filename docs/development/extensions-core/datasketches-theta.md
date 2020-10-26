@@ -23,7 +23,7 @@ title: "DataSketches Theta Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators based on Theta sketch from [datasketches](https://datasketches.github.io/) library. Note that sketch algorithms are approximate; see details in the "Accuracy" section of the datasketches doc.
+This module provides Apache Druid aggregators based on Theta sketch from [Apache DataSketches](https://datasketches.apache.org/) library. Note that sketch algorithms are approximate; see details in the "Accuracy" section of the datasketches doc.
 At ingestion time, this aggregator creates the Theta sketch objects which get stored in Druid segments. Logically speaking, a Theta sketch object can be thought of as a Set data structure. At query time, sketches are read and aggregated (set unioned) together. In the end, by default, you receive the estimate of the number of unique entries in the sketch object. Also, you can use post aggregators to do union, intersection or difference on sketch columns in the same row.
 Note that you can use `thetaSketch` aggregator on columns which were not ingested using the same. It will return estimated cardinality of the column. It is recommended to use it at ingestion time as well to make querying faster.
 
@@ -51,7 +51,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the aggregator used at ingestion time.|yes|
 |isInputThetaSketch|This should only be used at indexing time if your input data contains theta sketch objects. This would be the case if you use datasketches library outside of Druid, say with Pig/Hive, to produce the data that you are ingesting into Druid |no, defaults to false|
-|size|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See the [DataSketches site](https://datasketches.github.io/docs/Theta/ThetaSize.html) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
+|size|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See the [DataSketches site](https://datasketches.apache.org/docs/Theta/ThetaSize.html) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
 
 ### Post Aggregators
 

@@ -110,7 +110,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    return isIOException || isTimeout;
+    final boolean isInternalError = ex.getStatusCode() == 500 || ex.getStatusCode() == 503;
+    return isIOException || isTimeout || isInternalError;
   }
 
   /**
@@ -560,16 +561,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     assign(ImmutableSet.of());
 
-    scheduledExec.shutdown();
+    if (scheduledExec != null) {
+      scheduledExec.shutdown();
 
-    try {
-      if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
-        scheduledExec.shutdownNow();
+      try {
+        if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
+          scheduledExec.shutdownNow();
+        }
       }
-    }
-    catch (InterruptedException e) {
-      log.warn(e, "InterruptedException while shutting down");
-      throw new RuntimeException(e);
+      catch (InterruptedException e) {
+        log.warn(e, "InterruptedException while shutting down");
+        throw new RuntimeException(e);
+      }
     }
 
     this.closed = true;
@@ -715,9 +718,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
     for (Map.Entry<String, String> partitionOffset : currentOffsets.entrySet()) {
-      StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
-      long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
-      partitionLag.put(partitionOffset.getKey(), currentLag);
+      if (KinesisSequenceNumber.isValidAWSKinesisSequence(partitionOffset.getValue())) {
+        StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
+        long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
+        partitionLag.put(partitionOffset.getKey(), currentLag);
+      }
     }
     return partitionLag;
   }
@@ -806,6 +811,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                     + "the number of shards to increase throughput."
                 );
                 return true;
+              }
+              if (throwable instanceof AmazonServiceException) {
+                AmazonServiceException ase = (AmazonServiceException) throwable;
+                return isServiceExceptionRecoverable(ase);
               }
               return false;
             },

@@ -179,11 +179,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   );
 
   /**
-   * Generally speaking this is the exact same thing as makePreComputeManipulatorFn.  It is leveraged in
-   * order to compute PostAggregators on results after they have been completely merged together, which
-   * should actually be done in the mergeResults() call instead of here.
-   * <p>
-   * This should never actually be overridden and it should be removed as quickly as possible.
+   * Generally speaking this is the exact same thing as makePreComputeManipulatorFn.  It is leveraged in order to
+   * compute PostAggregators on results after they have been completely merged together. To minimize walks of segments,
+   * it is recommended to use mergeResults() call instead of this method if possible. However, this may not always be
+   * possible as we don’t always want to run PostAggregators and other stuff that happens there when you mergeResults.
    *
    * @param query The Query that is currently being processed
    * @param fn    The function that should be applied to all metrics in the results

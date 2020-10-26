@@ -27,6 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.After;
@@ -47,6 +48,7 @@ public class SQLAuditManagerTest
 
   private TestDerbyConnector connector;
   private AuditManager auditManager;
+  private final String PAYLOAD_DIMENSION_KEY = "payload";
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -81,6 +83,43 @@ public class SQLAuditManagerTest
     ObjectMapper mapper = new DefaultObjectMapper();
     AuditEntry serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEntry.class);
     Assert.assertEquals(entry, serde);
+  }
+
+  @Test
+  public void testAuditMetricEventBuilderConfig()
+  {
+    AuditEntry entry = new AuditEntry(
+            "testKey",
+            "testType",
+            new AuditInfo(
+                    "testAuthor",
+                    "testComment",
+                    "127.0.0.1"
+            ),
+            "testPayload",
+            DateTimes.of("2013-01-01T00:00:00Z")
+    );
+
+    SQLAuditManager auditManagerWithPayloadAsDimension = new SQLAuditManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopServiceEmitter(),
+        mapper,
+        new SQLAuditManagerConfig()
+        {
+          @Override
+          public boolean getIncludePayloadAsDimensionInMetric()
+          {
+            return true;
+          }
+        }
+    );
+
+    ServiceMetricEvent.Builder auditEntryBuilder = ((SQLAuditManager) auditManager).getAuditMetricEventBuilder(entry);
+    Assert.assertEquals(null, auditEntryBuilder.getDimension(PAYLOAD_DIMENSION_KEY));
+
+    ServiceMetricEvent.Builder auditEntryBuilderWithPayload = auditManagerWithPayloadAsDimension.getAuditMetricEventBuilder(entry);
+    Assert.assertEquals("testPayload", auditEntryBuilderWithPayload.getDimension(PAYLOAD_DIMENSION_KEY));
   }
 
   @Test(timeout = 60_000L)

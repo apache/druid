@@ -21,19 +21,22 @@ package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.ReferenceCountedObject;
 
+import java.io.Closeable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * Represents everything about a join clause except for the left-hand datasource. In other words, if the full join
  * clause is "t1 JOIN t2 ON t1.x = t2.x" then this class represents "JOIN t2 ON x = t2.x" -- it does not include
  * references to the left-hand "t1".
- *
- * Created from {@link org.apache.druid.query.planning.PreJoinableClause} by {@link Joinables#createSegmentMapFn}.
+ * <p>
+ * Created from {@link org.apache.druid.query.planning.PreJoinableClause} by {@link JoinableFactoryWrapper#createSegmentMapFn}.
  */
-public class JoinableClause
+public class JoinableClause implements ReferenceCountedObject
 {
   private final String prefix;
   private final Joinable joinable;
@@ -42,7 +45,7 @@ public class JoinableClause
 
   public JoinableClause(String prefix, Joinable joinable, JoinType joinType, JoinConditionAnalysis condition)
   {
-    this.prefix = Joinables.validatePrefix(prefix);
+    this.prefix = JoinPrefixUtils.validatePrefix(prefix);
     this.joinable = Preconditions.checkNotNull(joinable, "joinable");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.condition = Preconditions.checkNotNull(condition, "condition");
@@ -103,7 +106,7 @@ public class JoinableClause
    */
   public boolean includesColumn(final String columnName)
   {
-    return Joinables.isPrefixedBy(columnName, prefix);
+    return JoinPrefixUtils.isPrefixedBy(columnName, prefix);
   }
 
   /**
@@ -150,5 +153,11 @@ public class JoinableClause
            ", joinType=" + joinType +
            ", condition=" + condition +
            '}';
+  }
+
+  @Override
+  public Optional<Closeable> acquireReferences()
+  {
+    return joinable.acquireReferences();
   }
 }

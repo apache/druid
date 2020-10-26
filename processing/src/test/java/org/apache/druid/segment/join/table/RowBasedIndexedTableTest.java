@@ -172,4 +172,20 @@ public class RowBasedIndexedTableTest
     expectedException.expect(IndexOutOfBoundsException.class);
     countriesTable.columnReader(99);
   }
+
+  @Test
+  public void testVersion()
+  {
+    Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, countriesTable.version());
+    Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, regionsTable.version());
+  }
+
+  @Test
+  public void testIsCacheable() throws IOException
+  {
+    Assert.assertFalse(countriesTable.isCacheable());
+    RowBasedIndexedTable<Map<String, Object>> countriesTableWithCacheKey = JoinTestHelper.createCountriesIndexedTableWithCacheKey();
+    Assert.assertTrue(countriesTableWithCacheKey.isCacheable());
+    Assert.assertArrayEquals(JoinTestHelper.INDEXED_TABLE_CACHE_KEY, countriesTableWithCacheKey.computeCacheKey());
+  }
 }

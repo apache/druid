@@ -78,6 +78,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   private static final String APPLICATION_SMILE = "application/smile";
 
+  private static final String AVATICA_CONNECTION_ID = "connectionId";
+  private static final String AVATICA_STATEMENT_HANDLE = "statementHandle";
+
   private static final String HOST_ATTRIBUTE = "org.apache.druid.proxy.to.host";
   private static final String SCHEME_ATTRIBUTE = "org.apache.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "org.apache.druid.proxy.query";
@@ -422,14 +425,25 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
-  private static String getAvaticaConnectionId(Map<String, Object> requestMap)
+  @VisibleForTesting
+  static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
-    Object connectionIdObj = requestMap.get("connectionId");
+    // avatica commands always have a 'connectionId'. If commands are not part of a prepared statement, this appears at
+    // the top level of the request, but if it is part of a statement, then it will be nested in the 'statementHandle'.
+    // see https://calcite.apache.org/avatica/docs/json_reference.html#requests for more details
+    Object connectionIdObj = requestMap.get(AVATICA_CONNECTION_ID);
     if (connectionIdObj == null) {
-      throw new IAE("Received an Avatica request without a connectionId.");
+      Object statementHandle = requestMap.get(AVATICA_STATEMENT_HANDLE);
+      if (statementHandle != null && statementHandle instanceof Map) {
+        connectionIdObj = ((Map) statementHandle).get(AVATICA_CONNECTION_ID);
+      }
+    }
+
+    if (connectionIdObj == null) {
+      throw new IAE("Received an Avatica request without a %s.", AVATICA_CONNECTION_ID);
     }
     if (!(connectionIdObj instanceof String)) {
-      throw new IAE("Received an Avatica request with a non-String connectionId.");
+      throw new IAE("Received an Avatica request with a non-String %s.", AVATICA_CONNECTION_ID);
     }
 
     return (String) connectionIdObj;

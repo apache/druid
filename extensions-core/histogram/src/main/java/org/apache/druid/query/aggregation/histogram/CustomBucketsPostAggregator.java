@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -59,6 +60,15 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
   {
     ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.toHistogram(breaks);
+  }
+
+  /**
+   * actual type is {@link Histogram}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

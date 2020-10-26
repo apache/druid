@@ -24,23 +24,33 @@ import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.join.table.IndexedTable;
+import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
@@ -60,6 +70,8 @@ public class SegmentManager
   {
     private final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline =
         new VersionedIntervalTimeline<>(Ordering.natural());
+
+    private final ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
 
@@ -78,6 +90,11 @@ public class SegmentManager
     public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
     {
       return timeline;
+    }
+
+    public ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> getTablesLookup()
+    {
+      return tablesLookup;
     }
 
     public long getTotalSegmentSize()
@@ -121,6 +138,11 @@ public class SegmentManager
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
   }
 
+  public Set<String> getDataSourceNames()
+  {
+    return dataSources.keySet();
+  }
+
   /**
    * Returns a map of dataSource to the number of segments managed by this segmentManager.  This method should be
    * carefully because the returned map might be different from the actual data source states.
@@ -149,11 +171,42 @@ public class SegmentManager
    */
   public Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> getTimeline(DataSourceAnalysis analysis)
   {
-    final TableDataSource tableDataSource =
-        analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
-
+    final TableDataSource tableDataSource = getTableDataSource(analysis);
     return Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTimeline);
+  }
+
+  /**
+   * Returns the collection of {@link IndexedTable} for the entire timeline (since join conditions do not currently
+   * consider the queries intervals), if the timeline exists for each of its segments that are joinable.
+   */
+  public Optional<Stream<ReferenceCountingIndexedTable>> getIndexedTables(DataSourceAnalysis analysis)
+  {
+    return getTimeline(analysis).map(timeline -> {
+      // join doesn't currently consider intervals, so just consider all segments
+      final Stream<ReferenceCountingSegment> segments =
+          timeline.lookup(Intervals.ETERNITY)
+                  .stream()
+                  .flatMap(x -> StreamSupport.stream(x.getObject().payloads().spliterator(), false));
+      final TableDataSource tableDataSource = getTableDataSource(analysis);
+      ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> tables =
+          Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTablesLookup)
+                  .orElseThrow(() -> new ISE("Datasource %s does not have IndexedTables", tableDataSource.getName()));
+      return segments.map(segment -> tables.get(segment.getId())).filter(Objects::nonNull);
+    });
+  }
+
+  public boolean hasIndexedTables(String dataSourceName)
+  {
+    if (dataSources.containsKey(dataSourceName)) {
+      return dataSources.get(dataSourceName).tablesLookup.size() > 0;
+    }
+    return false;
+  }
+
+  private TableDataSource getTableDataSource(DataSourceAnalysis analysis)
+  {
+    return analysis.getBaseTableDataSource()
+                   .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
   }
 
   /**
@@ -188,6 +241,17 @@ public class SegmentManager
             log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
+
+            IndexedTable table = adapter.as(IndexedTable.class);
+            if (table != null) {
+              if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
+                dataSourceState.tablesLookup.put(segment.getId(), new ReferenceCountingIndexedTable(table));
+              } else {
+                log.error("Cannot load segment[%s] with IndexedTable, no existing segments are joinable", segment.getId());
+              }
+            } else if (dataSourceState.tablesLookup.size() > 0) {
+              log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", segment.getId());
+            }
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
@@ -197,7 +261,9 @@ public class SegmentManager
             );
             dataSourceState.addSegment(segment);
             resultSupplier.set(true);
+
           }
+
           return dataSourceState;
         }
     );
@@ -248,10 +314,18 @@ public class SegmentManager
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
             if (oldQueryable != null) {
-              dataSourceState.removeSegment(segment);
-
-              log.info("Attempting to close segment %s", segment.getId());
-              oldQueryable.close();
+              try (final Closer closer = Closer.create()) {
+                dataSourceState.removeSegment(segment);
+                closer.register(oldQueryable);
+                log.info("Attempting to close segment %s", segment.getId());
+                final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());
+                if (oldTable != null) {
+                  closer.register(oldTable);
+                }
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
             } else {
               log.info(
                   "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",

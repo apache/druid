@@ -96,11 +96,11 @@ Returns the percentage of segments actually loaded in the cluster versus segment
 
  * `/druid/coordinator/v1/loadstatus?simple`
 
-Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include replication.
+Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include segment replication counts.
 
 * `/druid/coordinator/v1/loadstatus?full`
 
-Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes replication.
+Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
 
 * `/druid/coordinator/v1/loadqueue`
 
@@ -113,6 +113,45 @@ Returns the number of segments to load and drop, as well as the total segment lo
 * `/druid/coordinator/v1/loadqueue?full`
 
 Returns the serialized JSON of segments to load and drop for each Historical process.
+
+
+#### Segment Loading by Datasource
+
+Note that all _interval_ query parameters are ISO 8601 strings (e.g., 2016-06-27/2016-06-28).
+Also note that these APIs only guarantees that the segments are available at the time of the call. 
+Segments can still become missing because of historical process failures or any other reasons afterward.
+
+##### GET
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
+
+Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster for the given 
+datasource over the given interval (or last 2 weeks if interval is not given). `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store 
+(Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
+of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content`
+
+ * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?simple&forceMetadataRefresh={boolean}&interval={myInterval}`
+
+Returns the number of segments left to load until segments that should be loaded in the cluster are available for the given datasource 
+over the given interval (or last 2 weeks if interval is not given). This does not include segment replication counts. `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store 
+(Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
+of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content` 
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
+
+Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available for the given datasource 
+over the given interval (or last 2 weeks if interval is not given). This includes segment replication counts. `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store 
+(Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
+of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
 
@@ -370,6 +409,32 @@ Returns total size and count for each datasource for each interval within given 
 
 Returns the total size of segments awaiting compaction for the given dataSource. 
 This is only valid for dataSource which has compaction enabled. 
+
+##### GET
+
+* `/druid/coordinator/v1/compaction/status`
+
+Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
+The `latestStatus` object has the following keys:
+* `dataSource`: name of the datasource for this status information
+* `scheduleStatus`: auto compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto compaction config submitted otherwise, `NOT_ENABLED`
+* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto compaction config.
+* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.
+* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.
+* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+
+##### GET
+
+* `/druid/coordinator/v1/compaction/status?dataSource={dataSource}`
+
+Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the {dataSource} given. 
+Note that {dataSource} given must have/had auto compaction enabled.
 
 #### Compaction Configuration
 

@@ -29,8 +29,8 @@ describe('rule editor', () => {
         tiers={['test', 'test', 'test']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -48,8 +48,8 @@ describe('rule editor', () => {
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -67,8 +67,8 @@ describe('rule editor', () => {
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -89,8 +89,26 @@ describe('rule editor', () => {
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
+      />
+    );
+    const { container } = render(ruleEditor);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with broadcast rule', () => {
+    const ruleEditor = (
+      <RuleEditor
+        rule={{
+          type: 'broadcastByInterval',
+          period: '2010-01-01/2015-01-01',
+        }}
+        tiers={[]}
+        onChange={() => {}}
+        onDelete={() => {}}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);

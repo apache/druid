@@ -1,0 +1,271 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "2.2"
+services:
+  druid-it-hadoop:
+    image: druid-it/hadoop:2.8.5
+    container_name: druid-it-hadoop
+    ports:
+      - 2049:2049
+      - 2122:2122
+      - 8020:8020
+      - 8021:8021
+      - 8030:8030
+      - 8031:8031
+      - 8032:8032
+      - 8033:8033
+      - 8040:8040
+      - 8042:8042
+      - 8088:8088
+      - 8443:8443
+      - 9000:9000
+      - 10020:10020
+      - 19888:19888
+      - 34455:34455
+      - 50010:50010
+      - 50020:50020
+      - 50030:50030
+      - 50060:50060
+      - 50070:50070
+      - 50075:50075
+      - 50090:50090
+      - 51111:51111
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.13
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./../src/test/resources:/resources
+    hostname: "druid-it-hadoop"
+    command: "bash -c 'echo Start druid-it-hadoop container... && \
+                /etc/bootstrap.sh && \
+                tail -f /dev/null'"
+
+  druid-zookeeper-kafka:
+    image: druid/cluster
+    container_name: druid-zookeeper-kafka
+    ports:
+      - 2181:2181
+      - 9092:9092
+      - 9093:9093
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.2
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/zookeeper.conf:/usr/lib/druid/conf/zookeeper.conf
+      - ./service-supervisords/kafka.conf:/usr/lib/druid/conf/kafka.conf
+    env_file:
+      - ./environment-configs/common
+
+  druid-metadata-storage:
+    image: druid/cluster
+    container_name: druid-metadata-storage
+    ports:
+      - 3306:3306
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.3
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/metadata-storage.conf:/usr/lib/druid/conf/metadata-storage.conf
+    env_file:
+      - ./environment-configs/common
+
+  druid-overlord:
+    image: druid/cluster
+    container_name: druid-overlord
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.4
+    ports:
+      - 8090:8090
+      - 8290:8290
+      - 5009:5009
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/overlord
+
+  druid-coordinator:
+    image: druid/cluster
+    container_name: druid-coordinator
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.5
+    ports:
+      - 8081:8081
+      - 8281:8281
+      - 5006:5006
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid-overlord.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/coordinator
+
+  druid-historical:
+    image: druid/cluster
+    container_name: druid-historical
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.6
+    ports:
+      - 8083:8083
+      - 8283:8283
+      - 5007:5007
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/historical
+
+  druid-middlemanager:
+    image: druid/cluster
+    container_name: druid-middlemanager
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.7
+    ports:
+      - 5008:5008
+      - 8091:8091
+      - 8291:8291
+      - 8100:8100
+      - 8101:8101
+      - 8102:8102
+      - 8103:8103
+      - 8104:8104
+      - 8105:8105
+      - 8300:8300
+      - 8301:8301
+      - 8302:8302
+      - 8303:8303
+      - 8304:8304
+      - 8305:8305
+    privileged: true
+    volumes:
+      - ./../src/test/resources:/resources
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/middlemanager
+
+  druid-broker:
+    image: druid/cluster
+    container_name: druid-broker
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.8
+    ports:
+      - 5005:5005
+      - 8082:8082
+      - 8282:8282
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/broker
+
+  druid-router:
+    image: druid/cluster
+    container_name: druid-router
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.9
+    ports:
+      - 5004:5004
+      - 8888:8888
+      - 9088:9088
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router
+
+  druid-router-permissive-tls:
+    image: druid/cluster
+    container_name: druid-router-permissive-tls
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.10
+    ports:
+      - 5001:5001
+      - 8889:8889
+      - 9089:9089
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router-permissive-tls
+
+  druid-router-no-client-auth-tls:
+    image: druid/cluster
+    container_name: druid-router-no-client-auth-tls
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.11
+    ports:
+      - 5002:5002
+      - 8890:8890
+      - 9090:9090
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router-no-client-auth-tls
+
+  druid-router-custom-check-tls:
+    image: druid/cluster
+    container_name: druid-router-custom-check-tls
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.12
+    ports:
+      - 5003:5003
+      - 8891:8891
+      - 9091:9091
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router-custom-check-tls
+
+networks:
+  druid-it-net:
+    name: druid-it-net
+    ipam:
+      config:
+        - subnet: 172.172.172.0/24

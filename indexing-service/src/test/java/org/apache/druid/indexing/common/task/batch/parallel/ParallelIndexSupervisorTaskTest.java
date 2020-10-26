@@ -19,14 +19,35 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
+import org.easymock.EasyMock;
 import org.hamcrest.Matchers;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -38,6 +59,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.mock;
+
 @RunWith(Enclosed.class)
 public class ParallelIndexSupervisorTaskTest
 {
@@ -45,8 +69,8 @@ public class ParallelIndexSupervisorTaskTest
   public static class CreateMergeIoConfigsTest
   {
     private static final int TOTAL_NUM_MERGE_TASKS = 10;
-    private static final Function<List<HashPartitionLocation>, PartialHashSegmentMergeIOConfig>
-        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialHashSegmentMergeIOConfig::new;
+    private static final Function<List<GenericPartitionLocation>, PartialGenericSegmentMergeIOConfig>
+        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialGenericSegmentMergeIOConfig::new;
 
     @Parameterized.Parameters(name = "count = {0}")
     public static Iterable<? extends Object> data()
@@ -66,14 +90,14 @@ public class ParallelIndexSupervisorTaskTest
     @Test
     public void handlesLastPartitionCorrectly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       assertNoMissingPartitions(count, assignedPartitionLocation);
     }
 
     @Test
     public void sizesPartitionsEvenly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       List<Integer> actualPartitionSizes = assignedPartitionLocation.stream()
                                                                     .map(i -> i.getPartitionLocations().size())
                                                                     .collect(Collectors.toList());
@@ -89,7 +113,7 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private List<PartialHashSegmentMergeIOConfig> createMergeIOConfigs()
+    private List<PartialGenericSegmentMergeIOConfig> createMergeIOConfigs()
     {
       return ParallelIndexSupervisorTask.createMergeIOConfigs(
           TOTAL_NUM_MERGE_TASKS,
@@ -98,7 +122,7 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> createPartitionToLocations(int count)
+    private static Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> createPartitionToLocations(int count)
     {
       return IntStream.range(0, count).boxed().collect(
           Collectors.toMap(
@@ -108,15 +132,22 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private static HashPartitionLocation createPartitionLocation(int id)
+    private static GenericPartitionLocation createPartitionLocation(int id)
     {
-      return new HashPartitionLocation(
+      return new GenericPartitionLocation(
           "host",
           0,
           false,
           "subTaskId",
           createInterval(id),
-          id
+          new BuildingHashBasedNumberedShardSpec(
+              id,
+              id,
+              id + 1,
+              null,
+              HashPartitionFunction.MURMUR3_32_ABS,
+              new ObjectMapper()
+          )
       );
     }
 
@@ -127,7 +158,7 @@ public class ParallelIndexSupervisorTaskTest
 
     private static void assertNoMissingPartitions(
         int count,
-        List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation
+        List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation
     )
     {
       List<Integer> expectedIds = IntStream.range(0, count).boxed().collect(Collectors.toList());
@@ -136,7 +167,7 @@ public class ParallelIndexSupervisorTaskTest
                                                          .flatMap(
                                                              i -> i.getPartitionLocations()
                                                                    .stream()
-                                                                   .map(HashPartitionLocation::getPartitionId)
+                                                                   .map(GenericPartitionLocation::getBucketId)
                                                          )
                                                          .sorted()
                                                          .collect(Collectors.toList());
@@ -144,4 +175,138 @@ public class ParallelIndexSupervisorTaskTest
       Assert.assertEquals(expectedIds, actualIds);
     }
   }
+
+  public static class ConstructorTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testFailToConstructWhenBothAppendToExistingAndForceGuaranteedRollupAreSet()
+    {
+      final boolean appendToExisting = true;
+      final boolean forceGuaranteedRollup = true;
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new InlineInputSource("test"),
+          new JsonInputFormat(null, null, null),
+          appendToExisting
+      );
+      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
+          null,
+          null,
+          10,
+          1000L,
+          null,
+          null,
+          null,
+          new HashedPartitionsSpec(null, 10, null),
+          new IndexSpec(
+              new RoaringBitmapSerdeFactory(true),
+              CompressionStrategy.UNCOMPRESSED,
+              CompressionStrategy.LZF,
+              LongEncodingStrategy.LONGS
+          ),
+          new IndexSpec(),
+          1,
+          forceGuaranteedRollup,
+          true,
+          10000L,
+          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+          null,
+          10,
+          100,
+          20L,
+          new Duration(3600),
+          128,
+          null,
+          null,
+          false,
+          null,
+          null
+      );
+      final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "datasource",
+              new TimestampSpec(null, null, null),
+              DimensionsSpec.EMPTY,
+              null,
+              null,
+              null
+          ),
+          ioConfig,
+          tuningConfig
+      );
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Perfect rollup cannot be guaranteed when appending to existing dataSources");
+      new ParallelIndexSupervisorTask(
+          null,
+          null,
+          null,
+          indexIngestionSpec,
+          null
+      );
+    }
+  }
+
+  public static class StaticUtilsTest
+  {
+    @Test
+    public void testIsParallelModeFalse_nullTuningConfig()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, null));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_rangePartition()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(true).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(0).andReturn(1).andReturn(2);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_notRangePartition()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(true).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(PartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(1).andReturn(2).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_inputSourceNotSplittable()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(false).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+  }
+
 }

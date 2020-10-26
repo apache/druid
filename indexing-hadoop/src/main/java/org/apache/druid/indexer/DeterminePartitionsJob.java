@@ -464,7 +464,7 @@ public class DeterminePartitionsJob implements Jobby
       final Optional<Interval> maybeInterval = config.getGranularitySpec().bucketInterval(timestamp);
 
       if (!maybeInterval.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", timestamp);
+        throw new ISE("No bucket found for timestamp: %s", timestamp);
       }
 
       final Interval interval = maybeInterval.get();
@@ -627,7 +627,7 @@ public class DeterminePartitionsJob implements Jobby
       final long totalRows = firstDvc.numRows;
 
       if (!"".equals(firstDvc.dim) || !"".equals(firstDvc.value)) {
-        throw new IllegalStateException("WTF?! Expected total row indicator on first k/v pair!");
+        throw new IllegalStateException("Expected total row indicator on first k/v pair");
       }
 
       // "iterator" will now take us over many candidate dimensions
@@ -666,7 +666,10 @@ public class DeterminePartitionsJob implements Jobby
               currentDimPartitions.dim,
               currentDimPartitionStart,
               dvc.value,
-              currentDimPartitions.partitions.size()
+              currentDimPartitions.partitions.size(),
+              // Set unknown core partitions size so that the legacy way is used for checking partitionHolder
+              // completeness. See SingleDimensionShardSpec.createChunk().
+              SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
           );
 
           log.info(
@@ -706,7 +709,10 @@ public class DeterminePartitionsJob implements Jobby
                   currentDimPartitions.dim,
                   previousShardSpec.getStart(),
                   null,
-                  previousShardSpec.getPartitionNum()
+                  previousShardSpec.getPartitionNum(),
+                  // Set unknown core partitions size so that the legacy way is used for checking partitionHolder
+                  // completeness. See SingleDimensionShardSpec.createChunk().
+                  SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
               );
 
               log.info("Removing possible shard: %s", previousShardSpec);
@@ -719,7 +725,10 @@ public class DeterminePartitionsJob implements Jobby
                   currentDimPartitions.dim,
                   currentDimPartitionStart,
                   null,
-                  currentDimPartitions.partitions.size()
+                  currentDimPartitions.partitions.size(),
+                  // Set unknown core partitions size so that the legacy way is used for checking partitionHolder
+                  // completeness. See SingleDimensionShardSpec.createChunk().
+                  SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
               );
             }
 

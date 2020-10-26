@@ -16,116 +16,215 @@
  * limitations under the License.
  */
 
-import { Menu, MenuItem, Popover } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import { HeaderRows, SqlQuery } from 'druid-query-toolkit';
-import { basicIdentifierEscape, basicLiteralEscape } from 'druid-query-toolkit/build/sql/helpers';
+import { Icon, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { IconName, IconNames } from '@blueprintjs/icons';
+import {
+  QueryResult,
+  SqlExpression,
+  SqlLiteral,
+  SqlQuery,
+  SqlRef,
+  trimString,
+} from 'druid-query-toolkit';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
+import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert } from '../../../utils';
+import { copyAndAlert, filterMap, prettyPrintSql } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
+import { deepSet } from '../../../utils/object-change';
+
+import { ColumnRenameInput } from './column-rename-input/column-rename-input';
 
 import './query-output.scss';
 
-function trimValue(str: any): string {
-  str = String(str);
-  if (str.length < 102) return str;
-  return str.substr(0, 100) + '...';
+function isComparable(x: unknown): boolean {
+  return x !== null && x !== '' && !isNaN(Number(x));
+}
+
+function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSON.stringify(value);
+
+    default:
+      return String(value);
+  }
+}
+
+interface Pagination {
+  page: number;
+  pageSize: number;
+}
+
+function getNumericColumnBraces(
+  queryResult: QueryResult | undefined,
+  pagination: Pagination,
+): Record<number, string[]> {
+  const numericColumnBraces: Record<number, string[]> = {};
+  if (queryResult) {
+    const index = pagination.page * pagination.pageSize;
+    const rows = queryResult.rows.slice(index, index + pagination.pageSize);
+    if (rows.length) {
+      const numColumns = queryResult.header.length;
+      for (let c = 0; c < numColumns; c++) {
+        const brace = filterMap(rows, row =>
+          typeof row[c] === 'number' ? String(row[c]) : undefined,
+        );
+        if (rows.length === brace.length) {
+          numericColumnBraces[c] = brace;
+        }
+      }
+    }
+  }
+  return numericColumnBraces;
 }
 
 export interface QueryOutputProps {
-  loading: boolean;
-  queryResult?: HeaderRows;
-  parsedQuery?: SqlQuery;
+  queryResult?: QueryResult;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
-  error?: string;
   runeMode: boolean;
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult, parsedQuery, loading, error } = props;
-  const [showValue, setShowValue] = useState();
+  const { queryResult, onQueryChange, runeMode } = props;
+  const parsedQuery = queryResult ? queryResult.sqlQuery : undefined;
+  const [pagination, setPagination] = useState<Pagination>({ page: 0, pageSize: 20 });
+  const [showValue, setShowValue] = useState<string>();
+  const [renamingColumn, setRenamingColumn] = useState<number>(-1);
 
-  function getHeaderMenu(header: string) {
-    const { parsedQuery, onQueryChange, runeMode } = props;
+  function hasFilterOnHeader(header: string, headerIndex: number): boolean {
+    if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
+
+    return (
+      parsedQuery.getEffectiveWhereExpression().containsColumn(header) ||
+      parsedQuery.getEffectiveHavingExpression().containsColumn(header)
+    );
+  }
+
+  function getHeaderMenu(header: string, headerIndex: number) {
+    const ref = SqlRef.column(header);
+    const prettyRef = prettyPrintSql(ref);
 
     if (parsedQuery) {
-      const sorted = parsedQuery.getSorted();
+      const orderByExpression = parsedQuery.isValidSelectIndex(headerIndex)
+        ? SqlLiteral.index(headerIndex)
+        : SqlRef.column(header);
+      const descOrderBy = orderByExpression.toOrderByPart('DESC');
+      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const orderBy = parsedQuery.getOrderByForSelectIndex(headerIndex);
 
       const basicActions: BasicAction[] = [];
-      if (sorted) {
-        sorted.map(sorted => {
-          if (sorted.id === header) {
-            basicActions.push({
-              icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
-              title: `Order by: ${trimValue(header)} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => {
-                onQueryChange(parsedQuery.orderBy(header, sorted.desc ? 'ASC' : 'DESC'), true);
-              },
-            });
-          }
+      if (orderBy) {
+        const reverseOrderBy = orderBy.reverseDirection();
+        const reverseOrderByDirection = reverseOrderBy.getEffectiveDirection();
+        basicActions.push({
+          icon: reverseOrderByDirection === 'ASC' ? IconNames.SORT_ASC : IconNames.SORT_DESC,
+          title: `Order ${reverseOrderByDirection === 'ASC' ? 'ascending' : 'descending'}`,
+          onAction: () => {
+            onQueryChange(parsedQuery.changeOrderByExpressions([reverseOrderBy]), true);
+          },
         });
-      }
-      if (!basicActions.length) {
+      } else {
         basicActions.push(
           {
             icon: IconNames.SORT_DESC,
-            title: `Order by: ${trimValue(header)} DESC`,
+            title: `Order descending`,
             onAction: () => {
-              onQueryChange(parsedQuery.orderBy(header, 'DESC'), true);
+              onQueryChange(parsedQuery.changeOrderByExpressions([descOrderBy]), true);
             },
           },
           {
             icon: IconNames.SORT_ASC,
-            title: `Order by: ${trimValue(header)} ASC`,
+            title: `Order ascending`,
             onAction: () => {
-              onQueryChange(parsedQuery.orderBy(header, 'ASC'), true);
+              onQueryChange(parsedQuery.changeOrderByExpressions([ascOrderBy]), true);
             },
           },
         );
       }
+
+      if (parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) {
+        const whereExpression = parsedQuery.getWhereExpression();
+        if (whereExpression && whereExpression.containsColumn(header)) {
+          basicActions.push({
+            icon: IconNames.FILTER_REMOVE,
+            title: `Remove from WHERE clause`,
+            onAction: () => {
+              onQueryChange(
+                parsedQuery.changeWhereExpression(whereExpression.removeColumnFromAnd(header)),
+                true,
+              );
+            },
+          });
+        }
+
+        const havingExpression = parsedQuery.getHavingExpression();
+        if (havingExpression && havingExpression.containsColumn(header)) {
+          basicActions.push({
+            icon: IconNames.FILTER_REMOVE,
+            title: `Remove from HAVING clause`,
+            onAction: () => {
+              onQueryChange(
+                parsedQuery.changeHavingExpression(havingExpression.removeColumnFromAnd(header)),
+                true,
+              );
+            },
+          });
+        }
+      }
+
+      if (!parsedQuery.hasStarInSelect()) {
+        basicActions.push({
+          icon: IconNames.EDIT,
+          title: `Rename column`,
+          onAction: () => {
+            setRenamingColumn(headerIndex);
+          },
+        });
+      }
+
       basicActions.push({
         icon: IconNames.CROSS,
-        title: `Remove: ${trimValue(header)}`,
+        title: `Remove column`,
         onAction: () => {
-          onQueryChange(parsedQuery.remove(header), true);
+          onQueryChange(parsedQuery.removeOutputColumn(header), true);
         },
       });
 
       return basicActionsToMenu(basicActions);
     } else {
+      const orderByExpression = SqlRef.column(header);
+      const descOrderBy = orderByExpression.toOrderByPart('DESC');
+      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderByPretty = prettyPrintSql(descOrderBy);
+      const ascOrderByPretty = prettyPrintSql(descOrderBy);
       return (
         <Menu>
           <MenuItem
             icon={IconNames.CLIPBOARD}
-            text={`Copy: ${trimValue(header)}`}
+            text={`Copy: ${prettyRef}`}
             onClick={() => {
-              copyAndAlert(header, `${header}' copied to clipboard`);
+              copyAndAlert(String(ref), `${prettyRef}' copied to clipboard`);
             }}
           />
           {!runeMode && (
             <>
               <MenuItem
                 icon={IconNames.CLIPBOARD}
-                text={`Copy: ORDER BY ${basicIdentifierEscape(header)} ASC`}
+                text={`Copy: ${descOrderByPretty}`}
                 onClick={() =>
-                  copyAndAlert(
-                    `ORDER BY ${basicIdentifierEscape(header)} ASC`,
-                    `ORDER BY ${basicIdentifierEscape(header)} ASC' copied to clipboard`,
-                  )
+                  copyAndAlert(descOrderBy.toString(), `'${descOrderByPretty}' copied to clipboard`)
                 }
               />
               <MenuItem
                 icon={IconNames.CLIPBOARD}
-                text={`Copy: 'ORDER BY ${basicIdentifierEscape(header)} DESC'`}
+                text={`Copy: ${ascOrderByPretty}`}
                 onClick={() =>
-                  copyAndAlert(
-                    `ORDER BY ${basicIdentifierEscape(header)} DESC`,
-                    `ORDER BY ${basicIdentifierEscape(header)} DESC' copied to clipboard`,
-                  )
+                  copyAndAlert(ascOrderBy.toString(), `'${ascOrderByPretty}' copied to clipboard`)
                 }
               />
             </>
@@ -135,94 +234,97 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     }
   }
 
-  function getCellMenu(header: string, value: any) {
-    const { parsedQuery, onQueryChange, runeMode } = props;
+  function filterOnMenuItem(icon: IconName, clause: SqlExpression, having: boolean) {
+    const { onQueryChange } = props;
+    if (!parsedQuery) return;
 
-    const showFullValueMenuItem =
-      typeof value === 'string' ? (
-        <MenuItem
-          icon={IconNames.EYE_OPEN}
-          text={`Show full value`}
-          onClick={() => {
-            setShowValue(value);
-          }}
-        />
-      ) : (
-        undefined
-      );
+    return (
+      <MenuItem
+        icon={icon}
+        text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
+        onClick={() => {
+          onQueryChange(
+            having ? parsedQuery.addToHaving(clause) : parsedQuery.addToWhere(clause),
+            true,
+          );
+        }}
+      />
+    );
+  }
+
+  function clipboardMenuItem(clause: SqlExpression) {
+    const prettyLabel = prettyPrintSql(clause);
+    return (
+      <MenuItem
+        icon={IconNames.CLIPBOARD}
+        text={`Copy: ${prettyLabel}`}
+        onClick={() => copyAndAlert(clause.toString(), `${prettyLabel} copied to clipboard`)}
+      />
+    );
+  }
+
+  function getCellMenu(header: string, headerIndex: number, value: unknown) {
+    const { runeMode } = props;
+
+    const val = SqlLiteral.maybe(value);
+    const showFullValueMenuItem = (
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text="Show full value"
+        onClick={() => {
+          setShowValue(stringifyValue(value));
+        }}
+      />
+    );
 
     if (parsedQuery) {
+      let ex: SqlExpression | undefined;
+      let having = false;
+      const selectValue = parsedQuery.getSelectExpressionForIndex(headerIndex);
+      if (selectValue) {
+        const outputName = selectValue.getOutputName();
+        having = parsedQuery.isAggregateSelectIndex(headerIndex);
+        if (having && outputName) {
+          ex = SqlRef.column(outputName);
+        } else {
+          ex = selectValue.expression as SqlExpression;
+        }
+      } else if (parsedQuery.hasStarInSelect()) {
+        ex = SqlRef.column(header);
+      }
+
       return (
         <Menu>
-          <MenuItem
-            icon={IconNames.FILTER_KEEP}
-            text={`Filter by: ${trimValue(header)} = ${trimValue(value)}`}
-            onClick={() => {
-              onQueryChange(parsedQuery.addWhereFilter(header, '=', value), true);
-            }}
-          />
-          <MenuItem
-            icon={IconNames.FILTER_REMOVE}
-            text={`Filter by: ${trimValue(header)} != ${trimValue(value)}`}
-            onClick={() => {
-              onQueryChange(parsedQuery.addWhereFilter(header, '!=', value), true);
-            }}
-          />
-          {!isNaN(Number(value)) && (
+          {ex && val && (
             <>
-              <MenuItem
-                icon={IconNames.FILTER_KEEP}
-                text={`Filter by: ${trimValue(header)} >= ${trimValue(value)}`}
-                onClick={() => {
-                  onQueryChange(parsedQuery.addWhereFilter(header, '>=', value), true);
-                }}
-              />
-              <MenuItem
-                icon={IconNames.FILTER_KEEP}
-                text={`Filter by: ${trimValue(header)} <= ${trimValue(value)}`}
-                onClick={() => {
-                  onQueryChange(parsedQuery.addWhereFilter(header, '<=', value), true);
-                }}
-              />
+              {isComparable(value) && (
+                <>
+                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
+                </>
+              )}
+              {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
             </>
           )}
           {showFullValueMenuItem}
         </Menu>
       );
     } else {
+      const ref = SqlRef.column(header);
+      const stringValue = stringifyValue(value);
+      const trimmedValue = trimString(stringValue, 50);
       return (
         <Menu>
           <MenuItem
             icon={IconNames.CLIPBOARD}
-            text={`Copy: ${trimValue(value)}`}
-            onClick={() => copyAndAlert(value, `${value} copied to clipboard`)}
+            text={`Copy: ${trimmedValue}`}
+            onClick={() => copyAndAlert(stringValue, `${trimmedValue} copied to clipboard`)}
           />
-          {!runeMode && (
+          {!runeMode && val && (
             <>
-              <MenuItem
-                icon={IconNames.CLIPBOARD}
-                text={`Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(value)}`}
-                onClick={() =>
-                  copyAndAlert(
-                    `${basicIdentifierEscape(header)} = ${basicLiteralEscape(value)}`,
-                    `${basicIdentifierEscape(header)} = ${basicLiteralEscape(
-                      value,
-                    )} copied to clipboard`,
-                  )
-                }
-              />
-              <MenuItem
-                icon={IconNames.CLIPBOARD}
-                text={`Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(value)}`}
-                onClick={() =>
-                  copyAndAlert(
-                    `${basicIdentifierEscape(header)} != ${basicLiteralEscape(value)}`,
-                    `${basicIdentifierEscape(header)} != ${basicLiteralEscape(
-                      value,
-                    )} copied to clipboard`,
-                  )
-                }
-              />
+              {clipboardMenuItem(ref.equal(val))}
+              {clipboardMenuItem(ref.unequal(val))}
             </>
           )}
           {showFullValueMenuItem}
@@ -231,67 +333,97 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     }
   }
 
-  function getHeaderClassName(header: string) {
-    const { parsedQuery } = props;
+  function getHeaderClassName(header: string, i: number) {
     if (!parsedQuery) return;
 
     const className = [];
-    const sorted = parsedQuery.getSorted();
-    const aggregateColumns = parsedQuery.getAggregateColumns();
-
-    if (sorted) {
-      const sortedColumnNames = sorted.map(column => column.id);
-      if (sortedColumnNames.includes(header)) {
-        className.push(sorted[sortedColumnNames.indexOf(header)].desc ? '-sort-desc' : '-sort-asc');
-      }
+    const orderBy = parsedQuery.getOrderByForOutputColumn(header);
+    if (orderBy) {
+      className.push(orderBy.getEffectiveDirection() === 'DESC' ? '-sort-desc' : '-sort-asc');
     }
 
-    if (aggregateColumns && aggregateColumns.includes(header)) {
+    if (parsedQuery.isAggregateOutputColumn(header)) {
       className.push('aggregate-header');
+    }
+
+    if (i === renamingColumn) {
+      className.push('renaming');
     }
 
     return className.join(' ');
   }
 
-  let aggregateColumns: string[] | undefined;
-  if (parsedQuery) {
-    aggregateColumns = parsedQuery.getAggregateColumns();
+  function renameColumnTo(renameTo: string | undefined) {
+    setRenamingColumn(-1);
+    if (renameTo && parsedQuery) {
+      if (parsedQuery.hasStarInSelect()) return;
+      const selectExpression = parsedQuery.selectExpressions.get(renamingColumn);
+      if (!selectExpression) return;
+      onQueryChange(
+        parsedQuery.changeSelectExpressions(
+          parsedQuery.selectExpressions.change(
+            renamingColumn,
+            selectExpression.changeAliasName(renameTo),
+          ),
+        ),
+        true,
+      );
+    }
   }
 
+  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
   return (
     <div className="query-output">
       <ReactTable
-        data={queryResult ? queryResult.rows : []}
-        loading={loading}
-        noDataText={
-          !loading && queryResult && !queryResult.rows.length
-            ? 'Query returned no data'
-            : error || ''
-        }
+        data={queryResult ? (queryResult.rows as any[][]) : []}
+        noDataText={queryResult && !queryResult.rows.length ? 'Query returned no data' : ''}
+        page={pagination.page}
+        pageSize={pagination.pageSize}
+        onPageChange={page => setPagination(deepSet(pagination, 'page', page))}
+        onPageSizeChange={(pageSize, page) => setPagination({ page, pageSize })}
         sortable={false}
-        columns={(queryResult ? queryResult.header : []).map((h: any, i) => {
+        columns={(queryResult ? queryResult.header : []).map((column, i) => {
+          const h = column.name;
           return {
-            Header: () => {
-              return (
-                <Popover className={'clickable-cell'} content={getHeaderMenu(h)}>
-                  <div>{h}</div>
-                </Popover>
-              );
-            },
-            headerClassName: getHeaderClassName(h),
+            Header:
+              i === renamingColumn && parsedQuery
+                ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
+                : () => {
+                    return (
+                      <Popover className={'clickable-cell'} content={getHeaderMenu(h, i)}>
+                        <div>
+                          {h}
+                          {hasFilterOnHeader(h, i) && (
+                            <Icon icon={IconNames.FILTER} iconSize={14} />
+                          )}
+                        </div>
+                      </Popover>
+                    );
+                  },
+            headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
             Cell: row => {
               const value = row.value;
               return (
                 <div>
-                  <Popover content={getCellMenu(h, value)}>
-                    <TableCell value={value} unlimited />
+                  <Popover content={getCellMenu(h, i, value)}>
+                    {numericColumnBraces[i] ? (
+                      <BracedText
+                        text={String(value)}
+                        braces={numericColumnBraces[i]}
+                        padFractionalPart
+                      />
+                    ) : (
+                      <TableCell value={value} unlimited />
+                    )}
                   </Popover>
                 </div>
               );
             },
             className:
-              aggregateColumns && aggregateColumns.includes(h) ? 'aggregate-column' : undefined,
+              parsedQuery && parsedQuery.isAggregateOutputColumn(h)
+                ? 'aggregate-column'
+                : undefined,
           };
         })}
       />

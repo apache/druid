@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -55,6 +55,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -74,7 +75,6 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -114,8 +114,7 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig,
-      final QueryConfig queryConfig
+      final GroupByQueryConfig querySpecificConfig
   )
   {
     if (storageAdapter == null) {
@@ -131,47 +130,52 @@ public class GroupByQueryEngineV2
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
-    final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-        query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
-    );
-
-    final DateTime fudgeTimestamp = fudgeTimestampString == null
-                                    ? null
-                                    : DateTimes.utc(Long.parseLong(fudgeTimestampString));
-
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-    final Interval interval = Iterables.getOnlyElement(query.getIntervals());
-
-    final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
-        VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
-    );
-
-    final Sequence<ResultRow> result;
-
-    if (doVectorize) {
-      result = VectorGroupByEngine.process(
-          query,
-          storageAdapter,
-          bufferHolder.get(),
-          fudgeTimestamp,
-          filter,
-          interval,
-          querySpecificConfig,
-          queryConfig
+    try {
+      final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
+          query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
       );
-    } else {
-      result = processNonVectorized(
-          query,
-          storageAdapter,
-          bufferHolder.get(),
-          fudgeTimestamp,
-          querySpecificConfig,
-          filter,
-          interval
+
+      final DateTime fudgeTimestamp = fudgeTimestampString == null
+                                      ? null
+                                      : DateTimes.utc(Long.parseLong(fudgeTimestampString));
+
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+
+      final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+          VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
+
+      final Sequence<ResultRow> result;
+
+      if (doVectorize) {
+        result = VectorGroupByEngine.process(
+            query,
+            storageAdapter,
+            bufferHolder.get(),
+            fudgeTimestamp,
+            filter,
+            interval,
+            querySpecificConfig
+        );
+      } else {
+        result = processNonVectorized(
+            query,
+            storageAdapter,
+            bufferHolder.get(),
+            fudgeTimestamp,
+            querySpecificConfig,
+            filter,
+            interval
+        );
+      }
+
+      return result.withBaggage(bufferHolder);
     }
-
-    return result.withBaggage(bufferHolder);
+    catch (Throwable e) {
+      bufferHolder.close();
+      throw e;
+    }
   }
 
   private static Sequence<ResultRow> processNonVectorized(
@@ -227,7 +231,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions(), false),
+                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions()),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -238,7 +242,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions(), false)
+                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions())
                   );
                 }
               }
@@ -315,13 +319,11 @@ public class GroupByQueryEngineV2
   /**
    * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
    * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
-   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonexistent' is sort of a hack to let
-   * the vectorized engine, which only operates on actual segments, to still work in this case for non-existent columns.
+   * broker merge, for example with an 'inline' datasource subquery.
    */
   public static boolean isAllSingleValueDims(
-      final Function<String, ColumnCapabilities> capabilitiesFunction,
-      final List<DimensionSpec> dimensions,
-      final boolean missingMeansNonexistent
+      final ColumnInspector inspector,
+      final List<DimensionSpec> dimensions
   )
   {
     return dimensions
@@ -334,10 +336,9 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues()) ||
-                     (missingMeansNonexistent && columnCapabilities == null);
+              // Now check column capabilities, which must be present and explicitly not multi-valued
+              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
+              return columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse();
             });
   }
 
@@ -617,6 +618,9 @@ public class GroupByQueryEngineV2
       }
 
       if (canDoLimitPushdown) {
+        // Sanity check; must not have "offset" at this point.
+        Preconditions.checkState(!limitSpec.isOffset(), "Cannot push down offsets");
+
         LimitedBufferHashGrouper<ByteBuffer> limitGrouper = new LimitedBufferHashGrouper<>(
             Suppliers.ofInstance(buffer),
             keySerde,
@@ -965,13 +969,13 @@ public class GroupByQueryEngineV2
       DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
 
       return GrouperBufferComparatorUtils.bufferComparatorWithAggregators(
-        query.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
-        aggregatorOffsets,
-        limitSpec,
-        query.getDimensions(),
-        getDimensionComparators(limitSpec),
-        query.getResultRowHasTimestamp(),
-        query.getContextSortByDimsFirst()
+          query.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
+          aggregatorOffsets,
+          limitSpec,
+          query.getDimensions(),
+          getDimensionComparators(limitSpec),
+          query.getResultRowHasTimestamp(),
+          query.getContextSortByDimsFirst()
       );
     }
 

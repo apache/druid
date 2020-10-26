@@ -24,8 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.indexer.TaskIdUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
@@ -53,6 +52,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -166,7 +166,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-      String taskId = TaskIdUtils.getRandomIdWithPrefix(baseSequenceName);
+      String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KinesisIndexTask(
           taskId,
           new TaskResource(baseSequenceName, 1),
@@ -174,11 +174,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
-          null,
-          null,
-          rowIngestionMetersFactory,
-          awsCredentialsConfig,
-          null
+          awsCredentialsConfig
       ));
     }
     return taskList;
@@ -414,19 +410,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         currentMetadata,
         expiredPartitionIds,
         KinesisSequenceNumber.EXPIRED_MARKER
-    );
-  }
-
-  @Override
-  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedPartitions(
-      SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> closedPartitionIds
-  )
-  {
-    log.info("Marking closed shards in metadata: " + closedPartitionIds);
-    return createDataSourceMetadataWithClosedOrExpiredPartitions(
-        currentMetadata,
-        closedPartitionIds,
-        KinesisSequenceNumber.END_OF_SHARD_MARKER
     );
   }
 

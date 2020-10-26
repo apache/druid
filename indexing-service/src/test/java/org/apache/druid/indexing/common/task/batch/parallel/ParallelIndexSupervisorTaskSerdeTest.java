@@ -21,8 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -31,22 +30,15 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -64,6 +56,10 @@ import java.util.Map;
 
 public class ParallelIndexSupervisorTaskSerdeTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
   private static final List<Interval> INTERVALS = Collections.singletonList(Intervals.of("2018/2019"));
 
@@ -117,13 +113,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
   @Test
   public void forceGuaranteedRollupWithHashPartitionsMissingNumShards()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "forceGuaranteedRollup is incompatible with partitionsSpec: numShards must be specified"
-    );
-
     Integer numShards = null;
-    new ParallelIndexSupervisorTaskBuilder()
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
         .ingestionSpec(
             new ParallelIndexIngestionSpecBuilder()
                 .forceGuaranteedRollup(true)
@@ -132,6 +123,9 @@ public class ParallelIndexSupervisorTaskSerdeTest
                 .build()
         )
         .build();
+
+    PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
+    Assert.assertThat(partitionsSpec, CoreMatchers.instanceOf(HashedPartitionsSpec.class));
   }
 
   @Test
@@ -191,11 +185,6 @@ public class ParallelIndexSupervisorTaskSerdeTest
     private static final String ID = "taskId";
     private final TaskResource taskResource = new TaskResource("group", 1);
     private final Map<String, Object> context = Collections.emptyMap();
-    private final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
-    private final ChatHandlerProvider chatHandlerProvider = new NoopChatHandlerProvider();
-    private final AuthorizerMapper authorizerMapper = new AuthorizerMapper(Collections.emptyMap());
-    private final RowIngestionMetersFactory rowIngestionMetersFactory = new DropwizardRowIngestionMetersFactory();
-    private final AppenderatorsManager appenderatorsManager = new TestAppenderatorsManager();
 
     private ParallelIndexIngestionSpec ingestionSpec;
 
@@ -212,12 +201,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
           null,
           taskResource,
           ingestionSpec,
-          context,
-          indexingServiceClient,
-          chatHandlerProvider,
-          authorizerMapper,
-          rowIngestionMetersFactory,
-          appenderatorsManager
+          context
       );
     }
   }
@@ -280,6 +264,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
       );
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
           null,
           null,
           null,

@@ -76,32 +76,6 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     return objects.size();
   }
 
-  @Override
-  @Nullable
-  public ReferenceCountingResourceHolder<T> take(final long timeoutMs)
-  {
-    Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
-    checkInitialized();
-    try {
-      return wrapObject(timeoutMs > 0 ? pollObject(timeoutMs) : pollObject());
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
-  public ReferenceCountingResourceHolder<T> take()
-  {
-    checkInitialized();
-    try {
-      return wrapObject(takeObject());
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Nullable
   private ReferenceCountingResourceHolder<T> wrapObject(T theObject)
   {
@@ -136,21 +110,6 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
           return null;
         }
         nanos = notEnough.awaitNanos(nanos);
-      }
-      return objects.pop();
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
-  private T takeObject() throws InterruptedException
-  {
-    final ReentrantLock lock = this.lock;
-    lock.lockInterruptibly();
-    try {
-      while (objects.isEmpty()) {
-        notEnough.await();
       }
       return objects.pop();
     }

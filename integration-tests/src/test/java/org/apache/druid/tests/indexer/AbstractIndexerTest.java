@@ -26,9 +26,11 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
+import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
@@ -46,6 +48,8 @@ import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
+  private static final Logger LOG = new Logger(AbstractIndexerTest.class);
+
   @Inject
   protected CoordinatorResourceTestClient coordinator;
   @Inject
@@ -69,6 +73,21 @@ public abstract class AbstractIndexerTest
 
   protected void unloadAndKillData(final String dataSource)
   {
+    // Get all failed task logs
+    List<TaskResponseObject> allTasks = indexer.getCompleteTasksForDataSource(dataSource);
+    for (TaskResponseObject task : allTasks) {
+      if (task.getStatus().isFailure()) {
+        LOG.info("------- START Found failed task logging for taskId=" + task.getId() + " -------");
+        LOG.info("Start failed task log:");
+        LOG.info(indexer.getTaskLog(task.getId()));
+        LOG.info("End failed task log.");
+        LOG.info("Start failed task errorMsg:");
+        LOG.info(indexer.getTaskErrorMessage(task.getId()));
+        LOG.info("End failed task errorMsg.");
+        LOG.info("------- END Found failed task logging for taskId=" + task.getId() + " -------");
+      }
+    }
+
     List<String> intervals = coordinator.getSegmentIntervals(dataSource);
 
     // each element in intervals has this form:

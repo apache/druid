@@ -23,9 +23,11 @@ This is the unified Druid web console that servers as a data management layer fo
 
 ## How to watch and run for development
 
-1. You need to be withing the `web-console` directory
+1. You need to be within the `web-console` directory
 2. Install the modules with `npm install`
-3. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+3. Run `npm run compile` to compile the scss files
+4. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+
 
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
 **Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
@@ -46,12 +48,6 @@ As part of this repo:
 - `public/` - The compiled destination of the file powering this console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console
-
-Generated/copied dynamically
-
-- `index.html` - Entry file for the coordinator console
-- `pages/` - The files for the older coordinator console
-- `coordinator-console/` - Files for the coordinator console
 
 ## List of non SQL data reading APIs used
 
@@ -82,26 +78,24 @@ From the web-console directory:
 3. Run end-to-end tests: `npm run test-e2e`
 4. Stop druid cluster: `script/druid stop`
 
+If you already have a druid cluster running on the standard ports, the steps to build/start/stop a druid cluster can
+be skipped.
+
 ### Debugging
 
 #### Screenshots
 
 `e2e-tests/util/debug.ts:saveScreenshotIfError()` is used to save a screenshot of the web console
-when the test fails. For example, if `e2e-tests/tutotrial-batch.spec.ts` fails, it will create
+when the test fails. For example, if `e2e-tests/tutorial-batch.spec.ts` fails, it will create
 `load-data-from-local-disk-error-screenshot.png`.
 
 #### Disabling Headless Mode
 
-Disabling headless mode while running the tests can be helpful. One way of doing this is by using
-`e2e-tests/util/playwright:createBrowserDebug()`. For example, the test can be modified to change
+Disabling headless mode while running the tests can be helpful. This can be done via the `DRUID_E2E_TEST_HEADLESS`
+environment variable, which defaults to `true`.
 
-```
-import { createBrowserNormal as createBrowser } from './util/playwright'
-```
+#### Running Against Alternate Web Console
 
-to
-
-```
-import { createBrowserDebug as createBrowser } from './util/playwright'`
-```
-
+The environment variable `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT` can be used to target a web console running on a
+non-default port (i.e., not port `8888`). For example, this environment variable can be used to target the
+development mode of the web console (started via `npm start`), which runs on port `18081`.

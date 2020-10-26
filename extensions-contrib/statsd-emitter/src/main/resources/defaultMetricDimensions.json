@@ -62,6 +62,12 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
+  "taskSlot/total/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/idle/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/busy/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/lazy/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/blacklisted/count" : { "dimensions" : [], "type" : "count" },
+
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/moved/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
@@ -93,15 +99,15 @@
   "jvm/pool/init" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
   "jvm/pool/max" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
   "jvm/pool/used" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
-  "jvm/bufferpool/count" : { "dimensions" : ["bufferPoolName"], "type" : "gauge" },
-  "jvm/bufferpool/used" : { "dimensions" : ["bufferPoolName"], "type" : "gauge" },
-  "jvm/bufferpool/capacity" : { "dimensions" : ["bufferPoolName"], "type" : "gauge" },
+  "jvm/bufferpool/count" : { "dimensions" : ["bufferpoolName"], "type" : "gauge" },
+  "jvm/bufferpool/used" : { "dimensions" : ["bufferpoolName"], "type" : "gauge" },
+  "jvm/bufferpool/capacity" : { "dimensions" : ["bufferpoolName"], "type" : "gauge" },
   "jvm/mem/init" : { "dimensions" : ["memKind"], "type" : "gauge" },
   "jvm/mem/max" : { "dimensions" : ["memKind"], "type" : "gauge" },
   "jvm/mem/used" : { "dimensions" : ["memKind"], "type" : "gauge" },
   "jvm/mem/committed" : { "dimensions" : ["memKind"], "type" : "gauge" },
-  "jvm/gc/count" : { "dimensions" : ["gcName"], "type" : "count" },
-  "jvm/gc/cpu" : { "dimensions" : ["gcName"], "type" : "count" },
+  "jvm/gc/count" : { "dimensions" : ["gcName", "gcGen"], "type" : "count" },
+  "jvm/gc/cpu" : { "dimensions" : ["gcName", "gcGen"], "type" : "count" },
 
   "ingest/events/buffered" : { "dimensions" : ["serviceName, bufferCapacity"], "type" : "gauge"},
 

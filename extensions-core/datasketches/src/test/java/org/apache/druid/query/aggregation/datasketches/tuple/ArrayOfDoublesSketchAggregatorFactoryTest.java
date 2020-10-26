@@ -20,12 +20,22 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
 import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
 import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,21 +69,45 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
   @Test
   public void testEquals()
   {
-    final ArrayOfDoublesSketchAggregatorFactory a1 = new ArrayOfDoublesSketchAggregatorFactory(
-        "name",
-        "field",
-        1,
-        ImmutableList.of("met"),
-        1
-    );
-    final ArrayOfDoublesSketchAggregatorFactory a2 = new ArrayOfDoublesSketchAggregatorFactory(
-        "name",
-        "field",
-        1,
-        ImmutableList.of("met"),
-        1
-    );
+    EqualsVerifier.forClass(ArrayOfDoublesSketchAggregatorFactory.class)
+                  .withNonnullFields("name", "fieldName")
+                  .usingGetClass()
+                  .verify();
+  }
 
-    Assert.assertEquals(a1, a2);
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count"),
+                  new ArrayOfDoublesSketchAggregatorFactory(
+                      "arrayOfDoublesSketch",
+                      "col",
+                      1,
+                      ImmutableList.of("met"),
+                      1
+                  )
+              )
+              .postAggregators(
+                  new FieldAccessPostAggregator("a", "arrayOfDoublesSketch"),
+                  new FinalizingFieldAccessPostAggregator("b", "arrayOfDoublesSketch")
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ValueType.LONG)
+                    .add("arrayOfDoublesSketch", null)
+                    .add("a", ValueType.COMPLEX)
+                    .add("b", ValueType.DOUBLE)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

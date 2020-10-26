@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment.join;
 
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -33,7 +35,7 @@ import java.util.Set;
  * This class's most important method is {@link #makeJoinMatcher}. Its main user is
  * {@link HashJoinEngine#makeJoinCursor}.
  */
-public interface Joinable
+public interface Joinable extends ReferenceCountedObject
 {
   int CARDINALITY_UNKNOWN = -1;
 
@@ -70,12 +72,17 @@ public interface Joinable
    * @param remainderNeeded           whether or not {@link JoinMatcher#matchRemainder()} will ever be called on the
    *                                  matcher. If we know it will not, additional optimizations are often possible.
    *
+   * @param descending                true if join cursor is iterated in descending order
+   * @param closer                    closer that will run after join cursor has completed to clean up any per query
+   *                                  resources the joinable uses
    * @return the matcher
    */
   JoinMatcher makeJoinMatcher(
       ColumnSelectorFactory leftColumnSelectorFactory,
       JoinConditionAnalysis condition,
-      boolean remainderNeeded
+      boolean remainderNeeded,
+      boolean descending,
+      Closer closer
   );
 
   /**

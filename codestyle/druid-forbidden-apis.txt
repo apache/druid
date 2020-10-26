@@ -24,7 +24,6 @@ com.google.common.io.Files#createTempDir() @ Use org.apache.druid.java.util.comm
 com.google.common.util.concurrent.MoreExecutors#sameThreadExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
 com.google.common.util.concurrent.MoreExecutors#newDirectExecutorService() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
 com.google.common.util.concurrent.MoreExecutors#directExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
-com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture, com.google.common.util.concurrent.AsyncFunction) @ Use org.apache.druid.java.util.common.concurrent.ListenableFutures#transformAsync
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
 java.lang.String#matches(java.lang.String) @ Use startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence) @ Use one of the appropriate methods in StringUtils instead

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
@@ -51,8 +50,7 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
     super(
@@ -60,8 +58,7 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
         taskId,
         groupId,
         ingestionSchema.getTuningConfig(),
-        context,
-        indexingServiceClient
+        context
     );
     this.ingestionSchema = ingestionSchema;
     this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(

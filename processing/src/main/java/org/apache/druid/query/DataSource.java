@@ -28,14 +28,15 @@ import java.util.Set;
 /**
  * Represents a source... of data... for a query. Analogous to the "FROM" clause in SQL.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacyDataSource.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TableDataSource.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
     @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
     @JsonSubTypes.Type(value = UnionDataSource.class, name = "union"),
     @JsonSubTypes.Type(value = JoinDataSource.class, name = "join"),
     @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
-    @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline")
+    @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
+    @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable")
 })
 public interface DataSource
 {
@@ -58,18 +59,23 @@ public interface DataSource
 
   /**
    * Returns true if queries on this dataSource are cacheable at both the result level and per-segment level.
-   * Currently, dataSources that modify the behavior of per-segment processing are not cacheable (like 'join').
-   * Nor are dataSources that do not actually reference segments (like 'inline'), since cache keys are always based
-   * on segment identifiers.
-   *
-   * Note: Ideally, queries on 'join' datasources _would_ be cacheable, but we cannot currently do this due to lacking
-   * the code necessary to compute cache keys properly.
+   * Currently, dataSources that do not actually reference segments (like 'inline'), are not cacheable since cache keys
+   * are always based on segment identifiers.
    */
-  boolean isCacheable();
+  boolean isCacheable(boolean isBroker);
 
   /**
    * Returns true if all servers have a full copy of this datasource. True for things like inline, lookup, etc, or
    * for queries of those.
+   *
+   * Currently this is coupled with joinability - if this returns true then the query engine expects there exists a
+   * {@link org.apache.druid.segment.join.JoinableFactory} which might build a
+   * {@link org.apache.druid.segment.join.Joinable} for this datasource directly. If a subquery 'inline' join is
+   * required to join this datasource on the right hand side, then this value must be false for now.
+   *
+   * In the future, instead of directly using this method, the query planner and engine should consider
+   * {@link org.apache.druid.segment.join.JoinableFactory#isDirectlyJoinable(DataSource)} when determining if the
+   * right hand side is directly joinable, which would allow decoupling this property from joins.
    */
   boolean isGlobal();
 

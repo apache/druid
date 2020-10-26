@@ -47,7 +47,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
       .requiredOperands(1)
-      .returnType(SqlTypeName.OTHER)
+      .returnTypeNonNull(SqlTypeName.OTHER)
       .build();
 
 

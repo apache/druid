@@ -21,144 +21,90 @@ import axios from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
-import { lookupBy, queryDruidSql, QueryManager } from '../../../utils';
+import { useQueryManager } from '../../../hooks';
+import { lookupBy, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
+
+export interface ServiceCounts {
+  coordinator?: number;
+  overlord?: number;
+  router?: number;
+  broker?: number;
+  historical?: number;
+  middle_manager?: number;
+  peon?: number;
+  indexer?: number;
+}
 
 export interface ServicesCardProps {
   capabilities: Capabilities;
 }
 
-export interface ServicesCardState {
-  serviceCountLoading: boolean;
-  coordinatorCount: number;
-  overlordCount: number;
-  routerCount: number;
-  brokerCount: number;
-  historicalCount: number;
-  middleManagerCount: number;
-  peonCount: number;
-  indexerCount: number;
-  serviceCountError?: string;
-}
-
-export class ServicesCard extends React.PureComponent<ServicesCardProps, ServicesCardState> {
-  private serviceQueryManager: QueryManager<Capabilities, any>;
-
-  constructor(props: ServicesCardProps, context: any) {
-    super(props, context);
-    this.state = {
-      serviceCountLoading: false,
-      coordinatorCount: 0,
-      overlordCount: 0,
-      routerCount: 0,
-      brokerCount: 0,
-      historicalCount: 0,
-      middleManagerCount: 0,
-      peonCount: 0,
-      indexerCount: 0,
-    };
-
-    this.serviceQueryManager = new QueryManager({
-      processQuery: async capabilities => {
-        if (capabilities.hasSql()) {
-          const serviceCountsFromQuery: {
-            service_type: string;
-            count: number;
-          }[] = await queryDruidSql({
-            query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
-          });
-          return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
-        } else if (capabilities.hasCoordinatorAccess()) {
-          const services = (await axios.get('/druid/coordinator/v1/servers?simple')).data;
-
-          const middleManager = capabilities.hasOverlordAccess()
-            ? (await axios.get('/druid/indexer/v1/workers')).data
-            : [];
-
-          return {
-            historical: services.filter((s: any) => s.type === 'historical').length,
-            middle_manager: middleManager.length,
-            peon: services.filter((s: any) => s.type === 'indexer-executor').length,
-          };
-        } else {
-          throw new Error(`must have SQL or coordinator access`);
-        }
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          serviceCountLoading: loading,
-          coordinatorCount: result ? result.coordinator : 0,
-          overlordCount: result ? result.overlord : 0,
-          routerCount: result ? result.router : 0,
-          brokerCount: result ? result.broker : 0,
-          historicalCount: result ? result.historical : 0,
-          middleManagerCount: result ? result.middle_manager : 0,
-          peonCount: result ? result.peon : 0,
-          indexerCount: result ? result.indexer : 0,
-          serviceCountError: error,
+export const ServicesCard = React.memo(function ServicesCard(props: ServicesCardProps) {
+  const [serviceCountState] = useQueryManager<Capabilities, ServiceCounts>({
+    processQuery: async capabilities => {
+      if (capabilities.hasSql()) {
+        const serviceCountsFromQuery: {
+          service_type: string;
+          count: number;
+        }[] = await queryDruidSql({
+          query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
         });
-      },
-    });
-  }
+        return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
+      } else if (capabilities.hasCoordinatorAccess()) {
+        const services = (await axios.get('/druid/coordinator/v1/servers?simple')).data;
 
-  componentDidMount(): void {
-    const { capabilities } = this.props;
+        const middleManager = capabilities.hasOverlordAccess()
+          ? (await axios.get('/druid/indexer/v1/workers')).data
+          : [];
 
-    this.serviceQueryManager.runQuery(capabilities);
-  }
+        return {
+          historical: services.filter((s: any) => s.type === 'historical').length,
+          middle_manager: middleManager.length,
+          peon: services.filter((s: any) => s.type === 'indexer-executor').length,
+        };
+      } else {
+        throw new Error(`must have SQL or coordinator access`);
+      }
+    },
+    initQuery: props.capabilities,
+  });
 
-  componentWillUnmount(): void {
-    this.serviceQueryManager.terminate();
-  }
-
-  render(): JSX.Element {
-    const {
-      serviceCountLoading,
-      coordinatorCount,
-      overlordCount,
-      routerCount,
-      brokerCount,
-      historicalCount,
-      middleManagerCount,
-      peonCount,
-      indexerCount,
-      serviceCountError,
-    } = this.state;
-    return (
-      <HomeViewCard
-        className="services-card"
-        href={'#services'}
-        icon={IconNames.DATABASE}
-        title={'Services'}
-        loading={serviceCountLoading}
-        error={serviceCountError}
-      >
-        <PluralPairIfNeeded
-          firstCount={overlordCount}
-          firstSingular="overlord"
-          secondCount={coordinatorCount}
-          secondSingular="coordinator"
-        />
-        <PluralPairIfNeeded
-          firstCount={routerCount}
-          firstSingular="router"
-          secondCount={brokerCount}
-          secondSingular="broker"
-        />
-        <PluralPairIfNeeded
-          firstCount={historicalCount}
-          firstSingular="historical"
-          secondCount={middleManagerCount}
-          secondSingular="middle manager"
-        />
-        <PluralPairIfNeeded
-          firstCount={peonCount}
-          firstSingular="peon"
-          secondCount={indexerCount}
-          secondSingular="indexer"
-        />
-      </HomeViewCard>
-    );
-  }
-}
+  const serviceCounts = serviceCountState.data;
+  return (
+    <HomeViewCard
+      className="services-card"
+      href={'#services'}
+      icon={IconNames.DATABASE}
+      title={'Services'}
+      loading={serviceCountState.loading}
+      error={serviceCountState.error}
+    >
+      <PluralPairIfNeeded
+        firstCount={serviceCounts ? serviceCounts.overlord : 0}
+        firstSingular="overlord"
+        secondCount={serviceCounts ? serviceCounts.coordinator : 0}
+        secondSingular="coordinator"
+      />
+      <PluralPairIfNeeded
+        firstCount={serviceCounts ? serviceCounts.router : 0}
+        firstSingular="router"
+        secondCount={serviceCounts ? serviceCounts.broker : 0}
+        secondSingular="broker"
+      />
+      <PluralPairIfNeeded
+        firstCount={serviceCounts ? serviceCounts.historical : 0}
+        firstSingular="historical"
+        secondCount={serviceCounts ? serviceCounts.middle_manager : 0}
+        secondSingular="middle manager"
+      />
+      <PluralPairIfNeeded
+        firstCount={serviceCounts ? serviceCounts.peon : 0}
+        firstSingular="peon"
+        secondCount={serviceCounts ? serviceCounts.indexer : 0}
+        secondSingular="indexer"
+      />
+    </HomeViewCard>
+  );
+});

@@ -21,10 +21,13 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -35,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
+ * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e.g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
@@ -45,7 +48,7 @@ import java.util.Map;
  * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
  * fails.
  * If it is a multi value column then each individual value should be taken into account for aggregation e.g. if a row
- * had value ["1","1","1"] , doubleSum aggregation would take each of them and sum them to 3.
+ * had value ["1","1","1"], doubleSum aggregation would take each of them and sum them to 3.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
@@ -68,7 +71,7 @@ public abstract class AggregatorFactory implements Cacheable
   /**
    * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
    */
-  public boolean canVectorize()
+  public boolean canVectorize(ColumnInspector columnInspector)
   {
     return false;
   }
@@ -210,22 +213,38 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract List<String> requiredFields();
 
   /**
-   * Get the type name of the intermediate type for this aggregator. This is the same as the type returned by
+   * Get the "intermediate" {@link ValueType} for this aggregator. This is the same as the type returned by
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
    *
-   * If the type is complex (i.e. not a simple, numeric {@link org.apache.druid.segment.column.ValueType}) then there
+   * Refer to the {@link ValueType} javadocs for details on the implications of choosing a type.
+   */
+  public abstract ValueType getType();
+
+  /**
+   * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
+   * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
+   * and {@link #combine}.
+   *
+   * Refer to the {@link ValueType} javadocs for details on the implications of choosing a type.
+   */
+  public abstract ValueType getFinalizedType();
+
+  /**
+   * Get the complex type name of the intermediate type for this aggregator.
+   *
+   * This should ONLY be implemented if the type is complex (i.e. not a simple, numeric {@link ValueType}), and there
    * must be a corresponding {@link org.apache.druid.segment.serde.ComplexMetricSerde} which was registered with
    * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
    *
-   * If you need a ValueType enum corresponding to this aggregator, a good way to do that is:
+   * If you need a ValueType enum corresponding to this aggregator, use {@link #getType} instead.
    *
-   * <pre>
-   *   Optional.ofNullable(GuavaUtils.getEnumIfPresent(ValueType.class, aggregator.getTypeName()))
-   *           .orElse(ValueType.COMPLEX);
-   * </pre>
+   * @throws IllegalStateException if getType() != ValueType.COMPLEX
    */
-  public abstract String getTypeName();
+  public String getComplexTypeName()
+  {
+    throw new ISE("Complex type name not is not available for %s of type %s", getName(), getType());
+  }
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
@@ -313,8 +332,6 @@ public abstract class AggregatorFactory implements Cacheable
       }
     }
 
-    return mergedAggregators == null
-           ? null
-           : mergedAggregators.values().toArray(new AggregatorFactory[0]);
+    return mergedAggregators == null ? null : mergedAggregators.values().toArray(new AggregatorFactory[0]);
   }
 }

@@ -23,7 +23,7 @@ exports[`retention dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            Edit retention rules: test
+            Edit retention rules: test-datasource
           </h4>
           <button
             aria-label="Close"
@@ -58,7 +58,7 @@ exports[`retention dialog matches snapshot 1`] = `
             Druid uses rules to determine what data should be retained in the cluster. The rules are evaluated in order from top to bottom. For more information please refer to the
              
             <a
-              href="https://druid.apache.org/docs/0.17.0/operations/rule-configuration.html"
+              href="https://druid.apache.org/docs/0.19.0/operations/rule-configuration.html"
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -71,43 +71,502 @@ exports[`retention dialog matches snapshot 1`] = `
           >
             <div
               class="bp3-form-content"
-            />
+            >
+              <div
+                class="rule-editor"
+              >
+                <div
+                  class="title"
+                >
+                  <button
+                    class="bp3-button bp3-minimal left"
+                    type="button"
+                  >
+                    <span
+                      class="bp3-button-text"
+                    >
+                      loadByPeriod(P1000Y+future)
+                    </span>
+                    <span
+                      class="bp3-icon bp3-icon-caret-down"
+                      icon="caret-down"
+                    >
+                      <svg
+                        data-icon="caret-down"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <desc>
+                          caret-down
+                        </desc>
+                        <path
+                          d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <div
+                    class="spacer"
+                  />
+                  <button
+                    class="bp3-button bp3-minimal"
+                    type="button"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-trash"
+                      icon="trash"
+                    >
+                      <svg
+                        data-icon="trash"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <desc>
+                          trash
+                        </desc>
+                        <path
+                          d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+                <div
+                  class="bp3-collapse"
+                  style="height: auto; overflow-y: visible; transition: none;"
+                >
+                  <div
+                    aria-hidden="false"
+                    class="bp3-collapse-body"
+                    style="transform: translateY(0); transition: none;"
+                  >
+                    <div
+                      class="bp3-card bp3-elevation-2"
+                    >
+                      <div
+                        class="bp3-form-group"
+                      >
+                        <div
+                          class="bp3-form-content"
+                        >
+                          <div
+                            class="bp3-control-group"
+                          >
+                            <div
+                              class="bp3-html-select"
+                            >
+                              <select>
+                                <option
+                                  value="loadForever"
+                                >
+                                  loadForever
+                                </option>
+                                <option
+                                  value="loadByInterval"
+                                >
+                                  loadByInterval
+                                </option>
+                                <option
+                                  value="loadByPeriod"
+                                >
+                                  loadByPeriod
+                                </option>
+                                <option
+                                  value="dropForever"
+                                >
+                                  dropForever
+                                </option>
+                                <option
+                                  value="dropByInterval"
+                                >
+                                  dropByInterval
+                                </option>
+                                <option
+                                  value="dropByPeriod"
+                                >
+                                  dropByPeriod
+                                </option>
+                                <option
+                                  value="dropBeforeByPeriod"
+                                >
+                                  dropBeforeByPeriod
+                                </option>
+                                <option
+                                  value="broadcastForever"
+                                >
+                                  broadcastForever
+                                </option>
+                                <option
+                                  value="broadcastByInterval"
+                                >
+                                  broadcastByInterval
+                                </option>
+                                <option
+                                  value="broadcastByPeriod"
+                                >
+                                  broadcastByPeriod
+                                </option>
+                              </select>
+                              <span
+                                class="bp3-icon bp3-icon-double-caret-vertical"
+                                icon="double-caret-vertical"
+                              >
+                                <svg
+                                  data-icon="double-caret-vertical"
+                                  height="16"
+                                  viewBox="0 0 16 16"
+                                  width="16"
+                                >
+                                  <desc>
+                                    double-caret-vertical
+                                  </desc>
+                                  <path
+                                    d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                                    fill-rule="evenodd"
+                                  />
+                                </svg>
+                              </span>
+                            </div>
+                            <div
+                              class="bp3-input-group suggestible-input"
+                            >
+                              <input
+                                class="bp3-input"
+                                placeholder="P1D"
+                                style="padding-right: 0px;"
+                                type="text"
+                                value="P1000Y"
+                              />
+                              <span
+                                class="bp3-input-action"
+                              >
+                                <span
+                                  class="bp3-popover-wrapper"
+                                >
+                                  <span
+                                    class="bp3-popover-target"
+                                  >
+                                    <button
+                                      class="bp3-button bp3-minimal"
+                                      type="button"
+                                    >
+                                      <span
+                                        class="bp3-icon bp3-icon-caret-down"
+                                        icon="caret-down"
+                                      >
+                                        <svg
+                                          data-icon="caret-down"
+                                          height="16"
+                                          viewBox="0 0 16 16"
+                                          width="16"
+                                        >
+                                          <desc>
+                                            caret-down
+                                          </desc>
+                                          <path
+                                            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                                            fill-rule="evenodd"
+                                          />
+                                        </svg>
+                                      </span>
+                                    </button>
+                                  </span>
+                                </span>
+                              </span>
+                            </div>
+                            <label
+                              class="bp3-control bp3-switch include-future"
+                            >
+                              <input
+                                checked=""
+                                type="checkbox"
+                              />
+                              <span
+                                class="bp3-control-indicator"
+                              />
+                              Include future
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="bp3-form-group"
+                      >
+                        <div
+                          class="bp3-form-content"
+                        >
+                          <div
+                            class="bp3-control-group"
+                          >
+                            <button
+                              class="bp3-button bp3-minimal"
+                              style="pointer-events: none;"
+                              type="button"
+                            >
+                              <span
+                                class="bp3-button-text"
+                              >
+                                Replicants:
+                              </span>
+                            </button>
+                            <div
+                              class="bp3-control-group bp3-numeric-input"
+                            >
+                              <div
+                                class="bp3-input-group"
+                              >
+                                <input
+                                  autocomplete="off"
+                                  class="bp3-input"
+                                  max="256"
+                                  min="1"
+                                  type="text"
+                                  value="2"
+                                />
+                              </div>
+                              <div
+                                class="bp3-button-group bp3-vertical bp3-fixed"
+                              >
+                                <button
+                                  class="bp3-button"
+                                  type="button"
+                                >
+                                  <span
+                                    class="bp3-icon bp3-icon-chevron-up"
+                                    icon="chevron-up"
+                                  >
+                                    <svg
+                                      data-icon="chevron-up"
+                                      height="16"
+                                      viewBox="0 0 16 16"
+                                      width="16"
+                                    >
+                                      <desc>
+                                        chevron-up
+                                      </desc>
+                                      <path
+                                        d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                                        fill-rule="evenodd"
+                                      />
+                                    </svg>
+                                  </span>
+                                </button>
+                                <button
+                                  class="bp3-button"
+                                  type="button"
+                                >
+                                  <span
+                                    class="bp3-icon bp3-icon-chevron-down"
+                                    icon="chevron-down"
+                                  >
+                                    <svg
+                                      data-icon="chevron-down"
+                                      height="16"
+                                      viewBox="0 0 16 16"
+                                      width="16"
+                                    >
+                                      <desc>
+                                        chevron-down
+                                      </desc>
+                                      <path
+                                        d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                                        fill-rule="evenodd"
+                                      />
+                                    </svg>
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                            <button
+                              class="bp3-button bp3-minimal"
+                              style="pointer-events: none;"
+                              type="button"
+                            >
+                              <span
+                                class="bp3-button-text"
+                              >
+                                Tier:
+                              </span>
+                            </button>
+                            <div
+                              class="bp3-html-select bp3-fill"
+                            >
+                              <select>
+                                <option
+                                  value="_default_tier"
+                                >
+                                  _default_tier
+                                </option>
+                                <option
+                                  value="tier1"
+                                >
+                                  tier1
+                                </option>
+                                <option
+                                  value="tier2"
+                                >
+                                  tier2
+                                </option>
+                              </select>
+                              <span
+                                class="bp3-icon bp3-icon-double-caret-vertical"
+                                icon="double-caret-vertical"
+                              >
+                                <svg
+                                  data-icon="double-caret-vertical"
+                                  height="16"
+                                  viewBox="0 0 16 16"
+                                  width="16"
+                                >
+                                  <desc>
+                                    double-caret-vertical
+                                  </desc>
+                                  <path
+                                    d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                                    fill-rule="evenodd"
+                                  />
+                                </svg>
+                              </span>
+                            </div>
+                            <button
+                              class="bp3-button bp3-disabled"
+                              disabled=""
+                              tabindex="-1"
+                              type="button"
+                            >
+                              <span
+                                class="bp3-icon bp3-icon-trash"
+                                icon="trash"
+                              >
+                                <svg
+                                  data-icon="trash"
+                                  height="16"
+                                  viewBox="0 0 16 16"
+                                  width="16"
+                                >
+                                  <desc>
+                                    trash
+                                  </desc>
+                                  <path
+                                    d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
+                                    fill-rule="evenodd"
+                                  />
+                                </svg>
+                              </span>
+                            </button>
+                          </div>
+                          <div
+                            class="bp3-form-group right"
+                          >
+                            <div
+                              class="bp3-form-content"
+                            >
+                              <button
+                                class="bp3-button bp3-minimal"
+                                type="button"
+                              >
+                                <span
+                                  class="bp3-icon bp3-icon-plus"
+                                  icon="plus"
+                                >
+                                  <svg
+                                    data-icon="plus"
+                                    height="16"
+                                    viewBox="0 0 16 16"
+                                    width="16"
+                                  >
+                                    <desc>
+                                      plus
+                                    </desc>
+                                    <path
+                                      d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
+                                      fill-rule="evenodd"
+                                    />
+                                  </svg>
+                                </span>
+                                <span
+                                  class="bp3-button-text"
+                                >
+                                  Add a tier
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <button
+                  class="bp3-button"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-plus"
+                    icon="plus"
+                  >
+                    <svg
+                      data-icon="plus"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        plus
+                      </desc>
+                      <path
+                        d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="bp3-button-text"
+                  >
+                    New rule
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
           <div
-            class="bp3-form-group right"
+            class="bp3-divider"
+          />
+          <div
+            class="bp3-form-group"
           >
             <div
               class="bp3-form-content"
             >
-              <button
-                class="bp3-button"
-                type="button"
+              <p>
+                Cluster defaults (
+                <a>
+                  edit
+                </a>
+                ):
+              </p>
+              <div
+                class="default-rule"
               >
-                <span
-                  class="bp3-icon bp3-icon-plus"
-                  icon="plus"
+                <button
+                  class="bp3-button bp3-disabled"
+                  disabled=""
+                  tabindex="-1"
+                  type="button"
                 >
-                  <svg
-                    data-icon="plus"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    width="16"
+                  <span
+                    class="bp3-button-text"
                   >
-                    <desc>
-                      plus
-                    </desc>
-                    <path
-                      d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
-                <span
-                  class="bp3-button-text"
-                >
-                  New rule
-                </span>
-              </button>
+                    loadForever
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -117,6 +576,16 @@ exports[`retention dialog matches snapshot 1`] = `
           <div
             class="bp3-dialog-footer-actions"
           >
+            <button
+              class="bp3-button bp3-minimal left-align-button"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                History
+              </span>
+            </button>
             <button
               class="bp3-button"
               type="button"

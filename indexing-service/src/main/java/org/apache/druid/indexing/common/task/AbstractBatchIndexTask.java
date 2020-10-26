@@ -19,10 +19,16 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -41,7 +47,12 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -51,15 +62,21 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -130,6 +147,55 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       stopped = true;
       resourceCloserOnAbnormalExit.clean(taskConfig);
     }
+  }
+
+  /**
+   * Returns an {@link InputRow} iterator which iterates over an input source.
+   * The returned iterator filters out rows which don't satisfy the given filter or cannot be parsed properly.
+   * The returned iterator can throw {@link org.apache.druid.java.util.common.parsers.ParseException}s in
+   * {@link Iterator#hasNext()} when it hits {@link ParseExceptionHandler#maxAllowedParseExceptions}.
+   */
+  public static FilteringCloseableInputRowIterator inputSourceReader(
+      File tmpDir,
+      DataSchema dataSchema,
+      InputSource inputSource,
+      @Nullable InputFormat inputFormat,
+      Predicate<InputRow> rowFilter,
+      RowIngestionMeters ingestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  ) throws IOException
+  {
+    final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
+                                            .map(AggregatorFactory::getName)
+                                            .collect(Collectors.toList());
+    final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
+        inputSource.reader(
+            new InputRowSchema(
+                dataSchema.getTimestampSpec(),
+                dataSchema.getDimensionsSpec(),
+                metricsNames
+            ),
+            inputFormat,
+            tmpDir
+        )
+    );
+    return new FilteringCloseableInputRowIterator(
+        inputSourceReader.read(),
+        rowFilter,
+        ingestionMeters,
+        parseExceptionHandler
+    );
+  }
+
+  protected static Predicate<InputRow> defaultRowFilter(GranularitySpec granularitySpec)
+  {
+    return inputRow -> {
+      if (inputRow == null) {
+        return false;
+      }
+      final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+      return optInterval.isPresent();
+    };
   }
 
   /**
@@ -226,8 +292,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  boolean determineLockGranularityandTryLockWithSegments(TaskActionClient client, List<DataSegment> segments)
-      throws IOException
+  boolean determineLockGranularityandTryLockWithSegments(
+      TaskActionClient client,
+      List<DataSegment> segments,
+      BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
+  ) throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
@@ -236,6 +305,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
       taskLockHelper = new TaskLockHelper(false);
+      segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
           new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
@@ -243,6 +313,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
       taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
+      segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
   }
@@ -363,11 +434,29 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    */
   public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
-    Preconditions.checkState(
+    Preconditions.checkArgument(
         !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
+  }
+
+  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+      boolean storeCompactionState,
+      TaskToolbox toolbox,
+      IndexTuningConfig tuningConfig
+  )
+  {
+    if (storeCompactionState) {
+      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
+      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap);
+      return segments -> segments
+          .stream()
+          .map(s -> s.withLastCompactionState(compactionState))
+          .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
   }
 
   @Nullable

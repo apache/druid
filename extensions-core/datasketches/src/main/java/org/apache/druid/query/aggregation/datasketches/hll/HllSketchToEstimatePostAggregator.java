@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -60,6 +61,12 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ValueType getType()
+  {
+    return round ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @JsonProperty
@@ -100,39 +107,6 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   }
 
   @Override
-  public String toString()
-  {
-    return getClass().getSimpleName() + "{" +
-        "name='" + name + '\'' +
-        ", field=" + field +
-        "}";
-  }
-
-  @Override
-  public boolean equals(final Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof HllSketchToEstimatePostAggregator)) {
-      return false;
-    }
-
-    final HllSketchToEstimatePostAggregator that = (HllSketchToEstimatePostAggregator) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    return field.equals(that.field);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, field);
-  }
-
-  @Override
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.HLL_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID)
@@ -140,4 +114,34 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
         .build();
   }
 
+  @Override
+  public String toString()
+  {
+    return "HllSketchToEstimatePostAggregator{" +
+           "name='" + name + '\'' +
+           ", field=" + field +
+           ", round=" + round +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    HllSketchToEstimatePostAggregator that = (HllSketchToEstimatePostAggregator) o;
+    return round == that.round &&
+           name.equals(that.name) &&
+           field.equals(that.field);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, field, round);
+  }
 }

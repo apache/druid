@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -501,7 +502,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     long workerDiscoveryStartTime = System.currentTimeMillis();
     while (!workerViewInitialized.await(30, TimeUnit.SECONDS)) {
       if (System.currentTimeMillis() - workerDiscoveryStartTime > TimeUnit.MINUTES.toMillis(5)) {
-        throw new ISE("WTF! Couldn't discover workers.");
+        throw new ISE("Couldn't discover workers.");
       } else {
         log.info("Waiting for worker discovery...");
       }
@@ -1183,7 +1184,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
 
         if (immutableWorker == null) {
-          throw new ISE("WTH! NULL immutableWorker");
+          throw new ISE("Unexpected state: null immutableWorker");
         }
 
         try {
@@ -1356,6 +1357,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     ).collect(Collectors.toList());
   }
 
+  public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
+  {
+    return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
+  }
+
   /**
    * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource} , used for read only.
    */
@@ -1419,7 +1425,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               break;
             default:
               log.makeAlert(
-                  "WTF! Found unrecognized state[%s] of task[%s] in taskStorage. Notification[%s] from worker[%s] is ignored.",
+                  "Found unrecognized state[%s] of task[%s] in taskStorage. Notification[%s] from worker[%s] is ignored.",
                   knownStatusInStorage.get().getStatusCode(),
                   taskId,
                   announcement,
@@ -1482,7 +1488,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 break;
               default:
                 log.makeAlert(
-                    "WTF! Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
+                    "Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
                     taskItem.getState(),
                     taskId,
                     announcement,
@@ -1527,7 +1533,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 break;
               default:
                 log.makeAlert(
-                    "WTF! Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
+                    "Found unrecognized state[%s] of task[%s]. Notification[%s] from worker[%s] is ignored.",
                     taskItem.getState(),
                     taskId,
                     announcement,
@@ -1537,7 +1543,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             break;
           default:
             log.makeAlert(
-                "WTF! Worker[%s] reported unrecognized state[%s] for task[%s].",
+                "Worker[%s] reported unrecognized state[%s] for task[%s].",
                 worker.getHost(),
                 announcement.getTaskStatus().getStatusCode(),
                 taskId
@@ -1559,6 +1565,61 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     synchronized (statusLock) {
       statusLock.notifyAll();
     }
+  }
+
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    long totalPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalPeons;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    long totalIdlePeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
+      totalIdlePeons += worker.getAvailableCapacity();
+    }
+
+    return totalIdlePeons;
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    long totalUsedPeons = 0;
+    for (ImmutableWorkerInfo worker : getWorkers()) {
+      totalUsedPeons += worker.getCurrCapacityUsed();
+    }
+
+    return totalUsedPeons;
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    long totalLazyPeons = 0;
+    for (Worker worker : getLazyWorkers()) {
+      totalLazyPeons += worker.getCapacity();
+    }
+
+    return totalLazyPeons;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    long totalBlacklistedPeons = 0;
+    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+      totalBlacklistedPeons += worker.getWorker().getCapacity();
+    }
+
+    return totalBlacklistedPeons;
   }
 
   private static class HttpRemoteTaskRunnerWorkItem extends RemoteTaskRunnerWorkItem

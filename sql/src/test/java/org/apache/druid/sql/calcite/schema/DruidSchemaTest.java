@@ -22,18 +22,21 @@ package org.apache.druid.sql.calcite.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -41,8 +44,14 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.NoopEscalator;
@@ -58,6 +67,8 @@ import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -71,11 +82,22 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class DruidSchemaTest extends CalciteTestBase
 {
-  private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+  private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig()
+  {
+    @Override
+    public Period getMetadataRefreshPeriod()
+    {
+      return new Period("PT1S");
+    }
+  };
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
       CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
@@ -92,7 +114,10 @@ public class DruidSchemaTest extends CalciteTestBase
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
+  private TestServerInventoryView serverView;
   private List<ImmutableDruidServer> druidServers;
+  private CountDownLatch getDatasourcesLatch = new CountDownLatch(1);
+  private CountDownLatch buildTableLatch = new CountDownLatch(1);
 
   @BeforeClass
   public static void setUpClass()
@@ -112,10 +137,16 @@ public class DruidSchemaTest extends CalciteTestBase
 
   private SpecificSegmentsQuerySegmentWalker walker = null;
   private DruidSchema schema = null;
+  private SegmentManager segmentManager;
+  private Set<String> segmentDataSourceNames;
+  private Set<String> joinableDataSourceNames;
 
   @Before
   public void setUp() throws Exception
   {
+    segmentDataSourceNames = Sets.newConcurrentHashSet();
+    joinableDataSourceNames = Sets.newConcurrentHashSet();
+
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
@@ -144,6 +175,16 @@ public class DruidSchemaTest extends CalciteTestBase
                                               )
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
+
+    segmentManager = new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+    {
+      @Override
+      public Set<String> getDataSourceNames()
+      {
+        getDatasourcesLatch.countDown();
+        return segmentDataSourceNames;
+      }
+    };
 
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
@@ -187,16 +228,46 @@ public class DruidSchemaTest extends CalciteTestBase
         PruneSpecsHolder.DEFAULT
     );
     final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
-    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
+    serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
+
+    final JoinableFactory globalTableJoinable = new JoinableFactory()
+    {
+      @Override
+      public boolean isDirectlyJoinable(DataSource dataSource)
+      {
+        return dataSource instanceof GlobalTableDataSource &&
+               joinableDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
+      }
+
+      @Override
+      public Optional<Joinable> build(
+          DataSource dataSource,
+          JoinConditionAnalysis condition
+      )
+      {
+        return Optional.empty();
+      }
+    };
 
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
-    );
+    )
+    {
+      @Override
+      protected DruidTable buildDruidTable(String dataSource)
+      {
+        DruidTable table = super.buildDruidTable(dataSource);
+        buildTableLatch.countDown();
+        return table;
+      }
+    };
 
     schema.start();
     schema.awaitInitialization();
@@ -418,4 +489,136 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(0L, currentMetadata.isRealtime());
   }
 
+  @Test
+  public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
+  {
+    DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
+
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    final DataSegment someNewBrokerSegment = new DataSegment(
+        "foo",
+        Intervals.of("2012/2013"),
+        "version1",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        new NumberedShardSpec(2, 3),
+        null,
+        1,
+        100L,
+        PruneSpecsHolder.DEFAULT
+    );
+    segmentDataSourceNames.add("foo");
+    joinableDataSourceNames.add("foo");
+    serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    // wait for build twice
+    buildTableLatch = new CountDownLatch(2);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertTrue(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertTrue(fooTable.isJoinable());
+    Assert.assertTrue(fooTable.isBroadcast());
+
+    // now remove it
+    joinableDataSourceNames.remove("foo");
+    segmentDataSourceNames.remove("foo");
+    serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    // wait for build
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+    buildTableLatch = new CountDownLatch(1);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
+  }
+
+  @Test
+  public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
+  {
+    DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
+
+    // wait for build twice
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    final DataSegment someNewBrokerSegment = new DataSegment(
+        "foo",
+        Intervals.of("2012/2013"),
+        "version1",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        new NumberedShardSpec(2, 3),
+        null,
+        1,
+        100L,
+        PruneSpecsHolder.DEFAULT
+    );
+    segmentDataSourceNames.add("foo");
+    serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    buildTableLatch = new CountDownLatch(2);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    // should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. idealy this will be
+    // changed in the future and we should expect
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertTrue(fooTable.isBroadcast());
+    Assert.assertFalse(fooTable.isJoinable());
+
+
+    // now remove it
+    segmentDataSourceNames.remove("foo");
+    serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    // wait for build
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+    buildTableLatch = new CountDownLatch(1);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isBroadcast());
+    Assert.assertFalse(fooTable.isJoinable());
+  }
 }

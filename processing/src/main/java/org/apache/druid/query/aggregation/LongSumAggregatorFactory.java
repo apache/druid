@@ -72,24 +72,12 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
-  {
-    return columnSelectorFactory.makeValueSelector(fieldName);
-  }
-
-  @Override
   protected VectorAggregator factorizeVector(
       VectorColumnSelectorFactory columnSelectorFactory,
       VectorValueSelector selector
   )
   {
     return new LongSumVectorAggregator(selector);
-  }
-
-  @Override
-  public boolean canVectorize()
-  {
-    return expression == null;
   }
 
   @Override

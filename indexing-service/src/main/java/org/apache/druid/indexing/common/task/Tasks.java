@@ -51,7 +51,7 @@ public class Tasks
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   /**
-   *This context is used in auto compaction. When it is set in the context, the segments created by the task
+   * This context is used in compaction. When it is set in the context, the segments created by the task
    * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
    * See {@link org.apache.druid.timeline.DataSegment} and {@link
    * org.apache.druid.server.coordinator.duty.NewestSegmentFirstIterator} for more details.

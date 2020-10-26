@@ -189,7 +189,7 @@ public class WhiteListBasedConverterTest
             defaultNamespace + ".ingest/persists/count"
         },
         new Object[]{
-            new ServiceMetricEvent.Builder().setDimension("bufferPoolName", "BufferPool")
+            new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
                                             .build(createdTime, "jvm/bufferpool/capacity", 10)

@@ -31,6 +31,8 @@ import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetrics;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -105,7 +107,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   public void emit(Event event)
   {
     if (!started.get()) {
-      throw new ISE("WTF emit was called while service is not started yet");
+      throw new ISE("Emit called unexpectedly before service start");
     }
     if (event instanceof ServiceMetricEvent) {
       final TimelineMetric timelineEvent = timelineMetricConverter.druidEventToTimelineMetric((ServiceMetricEvent) event);
@@ -141,15 +143,64 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   }
 
   @Override
-  protected String getCollectorUri()
+  protected String getCollectorUri(String host)
   {
-    return collectorURI;
+    return constructTimelineMetricUri(getCollectorProtocol(), host, getCollectorPort());
+  }
+
+  @Override
+  protected String getCollectorProtocol()
+  {
+    return config.getProtocol();
+  }
+
+  @Override
+  protected String getCollectorPort()
+  {
+    return String.valueOf(config.getPort());
   }
 
   @Override
   protected int getTimeoutSeconds()
   {
     return (int) (DEFAULT_FLUSH_TIMEOUT_MILLIS / 1000);
+  }
+
+  @Override
+  protected String getZookeeperQuorum()
+  {
+    //Ignoring Zk Fallback.
+    return null;
+  }
+
+  @Override
+  protected Collection<String> getConfiguredCollectorHosts()
+  {
+    return Collections.singleton(config.getHostname());
+  }
+
+  @Override
+  protected String getHostname()
+  {
+    return config.getHostname();
+  }
+
+  @Override
+  protected boolean isHostInMemoryAggregationEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  protected int getHostInMemoryAggregationPort()
+  {
+    return 0;  // since host in-memory aggregation is disabled, this return value is unimportant
+  }
+
+  @Override
+  protected String getHostInMemoryAggregationProtocol()
+  {
+    return "";  // since host in-memory aggregation is disabled, this return value is unimportant
   }
 
   private class ConsumerRunnable implements Runnable

@@ -53,6 +53,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -83,6 +84,8 @@ public class InformationSchema extends AbstractSchema
       .add("TABLE_SCHEMA", ValueType.STRING)
       .add("TABLE_NAME", ValueType.STRING)
       .add("TABLE_TYPE", ValueType.STRING)
+      .add("IS_JOINABLE", ValueType.STRING)
+      .add("IS_BROADCAST", ValueType.STRING)
       .build();
   private static final RowSignature COLUMNS_SIGNATURE = RowSignature
       .builder()
@@ -108,6 +111,9 @@ public class InformationSchema extends AbstractSchema
   private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
     return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
   };
+
+  private static final String INFO_TRUE = "YES";
+  private static final String INFO_FALSE = "NO";
 
   private final SchemaPlus rootSchema;
   private final Map<String, Table> tableMap;
@@ -217,18 +223,27 @@ public class InformationSchema extends AbstractSchema
                   return Iterables.filter(
                       Iterables.concat(
                           FluentIterable.from(authorizedTableNames).transform(
-                              new Function<String, Object[]>()
-                              {
-                                @Override
-                                public Object[] apply(final String tableName)
-                                {
-                                  return new Object[]{
-                                      CATALOG_NAME, // TABLE_CATALOG
-                                      schemaName, // TABLE_SCHEMA
-                                      tableName, // TABLE_NAME
-                                      subSchema.getTable(tableName).getJdbcTableType().toString() // TABLE_TYPE
-                                  };
+                              tableName -> {
+                                final Table table = subSchema.getTable(tableName);
+                                final boolean isJoinable;
+                                final boolean isBroadcast;
+                                if (table instanceof DruidTable) {
+                                  DruidTable druidTable = (DruidTable) table;
+                                  isJoinable = druidTable.isJoinable();
+                                  isBroadcast = druidTable.isBroadcast();
+                                } else {
+                                  isJoinable = false;
+                                  isBroadcast = false;
                                 }
+
+                                return new Object[]{
+                                    CATALOG_NAME, // TABLE_CATALOG
+                                    schemaName, // TABLE_SCHEMA
+                                    tableName, // TABLE_NAME
+                                    table.getJdbcTableType().toString(), // TABLE_TYPE
+                                    isJoinable ? INFO_TRUE : INFO_FALSE, // IS_JOINABLE
+                                    isBroadcast ? INFO_TRUE : INFO_FALSE // IS_BROADCAST
+                                };
                               }
                           ),
                           FluentIterable.from(authorizedFunctionNames).transform(
@@ -242,7 +257,9 @@ public class InformationSchema extends AbstractSchema
                                         CATALOG_NAME, // TABLE_CATALOG
                                         schemaName, // TABLE_SCHEMA
                                         functionName, // TABLE_NAME
-                                        "VIEW" // TABLE_TYPE
+                                        "VIEW", // TABLE_TYPE
+                                        INFO_FALSE, // IS_JOINABLE
+                                        INFO_FALSE // IS_BROADCAST
                                     };
                                   } else {
                                     return null;
@@ -406,7 +423,7 @@ public class InformationSchema extends AbstractSchema
                       field.getName(), // COLUMN_NAME
                       String.valueOf(field.getIndex()), // ORDINAL_POSITION
                       "", // COLUMN_DEFAULT
-                      type.isNullable() ? "YES" : "NO", // IS_NULLABLE
+                      type.isNullable() ? INFO_TRUE : INFO_FALSE, // IS_NULLABLE
                       type.getSqlTypeName().toString(), // DATA_TYPE
                       null, // CHARACTER_MAXIMUM_LENGTH
                       null, // CHARACTER_OCTET_LENGTH

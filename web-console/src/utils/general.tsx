@@ -26,6 +26,7 @@ import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons/toaster';
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -89,7 +90,7 @@ export function makeBooleanFilter(): FilterRender {
 
 interface NeedleAndMode {
   needle: string;
-  mode: 'exact' | 'prefix';
+  mode: 'exact' | 'includes';
 }
 
 function getNeedleAndMode(input: string): NeedleAndMode {
@@ -101,7 +102,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
   }
   return {
     needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'prefix',
+    mode: 'includes',
   };
 }
 
@@ -113,7 +114,7 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (needleAndMode.mode === 'exact') {
     return needle === haystack;
   }
-  return haystack.startsWith(needle);
+  return haystack.includes(needle);
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): string {
@@ -123,7 +124,7 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
   if (needleAndMode.mode === 'exact') {
     return `${columnName} = '${needle}'`;
   } else {
-    return `LOWER(${columnName}) LIKE LOWER('${needle}%')`;
+    return `LOWER(${columnName}) LIKE LOWER('%${needle}%')`;
   }
 }
 
@@ -137,7 +138,7 @@ export function caseInsensitiveContains(testString: string, searchString: string
 // ----------------------------
 
 export function countBy<T>(
-  array: T[],
+  array: readonly T[],
   fn: (x: T, index: number) => string = String,
 ): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -148,20 +149,21 @@ export function countBy<T>(
   return counts;
 }
 
-function identity(x: any): any {
+function identity<T>(x: T): T {
   return x;
 }
 
-export function lookupBy<T, Q>(
-  array: T[],
+export function lookupBy<T, Q = T>(
+  array: readonly T[],
   keyFn: (x: T, index: number) => string = String,
-  valueFn: (x: T, index: number) => Q = identity,
+  valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
+  if (!valueFn) valueFn = identity as any;
   const lookup: Record<string, Q> = {};
   const n = array.length;
   for (let i = 0; i < n; i++) {
     const a = array[i];
-    lookup[keyFn(a, i)] = valueFn(a, i);
+    lookup[keyFn(a, i)] = valueFn!(a, i);
   }
   return lookup;
 }
@@ -213,7 +215,7 @@ export function parseList(list: string): string[] {
 
 // ----------------------------
 
-export function formatNumber(n: number): string {
+export function formatInteger(n: number): string {
   return numeral(n).format('0,0');
 }
 
@@ -223,6 +225,20 @@ export function formatBytes(n: number): string {
 
 export function formatBytesCompact(n: number): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatMegabytes(n: number): string {
+  return numeral(n / 1048576).format('0,0.0');
+}
+
+export function formatPercent(n: number): string {
+  return (n * 100).toFixed(2) + '%';
+}
+
+export function formatMillions(n: number): string {
+  const s = (n / 1e6).toFixed(3);
+  if (s === '0.000') return String(Math.round(n));
+  return s + ' M';
 }
 
 function pad2(str: string | number): string {
@@ -238,7 +254,7 @@ export function formatDuration(ms: number): string {
 
 export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
-  return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
+  return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
@@ -260,7 +276,7 @@ export function validJson(json: string): boolean {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
@@ -277,9 +293,9 @@ export function alphanumericCompare(a: string, b: string): number {
 }
 
 export function sortWithPrefixSuffix(
-  things: string[],
-  prefix: string[],
-  suffix: string[],
+  things: readonly string[],
+  prefix: readonly string[],
+  suffix: readonly string[],
   cmp: null | ((a: string, b: string) => number),
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
@@ -309,10 +325,6 @@ export function downloadFile(text: string, type: string, filename: string): void
   FileSaver.saveAs(blob, filename);
 }
 
-export function escapeSqlIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
 export function copyAndAlert(copyString: string, alertMessage: string): void {
   copy(copyString, { format: 'text/plain' });
   AppToaster.show({
@@ -325,4 +337,12 @@ export function delay(ms: number) {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+export function swapElements<T>(items: readonly T[], indexA: number, indexB: number): T[] {
+  const newItems = items.concat();
+  const t = newItems[indexA];
+  newItems[indexA] = newItems[indexB];
+  newItems[indexB] = t;
+  return newItems;
 }

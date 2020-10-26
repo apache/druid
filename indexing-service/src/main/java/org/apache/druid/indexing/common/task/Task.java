@@ -28,10 +28,10 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.LegacySinglePhaseSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
@@ -63,7 +63,7 @@ import java.util.Map;
     // for backward compatibility
     @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
     @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
-    @Type(name = PartialHashSegmentMergeTask.TYPE, value = PartialHashSegmentMergeTask.class),
+    @Type(name = PartialDimensionCardinalityTask.TYPE, value = PartialDimensionCardinalityTask.class),
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
@@ -145,6 +145,11 @@ public interface Task
    * @return query runners for this task
    */
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
+
+  /**
+   * @return true if this Task type is queryable, such as streaming ingestion tasks
+   */
+  boolean supportsQueries();
 
   /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no

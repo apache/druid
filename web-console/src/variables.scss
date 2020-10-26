@@ -16,6 +16,27 @@
  * limitations under the License.
  */
 
+@import '/blueprint-overrides/common/colors';
+@import '/blueprint-overrides/common/variables';
+
 $header-bar-height: 50px;
 $view-control-bar-height: 30px;
 $standard-padding: 15px;
+$thin-padding: 10px;
+
+// various style variables
+
+$druid-brand: #2ceefb;
+$druid-brand2: #00b6bf;
+$druid-brand-background: #1c1c26;
+
+@mixin card-like {
+  background: $white;
+  border-radius: $pt-border-radius;
+  box-shadow: $pt-elevation-shadow-1;
+
+  .bp3-dark & {
+    background: $dark-gray3;
+    box-shadow: $pt-dark-elevation-shadow-1;
+  }
+}

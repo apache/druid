@@ -345,7 +345,7 @@ public class WorkerTaskManager
         if (taskId.equals(task.getId())) {
           assignedTasks.put(taskId, task);
         } else {
-          throw new ISE("WTF! Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
+          throw new ISE("Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
@@ -471,7 +471,7 @@ public class WorkerTaskManager
         if (taskId.equals(taskAnnouncement.getTaskId())) {
           completedTasks.put(taskId, taskAnnouncement);
         } else {
-          throw new ISE("WTF! Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
+          throw new ISE("Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
@@ -705,7 +705,7 @@ public class WorkerTaskManager
 
         if (!status.isComplete()) {
           log.warn(
-              "WTF?! Got status notice for task [%s] that isn't complete (status = [%s])...",
+              "Got status notice for task [%s] that isn't complete (status = [%s])...",
               task.getId(),
               status.getStatusCode()
           );

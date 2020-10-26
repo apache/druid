@@ -357,8 +357,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       {
         return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                            .setHasMultipleValues(true)
-                                           .setDictionaryEncoded(true)
-                                           .setIsComplete(true);
+                                           .setDictionaryEncoded(true);
       }
     };
     final BaseObjectColumnValueSelector selectorImplicit =
@@ -367,7 +366,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         SCALE_LIST_SELF_EXPLICIT.makeDimensionSelector(spec, factory);
 
     Assert.assertTrue(selectorImplicit instanceof SingleStringInputDimensionSelector);
-    Assert.assertTrue(selectorExplicit instanceof MultiValueExpressionDimensionSelector);
+    Assert.assertTrue(selectorExplicit instanceof ExpressionMultiValueDimensionSelector);
   }
 
   @Test
@@ -811,21 +810,21 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     ColumnCapabilities caps = X_PLUS_Y.capabilities("expr");
     Assert.assertEquals(ValueType.FLOAT, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    Assert.assertTrue(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertFalse(caps.isComplete());
 
     caps = Z_CONCAT_X.capabilities("expr");
     Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    Assert.assertTrue(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertFalse(caps.isComplete());
   }
 }

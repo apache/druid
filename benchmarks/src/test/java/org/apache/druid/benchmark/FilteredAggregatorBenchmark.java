@@ -21,9 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -35,6 +32,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -67,6 +65,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -125,7 +126,7 @@ public class FilteredAggregatorBenchmark
   private DimFilter filter;
   private List<InputRow> inputRows;
   private QueryRunnerFactory factory;
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private TimeseriesQuery query;
   private File tmpDir;
 
@@ -152,9 +153,9 @@ public class FilteredAggregatorBenchmark
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
-    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+    DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval(),
@@ -202,7 +203,7 @@ public class FilteredAggregatorBenchmark
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
 
-    BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
     QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
     List<AggregatorFactory> queryAggs = new ArrayList<>();
     queryAggs.add(filteredMetrics[0]);
@@ -226,7 +227,6 @@ public class FilteredAggregatorBenchmark
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(metrics)
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
   }
@@ -240,7 +240,12 @@ public class FilteredAggregatorBenchmark
     );
 
     final QueryPlus<T> queryToRun = QueryPlus.wrap(
-        query.withOverriddenContext(ImmutableMap.of("vectorize", vectorize))
+        query.withOverriddenContext(
+            ImmutableMap.of(
+                QueryContexts.VECTORIZE_KEY, vectorize,
+                QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+            )
+        )
     );
     Sequence<T> queryResult = theRunner.run(queryToRun, ResponseContext.createEmpty());
     return queryResult.toList();

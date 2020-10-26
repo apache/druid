@@ -21,7 +21,8 @@ import axios from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
-import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { useQueryManager } from '../../../hooks';
+import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
@@ -29,119 +30,80 @@ function getTaskStatus(d: any) {
   return d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode;
 }
 
+export interface TaskCounts {
+  SUCCESS?: number;
+  FAILED?: number;
+  RUNNING?: number;
+  PENDING?: number;
+  WAITING?: number;
+}
+
 export interface TasksCardProps {
   capabilities: Capabilities;
 }
 
-export interface TasksCardState {
-  taskCountLoading: boolean;
-  runningTaskCount: number;
-  pendingTaskCount: number;
-  successTaskCount: number;
-  failedTaskCount: number;
-  waitingTaskCount: number;
-  taskCountError?: string;
-}
-
-export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardState> {
-  private taskQueryManager: QueryManager<Capabilities, any>;
-
-  constructor(props: TasksCardProps, context: any) {
-    super(props, context);
-    this.state = {
-      taskCountLoading: false,
-      runningTaskCount: 0,
-      pendingTaskCount: 0,
-      successTaskCount: 0,
-      failedTaskCount: 0,
-      waitingTaskCount: 0,
-    };
-
-    this.taskQueryManager = new QueryManager({
-      processQuery: async capabilities => {
-        if (capabilities.hasSql()) {
-          const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
-            query: `SELECT
+export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
+  const [taskCountState] = useQueryManager<Capabilities, TaskCounts>({
+    processQuery: async capabilities => {
+      if (capabilities.hasSql()) {
+        const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
+          query: `SELECT
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   COUNT (*) AS "count"
 FROM sys.tasks
 GROUP BY 1`,
-          });
-          return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
-        } else if (capabilities.hasOverlordAccess()) {
-          const tasks: any[] = (await axios.get('/druid/indexer/v1/tasks')).data;
-          return {
-            SUCCESS: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
-            FAILED: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,
-            RUNNING: tasks.filter(d => getTaskStatus(d) === 'RUNNING').length,
-            PENDING: tasks.filter(d => getTaskStatus(d) === 'PENDING').length,
-            WAITING: tasks.filter(d => getTaskStatus(d) === 'WAITING').length,
-          };
-        } else {
-          throw new Error(`must have SQL or overlord access`);
-        }
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          taskCountLoading: loading,
-          successTaskCount: result ? result.SUCCESS : 0,
-          failedTaskCount: result ? result.FAILED : 0,
-          runningTaskCount: result ? result.RUNNING : 0,
-          pendingTaskCount: result ? result.PENDING : 0,
-          waitingTaskCount: result ? result.WAITING : 0,
-          taskCountError: error,
         });
-      },
-    });
-  }
+        return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+      } else if (capabilities.hasOverlordAccess()) {
+        const tasks: any[] = (await axios.get('/druid/indexer/v1/tasks')).data;
+        return {
+          SUCCESS: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
+          FAILED: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,
+          RUNNING: tasks.filter(d => getTaskStatus(d) === 'RUNNING').length,
+          PENDING: tasks.filter(d => getTaskStatus(d) === 'PENDING').length,
+          WAITING: tasks.filter(d => getTaskStatus(d) === 'WAITING').length,
+        };
+      } else {
+        throw new Error(`must have SQL or overlord access`);
+      }
+    },
+    initQuery: props.capabilities,
+  });
 
-  componentDidMount(): void {
-    const { capabilities } = this.props;
+  const taskCounts = taskCountState.data;
+  const successTaskCount = taskCounts ? taskCounts.SUCCESS : 0;
+  const failedTaskCount = taskCounts ? taskCounts.FAILED : 0;
+  const runningTaskCount = taskCounts ? taskCounts.RUNNING : 0;
+  const pendingTaskCount = taskCounts ? taskCounts.PENDING : 0;
+  const waitingTaskCount = taskCounts ? taskCounts.WAITING : 0;
 
-    this.taskQueryManager.runQuery(capabilities);
-  }
-
-  componentWillUnmount(): void {
-    this.taskQueryManager.terminate();
-  }
-
-  render(): JSX.Element {
-    const {
-      taskCountError,
-      taskCountLoading,
-      runningTaskCount,
-      pendingTaskCount,
-      successTaskCount,
-      failedTaskCount,
-      waitingTaskCount,
-    } = this.state;
-
-    return (
-      <HomeViewCard
-        className="tasks-card"
-        href={'#ingestion'}
-        icon={IconNames.GANTT_CHART}
-        title={'Tasks'}
-        loading={taskCountLoading}
-        error={taskCountError}
-      >
-        <PluralPairIfNeeded
-          firstCount={runningTaskCount}
-          firstSingular="running task"
-          secondCount={pendingTaskCount}
-          secondSingular="pending task"
-        />
-        {Boolean(successTaskCount) && <p>{pluralIfNeeded(successTaskCount, 'successful task')}</p>}
-        {Boolean(waitingTaskCount) && <p>{pluralIfNeeded(waitingTaskCount, 'waiting task')}</p>}
-        {Boolean(failedTaskCount) && <p>{pluralIfNeeded(failedTaskCount, 'failed task')}</p>}
-        {!(
-          Boolean(runningTaskCount) ||
-          Boolean(pendingTaskCount) ||
-          Boolean(successTaskCount) ||
-          Boolean(waitingTaskCount) ||
-          Boolean(failedTaskCount)
-        ) && <p>There are no tasks</p>}
-      </HomeViewCard>
-    );
-  }
-}
+  return (
+    <HomeViewCard
+      className="tasks-card"
+      href={'#ingestion'}
+      icon={IconNames.GANTT_CHART}
+      title={'Tasks'}
+      loading={taskCountState.loading}
+      error={taskCountState.error}
+    >
+      <PluralPairIfNeeded
+        firstCount={runningTaskCount}
+        firstSingular="running task"
+        secondCount={pendingTaskCount}
+        secondSingular="pending task"
+      />
+      {Boolean(successTaskCount) && (
+        <p>{pluralIfNeeded(successTaskCount || 0, 'successful task')}</p>
+      )}
+      {Boolean(waitingTaskCount) && <p>{pluralIfNeeded(waitingTaskCount || 0, 'waiting task')}</p>}
+      {Boolean(failedTaskCount) && <p>{pluralIfNeeded(failedTaskCount || 0, 'failed task')}</p>}
+      {!(
+        Boolean(runningTaskCount) ||
+        Boolean(pendingTaskCount) ||
+        Boolean(successTaskCount) ||
+        Boolean(waitingTaskCount) ||
+        Boolean(failedTaskCount)
+      ) && <p>There are no tasks</p>}
+    </HomeViewCard>
+  );
+});

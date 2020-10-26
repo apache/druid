@@ -28,8 +28,8 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -41,7 +41,6 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -53,13 +52,12 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
@@ -89,7 +87,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ExecutorService queryExecutorService;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
@@ -113,7 +111,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
     this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
-    this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
@@ -149,12 +147,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final Optional<TableDataSource> baseTableDataSource = analysis.getBaseTableDataSource();
 
-    if (!baseTableDataSource.isPresent() || !dataSource.equals(baseTableDataSource.get().getName())) {
-      // Report error, since we somehow got a query for a datasource we can't handle.
-      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
-    }
+    // Sanity check: make sure the query is based on the table we're meant to handle.
+    analysis.getBaseTableDataSource()
+            .filter(ds -> dataSource.equals(ds.getName()))
+            .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
@@ -171,17 +168,16 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuTimeAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        analysis.getBaseQuery().orElse(query)
     );
+
+    // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
@@ -211,21 +207,31 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
 
                     if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
-                      return new Pair<>(Intervals.ETERNITY, new NoopQueryRunner<>());
+                      return new Pair<>(hydrant.getSegmentDataInterval(), new NoopQueryRunner<>());
                     }
 
                     // Prevent the underlying segment from swapping when its being iterated
-                    final Pair<Segment, Closeable> segmentAndCloseable = hydrant.getAndIncrementSegment();
-                    try {
-                      final Segment mappedSegment = segmentMapFn.apply(segmentAndCloseable.lhs);
+                    final Optional<Pair<SegmentReference, Closeable>> maybeSegmentAndCloseable =
+                        hydrant.getSegmentForQuery(segmentMapFn);
 
-                      QueryRunner<T> runner = factory.createRunner(mappedSegment);
+                    // if optional isn't present, we failed to acquire reference to the segment or any joinables
+                    if (!maybeSegmentAndCloseable.isPresent()) {
+                      return new Pair<>(
+                          hydrant.getSegmentDataInterval(),
+                          new ReportTimelineMissingSegmentQueryRunner<>(descriptor)
+                      );
+                    }
+                    final Pair<SegmentReference, Closeable> segmentAndCloseable = maybeSegmentAndCloseable.get();
+                    try {
+
+                      QueryRunner<T> runner = factory.createRunner(segmentAndCloseable.lhs);
 
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
                       if (hydrantDefinitelySwapped && cache.isLocal()) {
                         runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
+                            cacheKeyPrefix,
                             descriptor,
                             objectMapper,
                             cache,
@@ -245,7 +251,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                           runner,
                           segmentAndCloseable.rhs
                       );
-                      return new Pair<>(mappedSegment.getDataInterval(), runner);
+                      return new Pair<>(segmentAndCloseable.lhs.getDataInterval(), runner);
                     }
                     catch (RuntimeException e) {
                       CloseQuietly.close(segmentAndCloseable.rhs);

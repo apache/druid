@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.core.DockerClientBuilder;
@@ -31,6 +32,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -51,15 +53,18 @@ public class DruidClusterAdminClient
   private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
   private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
 
+  private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private IntegrationTestingConfig config;
 
   @Inject
   DruidClusterAdminClient(
+      ObjectMapper jsonMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
   )
   {
+    this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.config = config;
   }
@@ -97,6 +102,7 @@ public class DruidClusterAdminClient
   public void waitUntilCoordinatorReady()
   {
     waitUntilInstanceReady(config.getCoordinatorUrl());
+    postDynamicConfig(CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1).build());
   }
 
   public void waitUntilHistoricalReady()
@@ -157,6 +163,31 @@ public class DruidClusterAdminClient
           }
         },
         "Waiting for instance to be ready: [" + host + "]"
+    );
+  }
+
+  private void postDynamicConfig(CoordinatorDynamicConfig coordinatorDynamicConfig)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          try {
+            String url = StringUtils.format("%s/druid/coordinator/v1/config", config.getCoordinatorUrl());
+            StatusResponseHolder response = httpClient.go(
+                new Request(HttpMethod.POST, new URL(url)).setContent(
+                    "application/json",
+                    jsonMapper.writeValueAsBytes(coordinatorDynamicConfig)
+                ), StatusResponseHandler.getInstance()
+            ).get();
+
+            LOG.info("%s %s", response.getStatus(), response.getContent());
+            return response.getStatus().equals(HttpResponseStatus.OK);
+          }
+          catch (Throwable e) {
+            LOG.error(e, "");
+            return false;
+          }
+        },
+        "Posting dynamic config after startup"
     );
   }
 }

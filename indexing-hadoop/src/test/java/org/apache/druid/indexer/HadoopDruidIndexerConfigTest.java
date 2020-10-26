@@ -36,6 +36,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,10 +63,20 @@ public class HadoopDruidIndexerConfigTest
     List<HadoopyShardSpec> shardSpecs = new ArrayList<>();
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
-      shardSpecs.add(new HadoopyShardSpec(
-          new HashBasedNumberedShardSpec(i, partitionCount, null, new DefaultObjectMapper()),
-          i
-      ));
+      shardSpecs.add(
+          new HadoopyShardSpec(
+              new HashBasedNumberedShardSpec(
+                  i,
+                  partitionCount,
+                  i,
+                  partitionCount,
+                  null,
+                  HashPartitionFunction.MURMUR3_32_ABS,
+                  new DefaultObjectMapper()
+              ),
+              i
+          )
+      );
     }
 
     HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder()
@@ -226,6 +237,7 @@ public class HadoopDruidIndexerConfigTest
           null,
           partitionsSpec,
           shardSpecs,
+          null,
           null,
           null,
           null,

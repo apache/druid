@@ -187,7 +187,10 @@ public class BalanceSegments implements CoordinatorDuty
 
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(toMoveFrom);
+      final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(
+          toMoveFrom,
+          params.getBroadcastDatasources()
+      );
       if (segmentToMoveHolder == null) {
         log.info("All servers to move segments from are empty, ending run.");
         break;

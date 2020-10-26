@@ -175,6 +175,15 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
     );
+
+    RESOURCE_CLOSER.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
+      Assert.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
+      defaultPool.close();
+      customPool.close();
+    });
+
     return retVal;
   }
 
@@ -638,15 +647,15 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
-                        .put("uniques", 0)
+                        .put("uniques", 0d)
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
-                        .put("uniques", 0)
+                        .put("uniques", 0d)
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put("market", "upfront")
-                        .put("uniques", 0)
+                        .put("uniques", 0d)
                         .build()
                 )
             )

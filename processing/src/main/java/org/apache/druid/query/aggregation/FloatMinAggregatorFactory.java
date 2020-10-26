@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -68,7 +70,16 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   {
     return new FloatMinBufferAggregator(selector);
   }
-  
+
+  @Override
+  protected VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    return new FloatMinVectorAggregator(selector);
+  }
+
   @Override
   @Nullable
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)

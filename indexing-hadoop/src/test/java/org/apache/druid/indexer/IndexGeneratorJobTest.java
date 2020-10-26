@@ -43,6 +43,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
@@ -528,6 +529,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 maxRowsInMemory,
                 maxBytesInMemory,
                 true,
@@ -559,12 +561,17 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = new ArrayList<>();
     if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(
-            shardInfo[0],
-            shardInfo[1],
-            null,
-            HadoopDruidIndexerConfig.JSON_MAPPER
-        ));
+        specs.add(
+            new HashBasedNumberedShardSpec(
+                shardInfo[0],
+                shardInfo[1],
+                shardInfo[0],
+                shardInfo[1],
+                null,
+                HashPartitionFunction.MURMUR3_32_ABS,
+                HadoopDruidIndexerConfig.JSON_MAPPER
+            )
+        );
       }
     } else if ("single".equals(partitionType)) {
       int partitionNum = 0;
@@ -573,7 +580,8 @@ public class IndexGeneratorJobTest
             "host",
             shardInfo[0],
             shardInfo[1],
-            partitionNum++
+            partitionNum++,
+            shardInfoForEachShard.length
         ));
       }
     } else {
@@ -693,12 +701,12 @@ public class IndexGeneratorJobTest
         if (forceExtendableShardSpecs) {
           NumberedShardSpec spec = (NumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(i, spec.getPartitionNum());
-          Assert.assertEquals(shardInfo.length, spec.getPartitions());
+          Assert.assertEquals(shardInfo.length, spec.getNumCorePartitions());
         } else if ("hashed".equals(partitionType)) {
           Integer[] hashShardInfo = (Integer[]) shardInfo[i];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
-          Assert.assertEquals((int) hashShardInfo[1], spec.getPartitions());
+          Assert.assertEquals((int) hashShardInfo[1], spec.getNumCorePartitions());
         } else if ("single".equals(partitionType)) {
           String[] singleDimensionShardInfo = (String[]) shardInfo[i];
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();

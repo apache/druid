@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -53,6 +54,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.server.QueryResource;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -69,6 +71,7 @@ import java.io.SequenceInputStream;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -86,6 +89,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public static final String QUERY_FAIL_TIME = "queryFailTime";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
+  private static final int VAL_TO_REDUCE_REMAINING_RESPONSES = -1;
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -105,12 +109,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public static void removeMagicResponseContextFields(ResponseContext responseContext)
   {
     responseContext.remove(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED);
+    responseContext.remove(ResponseContext.Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
   }
 
   public static ResponseContext makeResponseContextForQuery()
   {
     final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
     responseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+    responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
     return responseContext;
   }
 
@@ -231,7 +237,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final boolean continueReading;
           try {
+            log.trace(
+                "Got a response from [%s] for query ID[%s], subquery ID[%s]",
+                url,
+                query.getId(),
+                query.getSubQueryId()
+            );
             final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
+            context.add(
+                ResponseContext.Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+                new NonnullPair<>(query.getMostSpecificId(), VAL_TO_REDUCE_REMAINING_RESPONSES)
+            );
             // context may be null in case of error or query timeout
             if (responseContext != null) {
               context.merge(ResponseContext.deserialize(responseContext, objectMapper));
@@ -493,8 +509,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 url,
                 query,
                 host,
-                toolChest.decorateObjectMapper(objectMapper, query),
-                null
+                toolChest.decorateObjectMapper(objectMapper, query)
             );
           }
 

@@ -22,16 +22,13 @@
     width: 750px;
   }
 
-  .dialog-body {
-    overflow: scroll;
-    max-height: 70vh;
-
-    .form-group {
-      margin: 0 0 5px;
+  .bp3-dialog-body {
+    .rule-editor {
+      margin-bottom: 15px;
     }
 
-    .small {
-      width: 0px;
+    .no-rules-message {
+      font-style: italic;
     }
 
     .comment {
@@ -41,6 +38,10 @@
         max-width: 200px;
         padding: 0 15px;
       }
+    }
+
+    .default-rule {
+      margin-top: 10px;
     }
   }
 }
