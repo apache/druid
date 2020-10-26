@@ -27,6 +27,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
+import org.apache.druid.query.aggregation.InternalCountAdjustmentAggregator;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -35,6 +38,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,11 +61,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    */
   private static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, Aggregator> adjustmentAggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
+  protected final boolean adjustmentBytesInMemoryFlag; // control adjustment
+  private final HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+  @Nullable
+  private CountAdjustmentHolder adjustmentHolder = null;
 
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -74,15 +83,38 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
-      long maxBytesInMemory
+      long maxBytesInMemory,
+      boolean adjustmentBytesInMemoryFlag
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
+    for (AggregatorFactory metric : this.getMetricAggs()) {
+      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
+          .getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
+      if (maxIntermediateSizeAdjustStrategy == null) {
+        continue;
+      }
+      final String tempMetricType = maxIntermediateSizeAdjustStrategy.getAdjustmentMetricType();
+      final MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(tempMetricType, k -> new MetricAdjustmentHolder(maxIntermediateSizeAdjustStrategy));
+      if (metricAdjustmentHolder != null) {
+        metricAdjustmentHolder.incrementAndGet();
+      }
+    }
+    if (canAdjust()) {
+      adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+    }
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
-                                                   : new PlainFactsHolder(sortFacts, dimsComparator());
-    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
+        : new PlainFactsHolder(sortFacts, dimsComparator());
+    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentBytesInMemoryFlag, canAdjust());
+  }
+
+  private boolean canAdjust()
+  {
+    return adjustmentBytesInMemoryFlag && maxBytesInMemory != Long.MAX_VALUE
+        && metricTypeAndHolderMap.size() > 0;
   }
 
   /**
@@ -101,16 +133,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    * </ul>
    *
    * @param incrementalIndexSchema
-   *
    * @return long max aggregator size in bytes
    */
-  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema)
+  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema, boolean adjustmentBytesInMemoryFlag, boolean canAdjust)
   {
     long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
-                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls()
-                                                                    + Long.BYTES * 2L)
-                                           .sum();
+        .mapToLong(aggregator -> {
+          if (aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag) != null && canAdjust) {
+            final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
+            return aggregator.getMaxIntermediateSizeWithNulls() + maxIntermediateSizeAdjustStrategy.initAppendBytes()
+                + Long.BYTES * 2L;
+          }
+          return aggregator.getMaxIntermediateSizeWithNulls()
+              + Long.BYTES * 2L;
+        })
+        .sum();
     return maxAggregatorIntermediateSize;
   }
 
@@ -155,19 +193,30 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
+    Aggregator adjustmentAggregator = null;
     final AggregatorFactory[] metrics = getMetrics();
     final AtomicInteger numEntries = getNumEntries();
     final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
-      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      adjustmentAggregator = concurrentGetAdjustment(priorIndex);
+      final long rollupAppendingBytes = doAggregate(metrics, aggs, adjustmentAggregator, rowContainer, row, parseExceptionMessages);
+      if (log.isDebugEnabled() && rollupAppendingBytes > 0) {
+        log.debug(
+            "Current bytes[%s] add adjustAppendSizes[%s]=[%s],because curAggCardinalRows[%s] reached threshold",
+            sizeInBytes.get(), rollupAppendingBytes, sizeInBytes.get() + rollupAppendingBytes, adjustmentAggregator.get());
+      }
+      sizeInBytes.addAndGet(rollupAppendingBytes);
     } else {
       aggs = new Aggregator[metrics.length];
+      if (canAdjust()) {
+        adjustmentAggregator = new InternalCountAdjustmentAggregator(adjustmentHolder);
+      }
       factorizeAggs(metrics, aggs, rowContainer, row);
-      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      doAggregate(metrics, aggs, adjustmentAggregator, rowContainer, row, parseExceptionMessages);
 
       final int rowIndex = indexIncrement.getAndIncrement();
-      concurrentSet(rowIndex, aggs);
+      concurrentSet(rowIndex, aggs, adjustmentAggregator);
 
       // Last ditch sanity checks
       if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
@@ -188,7 +237,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         // We lost a race
         parseExceptionMessages.clear();
         aggs = concurrentGet(prev);
-        doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+        adjustmentAggregator = concurrentGetAdjustment(prev);
+        final long rollupAppendingBytes = doAggregate(metrics, aggs, adjustmentAggregator, rowContainer, row, parseExceptionMessages);
+        if (log.isDebugEnabled() && rollupAppendingBytes > 0) {
+          log.debug(
+              "Current bytes[%s] add adjustAppendSizes[%s]=[%s],because curAggCardinalRows[%s] reached threshold",
+              sizeInBytes.get(), rollupAppendingBytes, sizeInBytes.get() + rollupAppendingBytes, adjustmentAggregator.get());
+        }
+        sizeInBytes.addAndGet(rollupAppendingBytes);
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
@@ -196,6 +252,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
+  }
+
+  @Override
+  public void stopAdjust()
+  {
+    if (!canAdjust()) {
+      return;
+    }
+    metricTypeAndHolderMap.clear();
+    adjustmentHolder = null;
   }
 
   /**
@@ -208,7 +274,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    *
    * @param key                          TimeAndDims key
    * @param maxBytesPerRowForAggregators max size per aggregator
-   *
    * @return estimated size of row
    */
   private long estimateRowSizeInBytes(IncrementalIndexRow key, long maxBytesPerRowForAggregators)
@@ -237,9 +302,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     rowContainer.set(null);
   }
 
-  private void doAggregate(
+  private long doAggregate(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
+      @Nullable Aggregator adjustmentAggregator,
       ThreadLocal<InputRow> rowContainer,
       InputRow row,
       List<String> parseExceptionsHolder
@@ -262,6 +328,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     rowContainer.set(null);
+    if (adjustmentAggregator != null) {
+      synchronized (adjustmentAggregator) {
+        adjustmentAggregator.aggregate();
+      }
+      return adjustmentAggregator.getLong();
+    }
+    return 0;
   }
 
   private void closeAggregators()
@@ -271,6 +344,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       for (Aggregator agg : aggs) {
         closer.register(agg);
       }
+    }
+    for (Aggregator agg : adjustmentAggregators.values()) {
+      closer.register(agg);
     }
 
     try {
@@ -287,14 +363,28 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return aggregators.get(offset);
   }
 
-  protected void concurrentSet(int offset, Aggregator[] value)
+  @Nullable
+  protected Aggregator concurrentGetAdjustment(int offset)
+  {
+    // All get operations should be fine
+    if (!canAdjust()) {
+      return null;
+    }
+    return adjustmentAggregators.get(offset);
+  }
+
+  protected void concurrentSet(int offset, Aggregator[] value, @Nullable Aggregator adjustmentAggregator)
   {
     aggregators.put(offset, value);
+    if (adjustmentAggregator != null) {
+      adjustmentAggregators.put(offset, adjustmentAggregator);
+    }
   }
 
   protected void concurrentRemove(int offset)
   {
     aggregators.remove(offset);
+    adjustmentAggregators.remove(offset);
   }
 
   @Override
@@ -379,10 +469,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     super.close();
     closeAggregators();
     aggregators.clear();
+    adjustmentAggregators.clear();
     facts.clear();
     if (selectors != null) {
       selectors.clear();
     }
+    metricTypeAndHolderMap.clear();
+    adjustmentHolder = null;
   }
 
   /**
@@ -447,7 +540,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          adjustmentBytesInMemoryFlag
       );
     }
   }
@@ -481,6 +575,32 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     public int hashCode()
     {
       return Objects.hash(this.getClass());
+    }
+  }
+
+  public static class MetricAdjustmentHolder
+  {
+    private final MaxIntermediateSizeAdjustStrategy metricTypeAdjustmentStrategy;
+    private int metricCount = 0;
+
+    public MetricAdjustmentHolder(MaxIntermediateSizeAdjustStrategy metricTypeAdjustmentStrategy)
+    {
+      this.metricTypeAdjustmentStrategy = metricTypeAdjustmentStrategy;
+    }
+
+    public int incrementAndGet()
+    {
+      return ++metricCount;
+    }
+
+    public int[] getMetricTypeAppendingBytes()
+    {
+      return Arrays.stream(metricTypeAdjustmentStrategy.appendBytesOnRollupNum()).map(appendingByte -> appendingByte * metricCount).toArray();
+    }
+
+    public int[] getMetricTypeRollupRows()
+    {
+      return metricTypeAdjustmentStrategy.adjustWithRollupNum();
     }
   }
 }

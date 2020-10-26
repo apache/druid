@@ -74,6 +74,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -153,10 +154,10 @@ public class AppenderatorImpl implements Appenderator
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
-   *
+   * <p>
    * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
    * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
-   *
+   * <p>
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
    */
@@ -340,6 +341,7 @@ public class AppenderatorImpl implements Appenderator
         );
       } else {
         isPersistRequired = true;
+        sink.stopAdjust();
       }
     }
     return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
@@ -414,8 +416,8 @@ public class AppenderatorImpl implements Appenderator
       }
       catch (IOException e) {
         log.makeAlert(e, "Failed to announce new segment[%s]", schema.getDataSource())
-           .addData("interval", retVal.getInterval())
-           .emit();
+            .addData("interval", retVal.getInterval())
+            .emit();
       }
 
       sinks.put(identifier, retVal);
@@ -553,13 +555,13 @@ public class AppenderatorImpl implements Appenderator
                     commitMetadata,
                     Joiner.on(", ").join(
                         currentHydrants.entrySet()
-                                       .stream()
-                                       .map(entry -> StringUtils.format(
-                                           "%s:%d",
-                                           entry.getKey(),
-                                           entry.getValue()
-                                       ))
-                                       .collect(Collectors.toList())
+                            .stream()
+                            .map(entry -> StringUtils.format(
+                                "%s:%d",
+                                entry.getKey(),
+                                entry.getValue()
+                            ))
+                            .collect(Collectors.toList())
                     )
                 );
 
@@ -585,9 +587,9 @@ public class AppenderatorImpl implements Appenderator
                   "Flushed in-memory data with commit metadata [%s] for segments: %s",
                   commitMetadata,
                   indexesToPersist.stream()
-                                  .map(itp -> itp.rhs.asSegmentId().toString())
-                                  .distinct()
-                                  .collect(Collectors.joining(", "))
+                      .map(itp -> itp.rhs.asSegmentId().toString())
+                      .distinct()
+                      .collect(Collectors.joining(", "))
               );
 
               // return null if committer is null
@@ -683,7 +685,8 @@ public class AppenderatorImpl implements Appenderator
   private ListenableFuture<?> pushBarrier()
   {
     return intermediateTempExecutor.submit(
-        (Runnable) () -> pushExecutor.submit(() -> {})
+        (Runnable) () -> pushExecutor.submit(() -> {
+        })
     );
   }
 
@@ -694,7 +697,6 @@ public class AppenderatorImpl implements Appenderator
    * @param identifier    sink identifier
    * @param sink          sink to push
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
-   *
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
@@ -806,9 +808,9 @@ public class AppenderatorImpl implements Appenderator
 
       log.info(
           "Segment[%s] of %,d bytes "
-          + "built from %d incremental persist(s) in %,dms; "
-          + "pushed to deep storage in %,dms. "
-          + "Load spec is: %s",
+              + "built from %d incremental persist(s) in %,dms; "
+              + "pushed to deep storage in %,dms. "
+              + "Load spec is: %s",
           identifier,
           segment.getSize(),
           indexes.size(),
@@ -902,8 +904,8 @@ public class AppenderatorImpl implements Appenderator
       }
       catch (Exception e) {
         log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
-           .addData("identifier", entry.getKey().toString())
-           .emit();
+            .addData("identifier", entry.getKey().toString())
+            .emit();
       }
     }
     try {
@@ -1139,8 +1141,8 @@ public class AppenderatorImpl implements Appenderator
       }
       catch (IOException e) {
         log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
-           .addData("sinkDir", sinkDir)
-           .emit();
+            .addData("sinkDir", sinkDir)
+            .emit();
       }
     }
 
@@ -1203,8 +1205,8 @@ public class AppenderatorImpl implements Appenderator
               }
               catch (Exception e) {
                 log.makeAlert(e, "Failed to update committed segments[%s]", schema.getDataSource())
-                   .addData("identifier", identifier.toString())
-                   .emit();
+                    .addData("identifier", identifier.toString())
+                    .emit();
                 throw new RuntimeException(e);
               }
               finally {
@@ -1218,8 +1220,8 @@ public class AppenderatorImpl implements Appenderator
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
-                 .addData("identifier", identifier.toString())
-                 .emit();
+                  .addData("identifier", identifier.toString())
+                  .emit();
             }
 
             droppingSinks.remove(identifier);
@@ -1308,7 +1310,6 @@ public class AppenderatorImpl implements Appenderator
    *
    * @param indexToPersist hydrant to persist
    * @param identifier     the segment this hydrant is going to be part of
-   *
    * @return the number of rows persisted
    */
   private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)
@@ -1355,10 +1356,10 @@ public class AppenderatorImpl implements Appenderator
       }
       catch (IOException e) {
         log.makeAlert("Incremental persist failed")
-           .addData("segment", identifier.toString())
-           .addData("dataSource", schema.getDataSource())
-           .addData("count", indexToPersist.getCount())
-           .emit();
+            .addData("segment", identifier.toString())
+            .addData("dataSource", schema.getDataSource())
+            .addData("count", indexToPersist.getCount())
+            .emit();
 
         throw new RuntimeException(e);
       }
@@ -1373,8 +1374,8 @@ public class AppenderatorImpl implements Appenderator
       }
       catch (Exception e) {
         log.makeAlert(e, "Failed to remove directory[%s]", schema.getDataSource())
-           .addData("file", target)
-           .emit();
+            .addData("file", target)
+            .emit();
       }
     }
   }

@@ -21,28 +21,341 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.serde.ComplexMetricExtractor;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
   private static final int MAX_ROWS = 100000;
+  private static final int MAX_BYTES = 100_000_000;
+  private MaxIntermediateSizeAdjustStrategy customAggStrategy = null;
+  private Aggregator customAgg = null;
+  private AggregatorFactory customMetric = null;
+
+  public void initCustomAggAdjustStrategy()
+  {
+    customAggStrategy = new MaxIntermediateSizeAdjustStrategy()
+    {
+      final int[] rollupNums = {2, 20, 40, 400};
+      final int[] appendBytesWithNum = {1000, 1000, 1000, 1000};
+
+      @Override
+      public String getAdjustmentMetricType()
+      {
+        return "custom";
+      }
+
+      @Override
+      public int[] adjustWithRollupNum()
+      {
+        return rollupNums;
+      }
+
+      @Override
+      public int[] appendBytesOnRollupNum()
+      {
+        return appendBytesWithNum;
+      }
+
+      @Override
+      public int initAppendBytes()
+      {
+        return 100;
+      }
+    };
+
+    customAgg = new Aggregator()
+    {
+      AtomicInteger occupy = new AtomicInteger(0);
+
+      @Override
+      public void aggregate()
+      {
+        occupy.incrementAndGet();
+      }
+
+      @Nullable
+      @Override
+      public Object get()
+      {
+        return occupy.get();
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return occupy.get();
+      }
+
+      @Override
+      public long getLong()
+      {
+        return occupy.get();
+      }
+
+      @Override
+      public void close()
+      {
+        occupy = new AtomicInteger(0);
+      }
+    };
+
+    customMetric = new AggregatorFactory()
+    {
+      @Override
+      public Aggregator factorize(ColumnSelectorFactory metricFactory)
+      {
+        return customAgg;
+      }
+
+      @Nullable
+      @Override
+      public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
+      {
+        return customAggStrategy;
+      }
+
+      @Override
+      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+      {
+        return null;
+      }
+
+      @Override
+      public Comparator getComparator()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Object combine(@Nullable Object lhs, @Nullable Object rhs)
+      {
+        return null;
+      }
+
+      @Override
+      public AggregatorFactory getCombiningFactory()
+      {
+        return null;
+      }
+
+      @Override
+      public List<AggregatorFactory> getRequiredColumns()
+      {
+        return null;
+      }
+
+      @Override
+      public Object deserialize(Object object)
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Object finalizeComputation(@Nullable Object object)
+      {
+        return null;
+      }
+
+      @Override
+      public String getName()
+      {
+        return "custom";
+      }
+
+      @Override
+      public List<String> requiredFields()
+      {
+        return new ArrayList<>();
+      }
+
+      @Override
+      public ValueType getType()
+      {
+        return ValueType.COMPLEX;
+      }
+
+      @Override
+      public String getComplexTypeName()
+      {
+        return "custom";
+      }
+
+      @Override
+      public ValueType getFinalizedType()
+      {
+        return ValueType.COMPLEX;
+      }
+
+      @Override
+      public int getMaxIntermediateSize()
+      {
+        return 4;
+      }
+
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[0];
+      }
+    };
+
+    ComplexMetrics.registerSerde("custom", new ComplexMetricSerde()
+    {
+      @Override
+      public String getTypeName()
+      {
+        return "custom";
+      }
+
+      @Override
+      public ComplexMetricExtractor getExtractor()
+      {
+        return new ComplexMetricExtractor()
+        {
+          @Override
+          public Class extractedClass()
+          {
+            return customMetric.getClass();
+          }
+
+          @Nullable
+          @Override
+          public Object extractValue(InputRow inputRow, String metricName)
+          {
+            return inputRow.getMetric(metricName);
+          }
+        };
+      }
+
+      @Override
+      public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
+      {
+
+      }
+
+      @Override
+      public ObjectStrategy getObjectStrategy()
+      {
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testCustomAggSyncAdjustStrategy() throws IndexSizeExceededException, InterruptedException
+  {
+    initCustomAggAdjustStrategy();
+    final AggregatorFactory[] metrics = {new LongSumAggregatorFactory("sum1", "sum1"),
+        new LongMinAggregatorFactory("min1", "min1"), customMetric};
+    final OnheapIncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(metrics)
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
+        .setAdjustmentBytesInMemoryFlag(false)
+        .buildOnheap();
+    IncrementalIndexAddResult addResult1 = null;
+    for (int i = 0; i < MAX_ROWS; i++) {
+      addResult1 = index.add(new MapBasedInputRow(
+          0,
+          Collections.singletonList("billy"),
+          ImmutableMap.of("billy", 1, "sum1", i, "min1", i, "custom", 1)
+      ));
+    }
+    final long notAdjustBytes = addResult1.getBytesInMemory();
+    index.stopAdjust();
+
+    initCustomAggAdjustStrategy();
+    final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(metrics)
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
+        .setAdjustmentBytesInMemoryFlag(true)
+        .buildOnheap();
+
+    final int addThreadCount = 2;
+    Thread[] addThreads = new Thread[addThreadCount];
+    final CountDownLatch downLatch = new CountDownLatch(addThreadCount);
+    for (int i = 0; i < addThreadCount; ++i) {
+      addThreads[i] = new Thread(() -> {
+        try {
+          for (int i1 = 0; i1 < MAX_ROWS / addThreadCount; i1++) {
+            indexAdjust.add(new MapBasedInputRow(
+                0,
+                Collections.singletonList("billy"),
+                ImmutableMap.of("billy", 1, "sum1", i1, "min1", i1, "custom", 1)
+            ));
+          }
+          downLatch.countDown();
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      });
+      addThreads[i].start();
+    }
+    downLatch.await();
+    final IncrementalIndexAddResult addResult = indexAdjust.add(new MapBasedInputRow(
+        0,
+        Collections.singletonList("billy"),
+        ImmutableMap.of("billy", 1, "sum1", 1, "min1", 1, "custom", 1)
+    ));
+    final long adjustBytes = addResult.getBytesInMemory();
+    indexAdjust.stopAdjust();
+    indexAdjust.close();
+
+    final long actualAppendBytes = adjustBytes - notAdjustBytes;
+    final int[] appendBytess = customAggStrategy.appendBytesOnRollupNum();
+    Assert.assertEquals(Arrays.stream(appendBytess).sum() + customAggStrategy.initAppendBytes(), actualAppendBytes);
+  }
 
   @Test
   public void testMultithreadAddFacts() throws Exception
@@ -216,9 +529,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         .buildOnheap();
 
     index.add(new MapBasedInputRow(
-            0,
-            Collections.singletonList("billy"),
-            ImmutableMap.of("billy", 1, "max", 1)
+        0,
+        Collections.singletonList("billy"),
+        ImmutableMap.of("billy", 1, "max", 1)
     ));
 
     // override the aggregators with the mocks

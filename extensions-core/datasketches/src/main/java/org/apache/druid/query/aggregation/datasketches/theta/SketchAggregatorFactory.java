@@ -30,12 +30,14 @@ import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,6 +46,8 @@ import java.util.List;
 public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_SKETCH_SIZE = 16384;
+  @Nullable
+  private static ThetaSketchSizeAdjustStrategy strategy;
 
   protected final String name;
   protected final String fieldName;
@@ -59,6 +63,16 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     Util.checkIfPowerOf2(this.size, "size");
 
     this.cacheId = cacheId;
+  }
+
+  @Nullable
+  @Override
+  public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
+  {
+    if (adjustBytesInMemoryFlag && strategy == null) {
+      strategy = new ThetaSketchSizeAdjustStrategy(this.size);
+    }
+    return strategy;
   }
 
   @SuppressWarnings("unchecked")
@@ -172,20 +186,20 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + Integer.BYTES + fieldNameBytes.length)
-                     .put(cacheId)
-                     .putInt(size)
-                     .put(fieldNameBytes)
-                     .array();
+        .put(cacheId)
+        .putInt(size)
+        .put(fieldNameBytes)
+        .array();
   }
 
   @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{"
-           + "fieldName='" + fieldName + '\''
-           + ", name='" + name + '\''
-           + ", size=" + size
-           + '}';
+        + "fieldName='" + fieldName + '\''
+        + ", name='" + name + '\''
+        + ", size=" + size
+        + '}';
   }
 
 

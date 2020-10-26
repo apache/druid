@@ -62,6 +62,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -114,7 +116,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean concurrentEventAdd,
         boolean sortFacts,
         int maxRowCount,
-        long maxBytesInMemory
+        long maxBytesInMemory,
+        boolean adjustmentBytesInMemoryFlag
     )
     {
       super(
@@ -123,7 +126,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          adjustmentBytesInMemoryFlag
       );
     }
 
@@ -132,7 +136,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         Granularity gran,
         AggregatorFactory[] metrics,
         int maxRowCount,
-        long maxBytesInMemory
+        long maxBytesInMemory,
+        boolean adjustmentBytesInMemoryFlag
     )
     {
       super(
@@ -145,7 +150,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           false,
           true,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          adjustmentBytesInMemoryFlag
       );
     }
 
@@ -157,7 +163,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected void concurrentSet(int offset, Aggregator[] value)
+    protected void concurrentSet(int offset, Aggregator[] value, @Nullable Aggregator adjustmentAggregator)
     {
       indexedMap.put(offset, value);
     }
@@ -268,7 +274,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
   @BenchmarkOptions(callgc = true, clock = Clock.REAL_TIME, warmupRounds = 10, benchmarkRounds = 20)
   public void testConcurrentAddRead()
       throws InterruptedException, ExecutionException, NoSuchMethodException, IllegalAccessException,
-             InvocationTargetException, InstantiationException
+      InvocationTargetException, InstantiationException
   {
 
     final int taskCount = 30;
@@ -375,11 +381,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                       factory.getToolchest()
                   );
                   TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                                .dataSource("xxx")
-                                                .granularity(Granularities.ALL)
-                                                .intervals(ImmutableList.of(queryInterval))
-                                                .aggregators(queryAggregatorFactories)
-                                                .build();
+                      .dataSource("xxx")
+                      .granularity(Granularities.ALL)
+                      .intervals(ImmutableList.of(queryInterval))
+                      .aggregators(queryAggregatorFactories)
+                      .build();
                   List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
@@ -407,11 +413,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         factory.getToolchest()
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource("xxx")
-                                  .granularity(Granularities.ALL)
-                                  .intervals(ImmutableList.of(queryInterval))
-                                  .aggregators(queryAggregatorFactories)
-                                  .build();
+        .dataSource("xxx")
+        .granularity(Granularities.ALL)
+        .intervals(ImmutableList.of(queryInterval))
+        .aggregators(queryAggregatorFactories)
+        .build();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {

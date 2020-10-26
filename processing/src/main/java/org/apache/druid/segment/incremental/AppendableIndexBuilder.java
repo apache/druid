@@ -34,6 +34,7 @@ public abstract class AppendableIndexBuilder
   protected boolean sortFacts = true;
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
+  protected boolean adjustmentBytesInMemoryFlag = true;
 
   protected final Logger log = new Logger(this.getClass().getName());
 
@@ -49,7 +50,6 @@ public abstract class AppendableIndexBuilder
    * production settings.
    *
    * @param metrics variable array of {@link AggregatorFactory} metrics
-   *
    * @return this
    */
   @VisibleForTesting
@@ -65,7 +65,6 @@ public abstract class AppendableIndexBuilder
    * would use it in production settings.
    *
    * @param metrics variable array of {@link AggregatorFactory} metrics
-   *
    * @return this
    */
   @VisibleForTesting
@@ -103,6 +102,12 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setMaxBytesInMemory(final long maxBytesInMemory)
   {
     this.maxBytesInMemory = maxBytesInMemory;
+    return this;
+  }
+
+  public AppendableIndexBuilder setAdjustmentBytesInMemoryFlag(final boolean adjustmentBytesInMemoryFlag)
+  {
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
     return this;
   }
 
