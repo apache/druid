@@ -116,6 +116,7 @@ public class InputSourceSampler
       int numRowsIndexed = 0;
 
       while (responseRows.size() < nonNullSamplerConfig.getNumRows() && iterator.hasNext()) {
+        int i = 0;
         List<Map<String, Object>> rawColumnsList = null;
         try {
           final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
@@ -126,13 +127,15 @@ public class InputSourceSampler
             throw inputRowListPlusRawValues.getParseException();
           }
 
-          if (inputRowListPlusRawValues.getInputRows() == null) {
+          List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
+          if (inputRows == null) {
             continue;
           }
 
-          for (int i = 0; i < rawColumnsList.size(); i++) {
+          for (; i < rawColumnsList.size(); i++) {
+            // InputRowListPlusRawValues guarantees the size of rawColumnsList and inputRows are the same
             Map<String, Object> rawColumns = rawColumnsList.get(i);
-            InputRow row = inputRowListPlusRawValues.getInputRows().get(i);
+            InputRow row = inputRows.get(i);
 
             //keep the index of the row to be added to responseRows for further use
             final int rowIndex = responseRows.size();
@@ -145,7 +148,9 @@ public class InputSourceSampler
         }
         catch (ParseException e) {
           if (rawColumnsList != null) {
-            responseRows.addAll(rawColumnsList.stream()
+            // add all left rows to responseRows to return
+            responseRows.addAll(rawColumnsList.subList(i, rawColumnsList.size())
+                                              .stream()
                                               .map(rawColumns -> new SamplerResponseRow(rawColumns, null, true, e.getMessage()))
                                               .collect(Collectors.toList()));
           } else {
