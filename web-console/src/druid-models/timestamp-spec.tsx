@@ -61,13 +61,38 @@ export interface TimestampSpec {
   missingValue?: string;
 }
 
-export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
-  // https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
-  return timestampSpec.column || 'timestamp';
+export function getTimestampSpecColumnFromSpec(spec: IngestionSpec): string {
+  // For the default https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
+  return deepGet(spec, 'spec.dataSchema.timestampSpec.column') || 'timestamp';
 }
 
-export function isColumnTimestampSpec(timestampSpec: TimestampSpec) {
-  return (deepGet(timestampSpec, 'column') || 'timestamp') !== NO_SUCH_COLUMN;
+export function getTimestampSpecConstantFromSpec(spec: IngestionSpec): string | undefined {
+  return deepGet(spec, 'spec.dataSchema.timestampSpec.missingValue');
+}
+
+export function getTimestampSpecExpressionFromSpec(spec: IngestionSpec): string | undefined {
+  const transforms: Transform[] =
+    deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
+
+  const timeTransform = transforms.find(transform => transform.name === '__time');
+  if (!timeTransform) return;
+  return timeTransform.expression;
+}
+
+export function getTimestampDetailFromSpec(spec: IngestionSpec): string {
+  const timestampSchema = getTimestampSchema(spec);
+  switch (timestampSchema) {
+    case 'none':
+      return `Constant: ${getTimestampSpecConstantFromSpec(spec)}`;
+
+    case 'column':
+      return `Column: ${getTimestampSpecColumnFromSpec(spec)}`;
+
+    case 'expression':
+      return `Expression: ${getTimestampSpecExpressionFromSpec(spec)}`;
+  }
+
+  return '-';
 }
 
 export const TIMESTAMP_SPEC_FIELDS: Field<TimestampSpec>[] = [

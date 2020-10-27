@@ -19,7 +19,8 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { PLACEHOLDER_TIMESTAMP_SPEC } from '../../../druid-models';
+import { IngestionSpec, PLACEHOLDER_TIMESTAMP_SPEC } from '../../../druid-models';
+import { deepSet } from '../../../utils';
 
 import { ParseTimeTable } from './parse-time-table';
 
@@ -35,11 +36,17 @@ describe('parse time table', () => {
       ],
     };
 
+    const spec = deepSet(
+      {} as IngestionSpec,
+      'spec.dataSchema.timestampSpec',
+      PLACEHOLDER_TIMESTAMP_SPEC,
+    );
+
     const parseTimeTable = (
       <ParseTimeTable
         sampleBundle={{
           headerAndRows: sampleData,
-          timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+          spec,
         }}
         columnFilter=""
         possibleTimestampColumnsOnly={false}

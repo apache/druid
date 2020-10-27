@@ -310,7 +310,7 @@ export interface LoadDataViewState {
   // for timestamp
   timestampQueryState: QueryState<{
     headerAndRows: HeaderAndRows;
-    timestampSpec: TimestampSpec;
+    spec: IngestionSpec;
   }>;
 
   // for transform
@@ -1539,7 +1539,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, cacheRows } = this.state;
     const inputFormatColumns: string[] =
       deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
-    const timestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec') || EMPTY_OBJECT;
 
     if (!cacheRows) {
       this.setState({
@@ -1572,7 +1571,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             undefined,
             ['__time'].concat(inputFormatColumns),
           ),
-          timestampSpec,
+          spec,
         },
       }),
     });
