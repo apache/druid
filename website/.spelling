@@ -1645,6 +1645,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+allowList
 ANDed
 array_mod
 autoscale
@@ -1658,6 +1659,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+denyList
 doubleMax
 doubleMin
 doubleSum
