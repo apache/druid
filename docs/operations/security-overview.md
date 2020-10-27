@@ -3,6 +3,25 @@ id: security-overview
 title: "Security overview"
 ---
 
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 
 ## Overview
 
@@ -39,6 +58,7 @@ The first step in securing Druid is enabling TLS. You can enable TLS to secure e
 The configuration steps are: 
 
 1. Enable TLS by adding `druid.enableTlsPort=true` to `common.runtime.properties` on each node in the Druid cluster.
+2. Disable the non-TLS port by setting `druid.enablePlaintextPort` to `false`. 
 2. Follow the steps in [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#understanding-certificates-and-keys) to generate or import a key and certificate. 
 3. Configure the keystore and truststore settings in `common.runtime.properties`. The file should look something like this: 
   ```
@@ -56,10 +76,10 @@ The configuration steps are:
   druid.client.https.trustStorePassword=secret123  # replace with your own password
 
   ``` 
-4. Add the `simple-client-sslcontext` extension to `druid.extensions.loadList` in common.runtime.properties. This enables TLS for Druid nodes acting as clients.
+4. Add the `simple-client-sslcontext` extension to `druid.extensions.loadList` in `common.runtime.properties`. This enables TLS for Druid nodes acting as clients.
 5. Restart the cluster.
 
-For more information, see [TLS support](tls-support) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext). 
+For more information, see [TLS support](tls-support.md) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext.md). 
 
 Druid uses Jetty as its embedded web server. Therefore you refer to [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) for complete instructions. 
 
@@ -70,7 +90,7 @@ To authenticate requests in Druid, you configure an Authenticator. Authenticator
 
 The following takes you through sample configuration steps for enabling basic auth:  
 
-1. Add the `basic-auth` extension to `druid.extensions.loadList` in common.runtime.properties. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
+1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in common.runtime.properties. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
    druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service", "imply-utility-belt"]
    ```
@@ -99,7 +119,7 @@ The following takes you through sample configuration steps for enabling basic au
 
 3. Restart the cluster. 
 
-See [Authentication and Authorization](../design/auth) for more information about the Authenticator, Escalator, and Authorizer concepts. See [Basic Security](../development/extensions-core/druid-basic-security) for more information about the extension used in the examples above, and [Kerberos](../development/extensions-core/druid-kerberos) for Kerberos authentication.
+See [Authentication and Authorization](../design/auth.md) for more information about the Authenticator, Escalator, and Authorizer concepts. See [Basic Security](../development/extensions-core/druid-basic-security.md) for more information about the extension used in the examples above, and [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
 
 
 ## Enable authorizers
@@ -113,12 +133,13 @@ The following diagram depicts the authorization model, and the relationship betw
 
 The following steps walk through a sample setup procedure:  
 
-> The Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
+> The default Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
 
 1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`, replacing USERNAME with the new username. For example: 
   ```
    curl -u admin:password -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname
   ```
+  >  If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates, you may choose to include the `insecure` curl option to forgo certificate checking for the curl command. 
 2. Add a credential for the user by issuing a POST to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
     ```
     curl -u admin:password -H'Content-Type: application/json' -XPOST --data-binary @pass.json https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname/credentials
@@ -169,7 +190,7 @@ The following steps walk through a sample setup procedure:
 
 ## Configuring an LDAP authenticator
 
-As an alternative to using the basic metadata authenticator, as shown in the previous section, you can use LDAP to authenticate users. The following steps provide an overview of the setup steps. For more information on these settings, see [Properties for LDAP user authentication](https://druid.apache.org/docs/latest/development/extensions-core/druid-basic-security.html#properties-for-ldap-user-authentication).
+As an alternative to using the basic metadata authenticator, as shown in the previous section, you can use LDAP to authenticate users. The following steps provide an overview of the setup steps. For more information on these settings, see [Properties for LDAP user authentication](../development/extensions-core/druid-basic-security.md#properties-for-ldap-user-authentication).
 
 1. In `common.runtime.properties`, add LDAP to the authenticator chain in the order in which you want requests to be evaluated. For example:
    ```
