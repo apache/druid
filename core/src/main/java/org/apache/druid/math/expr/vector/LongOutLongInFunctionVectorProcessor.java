@@ -28,7 +28,7 @@ public abstract class LongOutLongInFunctionVectorProcessor extends UnivariateFun
 {
   public LongOutLongInFunctionVectorProcessor(ExprVectorProcessor<long[]> processor, int maxVectorSize)
   {
-    super(processor, maxVectorSize, new long[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExprType.LONG), maxVectorSize, new long[maxVectorSize]);
   }
 
   public abstract long apply(long input);
