@@ -48,7 +48,10 @@ import {
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
+  Capabilities,
+  CapabilitiesMode,
   countBy,
+  deepGet,
   formatBytes,
   formatInteger,
   formatMillions,
@@ -62,10 +65,8 @@ import {
   QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { Rule, RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 

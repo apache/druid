@@ -31,9 +31,8 @@ import ReactTable from 'react-table';
 
 import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, filterMap, prettyPrintSql } from '../../../utils';
+import { copyAndAlert, deepSet, filterMap, prettyPrintSql } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
-import { deepSet } from '../../../utils/object-change';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
 

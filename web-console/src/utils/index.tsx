@@ -25,3 +25,4 @@ export * from './query-cursor';
 export * from './local-storage-keys';
 export * from './column-metadata';
 export * from './object-change';
+export * from './capabilities';

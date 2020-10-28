@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
 import React from 'react';
 
-import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
+import { deepDelete, deepGet, deepSet } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';

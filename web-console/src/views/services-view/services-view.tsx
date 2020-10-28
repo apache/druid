@@ -37,6 +37,9 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addFilter,
+  Capabilities,
+  CapabilitiesMode,
+  deepGet,
   formatBytes,
   formatBytesCompact,
   LocalStorageKeys,
@@ -47,9 +50,7 @@ import {
   QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './services-view.scss';
 
@@ -93,7 +94,6 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
-  middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   capabilities: Capabilities;

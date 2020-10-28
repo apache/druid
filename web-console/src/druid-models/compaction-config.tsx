@@ -20,8 +20,7 @@ import { Code } from '@blueprintjs/core';
 import React from 'react';
 
 import { Field } from '../components';
-import { oneOf } from '../utils';
-import { deepGet, deepSet } from '../utils/object-change';
+import { deepGet, deepSet, oneOf } from '../utils';
 
 export type CompactionConfig = Record<string, any>;
 
