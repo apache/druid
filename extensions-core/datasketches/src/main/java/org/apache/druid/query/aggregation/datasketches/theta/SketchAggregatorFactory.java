@@ -37,7 +37,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -186,20 +185,20 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + Integer.BYTES + fieldNameBytes.length)
-        .put(cacheId)
-        .putInt(size)
-        .put(fieldNameBytes)
-        .array();
+                     .put(cacheId)
+                     .putInt(size)
+                     .put(fieldNameBytes)
+                     .array();
   }
 
   @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{"
-        + "fieldName='" + fieldName + '\''
-        + ", name='" + name + '\''
-        + ", size=" + size
-        + '}';
+           + "fieldName='" + fieldName + '\''
+           + ", name='" + name + '\''
+           + ", size=" + size
+           + '}';
   }
 
 

@@ -50,6 +50,7 @@ public abstract class AppendableIndexBuilder
    * production settings.
    *
    * @param metrics variable array of {@link AggregatorFactory} metrics
+   *
    * @return this
    */
   @VisibleForTesting
@@ -65,6 +66,7 @@ public abstract class AppendableIndexBuilder
    * would use it in production settings.
    *
    * @param metrics variable array of {@link AggregatorFactory} metrics
+   *
    * @return this
    */
   @VisibleForTesting

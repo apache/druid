@@ -38,7 +38,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,6 +132,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    * </ul>
    *
    * @param incrementalIndexSchema
+   *
    * @return long max aggregator size in bytes
    */
   private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema, boolean adjustmentBytesInMemoryFlag, boolean canAdjust)
@@ -264,6 +264,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    *
    * @param key                          TimeAndDims key
    * @param maxBytesPerRowForAggregators max size per aggregator
+   *
    * @return estimated size of row
    */
   private long estimateRowSizeInBytes(IncrementalIndexRow key, long maxBytesPerRowForAggregators)

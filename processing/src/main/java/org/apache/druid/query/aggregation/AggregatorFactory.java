@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -44,7 +43,7 @@ import java.util.Map;
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
  * to extend {@link NullableNumericAggregatorFactory}.
- * <p>
+ *
  * Implementations are also expected to correctly handle single/multi value string type columns as it makes sense
  * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
  * fails.
@@ -87,6 +86,7 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @param lhs The left hand side of the combine
    * @param rhs The right hand side of the combine
+   *
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
   @Nullable
@@ -125,20 +125,20 @@ public abstract class AggregatorFactory implements Cacheable
    * when we know we have some values that were produced with this aggregator factory, and want to do some additional
    * combining of them. This happens, for example, when merging query results from two different segments, or two
    * different servers.
-   * <p>
+   *
    * For simple aggregators, the combining factory may be computed by simply creating a new factory that is the same as
    * the current, except with its input column renamed to the same as the output column. For example, this aggregator:
-   * <p>
+   *
    * {"type": "longSum", "fieldName": "foo", "name": "bar"}
-   * <p>
+   *
    * Would become:
-   * <p>
+   *
    * {"type": "longSum", "fieldName": "bar", "name": "bar"}
-   * <p>
+   *
    * Sometimes, the type or other parameters of the combining aggregator will be different from the original aggregator.
    * For example, the {@link CountAggregatorFactory} getCombiningFactory method will return a
    * {@link LongSumAggregatorFactory}, because counts are combined by summing.
-   * <p>
+   *
    * No matter what, `foo.getCombiningFactory()` and `foo.getCombiningFactory().getCombiningFactory()` should return
    * the same result.
    *
@@ -152,11 +152,12 @@ public abstract class AggregatorFactory implements Cacheable
    * by the "other" aggregator factory, and we want to do some additional combining of them. This happens, for example,
    * when compacting two segments together that both have a metric column with the same name. (Even though the name of
    * the column is the same, the aggregator factory used to create it may be different from segment to segment.)
-   * <p>
+   *
    * This method may throw {@link AggregatorFactoryNotMergeableException}, meaning that "this" and "other" are not
    * compatible and values from one cannot sensibly be combined with values from the other.
    *
    * @return a new Factory that can be used for merging the output of aggregators from this factory and other.
+   *
    * @see #getCombiningFactory() which is equivalent to {@code foo.getMergingFactory(foo)} (when "this" and "other"
    * are the same instance).
    */
@@ -178,6 +179,7 @@ public abstract class AggregatorFactory implements Cacheable
    * "getRequiredColumns" sounded right, please use {@link #requiredFields()} instead.
    *
    * @return AggregatorFactories that can be used to "transfer" values from this aggregator into an incremental index
+   *
    * @see #requiredFields() a similarly-named method that is perhaps the one you want instead.
    */
   public abstract List<AggregatorFactory> getRequiredColumns();
@@ -187,6 +189,7 @@ public abstract class AggregatorFactory implements Cacheable
    * in order to transfer via JSON.
    *
    * @param object the object to deserialize
+   *
    * @return the deserialized object
    */
   public abstract Object deserialize(Object object);
@@ -196,6 +199,7 @@ public abstract class AggregatorFactory implements Cacheable
    * intermediate format than their final resultant output.
    *
    * @param object the object to be finalized
+   *
    * @return the finalized value that should be returned for the initial query
    */
   @Nullable
@@ -212,7 +216,7 @@ public abstract class AggregatorFactory implements Cacheable
    * Get the "intermediate" {@link ValueType} for this aggregator. This is the same as the type returned by
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
-   * <p>
+   *
    * Refer to the {@link ValueType} javadocs for details on the implications of choosing a type.
    */
   public abstract ValueType getType();
@@ -221,18 +225,18 @@ public abstract class AggregatorFactory implements Cacheable
    * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
    * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
    * and {@link #combine}.
-   * <p>
+   *
    * Refer to the {@link ValueType} javadocs for details on the implications of choosing a type.
    */
   public abstract ValueType getFinalizedType();
 
   /**
    * Get the complex type name of the intermediate type for this aggregator.
-   * <p>
+   *
    * This should ONLY be implemented if the type is complex (i.e. not a simple, numeric {@link ValueType}), and there
    * must be a corresponding {@link org.apache.druid.segment.serde.ComplexMetricSerde} which was registered with
    * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
-   * <p>
+   *
    * If you need a ValueType enum corresponding to this aggregator, use {@link #getType} instead.
    *
    * @throws IllegalStateException if getType() != ValueType.COMPLEX
@@ -291,6 +295,7 @@ public abstract class AggregatorFactory implements Cacheable
    * - AggregatorFactory of same name can not be merged if they are not compatible
    *
    * @param aggregatorsList
+   *
    * @return merged AggregatorFactory[] or Null if merging is not possible.
    */
   @Nullable

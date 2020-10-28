@@ -528,9 +528,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         .buildOnheap();
 
     index.add(new MapBasedInputRow(
-        0,
-        Collections.singletonList("billy"),
-        ImmutableMap.of("billy", 1, "max", 1)
+            0,
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", 1, "max", 1)
     ));
 
     // override the aggregators with the mocks

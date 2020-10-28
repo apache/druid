@@ -77,7 +77,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -106,6 +105,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * @param agg                       the aggregator
    * @param in                        ingestion-time input row supplier
    * @param deserializeComplexMetrics whether complex objects should be deserialized by a {@link ComplexMetricExtractor}
+   *
    * @return column selector factory
    */
   public static ColumnSelectorFactory makeColumnSelectorFactory(
@@ -515,6 +515,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * <p>
    *
    * @param row the row of data to add
+   *
    * @return the number of rows in the data set after adding the InputRow
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
@@ -831,10 +832,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       case STRING:
         // we start out as not having multiple values, but this might change as we encounter them
         return new ColumnCapabilitiesImpl().setType(type)
-            .setHasBitmapIndexes(true)
-            .setDictionaryEncoded(true)
-            .setDictionaryValuesUnique(true)
-            .setDictionaryValuesSorted(false);
+                                           .setHasBitmapIndexes(true)
+                                           .setDictionaryEncoded(true)
+                                           .setDictionaryValuesUnique(true)
+                                           .setDictionaryValuesSorted(false);
       case COMPLEX:
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true);
       default:
@@ -1041,7 +1042,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         this.type = valueType.toString();
       } else if (ValueType.COMPLEX.equals(valueType)) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
-            .setHasNulls(ColumnCapabilities.Capable.TRUE);
+                                             .setHasNulls(ColumnCapabilities.Capable.TRUE);
         String complexTypeName = factory.getComplexTypeName();
         ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
         if (serde != null) {
@@ -1240,8 +1241,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       if (descending && sortFacts) {
         return ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).descendingMap()
-            .keySet()
-            .iterator();
+                                                                                         .keySet()
+                                                                                         .iterator();
       }
       return keySet().iterator();
     }
@@ -1339,7 +1340,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       if (descending && sortFacts) {
         return timeOrderedConcat(((ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>>) facts)
-            .descendingMap().values(), true).iterator();
+                                     .descendingMap().values(), true).iterator();
       }
       return timeOrderedConcat(facts.values(), false).iterator();
     }
@@ -1371,8 +1372,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     )
     {
       return rowGroups.stream()
-          .flatMap(Collection::stream)
-          .sorted(incrementalIndexRowComparator);
+                      .flatMap(Collection::stream)
+                      .sorted(incrementalIndexRowComparator);
     }
 
     @Override

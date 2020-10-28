@@ -274,7 +274,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
   @BenchmarkOptions(callgc = true, clock = Clock.REAL_TIME, warmupRounds = 10, benchmarkRounds = 20)
   public void testConcurrentAddRead()
       throws InterruptedException, ExecutionException, NoSuchMethodException, IllegalAccessException,
-      InvocationTargetException, InstantiationException
+             InvocationTargetException, InstantiationException
   {
 
     final int taskCount = 30;
@@ -381,11 +381,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                       factory.getToolchest()
                   );
                   TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                      .dataSource("xxx")
-                      .granularity(Granularities.ALL)
-                      .intervals(ImmutableList.of(queryInterval))
-                      .aggregators(queryAggregatorFactories)
-                      .build();
+                                                .dataSource("xxx")
+                                                .granularity(Granularities.ALL)
+                                                .intervals(ImmutableList.of(queryInterval))
+                                                .aggregators(queryAggregatorFactories)
+                                                .build();
                   List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
@@ -413,11 +413,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         factory.getToolchest()
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-        .dataSource("xxx")
-        .granularity(Granularities.ALL)
-        .intervals(ImmutableList.of(queryInterval))
-        .aggregators(queryAggregatorFactories)
-        .build();
+                                  .dataSource("xxx")
+                                  .granularity(Granularities.ALL)
+                                  .intervals(ImmutableList.of(queryInterval))
+                                  .aggregators(queryAggregatorFactories)
+                                  .build();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {

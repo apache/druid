@@ -40,7 +40,6 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -232,7 +231,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
             fieldName,
             fieldName,
             k)
-    );
+        );
   }
 
   @Override
