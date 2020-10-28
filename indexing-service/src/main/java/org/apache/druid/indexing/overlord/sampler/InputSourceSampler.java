@@ -42,6 +42,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 
@@ -116,45 +117,43 @@ public class InputSourceSampler
       int numRowsIndexed = 0;
 
       while (responseRows.size() < nonNullSamplerConfig.getNumRows() && iterator.hasNext()) {
-        int i = 0;
-        List<Map<String, Object>> rawColumnsList = null;
-        try {
-          final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
+        final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
 
-          rawColumnsList = inputRowListPlusRawValues.getRawValuesList();
+        final List<Map<String, Object>> rawColumnsList = inputRowListPlusRawValues.getRawValuesList();
 
-          if (inputRowListPlusRawValues.getParseException() != null) {
-            throw inputRowListPlusRawValues.getParseException();
+        final ParseException parseException = inputRowListPlusRawValues.getParseException();
+        if (parseException != null) {
+          if (rawColumnsList != null) {
+            // add all rows to response
+            responseRows.addAll(rawColumnsList.stream()
+                                              .map(rawColumns -> new SamplerResponseRow(rawColumns, null, true, parseException.getMessage()))
+                                              .collect(Collectors.toList()));
+          } else {
+            // no data parsed, add one response row
+            responseRows.add(new SamplerResponseRow(null, null, true, parseException.getMessage()));
           }
+          continue;
+        }
 
-          List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
-          if (inputRows == null) {
-            continue;
-          }
+        List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
+        if (inputRows == null) {
+          continue;
+        }
 
-          for (; i < rawColumnsList.size(); i++) {
-            // InputRowListPlusRawValues guarantees the size of rawColumnsList and inputRows are the same
-            Map<String, Object> rawColumns = rawColumnsList.get(i);
-            InputRow row = inputRows.get(i);
+        for (int i = 0; i < rawColumnsList.size(); i++) {
+          // InputRowListPlusRawValues guarantees the size of rawColumnsList and inputRows are the same
+          Map<String, Object> rawColumns = rawColumnsList.get(i);
+          InputRow row = inputRows.get(i);
 
-            //keep the index of the row to be added to responseRows for further use
-            final int rowIndex = responseRows.size();
-            index.add(new SamplerInputRow(row, rowIndex), true);
-
+          //keep the index of the row to be added to responseRows for further use
+          final int rowIndex = responseRows.size();
+          IncrementalIndexAddResult addResult = index.add(new SamplerInputRow(row, rowIndex), true);
+          if (addResult.hasParseException()) {
+            responseRows.add(new SamplerResponseRow(rawColumns, null, true, addResult.getParseException().getMessage()));
+          } else {
             // store the raw value; will be merged with the data from the IncrementalIndex later
             responseRows.add(new SamplerResponseRow(rawColumns, null, null, null));
             numRowsIndexed++;
-          }
-        }
-        catch (ParseException e) {
-          if (rawColumnsList != null) {
-            // add all left rows to responseRows to return
-            responseRows.addAll(rawColumnsList.subList(i, rawColumnsList.size())
-                                              .stream()
-                                              .map(rawColumns -> new SamplerResponseRow(rawColumns, null, true, e.getMessage()))
-                                              .collect(Collectors.toList()));
-          } else {
-            responseRows.add(new SamplerResponseRow(null, null, true, e.getMessage()));
           }
         }
       }

@@ -577,13 +577,26 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    *
    * @param row the row of data to add
    *
-   * @return the number of rows in the data set after adding the InputRow
+   * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
     return add(row, false);
   }
 
+  /**
+   * Adds a new row.  The row might correspond with another row that already exists, in which case this will
+   * update that row instead of inserting a new one.
+   * <p>
+   * <p>
+   * Calls to add() are thread safe.
+   * <p>
+   *
+   * @param row the row of data to add
+   * @param skipMaxRowsInMemoryCheck whether or not skip the check of rows exceeding the max rows limit
+   * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
+   * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
+   */
   public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
@@ -722,15 +735,20 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     if (dimParseExceptionMessages != null) {
       for (String parseExceptionMessage : dimParseExceptionMessages) {
+        if (stringBuilder.length() > 0) {
+          stringBuilder.append(",");
+        }
         stringBuilder.append(parseExceptionMessage);
-        stringBuilder.append(",");
+
         numAdded++;
       }
     }
     if (aggParseExceptionMessages != null) {
       for (String parseExceptionMessage : aggParseExceptionMessages) {
+        if (stringBuilder.length() > 0) {
+          stringBuilder.append(",");
+        }
         stringBuilder.append(parseExceptionMessage);
-        stringBuilder.append(",");
         numAdded++;
       }
     }

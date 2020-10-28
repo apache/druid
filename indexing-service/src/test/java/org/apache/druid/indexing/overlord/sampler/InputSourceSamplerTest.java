@@ -21,6 +21,8 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
@@ -1057,6 +1059,107 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             getUnparseableTimestampString()
         ),
         data.get(2)
+    );
+  }
+
+  @Test
+  public void testIndexParseException() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(StringDimensionSchema.create("dim1PlusBar"))
+    );
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE))
+    );
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        transformSpec
+    );
+
+    //
+    // add a invalid row to cause parse exception when indexing
+    //
+    Map<String, Object> rawColumns4ParseExceptionRow = ImmutableMap.of("t", "2019-04-22T12:00",
+                                                                       "dim1", "foo2",
+                                                                       "met1", "invalidNumber");
+    final List<String> inputTestRows = Lists.newArrayList(getTestRows());
+    inputTestRows.add(ParserType.STR_CSV.equals(parserType) ?
+                      "2019-04-22T12:00,foo2,,invalidNumber" :
+                      OBJECT_MAPPER.writeValueAsString(rawColumns4ParseExceptionRow));
+
+    final InputSource inputSource = createInputSource(inputTestRows, dataSchema);
+    final InputFormat inputFormat = createInputFormat();
+
+    SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
+
+    Assert.assertEquals(7, response.getNumRowsRead());
+    Assert.assertEquals(5, response.getNumRowsIndexed());
+    Assert.assertEquals(4, response.getData().size());
+
+    List<SamplerResponseRow> data = response.getData();
+
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            getRawColumns().get(0),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foobar")
+                .put("met1", 11L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(0)
+    );
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            getRawColumns().get(3),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foo2bar")
+                .put("met1", 4L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(1)
+    );
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            getRawColumns().get(5),
+            null,
+            true,
+            getUnparseableTimestampString()
+        ),
+        data.get(2)
+    );
+
+    //
+    // the last row has parse exception when indexing, check if rawColumns and exception message match the expected
+    //
+    String indexParseExceptioMessage = ParserType.STR_CSV.equals(parserType)
+           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
+           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            rawColumns4ParseExceptionRow,
+            null,
+            true,
+            indexParseExceptioMessage
+        ),
+        data.get(3)
     );
   }
 
