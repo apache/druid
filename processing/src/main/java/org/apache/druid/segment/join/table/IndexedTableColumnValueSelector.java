@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.table;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -31,10 +32,11 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
   private final IntSupplier currentRow;
   private final IndexedTable.Reader columnReader;
 
-  IndexedTableColumnValueSelector(IndexedTable table, IntSupplier currentRow, int columnNumber)
+  IndexedTableColumnValueSelector(IndexedTable table, IntSupplier currentRow, int columnNumber, Closer closer)
   {
     this.currentRow = currentRow;
     this.columnReader = table.columnReader(columnNumber);
+    closer.register(columnReader);
   }
 
   @Override

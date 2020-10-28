@@ -21,9 +21,10 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
+import { useQueryManager } from '../../hooks';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile, QueryManager } from '../../utils';
+import { downloadFile } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './show-json.scss';
@@ -34,82 +35,59 @@ export interface ShowJsonProps {
   downloadFilename?: string;
 }
 
-export interface ShowJsonState {
-  jsonValue?: string;
-  loading: boolean;
-  error?: string;
-}
+export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
+  const { endpoint, transform, downloadFilename } = props;
 
-export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
-  private showJsonQueryManager: QueryManager<null, string>;
-  constructor(props: ShowJsonProps, context: any) {
-    super(props, context);
-    this.state = {
-      jsonValue: '',
-      loading: false,
-    };
-    this.showJsonQueryManager = new QueryManager({
-      processQuery: async () => {
-        const { endpoint, transform } = this.props;
-        const resp = await axios.get(endpoint);
-        let data = resp.data;
-        if (transform) data = transform(data);
-        return typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          loading,
-          error,
-          jsonValue: result,
-        });
-      },
-    });
-  }
+  const [jsonState] = useQueryManager<null, string>({
+    processQuery: async () => {
+      const resp = await axios.get(endpoint);
+      let data = resp.data;
+      if (transform) data = transform(data);
+      return typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
+    },
+    initQuery: null,
+  });
 
-  componentDidMount(): void {
-    this.showJsonQueryManager.runQuery(null);
-  }
-
-  render(): JSX.Element {
-    const { endpoint, downloadFilename } = this.props;
-    const { jsonValue, error, loading } = this.state;
-
-    return (
-      <div className="show-json">
-        <div className="top-actions">
-          <ButtonGroup className="right-buttons">
-            {downloadFilename && (
-              <Button
-                disabled={loading}
-                text="Save"
-                minimal
-                onClick={() => downloadFile(jsonValue ? jsonValue : '', 'json', downloadFilename)}
-              />
-            )}
+  const jsonValue = jsonState.data || '';
+  return (
+    <div className="show-json">
+      <div className="top-actions">
+        <ButtonGroup className="right-buttons">
+          {downloadFilename && (
             <Button
-              text="Copy"
+              disabled={jsonState.loading}
+              text="Save"
               minimal
-              disabled={loading}
-              onClick={() => {
-                copy(jsonValue ? jsonValue : '', { format: 'text/plain' });
-                AppToaster.show({
-                  message: 'JSON value copied to clipboard',
-                  intent: Intent.SUCCESS,
-                });
-              }}
+              onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />
-            <Button
-              text="View raw"
-              disabled={!jsonValue}
-              minimal
-              onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
-            />
-          </ButtonGroup>
-        </div>
-        <div className="main-area">
-          {loading ? <Loader /> : <TextArea readOnly value={!error ? jsonValue : error} />}
-        </div>
+          )}
+          <Button
+            text="Copy"
+            minimal
+            disabled={jsonState.loading}
+            onClick={() => {
+              copy(jsonValue, { format: 'text/plain' });
+              AppToaster.show({
+                message: 'JSON value copied to clipboard',
+                intent: Intent.SUCCESS,
+              });
+            }}
+          />
+          <Button
+            text="View raw"
+            disabled={!jsonValue}
+            minimal
+            onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
+          />
+        </ButtonGroup>
       </div>
-    );
-  }
-}
+      <div className="main-area">
+        {jsonState.loading ? (
+          <Loader />
+        ) : (
+          <TextArea readOnly value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()} />
+        )}
+      </div>
+    </div>
+  );
+});

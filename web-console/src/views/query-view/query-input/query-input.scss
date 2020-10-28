@@ -17,6 +17,7 @@
  */
 
 @import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
 
 .query-input {
   .ace-container {
@@ -24,25 +25,48 @@
     width: 100%;
     height: 100%;
 
-    .ace_scroller {
-      background-color: #232c35;
+    .ace-solarized-dark {
+      background-color: transparent;
     }
 
-    .ace_gutter-layer {
-      background-color: #27313c;
-      width: 50px;
+    .ace_gutter {
+      background-color: $gray5;
+      color: $gray1;
+
+      .bp3-dark & {
+        background-color: $dark-gray4;
+        color: $gray5;
+      }
+    }
+
+    .ace_placeholder {
+      // This padding is needed because there is a bug in this current version of ACE Editor where the padding set in
+      // code is not being applied to the placeholder element
+      margin-top: 10px;
+    }
+
+    .ace_gutter-active-line {
+      background-color: rgba($gray1, 0.6);
+    }
+
+    .ace_text-layer {
+      filter: brightness(1.3) saturate(0.8);
     }
   }
 }
 
 .ace_tooltip {
   padding: 10px;
-  background-color: #333d47;
   color: #c1ccd5;
   width: 500px;
   display: block;
   height: auto;
   white-space: initial;
+  background: $gray2;
+
+  .bp3-dark & {
+    background: $dark-gray2;
+  }
 
   hr {
     margin: 10px 0;

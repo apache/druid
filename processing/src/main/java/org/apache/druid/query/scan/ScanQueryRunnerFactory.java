@@ -253,7 +253,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
               }
             }
             if (finalInterval == null) {
-              throw new ISE("Row unexpectedly came from an unscanned interval");
+              throw new ISE("Row came from an unscanned interval");
             }
           }
         }

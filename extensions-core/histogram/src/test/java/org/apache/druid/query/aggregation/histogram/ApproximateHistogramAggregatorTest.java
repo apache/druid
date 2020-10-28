@@ -20,8 +20,16 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -111,6 +119,40 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
     Assert.assertEquals(
         "\"//sBQbgAAA==\"",
         finalStringBinary
+    );
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new ApproximateHistogramAggregatorFactory("approxHisto", "col", null, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("approxHistoBin", "col", null, null, null, null, true)
+              )
+              .postAggregators(
+                  new FieldAccessPostAggregator("approxHisto-access", "approxHisto"),
+                  new FinalizingFieldAccessPostAggregator("approxHisto-finalize", "approxHisto"),
+                  new FieldAccessPostAggregator("approxHistoBin-access", "approxHistoBin"),
+                  new FinalizingFieldAccessPostAggregator("approxHistoBin-finalize", "approxHistoBin")
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("approxHisto", ValueType.COMPLEX)
+                    .add("approxHistoBin", ValueType.COMPLEX)
+                    .add("approxHisto-access", ValueType.COMPLEX)
+                    .add("approxHisto-finalize", ValueType.COMPLEX)
+                    .add("approxHistoBin-access", ValueType.COMPLEX)
+                    .add("approxHistoBin-finalize", ValueType.COMPLEX)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
 }

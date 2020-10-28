@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
@@ -127,32 +126,51 @@ public class Calcites
   }
 
   @Nullable
-  public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
+  public static ValueType getValueTypeForRelDataType(final RelDataType type)
   {
+    final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {
       return ValueType.FLOAT;
-    } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName)) {
+    } else if (isDoubleType(sqlTypeName)) {
       return ValueType.DOUBLE;
-    } else if (SqlTypeName.TIMESTAMP == sqlTypeName
-               || SqlTypeName.DATE == sqlTypeName
-               || SqlTypeName.BOOLEAN == sqlTypeName
-               || SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
+    } else if (isLongType(sqlTypeName)) {
       return ValueType.LONG;
     } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
       return ValueType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       return ValueType.COMPLEX;
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
-      // until we have array ValueType, this will let us have array constants and use them at least
+      SqlTypeName componentType = type.getComponentType().getSqlTypeName();
+      if (isDoubleType(componentType)) {
+        // in the future return ValueType.DOUBLE_ARRAY;
+        return ValueType.STRING;
+      }
+      if (isLongType(componentType)) {
+        // in the future we will return ValueType.LONG_ARRAY;
+        return ValueType.STRING;
+      }
+      // in the future we will return ValueType.STRING_ARRAY;
       return ValueType.STRING;
     } else {
       return null;
     }
   }
 
-  public static StringComparator getStringComparatorForSqlTypeName(SqlTypeName sqlTypeName)
+  public static boolean isDoubleType(SqlTypeName sqlTypeName)
   {
-    final ValueType valueType = getValueTypeForSqlTypeName(sqlTypeName);
+    return SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName) || SqlTypeName.APPROX_TYPES.contains(sqlTypeName);
+  }
+  public static boolean isLongType(SqlTypeName sqlTypeName)
+  {
+    return SqlTypeName.TIMESTAMP == sqlTypeName ||
+           SqlTypeName.DATE == sqlTypeName ||
+           SqlTypeName.BOOLEAN == sqlTypeName ||
+           SqlTypeName.INT_TYPES.contains(sqlTypeName);
+  }
+
+  public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
+  {
+    final ValueType valueType = getValueTypeForRelDataType(dataType);
     return getStringComparatorForValueType(valueType);
   }
 
@@ -205,6 +223,25 @@ public class Calcites
     }
 
     return typeFactory.createTypeWithNullability(dataType, nullable);
+  }
+
+  /**
+   * Like RelDataTypeFactory.createSqlTypeWithNullability, but creates types that align best with how Druid
+   * represents them.
+   */
+  public static RelDataType createSqlArrayTypeWithNullability(
+      final RelDataTypeFactory typeFactory,
+      final SqlTypeName elementTypeName,
+      final boolean nullable
+  )
+  {
+
+    final RelDataType dataType = typeFactory.createArrayType(
+        createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
+        -1
+    );
+
+    return dataType;
   }
 
   /**
@@ -368,39 +405,6 @@ public class Calcites
   public static String makePrefixedName(final String prefix, final String suffix)
   {
     return StringUtils.format("%s:%s", prefix, suffix);
-  }
-
-  public static int getInt(RexNode rex, int defaultValue)
-  {
-    return rex == null ? defaultValue : RexLiteral.intValue(rex);
-  }
-
-  public static int getOffset(Sort sort)
-  {
-    return Calcites.getInt(sort.offset, 0);
-  }
-
-  public static int getFetch(Sort sort)
-  {
-    return Calcites.getInt(sort.fetch, -1);
-  }
-
-  public static int collapseFetch(int innerFetch, int outerFetch, int outerOffset)
-  {
-    final int fetch;
-    if (innerFetch < 0 && outerFetch < 0) {
-      // Neither has a limit => no limit overall.
-      fetch = -1;
-    } else if (innerFetch < 0) {
-      // Outer limit only.
-      fetch = outerFetch;
-    } else if (outerFetch < 0) {
-      // Inner limit only.
-      fetch = Math.max(0, innerFetch - outerOffset);
-    } else {
-      fetch = Math.max(0, Math.min(innerFetch - outerOffset, outerFetch));
-    }
-    return fetch;
   }
 
   public static Class<?> sqlTypeNameJdbcToJavaClass(SqlTypeName typeName)

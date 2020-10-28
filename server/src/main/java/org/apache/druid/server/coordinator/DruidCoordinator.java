@@ -19,12 +19,14 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -40,6 +42,7 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -131,7 +134,10 @@ public class DruidCoordinator
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
+
+  @Nullable // Null if zk is disabled
   private final CuratorFramework curator;
+
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
@@ -149,6 +155,9 @@ public class DruidCoordinator
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 
+  private int cachedBalancerThreadNumber;
+  private ListeningExecutorService balancerExec;
+
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
@@ -157,7 +166,7 @@ public class DruidCoordinator
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      CuratorFramework curator,
+      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -168,7 +177,8 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments
+      CompactSegments compactSegments,
+      ZkEnablementConfig zkEnablementConfig
   )
   {
     this(
@@ -178,7 +188,7 @@ public class DruidCoordinator
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curator,
+        curatorProvider,
         emitter,
         scheduledExecutorFactory,
         indexingServiceClient,
@@ -190,7 +200,8 @@ public class DruidCoordinator
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        compactSegments
+        compactSegments,
+        zkEnablementConfig
     );
   }
 
@@ -201,7 +212,7 @@ public class DruidCoordinator
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      CuratorFramework curator,
+      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -213,7 +224,8 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments
+      CompactSegments compactSegments,
+      ZkEnablementConfig zkEnablementConfig
   )
   {
     this.config = config;
@@ -223,7 +235,11 @@ public class DruidCoordinator
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
-    this.curator = curator;
+    if (zkEnablementConfig.isEnabled()) {
+      this.curator = curatorProvider.get();
+    } else {
+      this.curator = null;
+    }
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
@@ -363,6 +379,17 @@ public class DruidCoordinator
     return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
+  @Nullable
+  public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
+  {
+    return compactSegments.getAutoCompactionSnapshot(dataSource);
+  }
+
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
+  {
+    return compactSegments.getAutoCompactionSnapshot();
+  }
+
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
     return CoordinatorDynamicConfig.current(configManager);
@@ -457,7 +484,7 @@ public class DruidCoordinator
             () -> {
               try {
                 if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
-                    curator.checkExists().forPath(toLoadQueueSegPath) == null &&
+                    (curator == null || curator.checkExists().forPath(toLoadQueueSegPath) == null) &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {
@@ -481,6 +508,18 @@ public class DruidCoordinator
         callback.execute();
       }
     }
+  }
+
+  @VisibleForTesting
+  public int getCachedBalancerThreadNumber()
+  {
+    return cachedBalancerThreadNumber;
+  }
+
+  @VisibleForTesting
+  public ListeningExecutorService getBalancerExec()
+  {
+    return balancerExec;
   }
 
   @LifecycleStart
@@ -524,6 +563,10 @@ public class DruidCoordinator
       started = false;
 
       exec.shutdownNow();
+
+      if (balancerExec != null) {
+        balancerExec.shutdownNow();
+      }
     }
   }
 
@@ -569,7 +612,11 @@ public class DruidCoordinator
       }
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
-        ScheduledExecutors.scheduleWithFixedDelay(
+        // CompactSegmentsDuty can takes a non trival amount of time to complete.
+        // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
+        // config.getCoordinatorIndexingPeriod() period. Note that cautious should be taken
+        // if setting config.getCoordinatorIndexingPeriod() lower than the default value.
+        ScheduledExecutors.scheduleAtFixedRate(
             exec,
             config.getCoordinatorStartDelay(),
             dutiesRunnable.rhs,
@@ -612,6 +659,11 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       segmentsMetadataManager.stopPollingDatabasePeriodically();
+
+      if (balancerExec != null) {
+        balancerExec.shutdownNow();
+        balancerExec = null;
+      }
     }
   }
 
@@ -642,8 +694,9 @@ public class DruidCoordinator
     if (config.isLogUsedSegmentsDutyEnabled()) {
       duties.add(new LogUsedSegments());
     }
-    duties.addAll(makeCompactSegmentsDuty());
     duties.addAll(indexingServiceDuties);
+    // CompactSegmentsDuty should be the last duty as it can take a long time to complete
+    duties.addAll(makeCompactSegmentsDuty());
 
     log.debug(
         "Done making indexing service duties %s",
@@ -657,22 +710,52 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
-  private class DutiesRunnable implements Runnable
+  @VisibleForTesting
+  protected class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
 
-    private DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
+    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;
     }
 
+    @VisibleForTesting
+    protected void initBalancerExecutor()
+    {
+      final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
+      final String threadNameFormat = "coordinator-cost-balancer-%s";
+      // fist time initialization
+      if (balancerExec == null) {
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            currentNumber,
+            threadNameFormat
+        ));
+        cachedBalancerThreadNumber = currentNumber;
+        return;
+      }
+
+      if (cachedBalancerThreadNumber != currentNumber) {
+        log.info(
+            "balancerComputeThreads has been changed from [%s] to [%s], recreating the thread pool.",
+            cachedBalancerThreadNumber,
+            currentNumber
+        );
+        balancerExec.shutdownNow();
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            currentNumber,
+            threadNameFormat
+        ));
+        cachedBalancerThreadNumber = currentNumber;
+      }
+    }
+
     @Override
     public void run()
     {
-      ListeningExecutorService balancerExec = null;
       try {
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
@@ -694,10 +777,7 @@ public class DruidCoordinator
           }
         }
 
-        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-            getDynamicConfigs().getBalancerComputeThreads(),
-            "coordinator-cost-balancer-%s"
-        ));
+        initBalancerExecutor();
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
@@ -742,11 +822,6 @@ public class DruidCoordinator
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
-      }
-      finally {
-        if (balancerExec != null) {
-          balancerExec.shutdownNow();
-        }
       }
     }
   }

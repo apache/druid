@@ -36,6 +36,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -273,10 +274,18 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return storeDoubleAsFloat ? "float" : "double";
+    return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    // this is a copy of getComplexTypeName in the hopes that someday groupby v1 is no more and it will report it's actual
+    // type of COMPLEX
+    return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
   }
 
   @Override

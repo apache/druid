@@ -23,10 +23,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -144,5 +150,35 @@ public class DoublesSketchToCDFPostAggregatorTest
     Assert.assertEquals(2, cdf.length);
     Assert.assertEquals(0.5, cdf[0], 0);
     Assert.assertEquals(1.0, cdf[1], 0);
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new DoublesSketchAggregatorFactory("sketch", "col", 8)
+              )
+              .postAggregators(
+                  new DoublesSketchToCDFPostAggregator(
+                      "a",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      new double[] {4}
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("sketch", null)
+                    .add("a", ValueType.DOUBLE_ARRAY)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

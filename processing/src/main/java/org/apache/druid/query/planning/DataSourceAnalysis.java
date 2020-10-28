@@ -168,7 +168,7 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the base (bottom-leftmost) datasource.
+   * Returns the base (bottom-leftmost) datasource.
    */
   public DataSource getBaseDataSource()
   {
@@ -176,13 +176,27 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the same datasource as {@link #getBaseDataSource()}, but only if it is a table. Useful on data servers,
-   * since they generally can only handle queries where the base datasource is a table.
+   * If {@link #getBaseDataSource()} is a {@link TableDataSource}, returns it. Otherwise, returns an empty Optional.
+   *
+   * Note that this can return empty even if {@link #isConcreteTableBased()} is true. This happens if the base
+   * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
   public Optional<TableDataSource> getBaseTableDataSource()
   {
     if (baseDataSource instanceof TableDataSource) {
       return Optional.of((TableDataSource) baseDataSource);
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * If {@link #getBaseDataSource()} is a {@link UnionDataSource}, returns it. Otherwise, returns an empty Optional.
+   */
+  public Optional<UnionDataSource> getBaseUnionDataSource()
+  {
+    if (baseDataSource instanceof UnionDataSource) {
+      return Optional.of((UnionDataSource) baseDataSource);
     } else {
       return Optional.empty();
     }
@@ -243,8 +257,8 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if this datasource is concrete-based (see {@link #isConcreteBased()}, and the base datasource is a
-   * 'table' or union of them. This is an important property because it corresponds to datasources that can be handled
-   * by Druid data servers, like Historicals.
+   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}. This is an
+   * important property, because it corresponds to datasources that can be handled by Druid's distributed query stack.
    */
   public boolean isConcreteTableBased()
   {
@@ -264,6 +278,14 @@ public class DataSourceAnalysis
   public boolean isQuery()
   {
     return dataSource instanceof QueryDataSource;
+  }
+
+  /**
+   * Returns true if this datasource is made out of a join operation
+   */
+  public boolean isJoin()
+  {
+    return !preJoinableClauses.isEmpty();
   }
 
   @Override
