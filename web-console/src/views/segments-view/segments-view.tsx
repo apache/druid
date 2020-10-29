@@ -39,6 +39,7 @@ import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-di
 import {
   addFilter,
   compact,
+  deepGet,
   filterMap,
   formatBytes,
   formatInteger,
@@ -62,6 +63,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
+    'Granularity',
     'Partitioning',
     'Partition',
     'Size',
@@ -130,11 +132,12 @@ interface SegmentQueryResultRow {
   end: string;
   segment_id: string;
   version: string;
-  size: 0;
+  granularity: string;
+  partitioning: string;
+  size: number;
   partition_num: number;
   num_rows: number;
   num_replicas: number;
-  partitioning: string;
   is_available: number;
   is_published: number;
   is_realtime: number;
@@ -159,7 +162,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   static WITH_QUERY = `WITH s AS (
   SELECT
-    "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows",    
+    "segment_id", "datasource", "start", "end", "size", "version",
+    CASE
+      WHEN "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z' THEN 'Year'
+      WHEN "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z' THEN 'Month'
+      WHEN "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z' THEN 'Day'
+      WHEN "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z' THEN 'Hour'
+      WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
+      ELSE 'Sub minute'
+    END AS "granularity",
     CASE
       WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
       WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
@@ -169,6 +180,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
       ELSE '-'
     END AS "partitioning",
+    "partition_num", "num_replicas", "num_rows",
     "is_published", "is_available", "is_realtime", "is_overshadowed"
   FROM sys.segments
 )`;
@@ -286,23 +298,27 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
               .segments;
 
-            return segments.map((segment: any) => {
-              return {
-                segment_id: segment.identifier,
-                datasource: segment.dataSource,
-                start: segment.interval.split('/')[0],
-                end: segment.interval.split('/')[1],
-                version: segment.version,
-                partition_num: segment.shardSpec.partitionNum ? 0 : segment.shardSpec.partitionNum,
-                size: segment.size,
-                num_rows: -1,
-                num_replicas: -1,
-                is_available: -1,
-                is_published: -1,
-                is_realtime: -1,
-                is_overshadowed: -1,
-              };
-            });
+            return segments.map(
+              (segment: any): SegmentQueryResultRow => {
+                return {
+                  segment_id: segment.identifier,
+                  datasource: segment.dataSource,
+                  start: segment.interval.split('/')[0],
+                  end: segment.interval.split('/')[1],
+                  version: segment.version,
+                  granularity: '-',
+                  partitioning: '-',
+                  partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
+                  size: segment.size,
+                  num_rows: -1,
+                  num_replicas: -1,
+                  is_available: -1,
+                  is_published: -1,
+                  is_realtime: -1,
+                  is_overshadowed: -1,
+                };
+              },
+            );
           }),
         );
 
@@ -403,6 +419,23 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     const numRowsValues = segments.map(d => formatInteger(d.num_rows)).concat('(unknown)');
 
+    const renderFilterableCell = (field: string) => {
+      return (row: { value: any }) => {
+        const value = row.value;
+        return (
+          <a
+            onClick={() => {
+              this.setState({
+                segmentFilter: addFilter(segmentFilter, field, value),
+              });
+            }}
+          >
+            {value}
+          </a>
+        );
+      };
+    };
+
     return (
       <ReactTable
         data={segments}
@@ -437,17 +470,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             Header: 'Datasource',
             show: hiddenColumns.exists('Datasource'),
             accessor: 'datasource',
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: renderFilterableCell('datasource'),
           },
           {
             Header: 'Interval',
@@ -455,17 +478,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'interval',
             width: 120,
             defaultSortDesc: true,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ segmentFilter: addFilter(segmentFilter, 'interval', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: renderFilterableCell('interval'),
           },
           {
             Header: 'Start',
@@ -473,17 +486,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'start',
             width: 120,
             defaultSortDesc: true,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: renderFilterableCell('start'),
           },
           {
             Header: 'End',
@@ -491,17 +494,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'end',
             defaultSortDesc: true,
             width: 120,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: renderFilterableCell('end'),
           },
           {
             Header: 'Version',
@@ -511,24 +504,20 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
           },
           {
+            Header: 'Granularity',
+            show: capabilities.hasSql() && hiddenColumns.exists('Granularity'),
+            accessor: 'granularity',
+            width: 100,
+            filterable: true,
+            Cell: renderFilterableCell('granularity'),
+          },
+          {
             Header: 'Partitioning',
             show: capabilities.hasSql() && hiddenColumns.exists('Partitioning'),
             accessor: 'partitioning',
             width: 100,
             filterable: true,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({
-                      segmentFilter: addFilter(segmentFilter, 'partitioning', value),
-                    });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: renderFilterableCell('partitioning'),
           },
           {
             Header: 'Partition',

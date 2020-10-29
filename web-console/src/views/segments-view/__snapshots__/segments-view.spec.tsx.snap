@@ -48,6 +48,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Start",
             "End",
             "Version",
+            "Granularity",
             "Partitioning",
             "Partition",
             "Size",
@@ -163,6 +164,14 @@ exports[`segments-view matches snapshot 1`] = `
             "defaultSortDesc": true,
             "show": true,
             "width": 120,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Granularity",
+            "accessor": "granularity",
+            "filterable": true,
+            "show": true,
+            "width": 100,
           },
           Object {
             "Cell": [Function],
