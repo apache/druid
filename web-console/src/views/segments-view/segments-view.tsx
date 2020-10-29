@@ -161,12 +161,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   SELECT
     "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows",    
     CASE
-      WHEN "shardSpec" LIKE 'NumberedShardSpec%' THEN 'dynamic'
-      WHEN "shardSpec" LIKE 'HashBasedNumberedShardSpec%' THEN 'hashed'
-      WHEN "shardSpec" LIKE 'SingleDimensionShardSpec%' THEN 'single_dim'
-      WHEN "shardSpec" LIKE 'NoneShardSpec%' THEN 'none'
-      WHEN "shardSpec" LIKE 'LinearShardSpec%' THEN 'linear'
-      WHEN "shardSpec" LIKE 'NumberedOverwriteShardSpec%' THEN 'numbered_overwrite'
+      WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
+      WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
+      WHEN "shard_spec" LIKE '%"type":"single"%' THEN 'single_dim'
+      WHEN "shard_spec" LIKE '%"type":"none"%' THEN 'none'
+      WHEN "shard_spec" LIKE '%"type":"linear"%' THEN 'linear'
+      WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
       ELSE '-'
     END AS "partitioning",
     "is_published", "is_available", "is_realtime", "is_overshadowed"

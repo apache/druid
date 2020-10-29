@@ -159,7 +159,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.namespaceParseSpec.format',
     type: 'string',
     label: 'Parse format',
-    defaultValue: 'csv',
     suggestions: ['csv', 'tsv', 'simpleJson', 'customJson'],
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'uri',
     required: true,
