@@ -28,10 +28,13 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -108,6 +111,12 @@ public abstract class SimpleFloatAggregatorFactory extends NullableNumericAggreg
         fieldExpression.get(),
         nullValue()
     );
+  }
+
+  @Override
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return AggregatorUtil.makeVectorValueSelector(columnSelectorFactory, fieldName, expression, fieldExpression);
   }
 
   @Override
@@ -212,6 +221,12 @@ public abstract class SimpleFloatAggregatorFactory extends NullableNumericAggreg
   public String getExpression()
   {
     return expression;
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return AggregatorUtil.canVectorize(columnInspector, fieldName, expression, fieldExpression);
   }
 
   private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)

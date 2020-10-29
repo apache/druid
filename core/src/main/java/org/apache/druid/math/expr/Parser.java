@@ -169,7 +169,7 @@ public class Parser
    * @param bindingsToApply
    * @return
    */
-  public static Expr applyUnappliedBindings(Expr expr, Expr.BindingDetails bindingDetails, List<String> bindingsToApply)
+  public static Expr applyUnappliedBindings(Expr expr, Expr.BindingAnalysis bindingAnalysis, List<String> bindingsToApply)
   {
     if (bindingsToApply.isEmpty()) {
       // nothing to do, expression is fine as is
@@ -177,7 +177,7 @@ public class Parser
     }
     // filter the list of bindings to those which are used in this expression
     List<String> unappliedBindingsInExpression = bindingsToApply.stream()
-                                     .filter(x -> bindingDetails.getRequiredBindings().contains(x))
+                                     .filter(x -> bindingAnalysis.getRequiredBindings().contains(x))
                                      .collect(Collectors.toList());
 
     // any unapplied bindings that are inside a lambda expression need that lambda expression to be rewritten
@@ -193,7 +193,7 @@ public class Parser
             List<Expr> newArgs = new ArrayList<>();
             for (Expr arg : fnExpr.args) {
               if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
-                Expr newArg = applyUnappliedBindings(arg, bindingDetails, unappliedBindingsInExpression);
+                Expr newArg = applyUnappliedBindings(arg, bindingAnalysis, unappliedBindingsInExpression);
                 newArgs.add(newArg);
               } else {
                 newArgs.add(arg);
@@ -207,7 +207,7 @@ public class Parser
         }
     );
 
-    Expr.BindingDetails newExprBindings = newExpr.analyzeInputs();
+    Expr.BindingAnalysis newExprBindings = newExpr.analyzeInputs();
     final Set<String> expectedArrays = newExprBindings.getArrayVariables();
 
     List<String> remainingUnappliedBindings =
@@ -288,11 +288,11 @@ public class Parser
     // recursively evaluate arguments to ensure they are properly transformed into arrays as necessary
     Set<String> unappliedInThisApply =
         unappliedArgs.stream()
-                     .filter(u -> !expr.bindingDetails.getArrayBindings().contains(u))
+                     .filter(u -> !expr.bindingAnalysis.getArrayBindings().contains(u))
                      .collect(Collectors.toSet());
 
     List<String> unappliedIdentifiers =
-        expr.bindingDetails
+        expr.bindingAnalysis
             .getFreeVariables()
             .stream()
             .filter(x -> unappliedInThisApply.contains(x.getBindingIfIdentifier()))
@@ -304,7 +304,7 @@ public class Parser
       newArgs.add(
           applyUnappliedBindings(
               expr.argsExpr.get(i),
-              expr.argsBindingDetails.get(i),
+              expr.argsBindingAnalyses.get(i),
               unappliedIdentifiers
           )
       );
@@ -312,11 +312,11 @@ public class Parser
 
     // this will _not_ include the lambda identifiers.. anything in this list needs to be applied
     List<IdentifierExpr> unappliedLambdaBindings =
-        expr.lambdaBindingDetails.getFreeVariables()
-                                 .stream()
-                                 .filter(x -> unappliedArgs.contains(x.getBindingIfIdentifier()))
-                                 .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBinding()))
-                                 .collect(Collectors.toList());
+        expr.lambdaBindingAnalysis.getFreeVariables()
+                                  .stream()
+                                  .filter(x -> unappliedArgs.contains(x.getBindingIfIdentifier()))
+                                  .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBinding()))
+                                  .collect(Collectors.toList());
 
     if (unappliedLambdaBindings.isEmpty()) {
       return new ApplyFunctionExpr(expr.function, expr.name, expr.lambdaExpr, newArgs);
@@ -397,10 +397,10 @@ public class Parser
   /**
    * Validate that an expression uses input bindings in a type consistent manner.
    */
-  public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
+  public static void validateExpr(Expr expression, Expr.BindingAnalysis bindingAnalysis)
   {
     final Set<String> conflicted =
-        Sets.intersection(bindingDetails.getScalarBindings(), bindingDetails.getArrayBindings());
+        Sets.intersection(bindingAnalysis.getScalarBindings(), bindingAnalysis.getArrayBindings());
     if (!conflicted.isEmpty()) {
       throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, conflicted);
     }

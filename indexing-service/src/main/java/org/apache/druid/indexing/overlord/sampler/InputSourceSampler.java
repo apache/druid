@@ -34,7 +34,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -43,7 +42,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 
@@ -134,18 +132,11 @@ public class InputSourceSampler
           }
 
           for (InputRow row : inputRowListPlusRawValues.getInputRows()) {
-            if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-              throw new ParseException("Timestamp cannot be represented as a long: [%s]", row);
-            }
-            IncrementalIndexAddResult result = index.add(new SamplerInputRow(row, counter), true);
-            if (result.getParseException() != null) {
-              throw result.getParseException();
-            } else {
-              // store the raw value; will be merged with the data from the IncrementalIndex later
-              responseRows[counter] = new SamplerResponseRow(rawColumns, null, null, null);
-              counter++;
-              numRowsIndexed++;
-            }
+            index.add(new SamplerInputRow(row, counter), true);
+            // store the raw value; will be merged with the data from the IncrementalIndex later
+            responseRows[counter] = new SamplerResponseRow(rawColumns, null, null, null);
+            counter++;
+            numRowsIndexed++;
           }
         }
         catch (ParseException e) {

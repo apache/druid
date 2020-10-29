@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -126,6 +127,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   private static final String TYPE = "compact";
 
+  private static final boolean STORE_COMPACTION_STATE = true;
+
   static {
     Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
   }
@@ -216,6 +219,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return new ParallelIndexTuningConfig(
           null,
           indexTuningConfig.getMaxRowsPerSegment(),
+          indexTuningConfig.getAppendableIndexSpec(),
           indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getMaxBytesInMemory(),
           indexTuningConfig.getMaxTotalRows(),
@@ -359,10 +363,14 @@ public class CompactionTask extends AbstractBatchIndexTask
           // a new Appenderator on its own instead. As a result, they should use different sequence names to allocate
           // new segmentIds properly. See IndexerSQLMetadataStorageCoordinator.allocatePendingSegments() for details.
           // In this case, we use different fake IDs for each created index task.
-          final String subtaskId = tuningConfig == null || tuningConfig.getMaxNumConcurrentSubTasks() == 1
-                                   ? createIndexTaskSpecId(i)
-                                   : getId();
-          return newTask(subtaskId, ingestionSpecs.get(i));
+          ParallelIndexIngestionSpec ingestionSpec = ingestionSpecs.get(i);
+          InputSource inputSource = ingestionSpec.getIOConfig().getNonNullInputSource(
+              ingestionSpec.getDataSchema().getParser()
+          );
+          final String subtaskId = ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig)
+                                   ? getId()
+                                   : createIndexTaskSpecId(i);
+          return newTask(subtaskId, ingestionSpec);
         })
         .collect(Collectors.toList());
 
@@ -422,6 +430,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final Map<String, Object> newContext = new HashMap<>(getContext());
     newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, getPriority());
     return newContext;

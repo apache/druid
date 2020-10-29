@@ -306,6 +306,8 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
+partitionsSpec
 performant
 plaintext
 pluggable
@@ -360,6 +362,7 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
 servlet
 simple-client-sslcontext
@@ -379,6 +382,7 @@ subsecond
 substring
 subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -410,6 +414,7 @@ vCPUs
 validator
 vectorizable
 vectorize
+vectorizeVirtualColumns
 versioning
 w.r.t.
 whitelist
@@ -538,6 +543,7 @@ MeanNoNulls
 P1D
 cycleSize
 doubleMax
+doubleAny
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -545,6 +551,7 @@ doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
+longAny
 longMean
 longMeanNoNulls
 longMin
@@ -596,6 +603,7 @@ url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
+fixedBucketsHistogram
 bucketNum
 lowerLimit
 numBuckets
@@ -606,6 +614,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository
@@ -968,7 +977,6 @@ overwriteFiles
 partitionDimension
 partitionDimensions
 partitionSpec
-partitionsSpec
 pathFormat
 segmentOutputPath
 segmentTable
@@ -1094,6 +1102,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint
@@ -1104,6 +1114,7 @@ signum
 str1
 str2
 string_to_array
+stringAny
 strlen
 strpos
 timestamp_ceil
@@ -1183,6 +1194,7 @@ RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
+TaskSlotCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1492,6 +1504,7 @@ is_overshadowed
 is_published
 is_realtime
 java.sql.Types
+last_compaction_state
 max_size
 num_replicas
 num_rows
@@ -1502,6 +1515,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys
@@ -1669,6 +1683,7 @@ file.encoding
 fillCapacity
 first_location
 floatMax
+floatAny
 floatMin
 floatSum
 freeSpacePercent

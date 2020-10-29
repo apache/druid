@@ -185,6 +185,24 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     return config.getHostname();
   }
 
+  @Override
+  protected boolean isHostInMemoryAggregationEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  protected int getHostInMemoryAggregationPort()
+  {
+    return 0;  // since host in-memory aggregation is disabled, this return value is unimportant
+  }
+
+  @Override
+  protected String getHostInMemoryAggregationProtocol()
+  {
+    return "";  // since host in-memory aggregation is disabled, this return value is unimportant
+  }
+
   private class ConsumerRunnable implements Runnable
   {
     @Override

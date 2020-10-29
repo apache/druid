@@ -36,7 +36,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
@@ -76,6 +75,7 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -167,6 +167,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorRecordSupplier = createMock(KinesisRecordSupplier.class);
 
     tuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
@@ -3689,6 +3690,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
     KinesisSupervisorTuningConfig modifiedTuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
@@ -4741,6 +4743,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     };
 
     final KinesisSupervisorTuningConfig tuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,

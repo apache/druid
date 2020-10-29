@@ -314,6 +314,36 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
+  public long getTotalTaskSlotCount()
+  {
+    return 1;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    return runningItem == null ? 1 : 0;
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    return runningItem == null ? 0 : 1;
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    return 0;
+  }
+
+  @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
     return getQueryRunnerImpl(query);

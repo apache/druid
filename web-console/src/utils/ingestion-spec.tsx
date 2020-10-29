@@ -2115,15 +2115,19 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
   if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
     case 'hashed':
-      if (!deepGet(tuningConfig, 'partitionsSpec.numShards')) return true;
-      break;
-
+      return (
+        Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
+        Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
+      );
     case 'single_dim':
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
-      if (
-        !deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment') &&
-        !deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment')
-      ) {
+      const hasTargetRowsPerSegment = Boolean(
+        deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
+      );
+      const hasMaxRowsPerSegment = Boolean(
+        deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment'),
+      );
+      if (hasTargetRowsPerSegment === hasMaxRowsPerSegment) {
         return true;
       }
   }
@@ -2160,7 +2164,7 @@ export function getPartitionRelatedTuningSpecFormFields(
             <p>
               For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
               the hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a
-              single dimension. For best-effort rollup, you should use dynamic.
+              single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
         },
@@ -2183,17 +2187,44 @@ export function getPartitionRelatedTuningSpecFormFields(
         },
         // partitionsSpec type: hashed
         {
+          name: 'partitionsSpec.targetRowsPerSegment',
+          label: 'Target rows per segment',
+          type: 'number',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
+            !deepGet(t, 'partitionsSpec.numShards'),
+          info: (
+            <>
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition
+                dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to
+                the target assuming evenly distributed keys. Defaults to 5 million if numShards is
+                null.
+              </p>
+            </>
+          ),
+        },
+        {
           name: 'partitionsSpec.numShards',
           label: 'Num shards',
           type: 'number',
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
-          required: true,
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
           info: (
             <>
-              Directly specify the number of shards to create. If this is specified and 'intervals'
-              is specified in the granularitySpec, the index task can skip the determine
-              intervals/partitions pass through the data. numShards cannot be specified if
-              maxRowsPerSegment is set.
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for
+                compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and
+                'intervals' is specified in the granularitySpec, the index task can skip the
+                determine intervals/partitions pass through the data.
+              </p>
             </>
           ),
         },
@@ -2218,7 +2249,9 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Target rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
+            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
           required: (t: TuningConfig) =>
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
             !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
@@ -2234,7 +2267,9 @@ export function getPartitionRelatedTuningSpecFormFields(
           label: 'Max rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          defined: (t: TuningConfig) =>
+            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
           required: (t: TuningConfig) =>
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
             !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
@@ -2655,7 +2690,7 @@ export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): Inge
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
-function guessInputFormat(sampleData: string[]): InputFormat {
+export function guessInputFormat(sampleData: string[]): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
@@ -2671,7 +2706,7 @@ function guessInputFormat(sampleData: string[]): InputFormat {
       return inputFormatFromType('orc');
     }
     // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if (sampleDatum.startsWith('Obj1')) {
+    if (sampleDatum.startsWith('Obj') && sampleDatum.charCodeAt(3) === 1) {
       return inputFormatFromType('avro_ocf');
     }
 

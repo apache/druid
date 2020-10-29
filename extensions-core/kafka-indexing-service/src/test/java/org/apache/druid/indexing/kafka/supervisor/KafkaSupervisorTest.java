@@ -38,7 +38,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
@@ -77,6 +76,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -253,6 +253,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             INPUT_FORMAT
         ),
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -3070,6 +3071,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         kafkaHost,
         dataSchema,
         new KafkaSupervisorTuningConfig(
+            null,
             1000,
             null,
             50000,
@@ -3109,6 +3111,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
     KafkaSupervisorTuningConfig modifiedTuningConfig = new KafkaSupervisorTuningConfig(
+        null,
         42, // This is different
         null,
         50000,
@@ -3404,6 +3407,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     };
 
     final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
@@ -3514,6 +3518,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     };
 
     final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,

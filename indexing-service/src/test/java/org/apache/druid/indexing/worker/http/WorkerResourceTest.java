@@ -25,6 +25,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
@@ -100,9 +101,10 @@ public class WorkerResourceTest
 
     workerResource = new WorkerResource(
         worker,
-        curatorCoordinator,
+        () -> curatorCoordinator,
         null,
-        EasyMock.createNiceMock(WorkerTaskMonitor.class)
+        EasyMock.createNiceMock(WorkerTaskMonitor.class),
+        ZkEnablementConfig.ENABLED
     );
   }
 

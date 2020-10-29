@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -434,7 +435,10 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void querySql(Blackhole blackhole) throws Exception
   {
-    final Map<String, Object> context = ImmutableMap.of("vectorize", vectorize);
+    final Map<String, Object> context = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    );
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
     try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {
@@ -450,7 +454,10 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void planSql(Blackhole blackhole) throws Exception
   {
-    final Map<String, Object> context = ImmutableMap.of("vectorize", vectorize);
+    final Map<String, Object> context = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    );
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
     try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {

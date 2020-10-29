@@ -16,14 +16,22 @@
  * limitations under the License.
  */
 
+@import '~@blueprintjs/core/src/common/colors';
 @import '../../variables';
 
+@mixin sunk-panel {
+  background: rgba($dark-gray1, 0.5);
+  border-radius: $pt-border-radius;
+  box-shadow: inset 0 1px 3px rgba($black, 0.32);
+}
+
 .load-data-view {
+  //height: 100%;
   height: 100%;
   display: grid;
-  grid-gap: 15px 5px;
+  grid-gap: $thin-padding 5px;
   grid-template-columns: 1fr 280px;
-  grid-template-rows: 55px 1fr 28px;
+  grid-template-rows: 60px 1fr 28px;
   grid-template-areas:
     'navi navi'
     'main ctrl'
@@ -42,18 +50,27 @@
 
       .spec-card-icon {
         vertical-align: top;
+        margin-top: 6px;
+
+        svg {
+          width: 20px;
+          height: 20px;
+        }
       }
 
       .spec-card-header {
-        font-size: 25px;
-        line-height: 30px;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 32px;
         display: inline-block;
         vertical-align: top;
-        padding-left: 10px;
+        padding-left: 16px;
 
         .spec-card-caption {
-          font-size: 15px;
+          font-size: 13px;
           line-height: 20px;
+          font-weight: 400;
+          color: $gray4;
         }
       }
     }
@@ -65,15 +82,30 @@
       padding: 0;
       overflow: auto;
 
+      .ingestion-cards {
+        @include sunk-panel;
+        display: grid;
+        gap: $thin-padding;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        padding: 10px;
+
+        @media (max-width: 1200px) {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        @media (max-width: 900px) {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 600px) {
+          grid-template-columns: 1fr;
+        }
+      }
+
       .bp3-card {
         position: relative;
         display: inline-block;
         vertical-align: top;
-        width: 220px;
-        height: 140px;
-        margin-top: 10px;
-        margin-left: 10px;
-        font-size: 16px;
         text-align: center;
 
         & > * {
@@ -88,8 +120,12 @@
           bottom: 0;
           left: 0;
           content: '';
-          border: 2px solid #48aff0;
-          border-radius: 2px;
+          border: 2px solid $blue3;
+          border-radius: $pt-border-radius;
+
+          .bp3-dark & {
+            border: 2px solid $blue4;
+          }
         }
 
         &.disabled {
@@ -126,17 +162,17 @@
     grid-area: navi;
     white-space: nowrap;
     overflow: auto;
-    padding: 0 5px;
+    padding: 5px 5px 0 5px;
 
     .step-section {
       display: inline-block;
       vertical-align: top;
-      margin-right: 15px;
+      margin-right: $thin-padding;
     }
 
     .step-nav-l1 {
-      height: 25px;
-      font-weight: bold;
+      height: 24px;
+      font-weight: 600;
       color: #eeeeee;
     }
 
@@ -195,8 +231,8 @@
             left: 0;
             right: 0;
             content: '';
-            border: 2px solid #ff5d10;
-            border-radius: 2px;
+            border: 2px solid $blue4;
+            border-radius: $pt-border-radius;
           }
 
           .clickable {
@@ -204,21 +240,21 @@
           }
 
           &.timestamp {
-            background: rgba(19, 129, 201, 0.5);
+            background: rgba($cobalt3, 0.44);
           }
 
           &.used {
-            background: rgba(99, 129, 137, 0.5);
+            background: rgba($gray3, 0.3);
           }
         }
 
         .rt-td {
           &.timestamp {
-            background: rgba(19, 129, 201, 0.15);
+            background: rgba($cobalt3, 0.16);
           }
 
           &.used {
-            background: rgba(99, 129, 137, 0.15);
+            background: rgba($gray3, 0.16);
           }
         }
       }
@@ -258,9 +294,9 @@
   }
 
   .edit-controls {
-    background: #30404c;
+    background: rgba($gray3, 0.15);
     padding: 10px;
-    border-radius: 2px;
+    border-radius: $pt-border-radius;
     margin-bottom: 15px;
   }
 

@@ -34,6 +34,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
@@ -305,6 +306,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   )
   {
     final Set<String> baseColumns = new HashSet<>();
+    baseColumns.add(ColumnHolder.TIME_COLUMN_NAME);
     Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
     Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
 

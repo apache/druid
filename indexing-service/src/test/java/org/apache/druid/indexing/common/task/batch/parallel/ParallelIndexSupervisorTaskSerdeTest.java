@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -55,6 +56,10 @@ import java.util.Map;
 
 public class ParallelIndexSupervisorTaskSerdeTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
   private static final List<Interval> INTERVALS = Collections.singletonList(Intervals.of("2018/2019"));
 
@@ -108,13 +113,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
   @Test
   public void forceGuaranteedRollupWithHashPartitionsMissingNumShards()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "forceGuaranteedRollup is incompatible with partitionsSpec: numShards must be specified"
-    );
-
     Integer numShards = null;
-    new ParallelIndexSupervisorTaskBuilder()
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
         .ingestionSpec(
             new ParallelIndexIngestionSpecBuilder()
                 .forceGuaranteedRollup(true)
@@ -123,6 +123,9 @@ public class ParallelIndexSupervisorTaskSerdeTest
                 .build()
         )
         .build();
+
+    PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
+    Assert.assertThat(partitionsSpec, CoreMatchers.instanceOf(HashedPartitionsSpec.class));
   }
 
   @Test
@@ -261,6 +264,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
       );
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
           null,
           null,
           null,

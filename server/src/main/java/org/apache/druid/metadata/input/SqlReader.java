@@ -80,8 +80,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             intermediateRow
         )
     );

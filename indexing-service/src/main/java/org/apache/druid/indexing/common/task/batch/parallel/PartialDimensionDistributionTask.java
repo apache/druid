@@ -29,37 +29,33 @@ import com.google.common.hash.Funnels;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
-import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link PartialDimensionDistributionParallelIndexTaskRunner}. This task
@@ -189,41 +185,38 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
-    List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
-                                      .map(AggregatorFactory::getName)
-                                      .collect(Collectors.toList());
     InputFormat inputFormat = inputSource.needsFormat()
                               ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
                               : null;
-    InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
-        inputSource.reader(
-            new InputRowSchema(
-                dataSchema.getTimestampSpec(),
-                dataSchema.getDimensionsSpec(),
-                metricsNames
-            ),
-            inputFormat,
-            toolbox.getIndexingTmpDir()
-        )
+    final RowIngestionMeters buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+        buildSegmentsMeters,
+        tuningConfig.isLogParseExceptions(),
+        tuningConfig.getMaxParseExceptions(),
+        tuningConfig.getMaxSavedParseExceptions()
     );
 
     try (
-        CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read();
+        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+            toolbox.getIndexingTmpDir(),
+            dataSchema,
+            inputSource,
+            inputFormat,
+            AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
+            buildSegmentsMeters,
+            parseExceptionHandler
+        );
         HandlingInputRowIterator iterator =
             new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension, SKIP_NULL)
                 .delegate(inputRowIterator)
                 .granularitySpec(granularitySpec)
-                .nullRowRunnable(IndexTaskInputRowIteratorBuilder.NOOP_RUNNABLE)
-                .absentBucketIntervalConsumer(IndexTaskInputRowIteratorBuilder.NOOP_CONSUMER)
                 .build()
     ) {
       Map<Interval, StringDistribution> distribution = determineDistribution(
           iterator,
           granularitySpec,
           partitionDimension,
-          isAssumeGrouped,
-          tuningConfig.isLogParseExceptions(),
-          tuningConfig.getMaxParseExceptions()
+          isAssumeGrouped
       );
       sendReport(toolbox, new DimensionDistributionReport(getId(), distribution));
     }
@@ -235,9 +228,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       HandlingInputRowIterator inputRowIterator,
       GranularitySpec granularitySpec,
       String partitionDimension,
-      boolean isAssumeGrouped,
-      boolean isLogParseExceptions,
-      int maxParseExceptions
+      boolean isAssumeGrouped
   )
   {
     Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
@@ -246,36 +237,22 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         ? dedupInputRowFilterSupplier.get()
         : new PassthroughInputRowFilter();
 
-    int numParseExceptions = 0;
-
     while (inputRowIterator.hasNext()) {
-      try {
-        InputRow inputRow = inputRowIterator.next();
-        if (inputRow == null) {
-          continue;
-        }
-
-        DateTime timestamp = inputRow.getTimestamp();
-
-        //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
-        Interval interval = granularitySpec.bucketInterval(timestamp).get();
-        String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
-
-        if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
-          StringDistribution stringDistribution =
-              intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
-          stringDistribution.put(partitionDimensionValue);
-        }
+      InputRow inputRow = inputRowIterator.next();
+      if (inputRow == null) {
+        continue;
       }
-      catch (ParseException e) {
-        if (isLogParseExceptions) {
-          LOG.error(e, "Encountered parse exception");
-        }
 
-        numParseExceptions++;
-        if (numParseExceptions > maxParseExceptions) {
-          throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
-        }
+      DateTime timestamp = inputRow.getTimestamp();
+
+      //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
+      Interval interval = granularitySpec.bucketInterval(timestamp).get();
+      String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
+
+      if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
+        StringDistribution stringDistribution =
+            intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
+        stringDistribution.put(partitionDimensionValue);
       }
     }
 

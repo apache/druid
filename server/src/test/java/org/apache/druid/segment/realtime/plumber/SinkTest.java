@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -66,6 +65,7 @@ public class SinkTest extends InitializedNullHandlingTest
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         100,
         null,
         new Period("P1Y"),
@@ -91,9 +91,9 @@ public class SinkTest extends InitializedNullHandlingTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn()
     );
 
@@ -221,6 +221,7 @@ public class SinkTest extends InitializedNullHandlingTest
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         100,
         null,
         new Period("P1Y"),
@@ -246,9 +247,9 @@ public class SinkTest extends InitializedNullHandlingTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn()
     );
 

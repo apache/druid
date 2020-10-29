@@ -17,14 +17,15 @@
  */
 
 @import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../node_modules/@blueprintjs/datetime/lib/css/blueprint-datetime';
+@import '~fontsource-open-sans/index.css';
+@import './blueprint-overrides';
+@import '~@blueprintjs/core/src/blueprint';
+@import '~@blueprintjs/datetime/src/blueprint-datetime';
 @import '../lib/react-table';
 @import '../node_modules/react-splitter-layout/lib/index.css';
 
 html,
 body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
   position: fixed;
   height: 100%;
   width: 100%;
@@ -33,8 +34,10 @@ body {
 }
 
 body {
+  background: $light-gray4;
+
   &.bp3-dark {
-    background: rgb(41, 55, 66);
+    background: $dark-gray2;
   }
 
   &.mouse-mode {
@@ -48,4 +51,10 @@ body {
   position: absolute;
   height: 100%;
   width: 100%;
+
+  .console-application {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
 }

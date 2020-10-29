@@ -31,7 +31,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
@@ -79,7 +78,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -88,7 +86,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -223,7 +220,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
-  private final boolean reportParseExceptions; // only used by OffHeapIncrementalIndex
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -252,14 +248,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * @param incrementalIndexSchema    the schema to use for incremental index
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
-   * @param reportParseExceptions     flag whether or not to report ParseExceptions that occur while extracting values
-   *                                  from input rows
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions,
       final boolean concurrentEventAdd
   )
   {
@@ -270,7 +263,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
-    this.reportParseExceptions = reportParseExceptions;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
@@ -324,136 +316,62 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  public static class Builder
+  /**
+   * This class exists only as backward competability to reduce the number of modified lines.
+   */
+  public static class Builder extends OnheapIncrementalIndex.Builder
   {
-    @Nullable
-    private IncrementalIndexSchema incrementalIndexSchema;
-    private boolean deserializeComplexMetrics;
-    private boolean reportParseExceptions;
-    private boolean concurrentEventAdd;
-    private boolean sortFacts;
-    private int maxRowCount;
-    private long maxBytesInMemory;
-
-    public Builder()
-    {
-      incrementalIndexSchema = null;
-      deserializeComplexMetrics = true;
-      reportParseExceptions = true;
-      concurrentEventAdd = false;
-      sortFacts = true;
-      maxRowCount = 0;
-      maxBytesInMemory = 0;
-    }
-
+    @Override
     public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
     {
-      this.incrementalIndexSchema = incrementalIndexSchema;
-      return this;
+      return (Builder) super.setIndexSchema(incrementalIndexSchema);
     }
 
-    /**
-     * A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
-     * that this method is normally used for testing and benchmarking; it is unlikely that you would use it in
-     * production settings.
-     *
-     * @param metrics variable array of {@link AggregatorFactory} metrics
-     *
-     * @return this
-     */
-    @VisibleForTesting
+    @Override
     public Builder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
     {
-      return setSimpleTestingIndexSchema(null, metrics);
+      return (Builder) super.setSimpleTestingIndexSchema(metrics);
     }
 
-
-    /**
-     * A helper method to set a simple index schema with controllable metrics and rollup, and default values for the
-     * other parameters. Note that this method is normally used for testing and benchmarking; it is unlikely that you
-     * would use it in production settings.
-     *
-     * @param metrics variable array of {@link AggregatorFactory} metrics
-     *
-     * @return this
-     */
-    @VisibleForTesting
+    @Override
     public Builder setSimpleTestingIndexSchema(@Nullable Boolean rollup, final AggregatorFactory... metrics)
     {
-      IncrementalIndexSchema.Builder builder = new IncrementalIndexSchema.Builder().withMetrics(metrics);
-      this.incrementalIndexSchema = rollup != null ? builder.withRollup(rollup).build() : builder.build();
-      return this;
+      return (Builder) super.setSimpleTestingIndexSchema(rollup, metrics);
     }
 
+    @Override
     public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
     {
-      this.deserializeComplexMetrics = deserializeComplexMetrics;
-      return this;
+      return (Builder) super.setDeserializeComplexMetrics(deserializeComplexMetrics);
     }
 
-    public Builder setReportParseExceptions(final boolean reportParseExceptions)
-    {
-      this.reportParseExceptions = reportParseExceptions;
-      return this;
-    }
-
+    @Override
     public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
     {
-      this.concurrentEventAdd = concurrentEventAdd;
-      return this;
+      return (Builder) super.setConcurrentEventAdd(concurrentEventAdd);
     }
 
+    @Override
     public Builder setSortFacts(final boolean sortFacts)
     {
-      this.sortFacts = sortFacts;
-      return this;
+      return (Builder) super.setSortFacts(sortFacts);
     }
 
+    @Override
     public Builder setMaxRowCount(final int maxRowCount)
     {
-      this.maxRowCount = maxRowCount;
-      return this;
+      return (Builder) super.setMaxRowCount(maxRowCount);
     }
 
-    //maxBytesInMemory only applies to OnHeapIncrementalIndex
+    @Override
     public Builder setMaxBytesInMemory(final long maxBytesInMemory)
     {
-      this.maxBytesInMemory = maxBytesInMemory;
-      return this;
+      return (Builder) super.setMaxBytesInMemory(maxBytesInMemory);
     }
 
     public OnheapIncrementalIndex buildOnheap()
     {
-      if (maxRowCount <= 0) {
-        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
-      }
-
-      return new OnheapIncrementalIndex(
-          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
-          deserializeComplexMetrics,
-          reportParseExceptions,
-          concurrentEventAdd,
-          sortFacts,
-          maxRowCount,
-          maxBytesInMemory
-      );
-    }
-
-    public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
-    {
-      if (maxRowCount <= 0) {
-        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
-      }
-
-      return new OffheapIncrementalIndex(
-          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
-          deserializeComplexMetrics,
-          reportParseExceptions,
-          concurrentEventAdd,
-          sortFacts,
-          maxRowCount,
-          Objects.requireNonNull(bufferPool, "bufferPool is null")
-      );
+      return (OnheapIncrementalIndex) build();
     }
   }
 
@@ -610,7 +528,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
-    ParseException parseException = getCombinedParseException(
+    @Nullable ParseException parseException = getCombinedParseException(
         row,
         incrementalIndexRowResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
@@ -753,13 +671,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (numAdded == 0) {
       return null;
     }
-    ParseException pe = new ParseException(
+    return new ParseException(
+        true,
         "Found unparseable columns in row: [%s], exceptions: [%s]",
         row,
         stringBuilder.toString()
     );
-    pe.setFromPartiallyValidRow(true);
-    return pe;
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)
@@ -782,11 +699,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   boolean getDeserializeComplexMetrics()
   {
     return deserializeComplexMetrics;
-  }
-
-  boolean getReportParseExceptions()
-  {
-    return reportParseExceptions;
   }
 
   AtomicInteger getNumEntries()

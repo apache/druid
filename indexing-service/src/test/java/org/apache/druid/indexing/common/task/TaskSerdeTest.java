@@ -34,7 +34,6 @@ import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -44,6 +43,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -249,6 +249,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
                 null,
                 null,
@@ -329,6 +330,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
                 null,
                 null,
@@ -396,6 +398,7 @@ public class TaskSerdeTest
             ),
 
             new RealtimeTuningConfig(
+                null,
                 1,
                 10L,
                 new Period("PT10M"),

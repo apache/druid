@@ -28,6 +28,7 @@ import org.apache.druid.query.DataSource;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * A {@link JoinableFactory} that delegates to the appropriate factory based on the datasource.
@@ -67,17 +68,33 @@ public class MapJoinableFactory implements JoinableFactory
   @Override
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
+    return getSingleResult(dataSource, factory -> factory.build(dataSource, condition));
+  }
+
+  @Override
+  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
+  {
+    return getSingleResult(dataSource, factory -> factory.computeJoinCacheKey(dataSource, condition));
+  }
+
+  /**
+   * Computes the given function assuming that only one joinable factory will return a non-empty result. If we get
+   * results from two {@link JoinableFactory}, then throw an exception.
+   *
+   */
+  private <T> Optional<T> getSingleResult(DataSource dataSource, Function<JoinableFactory, Optional<T>> function)
+  {
     Set<JoinableFactory> factories = joinableFactories.get(dataSource.getClass());
-    Optional<Joinable> maybeJoinable = Optional.empty();
-    for (JoinableFactory factory : factories) {
-      Optional<Joinable> candidate = factory.build(dataSource, condition);
+    Optional<T> mayBeFinalResult = Optional.empty();
+    for (JoinableFactory joinableFactory : factories) {
+      Optional<T> candidate = function.apply(joinableFactory);
+      if (candidate.isPresent() && mayBeFinalResult.isPresent()) {
+        throw new ISE("Multiple joinable factories are valid for table[%s]", dataSource);
+      }
       if (candidate.isPresent()) {
-        if (maybeJoinable.isPresent()) {
-          throw new ISE("Multiple joinable factories are valid for table[%s]", dataSource);
-        }
-        maybeJoinable = candidate;
+        mayBeFinalResult = candidate;
       }
     }
-    return maybeJoinable;
+    return mayBeFinalResult;
   }
 }

@@ -649,6 +649,39 @@ public class ForkingTaskRunner
     return Joiner.on(" ").join(maskedIterator);
   }
 
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
+      return config.getPorts().size();
+    }
+    return config.getEndPort() - config.getStartPort() + 1;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    return portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    return 0;
+  }
+
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;

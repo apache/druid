@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -77,6 +78,18 @@ class LambdaExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return expr.canVectorize(inspector);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  {
+    return expr.buildVectorized(inspector);
+  }
+
+  @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return expr.eval(bindings);
@@ -89,13 +102,6 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    expr.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     List<IdentifierExpr> newArgs =
@@ -105,11 +111,17 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
-    BindingDetails bodyDetails = expr.analyzeInputs();
+    BindingAnalysis bodyDetails = expr.analyzeInputs();
     return bodyDetails.removeLambdaArguments(lambdaArgs);
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingInspector inspector)
+  {
+    return expr.getOutputType(inspector);
   }
 
   @Override
@@ -165,18 +177,21 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public String stringify()
+  public boolean canVectorize(InputBindingInspector inspector)
   {
-    return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
+    return function.canVectorize(inspector, args);
   }
 
   @Override
-  public void visit(Visitor visitor)
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
   {
-    for (Expr child : args) {
-      child.visit(visitor);
-    }
-    visitor.visit(this);
+    return function.asVectorProcessor(inspector, args);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
   }
 
   @Override
@@ -187,9 +202,9 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    BindingDetails accumulator = new BindingDetails();
+    BindingAnalysis accumulator = new BindingAnalysis();
 
     for (Expr arg : args) {
       accumulator = accumulator.with(arg);
@@ -198,6 +213,12 @@ class FunctionExpr implements Expr
                       .withArrayArguments(function.getArrayInputs(args))
                       .withArrayInputs(function.hasArrayInputs())
                       .withArrayOutput(function.hasArrayOutput());
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingInspector inspector)
+  {
+    return function.getOutputType(inspector, args);
   }
 
   @Override
@@ -232,9 +253,9 @@ class ApplyFunctionExpr implements Expr
   final String name;
   final LambdaExpr lambdaExpr;
   final ImmutableList<Expr> argsExpr;
-  final BindingDetails bindingDetails;
-  final BindingDetails lambdaBindingDetails;
-  final ImmutableList<BindingDetails> argsBindingDetails;
+  final BindingAnalysis bindingAnalysis;
+  final BindingAnalysis lambdaBindingAnalysis;
+  final ImmutableList<BindingAnalysis> argsBindingAnalyses;
 
   ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
@@ -247,21 +268,21 @@ class ApplyFunctionExpr implements Expr
 
     // apply function expressions are examined during expression selector creation, so precompute and cache the
     // binding details of children
-    ImmutableList.Builder<BindingDetails> argBindingDetailsBuilder = ImmutableList.builder();
-    BindingDetails accumulator = new BindingDetails();
+    ImmutableList.Builder<BindingAnalysis> argBindingDetailsBuilder = ImmutableList.builder();
+    BindingAnalysis accumulator = new BindingAnalysis();
     for (Expr arg : argsExpr) {
-      BindingDetails argDetails = arg.analyzeInputs();
+      BindingAnalysis argDetails = arg.analyzeInputs();
       argBindingDetailsBuilder.add(argDetails);
       accumulator = accumulator.with(argDetails);
     }
 
-    lambdaBindingDetails = lambdaExpr.analyzeInputs();
+    lambdaBindingAnalysis = lambdaExpr.analyzeInputs();
 
-    bindingDetails = accumulator.with(lambdaBindingDetails)
-                                .withArrayArguments(function.getArrayInputs(argsExpr))
-                                .withArrayInputs(true)
-                                .withArrayOutput(function.hasArrayOutput(lambdaExpr));
-    argsBindingDetails = argBindingDetailsBuilder.build();
+    bindingAnalysis = accumulator.with(lambdaBindingAnalysis)
+                                 .withArrayArguments(function.getArrayInputs(argsExpr))
+                                 .withArrayInputs(true)
+                                 .withArrayOutput(function.hasArrayOutput(lambdaExpr));
+    argsBindingAnalyses = argBindingDetailsBuilder.build();
   }
 
   @Override
@@ -277,6 +298,20 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return function.canVectorize(inspector, lambdaExpr, argsExpr) &&
+           lambdaExpr.canVectorize(inspector) &&
+           argsExpr.stream().allMatch(expr -> expr.canVectorize(inspector));
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  {
+    return function.asVectorProcessor(inspector, lambdaExpr, argsExpr);
+  }
+
+  @Override
   public String stringify()
   {
     return StringUtils.format(
@@ -288,16 +323,6 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    lambdaExpr.visit(visitor);
-    for (Expr arg : argsExpr) {
-      arg.visit(visitor);
-    }
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     LambdaExpr newLambda = (LambdaExpr) lambdaExpr.visit(shuttle);
@@ -306,9 +331,16 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    return bindingDetails;
+    return bindingAnalysis;
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingInspector inspector)
+  {
+    return function.getOutputType(inspector, lambdaExpr, argsExpr);
   }
 
   @Override
