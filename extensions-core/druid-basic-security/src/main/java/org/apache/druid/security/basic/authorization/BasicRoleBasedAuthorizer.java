@@ -121,7 +121,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     }
 
     Pattern resourceNamePattern = permission.getResourceNamePattern();
-    Matcher resourceNameMatcher = resourceNamePattern.matcher(resource.getName());
+    Matcher resourceNameMatcher = resourceNamePattern.matcher(resource.getName().toString());
     return resourceNameMatcher.matches();
   }
 

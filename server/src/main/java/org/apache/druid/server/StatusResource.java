@@ -28,6 +28,8 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ServerServerResourceFilter;
+import org.apache.druid.server.http.security.ServerStatusResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
@@ -64,7 +66,7 @@ public class StatusResource
 
   @GET
   @Path("/properties")
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters({ ConfigResourceFilter.class, ServerServerResourceFilter.class })
   @Produces(MediaType.APPLICATION_JSON)
   public Map<String, String> getProperties()
   {
@@ -74,7 +76,7 @@ public class StatusResource
   }
 
   @GET
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, ServerStatusResourceFilter.class })
   @Produces(MediaType.APPLICATION_JSON)
   public Status doGet(
       @Context final HttpServletRequest req

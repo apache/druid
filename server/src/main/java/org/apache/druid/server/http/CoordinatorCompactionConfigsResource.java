@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
@@ -30,6 +31,14 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ServerServerResourceFilter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -45,6 +54,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -54,23 +64,38 @@ import java.util.stream.Collectors;
 public class CoordinatorCompactionConfigsResource
 {
   private final JacksonConfigManager manager;
+  private final AuthorizerMapper authorizerMapper;
+  private final AuthConfig authConfig;
 
   @Inject
-  public CoordinatorCompactionConfigsResource(JacksonConfigManager manager)
+  public CoordinatorCompactionConfigsResource(
+      JacksonConfigManager manager,
+      AuthorizerMapper authorizerMapper,
+      AuthConfig authConfig
+  )
   {
     this.manager = manager;
+    this.authorizerMapper = authorizerMapper;
+    this.authConfig = authConfig;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig()
+  public Response getCompactionConfig(@Context HttpServletRequest request)
   {
-    return Response.ok(CoordinatorCompactionConfig.current(manager)).build();
+    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      return Response
+          .ok(getFilteredConfigsByDatasource(CoordinatorCompactionConfig.current(manager), request, Action.READ))
+          .build();
+    } else {
+      return Response.ok(CoordinatorCompactionConfig.current(manager)).build();
+    }
   }
 
   @POST
   @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ServerServerResourceFilter.class)
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
@@ -111,6 +136,12 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
+    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (!AuthorizationUtils.authorizeResourceAction(req, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(
+          newConfig.getDataSource()), authorizerMapper).isAllowed()) {
+        return Response.status(Response.Status.FORBIDDEN).build();
+      }
+    }
     final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final CoordinatorCompactionConfig newCompactionConfig;
     final Map<String, DataSourceCompactionConfig> newConfigs = current
@@ -136,8 +167,17 @@ public class CoordinatorCompactionConfigsResource
   @GET
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
+  public Response getCompactionConfig(@PathParam("dataSource") String dataSource, @Context HttpServletRequest req)
   {
+    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (!AuthorizationUtils.authorizeResourceAction(
+          req,
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource),
+          authorizerMapper
+      ).isAllowed()) {
+        return Response.status(Response.Status.FORBIDDEN).build();
+      }
+    }
     final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final Map<String, DataSourceCompactionConfig> configs = current
         .getCompactionConfigs()
@@ -162,6 +202,15 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
+    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (!AuthorizationUtils.authorizeResourceAction(
+          req,
+          AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource),
+          authorizerMapper
+      ).isAllowed()) {
+        return Response.status(Response.Status.FORBIDDEN).build();
+      }
+    }
     final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final Map<String, DataSourceCompactionConfig> configs = current
         .getCompactionConfigs()
@@ -184,5 +233,27 @@ public class CoordinatorCompactionConfigsResource
     } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
+  }
+
+  private CoordinatorCompactionConfig getFilteredConfigsByDatasource(
+      CoordinatorCompactionConfig compactionConfig,
+      HttpServletRequest request,
+      Action action
+  )
+  {
+    final Iterable<DataSourceCompactionConfig> dataSourceCompactionConfigs = AuthorizationUtils
+        .filterAuthorizedResources(request, compactionConfig.getCompactionConfigs(),
+            input -> Collections
+                .singleton(new ResourceAction(new Resource(input.getDataSource(), ResourceType.DATASOURCE), action)),
+            authorizerMapper
+        );
+    // remove so that it does not complain about it when checking for server server permission
+    request.removeAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
+    if (AuthorizationUtils
+        .authorizeResourceAction(request, new ResourceAction(Resource.SERVER_SERVER_RESOURCE, action), authorizerMapper)
+        .isAllowed()) {
+      return CoordinatorCompactionConfig.from(compactionConfig, Lists.newArrayList(dataSourceCompactionConfigs));
+    }
+    return CoordinatorCompactionConfig.from(Lists.newArrayList(dataSourceCompactionConfigs));
   }
 }

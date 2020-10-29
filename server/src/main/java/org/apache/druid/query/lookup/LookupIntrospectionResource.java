@@ -23,7 +23,16 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
@@ -37,18 +46,34 @@ public class LookupIntrospectionResource
   private static final Logger LOGGER = new Logger(LookupIntrospectionResource.class);
 
   private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
+  private final AuthConfig authConfig;
+  private AuthorizerMapper authorizerMapper;
 
   @Inject
   public LookupIntrospectionResource(
-      @Context LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider
+      @Context LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider,
+      AuthConfig authConfig,
+      AuthorizerMapper authorizerMapper
   )
   {
     this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
+    this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @Path("/{lookupId}")
-  public Object introspectLookup(@PathParam("lookupId") final String lookupId)
+  public Object introspectLookup(@PathParam("lookupId") final String lookupId, @Context HttpServletRequest request)
   {
+    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      final Access access = AuthorizationUtils.authorizeResourceAction(request,
+          new ResourceAction(new Resource(lookupId, ResourceType.LOOKUP), Action.READ),
+          authorizerMapper
+      );
+      if (!access.isAllowed()) {
+        return Response.status(Response.Status.FORBIDDEN).entity(access.getMessage()).build();
+      }
+    }
+
     final Optional<LookupExtractorFactoryContainer> maybeContainer =
         lookupExtractorFactoryContainerProvider.get(lookupId);
 

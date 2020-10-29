@@ -25,8 +25,11 @@ import org.apache.druid.java.util.common.StringUtils;
 public enum ResourceType
 {
   DATASOURCE,
-  CONFIG,
-  STATE;
+  INTERNAL,
+  LOOKUP,
+  SERVER,
+  @Deprecated CONFIG,
+  @Deprecated STATE;
 
   @JsonCreator
   public static ResourceType fromString(String name)

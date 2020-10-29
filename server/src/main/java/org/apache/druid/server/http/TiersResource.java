@@ -24,6 +24,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
+import org.apache.druid.server.http.security.ServerServerResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -44,7 +45,7 @@ import java.util.stream.Collectors;
 /**
  */
 @Path("/druid/coordinator/v1/tiers")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters({ StateResourceFilter.class, ServerServerResourceFilter.class })
 public class TiersResource
 {
   private final InventoryView serverInventoryView;

@@ -26,6 +26,9 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.server.WebserverTestUtils;
+import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.junit.After;
@@ -33,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
@@ -49,10 +53,14 @@ public class LookupIntrospectionResourceTest
       EasyMock.createMock(LookupIntrospectHandler.class);
 
   private LookupIntrospectionResource lookupIntrospectionResource =
-      new LookupIntrospectionResource(mockLookupExtractorFactoryContainerProvider);
+      new LookupIntrospectionResource(mockLookupExtractorFactoryContainerProvider, new AuthConfig(),
+          new AuthorizerMapper(
+              ImmutableMap.of(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthorizer()))
+      );
 
   private URI baseUri;
   private HttpServer server;
+  private HttpServletRequest request;
 
   @Before
   public void setup() throws Exception
@@ -98,6 +106,7 @@ public class LookupIntrospectionResourceTest
         }
     );
     server.start();
+    request = EasyMock.createMock(HttpServletRequest.class);
   }
 
   @After
@@ -118,7 +127,7 @@ public class LookupIntrospectionResourceTest
     EasyMock.replay(mockLookupExtractorFactory);
     Assert.assertEquals(
         Response.status(Response.Status.NOT_FOUND).build().getStatus(),
-        ((Response) lookupIntrospectionResource.introspectLookup("lookupId")).getStatus()
+        ((Response) lookupIntrospectionResource.introspectLookup("lookupId", request)).getStatus()
     );
   }
 
@@ -127,7 +136,7 @@ public class LookupIntrospectionResourceTest
   {
     Assert.assertEquals(
         Response.status(Response.Status.NOT_FOUND).build().getStatus(),
-        ((Response) lookupIntrospectionResource.introspectLookup("not there")).getStatus()
+        ((Response) lookupIntrospectionResource.introspectLookup("not there", request)).getStatus()
     );
   }
 
@@ -139,7 +148,7 @@ public class LookupIntrospectionResourceTest
             .andReturn(new MapLookupExtractor(ImmutableMap.of(), false))
             .anyTimes();
     EasyMock.replay(mockLookupExtractorFactory);
-    Assert.assertEquals(mockLookupIntrospectHandler, lookupIntrospectionResource.introspectLookup("lookupId"));
+    Assert.assertEquals(mockLookupIntrospectHandler, lookupIntrospectionResource.introspectLookup("lookupId", request));
   }
 
   @Test

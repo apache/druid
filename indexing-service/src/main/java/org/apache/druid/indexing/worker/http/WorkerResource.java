@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.InternalInternalResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
@@ -95,7 +96,7 @@ public class WorkerResource
   @POST
   @Path("/disable")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters({ ConfigResourceFilter.class, InternalInternalResourceFilter.class })
   public Response doDisable()
   {
     try {
@@ -121,7 +122,7 @@ public class WorkerResource
   @POST
   @Path("/enable")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters({ ConfigResourceFilter.class, InternalInternalResourceFilter.class })
   public Response doEnable()
   {
     try {
@@ -139,7 +140,7 @@ public class WorkerResource
   @GET
   @Path("/enabled")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   public Response isEnabled()
   {
     try {
@@ -153,7 +154,7 @@ public class WorkerResource
   @GET
   @Path("/tasks")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   public Response getTasks()
   {
     try {
@@ -181,7 +182,7 @@ public class WorkerResource
   @POST
   @Path("/task/{taskid}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {
@@ -197,7 +198,7 @@ public class WorkerResource
   @GET
   @Path("/task/{taskid}/log")
   @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   public Response doGetLog(
       @PathParam("taskid") String taskId,
       @QueryParam("offset") @DefaultValue("0") long offset

@@ -1029,7 +1029,8 @@ public class CalciteTests
         druidLeaderClient,
         druidLeaderClient,
         provider,
-        getJsonMapper()
+        getJsonMapper(),
+        new AuthConfig()
     );
   }
 

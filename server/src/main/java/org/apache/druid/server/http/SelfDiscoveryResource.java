@@ -28,6 +28,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.http.security.InternalInternalResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.eclipse.jetty.http.HttpStatus;
 
@@ -88,7 +89,7 @@ public class SelfDiscoveryResource
   @GET
   @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   public Response getSelfDiscoveredStatus()
   {
     return Response.ok(Collections.singletonMap("selfDiscovered", isDiscoveredAllRoles())).build();
@@ -97,7 +98,7 @@ public class SelfDiscoveryResource
   /** See the description of this endpoint in api-reference.md. */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   public Response getSelfDiscovered()
   {
     if (isDiscoveredAllRoles()) {

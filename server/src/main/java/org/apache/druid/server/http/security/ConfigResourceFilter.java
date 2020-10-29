@@ -22,6 +22,7 @@ package org.apache.druid.server.http.security;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -37,35 +38,37 @@ import org.apache.druid.server.security.ResourceType;
  * - druid/coordinator/v1/config
  * Note - Currently the resource name for all end points is set to "CONFIG" however if more fine grained access control
  * is required the resource name can be set to specific config properties.
+ *
+ *  @deprecated Used only with {@link org.apache.druid.server.security.AuthConfig#AUTH_VERSION_1}
  */
+@Deprecated
 public class ConfigResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public ConfigResourceFilter(
-      AuthorizerMapper authorizerMapper
-  )
+  public ConfigResourceFilter(AuthorizerMapper authorizerMapper, AuthConfig authConfig)
   {
-    super(authorizerMapper);
+    super(authorizerMapper, authConfig);
   }
 
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource("CONFIG", ResourceType.CONFIG),
-        getAction(request)
-    );
+    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_1)) {
+      final ResourceAction resourceAction = new ResourceAction(
+          new Resource("CONFIG", ResourceType.CONFIG),
+          getAction(request)
+      );
 
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
-        getReq(),
-        resourceAction,
-        getAuthorizerMapper()
-    );
+      final Access authResult = AuthorizationUtils.authorizeResourceAction(
+          getReq(),
+          resourceAction,
+          getAuthorizerMapper()
+      );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+      if (!authResult.isAllowed()) {
+        throw new ForbiddenException(authResult.toString());
+      }
     }
-
     return request;
   }
 }

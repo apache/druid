@@ -35,6 +35,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
@@ -45,12 +46,18 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -82,6 +89,7 @@ public class QueryLifecycle
   private final DefaultQueryConfig defaultQueryConfig;
   private final long startMs;
   private final long startNs;
+  private final AuthConfig authConfig;
 
   private State state = State.NEW;
   private AuthenticationResult authenticationResult;
@@ -97,7 +105,8 @@ public class QueryLifecycle
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
       final long startMs,
-      final long startNs
+      final long startNs,
+      final AuthConfig authConfig
   )
   {
     this.warehouse = warehouse;
@@ -109,6 +118,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.startMs = startMs;
     this.startNs = startNs;
+    this.authConfig = authConfig;
   }
 
   /**
@@ -134,7 +144,7 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      final Access access = authorize(authenticationResult);
+      final Access access = authorize(authenticationResult, authConfig);
       if (!access.isAllowed()) {
         throw new ISE("Unauthorized");
       }
@@ -193,9 +203,26 @@ public class QueryLifecycle
    *
    * @return authorization result
    */
-  public Access authorize(final AuthenticationResult authenticationResult)
+  public Access authorize(final AuthenticationResult authenticationResult, final AuthConfig authConfig)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      return doAuthorize(
+          authenticationResult,
+          AuthorizationUtils.authorizeAllResourceActions(
+              authenticationResult,
+              baseQuery.getDataSource() instanceof LookupDataSource ?
+                  Collections.singleton(new ResourceAction(new Resource(
+                      ((LookupDataSource) baseQuery.getDataSource()).getLookupName(),
+                      ResourceType.LOOKUP
+                  ), Action.READ)) : Iterables.transform(
+                  baseQuery.getDataSource().getTableNames(),
+                  AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+              ),
+              authorizerMapper
+          )
+      );
+    }
     return doAuthorize(
         authenticationResult,
         AuthorizationUtils.authorizeAllResourceActions(

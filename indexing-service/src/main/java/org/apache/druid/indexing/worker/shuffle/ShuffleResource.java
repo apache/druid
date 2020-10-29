@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.http.security.InternalInternalResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.joda.time.Interval;
 
@@ -54,7 +55,7 @@ import java.util.Optional;
  * We could develop a new ResourceFileter in the future if needed.
  */
 @Path("/druid/worker/v1/shuffle")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
 public class ShuffleResource
 {
   private static final Logger log = new Logger(ShuffleResource.class);

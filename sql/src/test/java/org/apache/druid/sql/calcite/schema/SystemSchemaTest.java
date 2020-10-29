@@ -79,6 +79,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
@@ -268,7 +269,8 @@ public class SystemSchemaTest extends CalciteTestBase
         client,
         client,
         druidNodeDiscoveryProvider,
-        mapper
+        mapper,
+        new AuthConfig()
     );
   }
 
@@ -524,7 +526,9 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper,
+        new AuthConfig()
+    );
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
         new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),

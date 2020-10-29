@@ -28,6 +28,7 @@ import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ServerServerResourceFilter;
 import org.joda.time.Interval;
 
 import javax.inject.Inject;
@@ -47,7 +48,7 @@ import javax.ws.rs.core.Response;
 /**
  */
 @Path("/druid/coordinator/v1/config")
-@ResourceFilters(ConfigResourceFilter.class)
+@ResourceFilters({ ConfigResourceFilter.class, ServerServerResourceFilter.class })
 public class CoordinatorDynamicConfigsResource
 {
   private final JacksonConfigManager manager;

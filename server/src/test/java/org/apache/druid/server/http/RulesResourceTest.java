@@ -78,7 +78,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, 2);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -121,7 +121,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", interval, null);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -140,7 +140,7 @@ public class RulesResourceTest
         .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, -1);
     Map<String, Object> rulesHistory = (Map) response.getEntity();
@@ -181,7 +181,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
 
     Response response = rulesResource.getDatasourceRuleHistory(null, 2);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -224,7 +224,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
 
     Response response = rulesResource.getDatasourceRuleHistory(interval, null);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -243,7 +243,7 @@ public class RulesResourceTest
         .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
 
     Response response = rulesResource.getDatasourceRuleHistory(null, -1);
     Map<String, Object> rulesHistory = (Map) response.getEntity();

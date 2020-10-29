@@ -21,6 +21,9 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -40,13 +43,48 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface Authorizer
 {
   /**
+   * Method to decide whether to use v1 or v2 model for authorization
+   *
+   * @param authenticationResult The authentication result of the request
+   * @param resource             The resource to be accessed
+   * @param action               The action to perform on the resource
+   * @param authVersion          Auth version to use
+   * @return An Access object representing the result of the authorization check. Must not be null.
+   */
+  default Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action, String authVersion)
+  {
+    switch (StringUtils.toLowerCase(authVersion)) {
+      case AuthConfig.AUTH_VERSION_1:
+        return authorize(authenticationResult, resource, action);
+      case AuthConfig.AUTH_VERSION_2:
+        return authorizeV2(authenticationResult, resource, action);
+      default:
+        throw new IAE("No such auth version [%s]", authVersion);
+    }
+  }
+
+  /**
    * Check if the entity represented by {@code identity} is authorized to perform {@code action} on {@code resource}.
    *
-   * @param authenticationResult  The authentication result of the request
-   * @param resource  The resource to be accessed
-   * @param action    The action to perform on the resource
-   *
+   * @param authenticationResult The authentication result of the request
+   * @param resource             The resource to be accessed
+   * @param action               The action to perform on the resource
    * @return An Access object representing the result of the authorization check. Must not be null.
    */
   Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
+
+  /**
+   * Check if the entity represented by {@code identity} is authorized to perform {@code action} on {@code resource}.
+   * This method will use Auth V2 model for resource name and types.
+   *
+   * @param authenticationResult The authentication result of the request
+   * @param resource             The resource to be accessed
+   * @param action               The action to perform on the resource
+   * @return An Access object representing the result of the authorization check. Must not be null.
+   */
+  default Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+  {
+    throw new ISE("Authorizer does not support V2 implementation, please implement it");
+  }
+
 }

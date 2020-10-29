@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.selector.Server;
+import org.apache.druid.server.http.security.InternalInternalResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.router.TieredBrokerHostSelector;
 
@@ -49,7 +50,7 @@ public class RouterResource
 
   @GET
   @Path("/brokers")
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
   @Produces(MediaType.APPLICATION_JSON)
   public Map<String, List<String>> getBrokers()
   {

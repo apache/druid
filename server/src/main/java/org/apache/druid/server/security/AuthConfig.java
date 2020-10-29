@@ -21,6 +21,8 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +30,8 @@ import java.util.Objects;
 
 public class AuthConfig
 {
+  public static final String AUTH_VERSION_1 = "v1";
+  public static final String AUTH_VERSION_2 = "v2";
   /**
    * HTTP attribute that holds an AuthenticationResult, with info about a successful authentication check.
    */
@@ -48,7 +52,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false);
+    this(null, null, null, false, AUTH_VERSION_1);
   }
 
   @JsonCreator
@@ -56,13 +60,17 @@ public class AuthConfig
       @JsonProperty("authenticatorChain") List<String> authenticatorChain,
       @JsonProperty("authorizers") List<String> authorizers,
       @JsonProperty("unsecuredPaths") List<String> unsecuredPaths,
-      @JsonProperty("allowUnauthenticatedHttpOptions") boolean allowUnauthenticatedHttpOptions
+      @JsonProperty("allowUnauthenticatedHttpOptions") boolean allowUnauthenticatedHttpOptions,
+      @JsonProperty("authVersion") String authVersion
   )
   {
     this.authenticatorChain = authenticatorChain;
     this.authorizers = authorizers;
     this.unsecuredPaths = unsecuredPaths == null ? Collections.emptyList() : unsecuredPaths;
     this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
+    Preconditions.checkArgument(authVersion == null || (authVersion.equalsIgnoreCase(AUTH_VERSION_1) || authVersion
+        .equalsIgnoreCase(AUTH_VERSION_2)), "Unknown auth version [%s]", authVersion);
+    this.authVersion = authVersion == null ? AUTH_VERSION_1 : StringUtils.toLowerCase(authVersion);
   }
 
   @JsonProperty
@@ -76,6 +84,9 @@ public class AuthConfig
 
   @JsonProperty
   private final boolean allowUnauthenticatedHttpOptions;
+
+  @JsonProperty
+  private final String authVersion;
 
   public List<String> getAuthenticatorChain()
   {
@@ -97,6 +108,11 @@ public class AuthConfig
     return allowUnauthenticatedHttpOptions;
   }
 
+  public String getAuthVersion()
+  {
+    return authVersion;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -108,9 +124,10 @@ public class AuthConfig
     }
     AuthConfig that = (AuthConfig) o;
     return isAllowUnauthenticatedHttpOptions() == that.isAllowUnauthenticatedHttpOptions() &&
-           Objects.equals(getAuthenticatorChain(), that.getAuthenticatorChain()) &&
-           Objects.equals(getAuthorizers(), that.getAuthorizers()) &&
-           Objects.equals(getUnsecuredPaths(), that.getUnsecuredPaths());
+        Objects.equals(getAuthenticatorChain(), that.getAuthenticatorChain()) &&
+        Objects.equals(getAuthorizers(), that.getAuthorizers()) &&
+        Objects.equals(getUnsecuredPaths(), that.getUnsecuredPaths()) &&
+        Objects.equals(getAuthVersion(), that.getAuthVersion());
   }
 
   @Override
@@ -120,7 +137,8 @@ public class AuthConfig
         getAuthenticatorChain(),
         getAuthorizers(),
         getUnsecuredPaths(),
-        isAllowUnauthenticatedHttpOptions()
+        isAllowUnauthenticatedHttpOptions(),
+        getAuthVersion()
     );
   }
 
@@ -132,6 +150,7 @@ public class AuthConfig
            ", authorizers=" + authorizers +
            ", unsecuredPaths=" + unsecuredPaths +
            ", allowUnauthenticatedHttpOptions=" + allowUnauthenticatedHttpOptions +
+           ", authVersion=" + authVersion +
            '}';
   }
 }

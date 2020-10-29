@@ -361,6 +361,29 @@ public class LookupCoordinatorManager
     return tierLookups.get(lookupName);
   }
 
+  /**
+   * Try to get all lookups for the specified tier.
+   *
+   * @param tier tier
+   *
+   * @return The lookups for a tier if found or null if not found or if no lookups at all are found
+   */
+  @Nullable
+  public Map<String, LookupExtractorFactoryMapContainer> getTierLookups(final String tier)
+  {
+    final Map<String, Map<String, LookupExtractorFactoryMapContainer>> prior = getKnownLookups();
+    if (prior == null) {
+      LOG.warn("Requested tier [%s]. But no lookups exist!", tier);
+      return null;
+    }
+    final Map<String, LookupExtractorFactoryMapContainer> tierLookups = prior.get(tier);
+    if (tierLookups == null) {
+      LOG.warn("Tier [%s] does not exist", tier);
+      return null;
+    }
+    return tierLookups;
+  }
+
   public boolean isStarted()
   {
     return lifecycleLock.isStarted();

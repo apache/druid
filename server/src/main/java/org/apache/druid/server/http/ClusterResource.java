@@ -31,6 +31,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.http.security.InternalInternalResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.GET;
@@ -47,7 +48,7 @@ import java.util.Collection;
  */
 @Path("/druid/coordinator/v1/cluster")
 @LazySingleton
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters({ StateResourceFilter.class, InternalInternalResourceFilter.class })
 public class ClusterResource
 {
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;

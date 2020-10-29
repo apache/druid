@@ -29,28 +29,12 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 
-/**
- * Use this ResourceFilter at end points where Druid Cluster State is read or written
- * Here are some example paths where this filter is used -
- * - druid/broker/v1
- * - druid/coordinator/v1
- * - druid/historical/v1
- * - druid/indexer/v1
- * - druid/coordinator/v1/rules
- * - druid/coordinator/v1/tiers
- * - druid/worker/v1
- * - druid/coordinator/v1/servers
- * - status
- * Note - Currently the resource name for all end points is set to "STATE" however if more fine grained access control
- * is required the resource name can be set to specific state properties.
- *
- * @deprecated Used only with {@link AuthConfig#AUTH_VERSION_1}
- */
-@Deprecated
-public class StateResourceFilter extends AbstractResourceFilter
+public class InternalInternalResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public StateResourceFilter(AuthorizerMapper authorizerMapper, AuthConfig authConfig)
+  public InternalInternalResourceFilter(AuthorizerMapper authorizerMapper,
+      AuthConfig authConfig
+  )
   {
     super(authorizerMapper, authConfig);
   }
@@ -58,9 +42,9 @@ public class StateResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_1)) {
+    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       final ResourceAction resourceAction = new ResourceAction(
-          Resource.STATE_RESOURCE,
+          Resource.INTERNAL_INTERNAL_RESOURCE,
           getAction(request)
       );
 

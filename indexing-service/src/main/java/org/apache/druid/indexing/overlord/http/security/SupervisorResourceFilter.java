@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -48,10 +49,11 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
   @Inject
   public SupervisorResourceFilter(
       AuthorizerMapper authorizerMapper,
-      SupervisorManager supervisorManager
+      SupervisorManager supervisorManager,
+      AuthConfig authConfig
   )
   {
-    super(authorizerMapper);
+    super(authorizerMapper, authConfig);
     this.supervisorManager = supervisorManager;
   }
 

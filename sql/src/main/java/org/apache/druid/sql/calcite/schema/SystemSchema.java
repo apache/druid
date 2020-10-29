@@ -70,6 +70,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -209,14 +210,15 @@ public class SystemSchema extends AbstractSchema
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final AuthConfig authConfig
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
-        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper, authConfig),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, authConfig),
+        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper, authConfig),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
     );
@@ -237,18 +239,21 @@ public class SystemSchema extends AbstractSchema
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
+    private final AuthConfig authConfig;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        AuthConfig authConfig
     )
     {
       this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
+      this.authConfig = authConfig;
     }
 
     @Override
@@ -479,16 +484,19 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final InventoryView serverInventoryView;
+    private final AuthConfig authConfig;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         InventoryView serverInventoryView,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        AuthConfig authConfig
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
+      this.authConfig = authConfig;
     }
 
     @Override
@@ -511,7 +519,7 @@ public class SystemSchema extends AbstractSchema
           root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
           "authenticationResult in dataContext"
       );
-      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper, authConfig.getAuthVersion());
 
       final FluentIterable<Object[]> results = FluentIterable
           .from(() -> druidServers)
@@ -636,12 +644,14 @@ public class SystemSchema extends AbstractSchema
   static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
-    final AuthorizerMapper authorizerMapper;
+    private final AuthorizerMapper authorizerMapper;
+    private final AuthConfig authConfig;
 
-    public ServerSegmentsTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper)
+    public ServerSegmentsTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper, AuthConfig authConfig)
     {
       this.serverView = serverView;
       this.authorizerMapper = authorizerMapper;
+      this.authConfig = authConfig;
     }
 
     @Override
@@ -663,7 +673,7 @@ public class SystemSchema extends AbstractSchema
           root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
           "authenticationResult in dataContext"
       );
-      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper, authConfig.getAuthVersion());
 
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
@@ -1083,12 +1093,17 @@ public class SystemSchema extends AbstractSchema
    */
   private static void checkStateReadAccessForServers(
       AuthenticationResult authenticationResult,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      String authVersion
   )
   {
     final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
-        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+        Collections.singletonList(
+            authVersion.equals(AuthConfig.AUTH_VERSION_2) ? new ResourceAction(Resource.SERVER_SERVER_RESOURCE,
+                Action.READ
+            ) : new ResourceAction(Resource.STATE_RESOURCE, Action.READ)
+        ),
         authorizerMapper
     );
     if (!stateAccess.isAllowed()) {

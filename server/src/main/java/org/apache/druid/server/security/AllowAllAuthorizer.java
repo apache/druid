@@ -26,4 +26,10 @@ public class AllowAllAuthorizer implements Authorizer
   {
     return Access.OK;
   }
+
+  @Override
+  public Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+  {
+    return Access.OK;
+  }
 }

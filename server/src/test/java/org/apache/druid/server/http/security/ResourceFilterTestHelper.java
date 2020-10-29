@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
@@ -55,9 +56,18 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ResourceFilterTestHelper
 {
+  private static Set<Class<? extends ResourceFilter>> whitelistedForTestFilters = ImmutableSet.of(
+      ConfigResourceFilter.class,
+      DatasourceResourceFilter.class,
+      RulesResourceFilter.class,
+      StateResourceFilter.class
+  );
+
   public HttpServletRequest req;
   public AuthorizerMapper authorizerMapper;
   public ContainerRequest request;
@@ -230,9 +240,10 @@ public class ResourceFilterTestHelper
                     final List<Class<? extends ResourceFilter>> resourceFilters =
                         method.getAnnotation(ResourceFilters.class) == null ? baseResourceFilters :
                         ImmutableList.copyOf(method.getAnnotation(ResourceFilters.class).value());
-
+                    final List<Class<? extends ResourceFilter>> enabledForTestResourceFilters = getEnabledForTestFilters(
+                        resourceFilters);
                     return Collections2.transform(
-                        resourceFilters,
+                        enabledForTestResourceFilters,
                         new Function<Class<? extends ResourceFilter>, Object[]>()
                         {
                           @Override
@@ -270,5 +281,12 @@ public class ResourceFilterTestHelper
     } else {
       return method.getAnnotation(DELETE.class) != null ? "DELETE" : "POST";
     }
+  }
+
+  private static List<Class<? extends ResourceFilter>> getEnabledForTestFilters(List<Class<? extends ResourceFilter>> filters)
+  {
+    List<Class<? extends ResourceFilter>> filtered = filters.stream()
+        .filter(aClass -> whitelistedForTestFilters.contains(aClass)).collect(Collectors.toList());
+    return filtered;
   }
 }
