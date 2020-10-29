@@ -130,7 +130,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "type": "string",
           },
           Object {
-            "defaultValue": "csv",
             "defined": [Function],
             "info": <React.Fragment>
               <p>
