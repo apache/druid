@@ -63,7 +63,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
-    'Granularity',
+    'Time span',
     'Partitioning',
     'Partition',
     'Size',
@@ -132,7 +132,7 @@ interface SegmentQueryResultRow {
   end: string;
   segment_id: string;
   version: string;
-  granularity: string;
+  time_span: string;
   partitioning: string;
   size: number;
   partition_num: number;
@@ -170,7 +170,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       WHEN "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z' THEN 'Hour'
       WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
       ELSE 'Sub minute'
-    END AS "granularity",
+    END AS "time_span",
     CASE
       WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
       WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
@@ -306,7 +306,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                   start: segment.interval.split('/')[0],
                   end: segment.interval.split('/')[1],
                   version: segment.version,
-                  granularity: '-',
+                  time_span: '-',
                   partitioning: '-',
                   partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
                   size: segment.size,
@@ -504,12 +504,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
           },
           {
-            Header: 'Granularity',
-            show: capabilities.hasSql() && hiddenColumns.exists('Granularity'),
-            accessor: 'granularity',
+            Header: 'Time span',
+            show: capabilities.hasSql() && hiddenColumns.exists('Time span'),
+            accessor: 'time_span',
             width: 100,
             filterable: true,
-            Cell: renderFilterableCell('granularity'),
+            Cell: renderFilterableCell('time_span'),
           },
           {
             Header: 'Partitioning',
