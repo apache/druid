@@ -23,22 +23,29 @@ title: "Basic Security"
   -->
 
 
-This Apache Druid extension adds:
+The Basic Security extension for Apache Druid adds:
 
-- an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store
-- an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups
+- an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store.
+- an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups.
 
-Make sure to [include](../../development/extensions.md#loading-extensions) `druid-basic-security` as an extension.
+To load the extension, [include](../../development/extensions.md#loading-extensions) `druid-basic-security` in the `druid.extensions.loadList` in your `common.runtime.properties`. For example:
+```
+druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage", "druid-basic-security"]
+```
 
-Please see [Authentication and Authorization](../../design/auth.md) for more information on the extension interfaces being implemented.
+See [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces.
 
 ## Configuration
 
-The examples in the section will use "MyBasicMetadataAuthenticator", "MyBasicLDAPAuthenticator", "MyBasicMetadataAuthorizer", and "MyBasicLDAPAuthorizer" as names for the Authenticators and Authorizer.
+The examples in the section use the following names for the Authenticators and Authorizers:
+- `MyBasicMetadataAuthenticator`
+- `MyBasicLDAPAuthenticator`
+- `MyBasicMetadataAuthorizer`
+- `MyBasicLDAPAuthorizer`.
 
 These properties are not tied to specific Authenticator or Authorizer instances.
 
-These configuration properties should be added to the common runtime properties file.
+To set the value for the configuration properties, add them to the common runtime properties file.
 
 ### Properties
 |Property|Description|Default|required|
@@ -62,8 +69,8 @@ druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMeta
 ```
 
 To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
-The authenticator needs to also define a credentialsValidator with type 'metadata' or 'ldap'.
-If credentialsValidator is not specified, type 'metadata' will be used as default.
+The default credentials validator (`credentialsValidator`) is `metadata`. To use the LDAP validator, define a credentials validator with a type of 'ldap'.
+
 
 Configuration of the named authenticator is assigned through properties with the form:
 
@@ -71,7 +78,7 @@ Configuration of the named authenticator is assigned through properties with the
 druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
 ```
 
-The authenticator configuration examples in the rest of this document will use "MyBasicMetadataAuthenticator" or "MyBasicLDAPAuthenticator" as the name of the authenticators being configured.
+The remaining examples of authenticator configuration use either `MyBasicMetadataAuthenticator` or `MyBasicLDAPAuthenticator` as the authenticator name.
 
 
 #### Properties for Druid metadata store user authentication
@@ -81,11 +88,17 @@ The authenticator configuration examples in the rest of this document will use "
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
-|`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialIterations`|Number of iterations to use for password hashing. See [Credential iterations and API performance](#credential-iterations-and-api-performance)|10000|No|
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type`|The type of credentials store (metadata) to validate requests credentials.|metadata|No|
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure`|If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.|false|No|
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName`|Authorizer that requests should be directed to|N/A|Yes|
 
+##### Credential iterations and API performance
+The credential iterations setting affects API performance, including query times. The default setting of 10000 is intentionally high to prevent attackers from using brute force to guess passwords, but it adds latency.
+
+You can decrease the number of iterations to speed up API response times, but it potentially exposes your system to dictionary attacks. Therefore, only reduce the number of iterations if your environment fits one of the following conditions:
+- **All** passwords are long and random which make them as safe as a randomly-generated token.
+- You have secured network access to Druid so that no attacker can execute a dictionary attack against it.
 #### Properties for LDAP user authentication
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
