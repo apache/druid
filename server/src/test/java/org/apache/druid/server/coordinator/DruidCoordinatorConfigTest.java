@@ -61,7 +61,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.kill.pendingSegments.on", "true");
     props.setProperty("druid.coordinator.load.timeout", "PT1s");
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
-    props.setProperty("druid.coordinator.duties.logUsedSegments.enabled", "false");
+    props.setProperty("druid.coordinator.logUsedSegments.enabled", "false");
 
     factory = Config.createFactory(props);
     config = factory.build(DruidCoordinatorConfig.class);

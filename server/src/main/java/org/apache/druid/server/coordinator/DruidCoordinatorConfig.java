@@ -51,7 +51,7 @@ public abstract class DruidCoordinatorConfig
   @Default("0")
   public abstract int getCoordinatorKillMaxSegments();
 
-  @Config("druid.coordinator.duties.logUsedSegments.enabled")
+  @Config("druid.coordinator.logUsedSegments.enabled")
   @Default("true")
   public abstract boolean isLogUsedSegmentsDutyEnabled();
 
