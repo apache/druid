@@ -210,8 +210,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsSqlQueryManager = new QueryManager({
       debounceIdle: 500,
       processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
-        const totalQuerySize = (query.page + 1) * query.pageSize;
-
         const whereParts = filterMap(query.filtered, (f: Filter) => {
           if (f.id.startsWith('is_')) {
             if (f.value === 'all') return;
@@ -232,10 +230,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           const innerQuery = compact([
             `SELECT "start" || '/' || "end" AS "interval"`,
             `FROM sys.segments`,
-            whereClause ? `WHERE ${whereClause}` : '',
+            whereClause ? `WHERE ${whereClause}` : undefined,
             `GROUP BY 1`,
             `ORDER BY 1 DESC`,
-            `LIMIT ${totalQuerySize}`,
+            `LIMIT ${query.pageSize}`,
+            query.page ? `OFFSET ${query.page * query.pageSize}` : undefined,
           ]).join('\n');
 
           const intervals: string = (await queryDruidSql({ query: innerQuery }))
@@ -260,7 +259,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             );
           }
 
-          queryParts.push(`LIMIT ${totalQuerySize * 1000}`);
+          queryParts.push(`LIMIT ${query.pageSize * 1000}`);
         } else {
           queryParts = [SegmentsView.WITH_QUERY, `SELECT *`, `FROM s`];
 
@@ -277,11 +276,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             );
           }
 
-          queryParts.push(`LIMIT ${totalQuerySize}`);
+          queryParts.push(`LIMIT ${query.pageSize}`);
+
+          if (query.page) {
+            queryParts.push(`OFFSET ${query.page * query.pageSize}`);
+          }
         }
         const sqlQuery = queryParts.join('\n');
         setIntermediateQuery(sqlQuery);
-        return (await queryDruidSql({ query: sqlQuery })).slice(query.page * query.pageSize);
+        return await queryDruidSql({ query: sqlQuery });
       },
       onStateChange: segmentsState => {
         this.setState({
