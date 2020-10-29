@@ -72,8 +72,20 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   {
     customAggStrategy = new MaxIntermediateSizeAdjustStrategy()
     {
+      @Override
+      public int compareTo(Object o)
+      {
+        return 0;
+      }
+
       final int[] rollupNums = {2, 20, 40, 400};
       final int[] appendBytesWithNum = {1000, 1000, 1000, 1000};
+
+      @Override
+      public AdjustmentType getAdjustmentType()
+      {
+        return AdjustmentType.MAX;
+      }
 
       @Override
       public String getAdjustmentMetricType()
@@ -97,6 +109,12 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       public int initAppendBytes()
       {
         return 100;
+      }
+
+      @Override
+      public Object getInputVal()
+      {
+        return 1;
       }
     };
 

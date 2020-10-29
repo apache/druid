@@ -40,6 +40,7 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -53,9 +54,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public static final int DEFAULT_K = 128;
 
   // Used for sketch size estimation.
-  private static final long MAX_STREAM_LENGTH = 1_000_000_000;
+  public static final long MAX_STREAM_LENGTH = 1_000_000_000;
   @Nullable
-  private static MaxIntermediateSizeAdjustStrategy strategy;
+  private MaxIntermediateSizeAdjustStrategy strategy;
 
   private final String name;
   private final String fieldName;
@@ -91,7 +92,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
   {
     if (adjustBytesInMemoryFlag && strategy == null) {
-      strategy = new DoublesSketchSizeAdjustStrategy(this.k, this.getMaxIntermediateSize());
+      strategy = new DoublesSketchSizeAdjustStrategy(this.k);
     }
     return strategy;
   }

@@ -38,7 +38,7 @@ import java.util.List;
  * 16                  2052                       256                1796
  * 128                 16416                      2052               14364
  */
-public class ThetaSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStrategy
+public class ThetaSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStrategy<Integer>
 {
   // example size=2048,X8： rollupCardinalNums 0-32 -->856byte (JOL)  33-256->4440byte (JOL)  257...->33112byte(JOL)
   private final int size;
@@ -83,6 +83,12 @@ public class ThetaSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStra
   }
 
   @Override
+  public AdjustmentType getAdjustmentType()
+  {
+    return AdjustmentType.MERGE;
+  }
+
+  @Override
   public String getAdjustmentMetricType()
   {
     return SketchModule.THETA_SKETCH;
@@ -104,6 +110,21 @@ public class ThetaSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStra
   public int initAppendBytes()
   {
     return initAggAppendBytes;
+  }
+
+  @Override
+  public Integer getInputVal()
+  {
+    return size;
+  }
+
+  @Override
+  public int compareTo(MaxIntermediateSizeAdjustStrategy<Integer> other)
+  {
+    if (other.getInputVal() == 0) {
+      return -1;
+    }
+    return Integer.compare(size, other.getInputVal());
   }
 
   @Override

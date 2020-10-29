@@ -61,19 +61,22 @@ public class DoublesSketchSizeAdjustStrategyTest extends InitializedNullHandling
   @Test
   public void testCreateAdjustStrategy()
   {
-    for (int k = 16; k < 32768; k *= 2) {
-      AggregatorFactory factory = new DoublesSketchAggregatorFactory("name", "name", k);
-      DoublesSketchSizeAdjustStrategy ds = new DoublesSketchSizeAdjustStrategy(k, factory.getMaxIntermediateSize());
+    int k = 128;
+    AggregatorFactory quantFactory = new DoublesSketchAggregatorFactory("doublesSketch1", "doublesSketch1", k);
+    DoublesSketchSizeAdjustStrategy ds = new DoublesSketchSizeAdjustStrategy(k);
+    final int[] rollNums = ds.adjustWithRollupNum();
+    final int[] appendBytesOnRollupNum = ds.appendBytesOnRollupNum();
 
-      final int estimateMaxSize = Arrays.stream(Arrays.copyOfRange
-          (ds.appendBytesOnRollupNum(), 0, ds.appendBytesOnRollupNum().length)).sum();
-
-      final long n = Arrays.stream(Arrays.copyOfRange
-          (ds.adjustWithRollupNum(), 0, ds.adjustWithRollupNum().length))
-          .sum() * 2;
+    for (int rollIndex = 0; rollIndex < appendBytesOnRollupNum.length; rollIndex++) {
+      final int totalAppendingBytes = Arrays.stream(Arrays.copyOfRange
+          (appendBytesOnRollupNum, 0, rollIndex)).sum();
+      final int n = rollNums[rollIndex];
       final int actualMaxBytes = DoublesSketch.getUpdatableStorageBytes(k, n);
-      // Assert.assertEquals(actualMaxBytes, estimateMaxSize);
-      System.out.println(actualMaxBytes + "," + estimateMaxSize);
+      final long iniAppendEstimate = quantFactory.getMaxIntermediateSize() + ds.initAppendBytes();
+      final long estimateBytes = iniAppendEstimate + totalAppendingBytes;
+      Assert.assertEquals(actualMaxBytes, estimateBytes);
+      // System.out.println(k + "," + n + ", " + actualMaxBytes + "," + totalAppendingBytes + "," +
+      //     (totalAppendingBytes + iniAppendEstimate));
     }
   }
 
@@ -81,14 +84,11 @@ public class DoublesSketchSizeAdjustStrategyTest extends InitializedNullHandling
   public void testOccupyBytesByAdjustOnCardinal()
   {
     AggregatorFactory factory = new DoublesSketchAggregatorFactory("name", "name", K_SIZE);
-    MaxIntermediateSizeAdjustStrategy strategy = new DoublesSketchSizeAdjustStrategy(
-        K_SIZE,
-        factory.getMaxIntermediateSize()
-    );
+    MaxIntermediateSizeAdjustStrategy strategy = new DoublesSketchSizeAdjustStrategy(K_SIZE);
 
     final int[] cardinalNums = strategy.adjustWithRollupNum();
     final int[] appendBytesOnCardinalNum = strategy.appendBytesOnRollupNum();
-    for (int k = 0; k < cardinalNums.length / 2; k++) {
+    for (int k = 0; k < Math.min(4, cardinalNums.length); k++) {
       int len = cardinalNums[k];
       double[] values = new double[len];
       for (int i = 0; i < len; i++) {
@@ -110,7 +110,7 @@ public class DoublesSketchSizeAdjustStrategyTest extends InitializedNullHandling
       final long estimateBytes = factory.getMaxIntermediateSize()
           + strategy.initAppendBytes()
           + Arrays.stream(Arrays.copyOfRange
-          (appendBytesOnCardinalNum, 0, k + 1)).sum();
+          (appendBytesOnCardinalNum, 0, k)).sum();
 
       Assert.assertEquals((int) (estimateBytes / actualBytes), 1, 1);
     }
@@ -121,7 +121,7 @@ public class DoublesSketchSizeAdjustStrategyTest extends InitializedNullHandling
   {
     int maxSize = 10000;
     AggregatorFactory quantFactory = new DoublesSketchAggregatorFactory("doublesSketch1", "doublesSketch1", K_SIZE);
-    MaxIntermediateSizeAdjustStrategy quantStrategy = new DoublesSketchSizeAdjustStrategy(K_SIZE, quantFactory.getMaxIntermediateSize());
+    MaxIntermediateSizeAdjustStrategy quantStrategy = new DoublesSketchSizeAdjustStrategy(K_SIZE);
 
     int[] rollupCardinals = quantStrategy.adjustWithRollupNum();
     int[] quantAppendBytes = quantStrategy.appendBytesOnRollupNum();

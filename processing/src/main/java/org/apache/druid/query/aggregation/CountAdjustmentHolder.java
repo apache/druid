@@ -52,6 +52,7 @@ public class CountAdjustmentHolder
     final Iterator<Map.Entry<String, OnheapIncrementalIndex.MetricAdjustmentHolder>> iterator = metricTypeAndHolderMap.entrySet().iterator();
     while (iterator.hasNext()) {
       final OnheapIncrementalIndex.MetricAdjustmentHolder metricAdjustmentHolder = iterator.next().getValue();
+      metricAdjustmentHolder.computeAppendingInfo();
       // merge sort and when rollupRow equals then sum appendbytes
       mergeSortAndEqualSum(metricAdjustmentHolder);
     }
@@ -91,7 +92,7 @@ public class CountAdjustmentHolder
         tempAppendBytesAll[k++] = appendBytes[j++];
       }
 
-      if (k < tempAppendBytesAll.length) {
+      if (k <= tempAppendBytesAll.length) {
         appendBytesAll = new int[k];
         rollupRowsAll = new int[k];
         System.arraycopy(tempAppendBytesAll, 0, appendBytesAll, 0, k);

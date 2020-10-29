@@ -19,14 +19,10 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.java.util.common.logger.Logger;
-
 /**
  */
 public class InternalCountAdjustmentAggregator implements Aggregator
 {
-  private static final Logger log = new Logger(InternalCountAdjustmentAggregator.class);
-
   private long count = 0;
   private final int[] appendingBytesOnRollupRows;
   private final int[] rollupRows;
@@ -48,7 +44,6 @@ public class InternalCountAdjustmentAggregator implements Aggregator
       needAppendingBytes = 0;
       return;
     }
-    log.debug("Need adjustment,count[%s],appendingIndex[%s],appendingBytes[%s]", count, appendingIndex, appendingBytesOnRollupRows[appendingIndex]);
     needAppendingBytes = appendingBytesOnRollupRows[appendingIndex];
   }
 

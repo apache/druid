@@ -22,8 +22,15 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 @ExtensionPoint
-public abstract class MaxIntermediateSizeAdjustStrategy
+public abstract class MaxIntermediateSizeAdjustStrategy<Input> implements Comparable<MaxIntermediateSizeAdjustStrategy<Input>>
 {
+  public enum AdjustmentType
+  {
+    MAX,
+    MERGE
+  }
+
+  public abstract AdjustmentType getAdjustmentType();
 
   public abstract String getAdjustmentMetricType();
 
@@ -48,4 +55,11 @@ public abstract class MaxIntermediateSizeAdjustStrategy
    * @return
    */
   public abstract int initAppendBytes();
+
+  /**
+   * if input value is different in the same metric type,then select the adjustment strategy with the maximum input value
+   *
+   * @return
+   */
+  public abstract Input getInputVal();
 }
