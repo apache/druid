@@ -91,8 +91,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   {
     name: 'columns',
     type: 'string-array',
-    required: (p: InputFormat) =>
-      (oneOf(p.type, 'csv', 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
+    required: true,
     defined: (p: InputFormat) =>
       (oneOf(p.type, 'csv', 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
   },
