@@ -34,6 +34,7 @@ import org.apache.druid.security.basic.authorization.db.updater.CoordinatorBasic
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -122,7 +123,8 @@ public class BasicRoleBasedAuthorizerTest
         new BasicAuthCommonCacheConfig(null, null, null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthorizerCacheNotifier(),
-        null
+        null,
+        new AuthConfig()
     );
 
     updater.start();

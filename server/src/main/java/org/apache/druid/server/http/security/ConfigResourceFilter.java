@@ -39,7 +39,7 @@ import org.apache.druid.server.security.ResourceType;
  * Note - Currently the resource name for all end points is set to "CONFIG" however if more fine grained access control
  * is required the resource name can be set to specific config properties.
  *
- *  @deprecated Used only with {@link org.apache.druid.server.security.AuthConfig#AUTH_VERSION_1}
+ *  @deprecated Used only with {@link AuthConfig#AUTH_VERSION_1}
  */
 @Deprecated
 public class ConfigResourceFilter extends AbstractResourceFilter

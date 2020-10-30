@@ -36,6 +36,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermi
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -113,7 +114,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
         new BasicAuthCommonCacheConfig(null, null, null, null),
         objectMapper,
         new NoopBasicAuthorizerCacheNotifier(),
-        null
+        null,
+        new AuthConfig()
     );
 
     updater.start();

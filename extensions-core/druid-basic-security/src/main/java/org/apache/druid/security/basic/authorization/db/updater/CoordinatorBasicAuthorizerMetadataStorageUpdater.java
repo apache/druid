@@ -53,6 +53,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserM
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -86,7 +87,9 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private static final String GROUP_MAPPINGS = "groupMappings";
   private static final String ROLES = "roles";
 
+  @Deprecated
   public static final List<ResourceAction> SUPERUSER_PERMISSIONS = makeSuperUserPermissions();
+  public static final List<ResourceAction> SUPERUSER_PERMISSIONS_V2 = makeSuperUserPermissionsV2();
 
   private final AuthorizerMapper authorizerMapper;
   private final MetadataStorageConnector connector;
@@ -94,6 +97,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private final BasicAuthorizerCacheNotifier cacheNotifier;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
+  private final AuthConfig authConfig;
   private final int numRetries = 5;
 
   private final Map<String, BasicAuthorizerUserMapBundle> cachedUserMaps;
@@ -114,7 +118,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       BasicAuthorizerCacheNotifier cacheNotifier,
-      ConfigManager configManager // -V6022: ConfigManager creates the db table we need, set a dependency here
+      ConfigManager configManager, // -V6022: ConfigManager creates the db table we need, set a dependency here
+      AuthConfig authConfig
   )
   {
     this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthorizerMetadataStorageUpdater-Exec--%d");
@@ -128,6 +133,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     this.cachedGroupMappingMaps = new ConcurrentHashMap<>();
     this.cachedRoleMaps = new ConcurrentHashMap<>();
     this.authorizerNames = new HashSet<>();
+    this.authConfig = authConfig;
   }
 
   @LifecycleStart
@@ -175,7 +181,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           initSuperUsersAndGroupMapping(authorizerName, userMap, roleMap, groupMappingMap,
                                         dbConfig.getInitialAdminUser(),
                                         dbConfig.getInitialAdminRole(),
-                                        dbConfig.getInitialAdminGroupMapping()
+                                        dbConfig.getInitialAdminGroupMapping(),
+                                        authConfig.getAuthVersion()
           );
         }
       }
@@ -1138,17 +1145,26 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       Map<String, BasicAuthorizerGroupMapping> groupMappingMap,
       String initialAdminUser,
       String initialAdminRole,
-      String initialAdminGroupMapping
+      String initialAdminGroupMapping,
+      String authVersion
   )
   {
     if (!roleMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
       createRoleInternal(authorizerName, BasicAuthUtils.ADMIN_NAME);
-      setPermissionsInternal(authorizerName, BasicAuthUtils.ADMIN_NAME, SUPERUSER_PERMISSIONS);
+      setPermissionsInternal(
+          authorizerName,
+          BasicAuthUtils.ADMIN_NAME,
+          authVersion.equals(AuthConfig.AUTH_VERSION_2) ? SUPERUSER_PERMISSIONS_V2 : SUPERUSER_PERMISSIONS
+      );
     }
 
     if (!roleMap.containsKey(BasicAuthUtils.INTERNAL_USER_NAME)) {
       createRoleInternal(authorizerName, BasicAuthUtils.INTERNAL_USER_NAME);
-      setPermissionsInternal(authorizerName, BasicAuthUtils.INTERNAL_USER_NAME, SUPERUSER_PERMISSIONS);
+      setPermissionsInternal(
+          authorizerName,
+          BasicAuthUtils.INTERNAL_USER_NAME,
+          authVersion.equals(AuthConfig.AUTH_VERSION_2) ? SUPERUSER_PERMISSIONS_V2 : SUPERUSER_PERMISSIONS
+      );
     }
 
     if (!userMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
@@ -1165,7 +1181,11 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         && !(initialAdminRole.equals(BasicAuthUtils.ADMIN_NAME) || initialAdminRole.equals(BasicAuthUtils.INTERNAL_USER_NAME))
         && !roleMap.containsKey(initialAdminRole)) {
       createRoleInternal(authorizerName, initialAdminRole);
-      setPermissionsInternal(authorizerName, initialAdminRole, SUPERUSER_PERMISSIONS);
+      setPermissionsInternal(
+          authorizerName,
+          initialAdminRole,
+          authVersion.equals(AuthConfig.AUTH_VERSION_2) ? SUPERUSER_PERMISSIONS_V2 : SUPERUSER_PERMISSIONS
+      );
     }
 
     if (initialAdminUser != null
@@ -1186,6 +1206,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
   }
 
+  @Deprecated
   private static List<ResourceAction> makeSuperUserPermissions()
   {
     ResourceAction datasourceR = new ResourceAction(
@@ -1219,5 +1240,50 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     );
 
     return Lists.newArrayList(datasourceR, datasourceW, configR, configW, stateR, stateW);
+  }
+
+  private static List<ResourceAction> makeSuperUserPermissionsV2()
+  {
+    ResourceAction datasourceR = new ResourceAction(
+        new Resource(".*", ResourceType.DATASOURCE),
+        Action.READ
+    );
+
+    ResourceAction datasourceW = new ResourceAction(
+        new Resource(".*", ResourceType.DATASOURCE),
+        Action.WRITE
+    );
+
+    ResourceAction internalR = new ResourceAction(
+        new Resource(".*", ResourceType.INTERNAL),
+        Action.READ
+    );
+
+    ResourceAction internalW = new ResourceAction(
+        new Resource(".*", ResourceType.INTERNAL),
+        Action.WRITE
+    );
+
+    ResourceAction lookupR = new ResourceAction(
+        new Resource(".*", ResourceType.LOOKUP),
+        Action.READ
+    );
+
+    ResourceAction lookupW = new ResourceAction(
+        new Resource(".*", ResourceType.LOOKUP),
+        Action.WRITE
+    );
+
+    ResourceAction serverR = new ResourceAction(
+        new Resource(".*", ResourceType.SERVER),
+        Action.READ
+    );
+
+    ResourceAction serverW = new ResourceAction(
+        new Resource(".*", ResourceType.SERVER),
+        Action.WRITE
+    );
+
+    return Lists.newArrayList(datasourceR, datasourceW, internalR, internalW, lookupR, lookupW, serverR, serverW);
   }
 }

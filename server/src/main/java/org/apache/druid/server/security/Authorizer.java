@@ -71,6 +71,7 @@ public interface Authorizer
    * @param action               The action to perform on the resource
    * @return An Access object representing the result of the authorization check. Must not be null.
    */
+  @Deprecated
   Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
 
   /**
