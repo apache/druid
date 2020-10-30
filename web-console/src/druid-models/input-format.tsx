@@ -127,11 +127,5 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 }
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  const inputFormatType = inputFormat.type;
-  return (
-    inputFormatType === 'json' ||
-    inputFormatType === 'parquet' ||
-    inputFormatType === 'orc' ||
-    inputFormatType === 'avro_ocf'
-  );
+  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf');
 }

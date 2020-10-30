@@ -2029,7 +2029,7 @@ export function guessTypeFromSample(sample: any[]): string {
   const definedValues = sample.filter(v => v != null);
   if (
     definedValues.length &&
-    definedValues.every(v => !isNaN(v) && (typeof v === 'number' || typeof v === 'string'))
+    definedValues.every(v => !isNaN(v) && oneOf(typeof v, 'number', 'string'))
   ) {
     if (definedValues.every(v => v % 1 === 0)) {
       return 'long';
