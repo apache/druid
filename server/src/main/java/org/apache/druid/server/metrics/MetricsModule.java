@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -109,7 +110,8 @@ public class MetricsModule implements Module
         config.get(),
         CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("MonitorScheduler-%s").build(),
         emitter,
-        monitors
+        monitors,
+        Executors.newFixedThreadPool(10)
     );
   }
 
