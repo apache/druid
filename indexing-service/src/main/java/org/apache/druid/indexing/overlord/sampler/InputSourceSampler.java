@@ -140,9 +140,9 @@ public class InputSourceSampler
           continue;
         }
 
-        for (int i = 0; i < rawColumnsList.size(); i++) {
+        for (int i = 0; i < inputRows.size(); i++) {
           // InputRowListPlusRawValues guarantees the size of rawColumnsList and inputRows are the same
-          Map<String, Object> rawColumns = rawColumnsList.get(i);
+          Map<String, Object> rawColumns = rawColumnsList == null ? null : rawColumnsList.get(i);
           InputRow row = inputRows.get(i);
 
           //keep the index of the row to be added to responseRows for further use
