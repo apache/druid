@@ -58,7 +58,7 @@ exports[`retention dialog matches snapshot 1`] = `
             Druid uses rules to determine what data should be retained in the cluster. The rules are evaluated in order from top to bottom. For more information please refer to the
              
             <a
-              href="https://druid.apache.org/docs/0.19.0/operations/rule-configuration.html"
+              href="https://druid.apache.org/docs/0.20.0/operations/rule-configuration.html"
               rel="noopener noreferrer"
               target="_blank"
             >

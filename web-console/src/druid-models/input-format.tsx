@@ -116,8 +116,8 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf'),
     info: (
       <>
-        Specifies if the bytes parquet column which is not logically marked as a string or enum type
-        should be treated as a UTF-8 encoded string.
+        Specifies if the binary column which is not logically marked as a string should be treated
+        as a UTF-8 encoded string.
       </>
     ),
   },

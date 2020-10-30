@@ -196,7 +196,7 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
       return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
 
     default:
-      return `${getLink('DOCS')}/ingestion/native-batch.html#firehoses`;
+      return `${getLink('DOCS')}/ingestion/native-batch.html#input-sources`;
   }
 }
 
@@ -353,7 +353,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -406,7 +406,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -430,7 +430,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ],
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/native-batch.html#local-input-source`}
+              >
                 inputSource.filter
               </ExternalLink>
               <p>
