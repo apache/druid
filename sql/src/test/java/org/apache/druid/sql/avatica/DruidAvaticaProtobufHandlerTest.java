@@ -19,25 +19,29 @@
 
 package org.apache.druid.sql.avatica;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.server.initialization.jetty.JettyBindings;
-import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.DruidNode;
 
-/**
- * The module responsible for providing bindings to Avatica.
- */
-public class AvaticaModule implements Module
+public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
 {
   @Override
-  public void configure(Binder binder)
+  protected String getJdbcConnectionString(final int port)
   {
-    JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
-    binder.bind(AvaticaMonitor.class).in(LazySingleton.class);
-    JettyBindings.addHandler(binder, DruidAvaticaJsonHandler.class);
-    JettyBindings.addHandler(binder, DruidAvaticaProtobufHandler.class);
-    MetricsModule.register(binder, AvaticaMonitor.class);
+    return StringUtils.format(
+            "jdbc:avatica:remote:url=http://127.0.0.1:%d%s;serialization=protobuf",
+            port,
+            DruidAvaticaProtobufHandler.AVATICA_PATH
+    );
+  }
+
+  @Override
+  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  {
+    return new DruidAvaticaProtobufHandler(
+            druidMeta,
+            new DruidNode("dummy", "dummy", false, 1, null, true, false),
+            new AvaticaMonitor()
+    );
   }
 }

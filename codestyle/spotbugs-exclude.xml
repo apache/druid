@@ -38,6 +38,12 @@
             </Or>
         </And>
     </Match>
+    <Match>
+        <And>
+            <Bug pattern="SE_BAD_FIELD_STORE" />
+            <Class name="org.apache.druid.server.AsyncQueryForwardingServlet" />
+        </And>
+    </Match>
 
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>
