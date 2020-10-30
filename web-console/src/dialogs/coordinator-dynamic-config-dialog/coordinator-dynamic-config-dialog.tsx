@@ -264,6 +264,18 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
               </>
             ),
           },
+          {
+            name: 'pauseCoordination',
+            type: 'boolean',
+            defaultValue: false,
+            info: (
+              <>
+                Boolean flag for whether or not the coordinator should execute its various duties of
+                coordinating the cluster. Setting this to true essentially pauses all coordination
+                work while allowing the API to remain up.
+              </>
+            ),
+          },
         ]}
         model={dynamicConfig}
         onChange={m => setDynamicConfig(m)}
