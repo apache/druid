@@ -20,6 +20,7 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -127,7 +128,7 @@ public class InputRowListPlusRawValues
   @Nullable
   public Map<String, Object> getRawValues()
   {
-    return CollectionUtils.isNullOrEmpty(rawValues) ? null : rawValues.get(0);
+    return CollectionUtils.isNullOrEmpty(rawValues) ? null : Iterables.getOnlyElement(rawValues);
   }
 
   public List<Map<String, Object>> getRawValuesList()
