@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
-.compaction-dialog {
-  &.bp3-dialog {
-    height: 80vh;
-  }
+import { timeFormatMatches } from './time';
 
-  .form-json-selector {
-    margin: 15px;
-  }
+describe('timeFormatMatches', () => {
+  it('works for auto', () => {
+    expect(timeFormatMatches('auto', '2019-05-22 22:42:51+0000')).toBeTruthy();
+  });
 
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 0 5px 0 15px;
-    flex: 1;
-    overflow: auto;
-  }
-}
+  it('works for iso', () => {
+    expect(timeFormatMatches('iso', '2019-05-22T22:42:51+0000')).toBeTruthy();
+    expect(timeFormatMatches('iso', '2019-05-22 22:42:51+0000')).toBeFalsy();
+  });
+});

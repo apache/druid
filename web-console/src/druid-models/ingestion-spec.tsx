@@ -19,23 +19,38 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../components/auto-form/auto-form';
-import { ExternalLink } from '../components/external-link/external-link';
+import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
+import {
+  deepDelete,
+  deepGet,
+  deepMove,
+  deepSet,
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
+  filterMap,
+  oneOf,
+} from '../utils';
+import { HeaderAndRows } from '../utils/sampler';
 
 import {
-  BASIC_TIME_FORMATS,
-  DATE_ONLY_TIME_FORMATS,
-  DATETIME_TIME_FORMATS,
-  OTHER_TIME_FORMATS,
-} from './druid-time';
-import { deepDelete, deepGet, deepMove, deepSet } from './object-change';
+  DimensionsSpec,
+  getDimensionSpecName,
+  getDimensionSpecs,
+  getDimensionSpecType,
+} from './dimension-spec';
+import { InputFormat, issueWithInputFormat } from './input-format';
+import { InputSource, issueWithInputSource } from './input-source';
+import {
+  getMetricSpecOutputType,
+  getMetricSpecs,
+  getMetricSpecSingleFieldName,
+  MetricSpec,
+} from './metric-spec';
+import { PLACEHOLDER_TIMESTAMP_SPEC, TimestampSpec } from './timestamp-spec';
+import { TransformSpec } from './transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
-
-// These constants are used to make sure that they are not constantly recreated thrashing the pure components
-export const EMPTY_OBJECT: any = {};
-export const EMPTY_ARRAY: any[] = [];
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
@@ -76,14 +91,6 @@ export type IngestionComboTypeWithExtra =
   | 'hadoop'
   | 'example'
   | 'other';
-
-export function adjustIngestionSpec(spec: IngestionSpec) {
-  const tuningConfig = deepGet(spec, 'spec.tuningConfig');
-  if (tuningConfig) {
-    spec = deepSet(spec, 'spec.tuningConfig', adjustTuningConfig(tuningConfig));
-  }
-  return spec;
-}
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
@@ -189,7 +196,7 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
       return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
 
     default:
-      return `${getLink('DOCS')}/ingestion/native-batch.html#firehoses`;
+      return `${getLink('DOCS')}/ingestion/native-batch.html#input-sources`;
   }
 }
 
@@ -229,18 +236,6 @@ export interface DataSchema {
   metricsSpec?: MetricSpec[];
 }
 
-export interface InputFormat {
-  type: string;
-  findColumnsFromHeader?: boolean;
-  skipHeaderRows?: number;
-  columns?: string[];
-  listDelimiter?: string;
-  pattern?: string;
-  function?: string;
-  flattenSpec?: FlattenSpec;
-  keepNullColumns?: boolean;
-}
-
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
@@ -266,7 +261,7 @@ export function isTask(spec: IngestionSpec) {
   const type = String(getSpecType(spec));
   return (
     type.startsWith('index_') ||
-    ['index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge'].includes(type)
+    oneOf(type, 'index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge')
   );
 }
 
@@ -314,653 +309,12 @@ export function cleanSpec(spec: IngestionSpec): IngestionSpec {
   };
 }
 
-const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
-  {
-    name: 'type',
-    label: 'Input format',
-    type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
-    info: (
-      <>
-        <p>The parser used to parse the data.</p>
-        <p>
-          For more information see{' '}
-          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
-            the documentation
-          </ExternalLink>
-          .
-        </p>
-      </>
-    ),
-  },
-  {
-    name: 'pattern',
-    type: 'string',
-    required: true,
-    defined: (p: InputFormat) => p.type === 'regex',
-  },
-  {
-    name: 'function',
-    type: 'string',
-    required: true,
-    defined: (p: InputFormat) => p.type === 'javascript',
-  },
-  {
-    name: 'findColumnsFromHeader',
-    type: 'boolean',
-    required: true,
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
-  },
-  {
-    name: 'skipHeaderRows',
-    type: 'number',
-    defaultValue: 0,
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
-    min: 0,
-    info: (
-      <>
-        If both skipHeaderRows and hasHeaderRow options are set, skipHeaderRows is first applied.
-        For example, if you set skipHeaderRows to 2 and hasHeaderRow to true, Druid will skip the
-        first two lines and then extract column information from the third line.
-      </>
-    ),
-  },
-  {
-    name: 'columns',
-    type: 'string-array',
-    required: (p: InputFormat) =>
-      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
-    defined: (p: InputFormat) =>
-      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
-  },
-  {
-    name: 'delimiter',
-    type: 'string',
-    defaultValue: '\t',
-    defined: (p: InputFormat) => p.type === 'tsv',
-    info: <>A custom delimiter for data values.</>,
-  },
-  {
-    name: 'listDelimiter',
-    type: 'string',
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv' || p.type === 'regex',
-    info: <>A custom delimiter for multi-value dimensions.</>,
-  },
-  {
-    name: 'binaryAsString',
-    type: 'boolean',
-    defaultValue: false,
-    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc' || p.type === 'avro_ocf',
-    info: (
-      <>
-        Specifies if the bytes parquet column which is not logically marked as a string or enum type
-        should be treated as a UTF-8 encoded string.
-      </>
-    ),
-  },
-];
-
-export function getInputFormatFormFields() {
-  return INPUT_FORMAT_FORM_FIELDS;
-}
-
-export function issueWithInputFormat(inputFormat: InputFormat | undefined): string | undefined {
-  if (!inputFormat) return 'no input format';
-  if (!inputFormat.type) return 'missing a type';
-  switch (inputFormat.type) {
-    case 'regex':
-      if (!inputFormat.pattern) return "must have a 'pattern'";
-      break;
-
-    case 'javascript':
-      if (!inputFormat['function']) return "must have a 'function'";
-      break;
-  }
-  return;
-}
-
-export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  const inputFormatType = inputFormat.type;
-  return (
-    inputFormatType === 'json' ||
-    inputFormatType === 'parquet' ||
-    inputFormatType === 'orc' ||
-    inputFormatType === 'avro_ocf'
-  );
-}
-
-export interface TimestampSpec {
-  column?: string;
-  format?: string;
-  missingValue?: string;
-}
-
-export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
-  // https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
-  return timestampSpec.column || 'timestamp';
-}
-
-const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
-
-const DUMMY_TIMESTAMP_SPEC: TimestampSpec = {
-  column: NO_SUCH_COLUMN,
-  missingValue: '1970-01-01T00:00:00Z',
-};
-
-export function getDummyTimestampSpec() {
-  return DUMMY_TIMESTAMP_SPEC;
-}
-
-const CONSTANT_TIMESTAMP_SPEC: TimestampSpec = {
-  column: NO_SUCH_COLUMN,
-  missingValue: '2010-01-01T00:00:00Z',
-};
-
-export function getConstantTimestampSpec() {
-  return CONSTANT_TIMESTAMP_SPEC;
-}
-
-export function isColumnTimestampSpec(timestampSpec: TimestampSpec) {
-  return (deepGet(timestampSpec, 'column') || 'timestamp') !== NO_SUCH_COLUMN;
-}
-
-const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
-  {
-    name: 'column',
-    type: 'string',
-    defaultValue: 'timestamp',
-  },
-  {
-    name: 'format',
-    type: 'string',
-    defaultValue: 'auto',
-    suggestions: [
-      ...BASIC_TIME_FORMATS,
-      {
-        group: 'Date and time formats',
-        suggestions: DATETIME_TIME_FORMATS,
-      },
-      {
-        group: 'Date only formats',
-        suggestions: DATE_ONLY_TIME_FORMATS,
-      },
-      {
-        group: 'Other time formats',
-        suggestions: OTHER_TIME_FORMATS,
-      },
-    ],
-    defined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
-    info: (
-      <p>
-        Please specify your timestamp format by using the suggestions menu or typing in a{' '}
-        <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html">
-          format string
-        </ExternalLink>
-        .
-      </p>
-    ),
-  },
-  {
-    name: 'missingValue',
-    type: 'string',
-    placeholder: '(optional)',
-    info: <p>This value will be used if the specified column can not be found.</p>,
-  },
-];
-
-const CONSTANT_TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
-  {
-    name: 'missingValue',
-    label: 'Constant value',
-    type: 'string',
-    info: <p>The dummy value that will be used as the timestamp.</p>,
-  },
-];
-
-export function getTimestampSpecFormFields(timestampSpec: TimestampSpec) {
-  if (isColumnTimestampSpec(timestampSpec)) {
-    return TIMESTAMP_SPEC_FORM_FIELDS;
-  } else {
-    return CONSTANT_TIMESTAMP_SPEC_FORM_FIELDS;
-  }
-}
-
-export function issueWithTimestampSpec(
-  timestampSpec: TimestampSpec | undefined,
-): string | undefined {
-  if (!timestampSpec) return 'no spec';
-  if (!timestampSpec.column && !timestampSpec.missingValue) return 'timestamp spec is blank';
-  return;
-}
-
-export interface DimensionsSpec {
-  dimensions?: (string | DimensionSpec)[];
-  dimensionExclusions?: string[];
-  spatialDimensions?: any[];
-}
-
-export interface DimensionSpec {
-  type: string;
-  name: string;
-  createBitmapIndex?: boolean;
-}
-
-const DIMENSION_SPEC_FORM_FIELDS: Field<DimensionSpec>[] = [
-  {
-    name: 'name',
-    type: 'string',
-  },
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: ['string', 'long', 'float', 'double'],
-  },
-  {
-    name: 'createBitmapIndex',
-    type: 'boolean',
-    defaultValue: true,
-    defined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
-  },
-];
-
-export function getDimensionSpecFormFields() {
-  return DIMENSION_SPEC_FORM_FIELDS;
-}
-
-export function getDimensionSpecName(dimensionSpec: string | DimensionSpec): string {
-  return typeof dimensionSpec === 'string' ? dimensionSpec : dimensionSpec.name;
-}
-
-export function getDimensionSpecType(dimensionSpec: string | DimensionSpec): string {
-  return typeof dimensionSpec === 'string' ? 'string' : dimensionSpec.type;
-}
-
-export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): DimensionSpec {
-  return typeof dimensionSpec === 'string'
-    ? { name: dimensionSpec, type: 'string' }
-    : dimensionSpec;
-}
-
-export interface FlattenSpec {
-  useFieldDiscovery?: boolean;
-  fields?: FlattenField[];
-}
-
-export interface FlattenField {
-  name: string;
-  type: string;
-  expr: string;
-}
-
-const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
-  {
-    name: 'name',
-    type: 'string',
-    placeholder: 'column_name',
-    required: true,
-  },
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: ['path', 'jq', 'root'],
-    required: true,
-  },
-  {
-    name: 'expr',
-    type: 'string',
-    placeholder: '$.thing',
-    defined: (flattenField: FlattenField) =>
-      flattenField.type === 'path' || flattenField.type === 'jq',
-    required: true,
-    info: (
-      <>
-        Specify a flatten{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>expression</ExternalLink>.
-      </>
-    ),
-  },
-];
-
-export function getFlattenFieldFormFields() {
-  return FLATTEN_FIELD_FORM_FIELDS;
-}
-
-export interface TransformSpec {
-  transforms?: Transform[];
-  filter?: any;
-}
-
-export interface Transform {
-  type: string;
-  name: string;
-  expression: string;
-}
-
-const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
-  {
-    name: 'name',
-    type: 'string',
-    placeholder: 'output_name',
-    required: true,
-  },
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: ['expression'],
-    required: true,
-  },
-  {
-    name: 'expression',
-    type: 'string',
-    placeholder: '"foo" + "bar"',
-    required: true,
-    info: (
-      <>
-        A valid Druid{' '}
-        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>.
-      </>
-    ),
-  },
-];
-
-export function getTransformFormFields() {
-  return TRANSFORM_FORM_FIELDS;
-}
-
 export interface GranularitySpec {
   type?: string;
   queryGranularity?: string;
   segmentGranularity?: string;
   rollup?: boolean;
   intervals?: string | string[];
-}
-
-export interface MetricSpec {
-  type: string;
-  name?: string;
-  fieldName?: string;
-  maxStringBytes?: number;
-  filterNullValues?: boolean;
-  fieldNames?: string[];
-  fnAggregate?: string;
-  fnCombine?: string;
-  fnReset?: string;
-  fields?: string[];
-  byRow?: boolean;
-  round?: boolean;
-  isInputHyperUnique?: boolean;
-  filter?: any;
-  aggregator?: MetricSpec;
-}
-
-const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
-  {
-    name: 'name',
-    type: 'string',
-    info: <>The metric name as it will appear in Druid.</>,
-  },
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: [
-      'count',
-      {
-        group: 'sum',
-        suggestions: ['longSum', 'doubleSum', 'floatSum'],
-      },
-      {
-        group: 'min',
-        suggestions: ['longMin', 'doubleMin', 'floatMin'],
-      },
-      {
-        group: 'max',
-        suggestions: ['longMax', 'doubleMax', 'floatMax'],
-      },
-      {
-        group: 'first',
-        suggestions: ['longFirst', 'doubleFirst', 'floatFirst'],
-      },
-      {
-        group: 'last',
-        suggestions: ['longLast', 'doubleLast', 'floatLast'],
-      },
-      'thetaSketch',
-      {
-        group: 'HLLSketch',
-        suggestions: ['HLLSketchBuild', 'HLLSketchMerge'],
-      },
-      'quantilesDoublesSketch',
-      'momentSketch',
-      'fixedBucketsHistogram',
-      'hyperUnique',
-      'filtered',
-    ],
-    info: <>The aggregation function to apply.</>,
-  },
-  {
-    name: 'fieldName',
-    type: 'string',
-    defined: m => m.type !== 'filtered',
-    info: <>The column name for the aggregator to operate on.</>,
-  },
-  {
-    name: 'maxStringBytes',
-    type: 'number',
-    defaultValue: 1024,
-    defined: m => {
-      return ['stringFirst', 'stringLast'].includes(m.type);
-    },
-  },
-  {
-    name: 'filterNullValues',
-    type: 'boolean',
-    defaultValue: false,
-    defined: m => {
-      return ['stringFirst', 'stringLast'].includes(m.type);
-    },
-  },
-  // filtered
-  {
-    name: 'filter',
-    type: 'json',
-    defined: m => m.type === 'filtered',
-  },
-  {
-    name: 'aggregator',
-    type: 'json',
-    defined: m => m.type === 'filtered',
-  },
-  // thetaSketch
-  {
-    name: 'size',
-    type: 'number',
-    defined: m => m.type === 'thetaSketch',
-    defaultValue: 16384,
-    info: (
-      <>
-        <p>
-          Must be a power of 2. Internally, size refers to the maximum number of entries sketch
-          object will retain. Higher size means higher accuracy but more space to store sketches.
-          Note that after you index with a particular size, druid will persist sketch in segments
-          and you will use size greater or equal to that at query time.
-        </p>
-        <p>
-          See the{' '}
-          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize.html">
-            DataSketches site
-          </ExternalLink>{' '}
-          for details.
-        </p>
-        <p>In general, We recommend just sticking to default size.</p>
-      </>
-    ),
-  },
-  {
-    name: 'isInputThetaSketch',
-    type: 'boolean',
-    defined: m => m.type === 'thetaSketch',
-    defaultValue: false,
-    info: (
-      <>
-        This should only be used at indexing time if your input data contains theta sketch objects.
-        This would be the case if you use datasketches library outside of Druid, say with Pig/Hive,
-        to produce the data that you are ingesting into Druid
-      </>
-    ),
-  },
-  // HLLSketchBuild & HLLSketchMerge
-  {
-    name: 'lgK',
-    type: 'number',
-    defined: m => m.type === 'HLLSketchBuild' || m.type === 'HLLSketchMerge',
-    defaultValue: 12,
-    info: (
-      <>
-        <p>
-          log2 of K that is the number of buckets in the sketch, parameter that controls the size
-          and the accuracy.
-        </p>
-        <p>Must be between 4 to 21 inclusively.</p>
-      </>
-    ),
-  },
-  {
-    name: 'tgtHllType',
-    type: 'string',
-    defined: m => m.type === 'HLLSketchBuild' || m.type === 'HLLSketchMerge',
-    defaultValue: 'HLL_4',
-    suggestions: ['HLL_4', 'HLL_6', 'HLL_8'],
-    info: (
-      <>
-        The type of the target HLL sketch. Must be <Code>HLL_4</Code>, <Code>HLL_6</Code>, or{' '}
-        <Code>HLL_8</Code>.
-      </>
-    ),
-  },
-  // quantilesDoublesSketch
-  {
-    name: 'k',
-    type: 'number',
-    defined: m => m.type === 'quantilesDoublesSketch',
-    defaultValue: 128,
-    info: (
-      <>
-        <p>
-          Parameter that determines the accuracy and size of the sketch. Higher k means higher
-          accuracy but more space to store sketches.
-        </p>
-        <p>
-          Must be a power of 2 from 2 to 32768. See the{' '}
-          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy.html">
-            Quantiles Accuracy
-          </ExternalLink>{' '}
-          for details.
-        </p>
-      </>
-    ),
-  },
-  // momentSketch
-  {
-    name: 'k',
-    type: 'number',
-    defined: m => m.type === 'momentSketch',
-    required: true,
-    info: (
-      <>
-        Parameter that determines the accuracy and size of the sketch. Higher k means higher
-        accuracy but more space to store sketches. Usable range is generally [3,15]
-      </>
-    ),
-  },
-  {
-    name: 'compress',
-    type: 'boolean',
-    defined: m => m.type === 'momentSketch',
-    defaultValue: true,
-    info: (
-      <>
-        Flag for whether the aggregator compresses numeric values using arcsinh. Can improve
-        robustness to skewed and long-tailed distributions, but reduces accuracy slightly on more
-        uniform distributions.
-      </>
-    ),
-  },
-  // fixedBucketsHistogram
-  {
-    name: 'lowerLimit',
-    type: 'number',
-    defined: m => m.type === 'fixedBucketsHistogram',
-    required: true,
-    info: <>Lower limit of the histogram.</>,
-  },
-  {
-    name: 'upperLimit',
-    type: 'number',
-    defined: m => m.type === 'fixedBucketsHistogram',
-    required: true,
-    info: <>Upper limit of the histogram.</>,
-  },
-  {
-    name: 'numBuckets',
-    type: 'number',
-    defined: m => m.type === 'fixedBucketsHistogram',
-    defaultValue: 10,
-    required: true,
-    info: (
-      <>
-        Number of buckets for the histogram. The range <Code>[lowerLimit, upperLimit]</Code> will be
-        divided into <Code>numBuckets</Code> intervals of equal size.
-      </>
-    ),
-  },
-  {
-    name: 'outlierHandlingMode',
-    type: 'string',
-    defined: m => m.type === 'fixedBucketsHistogram',
-    required: true,
-    suggestions: ['ignore', 'overflow', 'clip'],
-    info: (
-      <>
-        <p>
-          Specifies how values outside of <Code>[lowerLimit, upperLimit]</Code> will be handled.
-        </p>
-        <p>
-          Supported modes are <Code>ignore</Code>, <Code>overflow</Code>, and <Code>clip</Code>. See
-          <ExternalLink
-            href={`${getLink(
-              'DOCS',
-            )}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
-          >
-            outlier handling modes
-          </ExternalLink>{' '}
-          for more details.
-        </p>
-      </>
-    ),
-  },
-  // hyperUnique
-  {
-    name: 'isInputHyperUnique',
-    type: 'boolean',
-    defined: m => m.type === 'hyperUnique',
-    defaultValue: false,
-    info: (
-      <>
-        This can be set to true to index precomputed HLL (Base64 encoded output from druid-hll is
-        expected).
-      </>
-    ),
-  },
-];
-
-export function getMetricSpecFormFields() {
-  return METRIC_SPEC_FORM_FIELDS;
-}
-
-export function getMetricSpecName(metricSpec: MetricSpec): string {
-  return (
-    metricSpec.name || (metricSpec.aggregator ? getMetricSpecName(metricSpec.aggregator) : '?')
-  );
 }
 
 // --------------
@@ -990,29 +344,6 @@ export function invalidIoConfig(ioConfig: IoConfig): boolean {
   );
 }
 
-export interface InputSource {
-  type: string;
-  baseDir?: string;
-  filter?: any;
-  uris?: string[];
-  prefixes?: string[];
-  objects?: { bucket: string; path: string }[];
-  fetchTimeout?: number;
-
-  // druid
-  dataSource?: string;
-  interval?: string;
-  dimensions?: string[];
-  metrics?: string[];
-  maxInputSegmentBytesPerTask?: number;
-
-  // inline
-  data?: string;
-
-  // hdfs
-  paths?: string;
-}
-
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
   const inputSourceType: Field<IoConfig> = {
     name: 'inputSource.type',
@@ -1022,7 +353,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -1075,7 +406,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -1099,7 +430,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ],
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/native-batch.html#local-input-source`}
+              >
                 inputSource.filter
               </ExternalLink>
               <p>
@@ -1588,55 +921,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
   throw new Error(`unknown input type ${ingestionComboType}`);
 }
 
-function nonEmptyArray(a: any) {
-  return Array.isArray(a) && Boolean(a.length);
-}
-
-function issueWithInputSource(inputSource: InputSource | undefined): string | undefined {
-  if (!inputSource) return 'does not exist';
-  if (!inputSource.type) return 'missing a type';
-  switch (inputSource.type) {
-    case 'local':
-      if (!inputSource.baseDir) return `must have a 'baseDir'`;
-      if (!inputSource.filter) return `must have a 'filter'`;
-      break;
-
-    case 'http':
-      if (!nonEmptyArray(inputSource.uris)) {
-        return 'must have at least one uri';
-      }
-      break;
-
-    case 'druid':
-      if (!inputSource.dataSource) return `must have a 'dataSource'`;
-      if (!inputSource.interval) return `must have an 'interval'`;
-      break;
-
-    case 'inline':
-      if (!inputSource.data) return `must have 'data'`;
-      break;
-
-    case 's3':
-    case 'azure':
-    case 'google':
-      if (
-        !nonEmptyArray(inputSource.uris) &&
-        !nonEmptyArray(inputSource.prefixes) &&
-        !nonEmptyArray(inputSource.objects)
-      ) {
-        return 'must have at least one uri or prefix or object';
-      }
-      break;
-
-    case 'hdfs':
-      if (!inputSource.paths) {
-        return 'must have paths';
-      }
-      break;
-  }
-  return;
-}
-
 export function issueWithIoConfig(
   ioConfig: IoConfig | undefined,
   ignoreInputFormat = false,
@@ -2096,30 +1380,29 @@ export function adjustTuningConfig(tuningConfig: TuningConfig) {
   const tuningConfigType = deepGet(tuningConfig, 'type');
   if (tuningConfigType !== 'index_parallel') return tuningConfig;
 
-  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type');
-  if (tuningConfig.forceGuaranteedRollup) {
-    if (partitionsSpecType !== 'hashed' && partitionsSpecType !== 'single_dim') {
-      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'hashed' });
-    }
-  } else {
-    if (partitionsSpecType !== 'dynamic') {
-      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'dynamic' });
-    }
+  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type') || 'dynamic';
+  if (partitionsSpecType === 'dynamic') {
+    tuningConfig = deepDelete(tuningConfig, 'forceGuaranteedRollup');
+  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
+    tuningConfig = deepSet(tuningConfig, 'forceGuaranteedRollup', true);
   }
+
   return tuningConfig;
 }
 
 export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
-  if (tuningConfig.type !== 'index_parallel' || !tuningConfig.forceGuaranteedRollup) return false;
+  if (tuningConfig.type !== 'index_parallel') return false;
 
-  if (!intervals) return true;
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
     case 'hashed':
+      if (!intervals) return true;
       return (
         Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
         Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
       );
+
     case 'single_dim':
+      if (!intervals) return true;
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
       const hasTargetRowsPerSegment = Boolean(
         deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
@@ -2142,24 +1425,11 @@ export function getPartitionRelatedTuningSpecFormFields(
     case 'index_parallel':
       return [
         {
-          name: 'forceGuaranteedRollup',
-          type: 'boolean',
-          defaultValue: false,
-          info: (
-            <p>
-              Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size of
-              generated segments and querying time while indexing time will be increased. If this is
-              set to true, the index task will read the entire input data twice: one for finding the
-              optimal number of partitions per time chunk and one for generating segments.
-            </p>
-          ),
-        },
-        {
           name: 'partitionsSpec.type',
           label: 'Partitioning type',
           type: 'string',
-          suggestions: (t: TuningConfig) =>
-            t.forceGuaranteedRollup ? ['hashed', 'single_dim'] : ['dynamic'],
+          required: true,
+          suggestions: ['dynamic', 'hashed', 'single_dim'],
           info: (
             <p>
               For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
@@ -2355,17 +1625,26 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'maxNumMergeTasks',
+    name: 'totalNumMergeTasks',
     type: 'number',
     defaultValue: 10,
-    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    min: 1,
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
+      ),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
     name: 'maxNumSegmentsToMerge',
     type: 'number',
     defaultValue: 100,
-    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
+      ),
     info: (
       <>
         Max limit for the number of segments a single task can merge at the same time after shuffle.
@@ -2376,7 +1655,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -2388,14 +1667,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -2429,7 +1708,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
@@ -2489,7 +1768,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
@@ -2498,14 +1777,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
     name: 'chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -2517,14 +1796,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
@@ -2676,7 +1955,7 @@ export function updateIngestionType(
   }
 
   if (!deepGet(spec, 'spec.dataSchema.timestampSpec')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.timestampSpec', getDummyTimestampSpec());
+    newSpec = deepSet(newSpec, 'spec.dataSchema.timestampSpec', PLACEHOLDER_TIMESTAMP_SPEC);
   }
 
   if (!deepGet(spec, 'spec.dataSchema.dimensionsSpec')) {
@@ -2744,110 +2023,90 @@ function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): Inp
   return inputFormat;
 }
 
-export type DruidFilter = Record<string, any>;
+// ------------------------
 
-export interface DimensionFiltersWithRest {
-  dimensionFilters: DruidFilter[];
-  restFilter?: DruidFilter;
+export function guessTypeFromSample(sample: any[]): string {
+  const definedValues = sample.filter(v => v != null);
+  if (
+    definedValues.length &&
+    definedValues.every(v => !isNaN(v) && oneOf(typeof v, 'number', 'string'))
+  ) {
+    if (definedValues.every(v => v % 1 === 0)) {
+      return 'long';
+    } else {
+      return 'double';
+    }
+  } else {
+    return 'string';
+  }
 }
 
-export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
-  const inputAndFilters: DruidFilter[] = filter
-    ? filter.type === 'and' && Array.isArray(filter.fields)
-      ? filter.fields
-      : [filter]
-    : EMPTY_ARRAY;
-  const dimensionFilters: DruidFilter[] = inputAndFilters.filter(
-    f => typeof f.dimension === 'string',
+export function getColumnTypeFromHeaderAndRows(
+  headerAndRows: HeaderAndRows,
+  column: string,
+): string {
+  return guessTypeFromSample(
+    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
   );
-  const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
-
-  return {
-    dimensionFilters,
-    restFilter: restFilters.length
-      ? restFilters.length > 1
-        ? { type: 'and', filters: restFilters }
-        : restFilters[0]
-      : undefined,
-  };
 }
 
-export function joinFilter(
-  dimensionFiltersWithRest: DimensionFiltersWithRest,
-): DruidFilter | undefined {
-  const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
-  let newFields = dimensionFilters || EMPTY_ARRAY;
-  if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
+function getTypeHintsFromSpec(spec: IngestionSpec): Record<string, string> {
+  const typeHints: Record<string, string> = {};
+  const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
+  for (const currentDimension of currentDimensions) {
+    typeHints[getDimensionSpecName(currentDimension)] = getDimensionSpecType(currentDimension);
+  }
 
-  if (!newFields.length) return;
-  if (newFields.length === 1) return newFields[0];
-  return { type: 'and', fields: newFields };
+  const currentMetrics = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
+  for (const currentMetric of currentMetrics) {
+    const singleFieldName = getMetricSpecSingleFieldName(currentMetric);
+    const metricOutputType = getMetricSpecOutputType(currentMetric);
+    if (singleFieldName && metricOutputType) {
+      typeHints[singleFieldName] = metricOutputType;
+    }
+  }
+
+  return typeHints;
 }
 
-const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
-  {
-    name: 'type',
-    type: 'string',
-    suggestions: ['selector', 'in', 'regex', 'like', 'not'],
-  },
-  {
-    name: 'dimension',
-    type: 'string',
-    defined: (df: DruidFilter) => ['selector', 'in', 'regex', 'like'].includes(df.type),
-  },
-  {
-    name: 'value',
-    type: 'string',
-    defined: (df: DruidFilter) => df.type === 'selector',
-  },
-  {
-    name: 'values',
-    type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'in',
-  },
-  {
-    name: 'pattern',
-    type: 'string',
-    defined: (df: DruidFilter) => ['regex', 'like'].includes(df.type),
-  },
+export function updateSchemaWithSample(
+  spec: IngestionSpec,
+  headerAndRows: HeaderAndRows,
+  dimensionMode: DimensionMode,
+  rollup: boolean,
+): IngestionSpec {
+  const typeHints = getTypeHintsFromSpec(spec);
 
-  {
-    name: 'field.type',
-    label: 'Sub-filter type',
-    type: 'string',
-    suggestions: ['selector', 'in', 'regex', 'like'],
-    defined: (df: DruidFilter) => df.type === 'not',
-  },
-  {
-    name: 'field.dimension',
-    label: 'Sub-filter dimension',
-    type: 'string',
-    defined: (df: DruidFilter) => df.type === 'not',
-  },
-  {
-    name: 'field.value',
-    label: 'Sub-filter value',
-    type: 'string',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'selector',
-  },
-  {
-    name: 'field.values',
-    label: 'Sub-filter values',
-    type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'in',
-  },
-  {
-    name: 'field.pattern',
-    label: 'Sub-filter pattern',
-    type: 'string',
-    defined: (df: DruidFilter) =>
-      df.type === 'not' && ['regex', 'like'].includes(deepGet(df, 'field.type')),
-  },
-];
+  let newSpec = spec;
 
-export function getFilterFormFields() {
-  return FILTER_FORM_FIELDS;
+  if (dimensionMode === 'auto-detect') {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', []);
+  } else {
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
+
+    const dimensions = getDimensionSpecs(headerAndRows, typeHints, rollup);
+    if (dimensions) {
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
+    }
+  }
+
+  if (rollup) {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'HOUR');
+
+    const metrics = getMetricSpecs(headerAndRows, typeHints);
+    if (metrics) {
+      newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
+    }
+  } else {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'NONE');
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
+  }
+
+  newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);
+  return newSpec;
 }
+
+// ------------------------
 
 export function upgradeSpec(spec: any): any {
   if (deepGet(spec, 'spec.ioConfig.firehose')) {

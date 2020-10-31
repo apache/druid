@@ -37,18 +37,20 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addFilter,
+  Capabilities,
+  CapabilitiesMode,
+  deepGet,
   formatBytes,
   formatBytesCompact,
   LocalStorageKeys,
   lookupBy,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './services-view.scss';
 
@@ -92,7 +94,6 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
-  middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   capabilities: Capabilities;
@@ -326,8 +327,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             show: hiddenColumns.exists('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -348,8 +348,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
             },
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -428,7 +427,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 100,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 return row.worker ? (row.currCapacityUsed || 0) / row.worker.capacity : null;
               } else {
                 return row.max_size ? row.curr_size / row.max_size : null;
@@ -488,7 +487,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 400,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
 
                 const details: string[] = [];
@@ -551,10 +550,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: row => {
-              if (!row.value) return null;
-              const disabled = row.value.version === '';
-              const workerActions = this.getWorkerActions(row.value.host, disabled);
+            Cell: ({ value }) => {
+              if (!value) return null;
+              const disabled = value.version === '';
+              const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
           },

@@ -16,7 +16,50 @@
  * limitations under the License.
  */
 
-import { FlattenField } from './ingestion-spec';
+import React from 'react';
+
+import { ExternalLink, Field } from '../components';
+import { getLink } from '../links';
+import { oneOf } from '../utils';
+
+export interface FlattenSpec {
+  useFieldDiscovery?: boolean;
+  fields?: FlattenField[];
+}
+
+export interface FlattenField {
+  name: string;
+  type: string;
+  expr: string;
+}
+
+export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
+  {
+    name: 'name',
+    type: 'string',
+    placeholder: 'column_name',
+    required: true,
+  },
+  {
+    name: 'type',
+    type: 'string',
+    suggestions: ['path', 'jq', 'root'],
+    required: true,
+  },
+  {
+    name: 'expr',
+    type: 'string',
+    placeholder: '$.thing',
+    defined: (flattenField: FlattenField) => oneOf(flattenField.type, 'path', 'jq'),
+    required: true,
+    info: (
+      <>
+        Specify a flatten{' '}
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>expression</ExternalLink>.
+      </>
+    ),
+  },
+];
 
 export type ExprType = 'path' | 'jq';
 export type ArrayHandling = 'ignore-arrays' | 'include-arrays';

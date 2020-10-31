@@ -11,7 +11,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
     Edit the coordinator dynamic configuration on the fly. For more information please refer to the
      
     <Memo(ExternalLink)
-      href="https://druid.apache.org/docs/0.19.0/configuration/index.html#dynamic-configuration"
+      href="https://druid.apache.org/docs/0.20.0/configuration/index.html#dynamic-configuration"
     >
       documentation
     </Memo(ExternalLink)>

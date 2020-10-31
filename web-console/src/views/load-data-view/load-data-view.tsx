@@ -54,53 +54,46 @@ import {
 } from '../../components';
 import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
-import { getLink } from '../../links';
-import { AppToaster } from '../../singletons/toaster';
-import { UrlBaser } from '../../singletons/url-baser';
 import {
-  filterMap,
-  getDruidErrorMessage,
-  localStorageGet,
-  LocalStorageKeys,
-  localStorageSet,
-  parseJson,
-  pluralIfNeeded,
-  QueryState,
-} from '../../utils';
-import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
-import { updateSchemaWithSample } from '../../utils/druid-type';
+  addTimestampTransform,
+  CONSTANT_TIMESTAMP_SPEC,
+  CONSTANT_TIMESTAMP_SPEC_FIELDS,
+  DIMENSION_SPEC_FIELDS,
+  FILTER_FIELDS,
+  FLATTEN_FIELD_FIELDS,
+  getTimestampExpressionFields,
+  getTimestampSchema,
+  INPUT_FORMAT_FIELDS,
+  METRIC_SPEC_FIELDS,
+  removeTimestampTransform,
+  TIMESTAMP_SPEC_FIELDS,
+  TimestampSpec,
+  Transform,
+  TRANSFORM_FIELDS,
+  updateSchemaWithSample,
+} from '../../druid-models';
 import {
-  adjustIngestionSpec,
   adjustTuningConfig,
   cleanSpec,
+  computeFlattenPathsForData,
   DimensionMode,
   DimensionSpec,
   DimensionsSpec,
   DruidFilter,
-  EMPTY_ARRAY,
-  EMPTY_OBJECT,
   fillDataSourceNameIfNeeded,
   fillInputFormat,
   FlattenField,
-  getConstantTimestampSpec,
   getDimensionMode,
-  getDimensionSpecFormFields,
-  getFilterFormFields,
-  getFlattenFieldFormFields,
   getIngestionComboType,
   getIngestionDocLink,
   getIngestionImage,
   getIngestionTitle,
-  getInputFormatFormFields,
   getIoConfigFormFields,
   getIoConfigTuningFormFields,
-  getMetricSpecFormFields,
   getPartitionRelatedTuningSpecFormFields,
   getRequiredModule,
   getRollup,
   getSpecType,
-  getTimestampSpecFormFields,
-  getTransformFormFields,
   getTuningSpecFormFields,
   GranularitySpec,
   IngestionComboTypeWithExtra,
@@ -110,7 +103,6 @@ import {
   invalidIoConfig,
   invalidTuningConfig,
   IoConfig,
-  isColumnTimestampSpec,
   isDruidSource,
   isEmptyIngestionSpec,
   issueWithIoConfig,
@@ -119,14 +111,33 @@ import {
   MAX_INLINE_DATA_LENGTH,
   MetricSpec,
   normalizeSpec,
+  NUMERIC_TIME_FORMATS,
+  possibleDruidFormatForValues,
   splitFilter,
-  TimestampSpec,
-  Transform,
   TuningConfig,
   updateIngestionType,
   upgradeSpec,
-} from '../../utils/ingestion-spec';
-import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
+} from '../../druid-models';
+import { getLink } from '../../links';
+import { AppToaster } from '../../singletons/toaster';
+import { UrlBaser } from '../../singletons/url-baser';
+import {
+  deepDelete,
+  deepGet,
+  deepSet,
+  deepSetMulti,
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
+  filterMap,
+  getDruidErrorMessage,
+  localStorageGet,
+  LocalStorageKeys,
+  localStorageSet,
+  oneOf,
+  parseJson,
+  pluralIfNeeded,
+  QueryState,
+} from '../../utils';
 import {
   CacheRows,
   ExampleManifest,
@@ -146,7 +157,6 @@ import {
   SampleResponseWithExtraInfo,
   SampleStrategy,
 } from '../../utils/sampler';
-import { computeFlattenPathsForData } from '../../utils/spec-utils';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
@@ -187,7 +197,7 @@ function showBlankLine(line: SampleEntry): string {
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
-  if (!headerAndRows) return getConstantTimestampSpec();
+  if (!headerAndRows) return CONSTANT_TIMESTAMP_SPEC;
 
   const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
     const possibleFormat = possibleDruidFormatForValues(
@@ -204,7 +214,7 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
     timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
     timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
     timestampSpecs[0] || // Fall back to the first one
-    getConstantTimestampSpec() // Ok, empty it is...
+    CONSTANT_TIMESTAMP_SPEC // Ok, empty it is...
   );
 }
 
@@ -300,7 +310,7 @@ export interface LoadDataViewState {
   // for timestamp
   timestampQueryState: QueryState<{
     headerAndRows: HeaderAndRows;
-    timestampSpec: TimestampSpec;
+    spec: IngestionSpec;
   }>;
 
   // for transform
@@ -454,7 +464,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
-    newSpec = adjustIngestionSpec(newSpec);
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
     if (!deepGet(newSpec, 'spec.ioConfig.type')) {
       deltaState.cacheRows = undefined;
@@ -470,7 +479,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private applyPreviewSpec = () => {
     this.setState(state => {
       localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(state.specPreview));
-      return { spec: state.specPreview };
+      return { spec: Object.assign({}, state.specPreview) };
     });
   };
 
@@ -577,14 +586,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderApplyButtonBar() {
+  renderApplyButtonBar(queryState: QueryState<unknown>) {
     const previewSpecSame = this.isPreviewSpecSame();
+    const queryStateHasError = Boolean(queryState && queryState.error);
 
     return (
       <FormGroup className="control-buttons">
         <Button
           text="Apply"
-          disabled={previewSpecSame}
+          disabled={previewSpecSame && !queryStateHasError}
           intent={Intent.PRIMARY}
           onClick={this.applyPreviewSpec}
         />
@@ -1047,7 +1057,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForConnect(spec, sampleStrategy);
     } catch (e) {
       this.setState({
-        inputQueryState: new QueryState({ error: e.message }),
+        inputQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1091,7 +1101,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (inputQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (inputQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${inputQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${inputQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (inputQueryState.data) {
       const inputData = inputQueryState.data.data;
       mainFill = (
@@ -1168,7 +1178,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Callout>
             </FormGroup>
           )}
-          {(specType === 'kafka' || specType === 'kinesis') && (
+          {oneOf(specType, 'kafka', 'kinesis') && (
             <FormGroup label="Where should the data be sampled from?">
               <HTMLSelect
                 value={sampleStrategy}
@@ -1179,7 +1189,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </HTMLSelect>
             </FormGroup>
           )}
-          {this.renderApplyButtonBar()}
+          {this.renderApplyButtonBar(inputQueryState)}
         </div>
         {this.renderNextBar({
           disabled: !inputQueryState.data,
@@ -1278,7 +1288,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForParser(spec, sampleStrategy);
     } catch (e) {
       this.setState({
-        parserQueryState: new QueryState({ error: e.message }),
+        parserQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1315,7 +1325,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (parserQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (parserQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${parserQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${parserQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (parserQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1380,13 +1390,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {!selectedFlattenField && (
             <>
               <AutoForm
-                fields={getInputFormatFormFields()}
+                fields={INPUT_FORMAT_FIELDS}
                 model={inputFormat}
                 onChange={p =>
                   this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
                 }
               />
-              {this.renderApplyButtonBar()}
+              {this.renderApplyButtonBar(parserQueryState)}
             </>
           )}
           {this.renderFlattenControls()}
@@ -1461,7 +1471,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getFlattenFieldFormFields()}
+            fields={FLATTEN_FIELD_FIELDS}
             model={selectedFlattenField}
             onChange={f => this.setState({ selectedFlattenField: f })}
           />
@@ -1529,7 +1539,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, cacheRows } = this.state;
     const inputFormatColumns: string[] =
       deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
-    const timestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec') || EMPTY_OBJECT;
 
     if (!cacheRows) {
       this.setState({
@@ -1549,7 +1558,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForTimestamp(spec, cacheRows);
     } catch (e) {
       this.setState({
-        timestampQueryState: new QueryState({ error: e.message }),
+        timestampQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1562,7 +1571,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             undefined,
             ['__time'].concat(inputFormatColumns),
           ),
-          timestampSpec,
+          spec,
         },
       }),
     });
@@ -1570,9 +1579,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderTimestampStep() {
     const { specPreview: spec, columnFilter, specialColumnsOnly, timestampQueryState } = this.state;
+    const timestampSchema = getTimestampSchema(spec);
     const timestampSpec: TimestampSpec =
       deepGet(spec, 'spec.dataSchema.timestampSpec') || EMPTY_OBJECT;
-    const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
+    const transforms: Transform[] =
+      deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
     let mainFill: JSX.Element | string = '';
     if (timestampQueryState.isInit()) {
@@ -1585,7 +1596,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (timestampQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (timestampQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${timestampQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${timestampQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (timestampQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1622,46 +1633,88 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p>
               Druid partitions data based on the primary time column of your data. This column is
-              stored internally in Druid as <Code>__time</Code>. Please specify the primary time
-              column. If you do not have any time columns, you can choose "Constant value" to create
-              a default one.
+              stored internally in Druid as <Code>__time</Code>.
+            </p>
+            <p>Configure how to define the time column for this data.</p>
+            <p>
+              If your data does not have a time column, you can select "None" to use a placeholder
+              value. If the time information is spread across multiple columns you can combine them
+              into one by selecting "Expression" and defining a transform expression.
             </p>
             <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#timestampspec`} />
           </Callout>
-          <FormGroup label="Timestamp spec">
+          <FormGroup label="Parse timestamp from">
             <ButtonGroup>
               <Button
-                text="From column"
-                active={timestampSpecFromColumn}
+                text="None"
+                active={timestampSchema === 'none'}
+                onClick={() => {
+                  this.updateSpecPreview(
+                    deepSetMulti(spec, {
+                      'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
+                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
+                        transforms,
+                      ),
+                    }),
+                  );
+                }}
+              />
+              <Button
+                text="Column"
+                active={timestampSchema === 'column'}
                 onClick={() => {
                   const timestampSpec = {
                     column: 'timestamp',
                     format: 'auto',
                   };
                   this.updateSpecPreview(
-                    deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec),
+                    deepSetMulti(spec, {
+                      'spec.dataSchema.timestampSpec': timestampSpec,
+                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
+                        transforms,
+                      ),
+                    }),
                   );
                 }}
               />
               <Button
-                text="Constant value"
-                active={!timestampSpecFromColumn}
+                text="Expression"
+                active={timestampSchema === 'expression'}
                 onClick={() => {
                   this.updateSpecPreview(
-                    deepSet(spec, 'spec.dataSchema.timestampSpec', getConstantTimestampSpec()),
+                    deepSetMulti(spec, {
+                      'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
+                      'spec.dataSchema.transformSpec.transforms': addTimestampTransform(transforms),
+                    }),
                   );
                 }}
               />
             </ButtonGroup>
           </FormGroup>
-          <AutoForm
-            fields={getTimestampSpecFormFields(timestampSpec)}
-            model={timestampSpec}
-            onChange={timestampSpec => {
-              this.updateSpecPreview(deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec));
-            }}
-          />
-          {this.renderApplyButtonBar()}
+          {timestampSchema === 'expression' ? (
+            <AutoForm
+              fields={getTimestampExpressionFields(transforms)}
+              model={transforms}
+              onChange={transforms => {
+                this.updateSpecPreview(
+                  deepSet(spec, 'spec.dataSchema.transformSpec.transforms', transforms),
+                );
+              }}
+            />
+          ) : (
+            <AutoForm
+              fields={
+                timestampSchema === 'none' ? CONSTANT_TIMESTAMP_SPEC_FIELDS : TIMESTAMP_SPEC_FIELDS
+              }
+              model={timestampSpec}
+              onChange={timestampSpec => {
+                this.updateSpecPreview(
+                  deepSet(spec, 'spec.dataSchema.timestampSpec', timestampSpec),
+                );
+              }}
+            />
+          )}
+          {this.renderApplyButtonBar(timestampQueryState)}
         </div>
         {this.renderNextBar({
           disabled: !timestampQueryState.data,
@@ -1700,7 +1753,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForTransform(spec, cacheRows);
     } catch (e) {
       this.setState({
-        transformQueryState: new QueryState({ error: e.message }),
+        transformQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1734,7 +1787,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (transformQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (transformQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${transformQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${transformQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (transformQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -1834,7 +1887,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getTransformFormFields()}
+            fields={TRANSFORM_FIELDS}
             model={selectedTransform}
             onChange={selectedTransform => this.setState({ selectedTransform })}
           />
@@ -1915,7 +1968,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForFilter(spec, cacheRows);
     } catch (e) {
       this.setState({
-        filterQueryState: new QueryState({ error: e.message }),
+        filterQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1941,7 +1994,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponseNoFilter = await sampleForFilter(specNoFilter, cacheRows);
     } catch (e) {
       this.setState({
-        filterQueryState: new QueryState({ error: e.message }),
+        filterQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -1976,7 +2029,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (filterQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (filterQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${filterQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${filterQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (filterQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -2048,10 +2101,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getFilterFormFields()}
+            fields={FILTER_FIELDS}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
-            showCustom={f => !['selector', 'in', 'regex', 'like', 'not'].includes(f.type)}
+            showCustom={f => !oneOf(f.type, 'selector', 'in', 'regex', 'like', 'not')}
           />
           <div className="control-buttons">
             <Button
@@ -2122,12 +2175,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: 'Time intervals',
                 type: 'string-array',
                 placeholder: 'ex: 2018-01-01/2018-06-01',
-                info: (
-                  <>
-                    A comma separated list of intervals for the raw data being ingested. Ignored for
-                    real-time ingestion.
-                  </>
-                ),
+                info: <>A comma separated list of intervals for the raw data being ingested.</>,
               },
             ]}
             model={spec}
@@ -2202,7 +2250,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sampleResponse = await sampleForSchema(spec, cacheRows);
     } catch (e) {
       this.setState({
-        schemaQueryState: new QueryState({ error: e.message }),
+        schemaQueryState: new QueryState({ error: e }),
       });
       return;
     }
@@ -2242,7 +2290,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (schemaQueryState.isLoading()) {
       mainFill = <Loader />;
     } else if (schemaQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${schemaQueryState.error.message}`}</CenterMessage>;
+      mainFill = <CenterMessage>{`Error: ${schemaQueryState.getErrorMessage()}`}</CenterMessage>;
     } else if (schemaQueryState.data) {
       mainFill = (
         <div className="table-with-control">
@@ -2362,7 +2410,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 <Switch
                   checked={rollup}
                   onChange={() => this.setState({ newRollup: !rollup })}
-                  labelElement="Rollup"
+                  label="Rollup"
                 />
               </FormGroupWithInfo>
               <AutoForm
@@ -2394,6 +2442,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         {this.renderNextBar({
           disabled: !schemaQueryState.data,
+          onNextStep: () => {
+            let newSpec = spec;
+            if (rollup) {
+              newSpec = deepSet(newSpec, 'spec.tuningConfig.partitionsSpec', { type: 'hashed' });
+              newSpec = deepSet(newSpec, 'spec.tuningConfig.forceGuaranteedRollup', true);
+            } else {
+              newSpec = deepSet(newSpec, 'spec.tuningConfig.partitionsSpec', { type: 'dynamic' });
+              newSpec = deepDelete(newSpec, 'spec.tuningConfig.forceGuaranteedRollup');
+            }
+            this.updateSpec(newSpec);
+          },
         })}
       </>
     );
@@ -2544,7 +2603,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getDimensionSpecFormFields()}
+            fields={DIMENSION_SPEC_FIELDS}
             model={selectedDimensionSpec}
             onChange={selectedDimensionSpec => this.setState({ selectedDimensionSpec })}
           />
@@ -2667,7 +2726,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return (
         <div className="edit-controls">
           <AutoForm
-            fields={getMetricSpecFormFields()}
+            fields={METRIC_SPEC_FIELDS}
             model={selectedMetricSpec}
             onChange={selectedMetricSpec => this.setState({ selectedMetricSpec })}
           />
@@ -2742,6 +2801,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const tuningConfig: TuningConfig = deepGet(spec, 'spec.tuningConfig') || EMPTY_OBJECT;
     const granularitySpec: GranularitySpec =
       deepGet(spec, 'spec.dataSchema.granularitySpec') || EMPTY_OBJECT;
+    const isStreaming = oneOf(spec.type, 'kafka', 'kinesis');
 
     return (
       <>
@@ -2774,25 +2834,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={granularitySpec}
             onChange={g => this.updateSpec(deepSet(spec, 'spec.dataSchema.granularitySpec', g))}
           />
-          <AutoForm
-            fields={[
-              {
-                name: 'spec.dataSchema.granularitySpec.intervals',
-                label: 'Time intervals',
-                type: 'string-array',
-                placeholder: 'ex: 2018-01-01/2018-06-01',
-                required: spec => Boolean(deepGet(spec, 'spec.tuningConfig.forceGuaranteedRollup')),
-                info: (
-                  <>
-                    A comma separated list of intervals for the raw data being ingested. Ignored for
-                    real-time ingestion.
-                  </>
-                ),
-              },
-            ]}
-            model={spec}
-            onChange={s => this.updateSpec(s)}
-          />
+          {!isStreaming && (
+            <AutoForm
+              fields={[
+                {
+                  name: 'spec.dataSchema.granularitySpec.intervals',
+                  label: 'Time intervals',
+                  type: 'string-array',
+                  placeholder: 'ex: 2018-01-01/2018-06-01',
+                  required: spec =>
+                    ['hashed', 'single_dim'].includes(
+                      deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'),
+                    ),
+                  info: <>A comma separated list of intervals for the raw data being ingested.</>,
+                },
+              ]}
+              model={spec}
+              onChange={s => this.updateSpec(s)}
+            />
+          )}
         </div>
         <div className="other">
           <H5>Secondary partitioning</H5>
@@ -2904,7 +2964,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: 'Append to existing',
                 type: 'boolean',
                 defaultValue: false,
-                defined: spec => !deepGet(spec, 'spec.tuningConfig.forceGuaranteedRollup'),
+                defined: spec =>
+                  deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
                 info: (
                   <>
                     Creates segments as additional shards of the latest version, effectively

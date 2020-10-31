@@ -90,6 +90,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -104,6 +105,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -112,6 +114,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -175,14 +178,14 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
@@ -327,6 +330,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -341,6 +345,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -349,6 +354,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -412,14 +418,14 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
@@ -564,6 +570,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -578,6 +585,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -586,6 +594,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -649,14 +658,14 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
@@ -801,6 +810,7 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -815,6 +825,7 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -823,6 +834,7 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -886,14 +898,14 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {

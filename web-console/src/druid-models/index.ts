@@ -16,19 +16,16 @@
  * limitations under the License.
  */
 
-.compaction-dialog {
-  &.bp3-dialog {
-    height: 80vh;
-  }
-
-  .form-json-selector {
-    margin: 15px;
-  }
-
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 0 5px 0 15px;
-    flex: 1;
-    overflow: auto;
-  }
-}
+export * from './compaction-config';
+export * from './compaction-status';
+export * from './lookup-spec';
+export * from './time';
+export * from './timestamp-spec';
+export * from './transform-spec';
+export * from './input-source';
+export * from './input-format';
+export * from './flatten-spec';
+export * from './filter';
+export * from './dimension-spec';
+export * from './metric-spec';
+export * from './ingestion-spec';

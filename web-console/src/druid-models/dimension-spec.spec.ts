@@ -16,19 +16,14 @@
  * limitations under the License.
  */
 
-.compaction-dialog {
-  &.bp3-dialog {
-    height: 80vh;
-  }
+import { getDimensionSpecs } from './dimension-spec';
 
-  .form-json-selector {
-    margin: 15px;
-  }
-
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 0 5px 0 15px;
-    flex: 1;
-    overflow: auto;
-  }
-}
+describe('dimension-spec', () => {
+  it('getDimensionSpecs', () => {
+    expect(getDimensionSpecs({ header: ['header'], rows: [] }, {}, true)).toMatchInlineSnapshot(`
+      Array [
+        "header",
+      ]
+    `);
+  });
+});
