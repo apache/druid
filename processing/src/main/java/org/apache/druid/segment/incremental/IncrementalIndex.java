@@ -735,26 +735,27 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     if (dimParseExceptionMessages != null) {
       for (String parseExceptionMessage : dimParseExceptionMessages) {
-        if (stringBuilder.length() > 0) {
-          stringBuilder.append(",");
-        }
         stringBuilder.append(parseExceptionMessage);
-
+        stringBuilder.append(",");
         numAdded++;
       }
     }
     if (aggParseExceptionMessages != null) {
       for (String parseExceptionMessage : aggParseExceptionMessages) {
-        if (stringBuilder.length() > 0) {
-          stringBuilder.append(",");
-        }
         stringBuilder.append(parseExceptionMessage);
+        stringBuilder.append(",");
         numAdded++;
       }
     }
 
     if (numAdded == 0) {
       return null;
+    }
+
+    // remove extra "," at the end of the message
+    int messageLen = stringBuilder.length();
+    if (messageLen > 0) {
+      stringBuilder.delete(messageLen - 1, messageLen);
     }
     return new ParseException(
         true,
