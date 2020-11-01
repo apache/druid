@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 public class PrometheusEmitterConfig
 {
 
-  Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
+  final static Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
   @JsonProperty
   private final Strategy strategy;

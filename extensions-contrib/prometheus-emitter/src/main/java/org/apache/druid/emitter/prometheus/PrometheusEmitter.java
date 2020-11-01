@@ -26,6 +26,7 @@ import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -33,23 +34,27 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.regex.Pattern;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  */
 public class PrometheusEmitter implements Emitter
 {
-
   private static final Logger log = new Logger(PrometheusEmitter.class);
   private final Metrics metrics;
   private final PrometheusEmitterConfig config;
   private final PrometheusEmitterConfig.Strategy strategy;
-  private final Pattern pattern = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
   private HTTPServer server;
   private PushGateway pushGateway;
   private String identifier;
+
+  private static ScheduledExecutorService PUSHGATE_WAY_EXECUTOR_SERVICE =
+          Executors.newSingleThreadScheduledExecutor(
+                  new BasicThreadFactory.Builder().namingPattern("Metric-Pusher-%d").daemon(true).build());
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
@@ -80,6 +85,7 @@ public class PrometheusEmitter implements Emitter
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       pushGateway = new PushGateway(config.getPushGatewayAddress());
+      PUSHGATE_WAY_EXECUTOR_SERVICE.scheduleAtFixedRate(this::pushMetric, 1L, 5L, TimeUnit.MINUTES);
     }
 
   }
@@ -92,7 +98,7 @@ public class PrometheusEmitter implements Emitter
     }
   }
 
-  void emitMetric(ServiceMetricEvent metricEvent)
+  private void emitMetric(ServiceMetricEvent metricEvent)
   {
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
@@ -108,7 +114,7 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? pattern.matcher(userDim.toString()).replaceAll("_") : "unknown";
+        labelValues[i] = userDim != null ? Metrics.pattern.matcher(userDim.toString()).replaceAll("_") : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {
@@ -125,17 +131,22 @@ public class PrometheusEmitter implements Emitter
     }
   }
 
-  @Override
-  public void flush()
-  {
-    Map<String, DimensionsAndCollector> map = metrics.getMap();
+  private void pushMetric(){
+    Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     try {
       for (DimensionsAndCollector collector : map.values()) {
         pushGateway.push(collector.getCollector(), config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
       }
-    }
-    catch(IOException e){
+    } catch (IOException e) {
       log.error(e, "Unable to push prometheus metrics to pushGateway");
+    }
+  }
+
+  @Override
+  public void flush()
+  {
+    if(pushGateway != null) {
+      pushMetric();
     }
   }
 

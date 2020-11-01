@@ -45,24 +45,20 @@ public class Metrics
 {
 
   private static final Logger log = new Logger(Metrics.class);
-  private final Map<String, DimensionsAndCollector> map = new HashMap<>();
+  private final Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
-  private final Pattern pattern = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
+  public static final Pattern pattern = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
   public DimensionsAndCollector getByName(String name, String service)
   {
-    if (map.containsKey(name)) {
-      return map.get(name);
-    } else if (map.containsKey(service + "_" + name)) {
-      return map.get(service + "_" + name);
-    } else {
-      return null;
-    }
+    if (registeredMetrics.containsKey(name)) {
+      return registeredMetrics.get(name);
+    } else return registeredMetrics.getOrDefault(service + "_" + name, null);
   }
 
   public Metrics(String namespace, String path)
   {
-    Map<String, Metric> metrics = readMap(path);
+    Map<String, Metric> metrics = readConfig(path);
     for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
       String name = entry.getKey();
       Metric metric = entry.getValue();
@@ -97,21 +93,21 @@ public class Metrics
       }
 
       if (collector != null) {
-        map.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
+        registeredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
       }
     }
 
   }
 
-  private Map<String, Metric> readMap(String path)
+  private Map<String, Metric> readConfig(String path)
   {
     try {
       InputStream is;
       if (Strings.isNullOrEmpty(path)) {
-        log.info("Using default metric dimension and types");
+        log.info("Using default metric configuration");
         is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics.json");
       } else {
-        log.info("Using metric dimensions at types at [%s]", path);
+        log.info("Using metric configuration at [%s]", path);
         is = new FileInputStream(new File(path));
       }
       return mapper.readerFor(new TypeReference<Map<String, Metric>>()
@@ -119,13 +115,13 @@ public class Metrics
       }).readValue(is);
     }
     catch (IOException e) {
-      throw new ISE(e, "Failed to parse metric dimensions and types");
+      throw new ISE(e, "Failed to parse metric configuration");
     }
   }
 
-  public Map<String, DimensionsAndCollector> getMap()
+  public Map<String, DimensionsAndCollector> getRegisteredMetrics()
   {
-    return map;
+    return registeredMetrics;
   }
 
   public static class Metric
