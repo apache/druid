@@ -57,11 +57,13 @@ public abstract class AbstractMonitor implements Monitor
 
   public abstract boolean doMonitor(ServiceEmitter emitter);
 
+  @Override
   public Future<?> getScheduledFuture()
   {
     return scheduledFuture;
   }
 
+  @Override
   public void setScheduledFuture(Future<?> scheduledFuture)
   {
     this.scheduledFuture = scheduledFuture;
