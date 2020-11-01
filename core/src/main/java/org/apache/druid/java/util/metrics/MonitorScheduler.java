@@ -135,7 +135,7 @@ public class MonitorScheduler
   {
     synchronized (lock) {
       monitor.start();
-      Long rate = config.getEmitterPeriod().getMillis();
+      long rate = config.getEmitterPeriod().getMillis();
       Future<?> scheduledFuture = scheduler.scheduleAtFixedRate(
           rate,
           rate,
@@ -157,6 +157,7 @@ public class MonitorScheduler
                 log.trace("Running %s (period %s)", this, rate);
                 monitorFuture = executorService.submit(new Callable<Boolean>()
                 {
+                  @Override
                   public Boolean call()
                   {
                     try {
