@@ -111,7 +111,7 @@ public class MetricsModule implements Module
         CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("MonitorScheduler-%s").build(),
         emitter,
         monitors,
-        Executors.newFixedThreadPool(10)
+        Executors.newCachedThreadPool()
     );
   }
 
