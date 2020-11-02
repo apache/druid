@@ -114,9 +114,9 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X GET  http://loc
 
 ### Step 2: Add permissions to a role 
 
-You can now add one or more permissions to the role. The following example adds read-only access to a `wikipedia` data source.  
+You can now add one or more permission to the role. The following example adds read-only access to a `wikipedia` data source.  
 
-Given the following JSON in a file named perm.json:
+Given the following JSON in a file named `perm.json`:
 
 ```
 [{ "resource": { "name": "wikipedia", "type": "DATASOURCE" }, "action": "READ" }
@@ -130,7 +130,7 @@ The following command associates the permissions in the JSON file with the role
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d@perm.json  http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/roles/readRole/permissions
 ```
 
-Note that the STATE and CONFIG permissions in perm.json are needed to see the data source in the Druid console. If only querying permissions are needed, the READ action is sufficient:
+Note that the STATE and CONFIG permissions in `perm.json` are needed to see the data source in the Druid console. If only querying permissions are needed, the READ action is sufficient:
 
 ```
 [{ "resource": { "name": "wikipedia", "type": "DATASOURCE" }, "action": "READ" }]
@@ -141,7 +141,7 @@ You can also provide the name in the form of regular expression. For example, to
 
 ### Step 3: Create group Mapping 
 
-The following shows an example of a group to role mapping. It assumes the existence of a group named "group1" in the directory, which is mapped to a role in a file named groupmap.json:
+The following shows an example of a group to role mapping. It assumes that a group named "group1" exists in the directory. Also assuming the following role mapping in a file named `groupmap.json`:
 
 ```
 {
@@ -153,25 +153,25 @@ The following shows an example of a group to role mapping. It assumes the existe
 }
 ```
 
-You can then creates a group mapping as follows:
+You can configure the mapping as follows:
 
 ```
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
 ```
 
-Check if the group mapping is created successfully by executing the following command:
+To check whether the group mapping was created successfully, run the following command:
 
 ```
 curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
 ```
 
-To check the details of a specific group mapping use the following:
+To check the details of a specific group mapping, use the following:
 
 ```
 curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
 ```
 
-To add additional roles to the group mapping use the following API 
+To add additional roles to the group mapping, use the following API:
 
 ```
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
@@ -179,7 +179,7 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://loca
 
 ### Step 4. Assign roles for individual LDAP users
 
-Once LDAP is enabled, only the user password is verified with LDAP. You can add LDAP user to Druid as follows: 
+Once LDAP is enabled, only user passwords are verified with LDAP. You add the LDAP user to Druid as follows: 
 
 ```
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<AD user> 

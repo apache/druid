@@ -27,7 +27,7 @@ This document describes the Druid security model that extensions use to enable u
 
 ## Authentication and authorization model
 
-At the center of the Druid user authentication and authoratization model are _resources_ and _actions_. A resource is something that authenticated users are trying to access or modify. An action is something that users are trying to do. 
+At the center of the Druid user authentication and authorization model are _resources_ and _actions_. A resource is something that authenticated users are trying to access or modify. An action is something that users are trying to do. 
 
 There are three resource types:
 
@@ -35,7 +35,7 @@ There are three resource types:
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * STATE &ndash; Cluster-wide state resources.
 
-For specific resources associated with the types, see the endpoint list below and the corresponding descriptions of those endpoints on [API Reference](api-reference).
+For specific resources associated with the types, see the endpoint list below and corresponding descriptions in [API Reference](api-reference).
 
 There are two actions:
 
