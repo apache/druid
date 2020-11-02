@@ -16102,7 +16102,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testTimeStampAddConversion() throws Exception
   {
     final PeriodGranularity periodGranularity = new PeriodGranularity(new Period("P1M"), null, null);
-    skipVectorize();
 
     //
     // 2nd parameter for TIMESTAMPADD is literal, it will be translated to 'P1M' string
