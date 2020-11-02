@@ -22,7 +22,7 @@ title: "Indexer Process"
   ~ under the License.
   -->
 
-> The Indexer is an optional and [experimental](../../development/experimental.md) feature.
+> The Indexer is an optional and [experimental](../development/experimental.md) feature.
 > Its memory management system is still under development and will be significantly enhanced in later releases. 
 
 The Apache Druid Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
