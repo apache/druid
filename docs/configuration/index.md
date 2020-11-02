@@ -1190,7 +1190,7 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the MiddleManager.|0|
 |`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of CPUs on the machine - 1|
-|`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`__default_worker_category`|
+|`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
 
 #### Peon Processing
 
