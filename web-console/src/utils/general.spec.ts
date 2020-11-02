@@ -22,6 +22,7 @@ import {
   formatBytesCompact,
   formatInteger,
   formatMegabytes,
+  formatMillions,
   formatPercent,
   sortWithPrefixSuffix,
   sqlQueryCustomTableFilter,
@@ -54,20 +55,26 @@ describe('general', () => {
   });
 
   describe('sqlQueryCustomTableFilter', () => {
-    it('works', () => {
+    it('works with contains', () => {
       expect(
-        sqlQueryCustomTableFilter({
-          id: 'datasource',
-          value: `hello`,
-        }),
-      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('%hello%')"`);
+        String(
+          sqlQueryCustomTableFilter({
+            id: 'datasource',
+            value: `Hello`,
+          }),
+        ),
+      ).toEqual(`LOWER("datasource") LIKE '%hello%'`);
+    });
 
+    it('works with exact', () => {
       expect(
-        sqlQueryCustomTableFilter({
-          id: 'datasource',
-          value: `"hello"`,
-        }),
-      ).toMatchInlineSnapshot(`"\\"datasource\\" = 'hello'"`);
+        String(
+          sqlQueryCustomTableFilter({
+            id: 'datasource',
+            value: `"hello"`,
+          }),
+        ),
+      ).toEqual(`"datasource" = 'hello'`);
     });
   });
 
@@ -116,6 +123,15 @@ describe('general', () => {
   describe('formatPercent', () => {
     it('works', () => {
       expect(formatPercent(2 / 3)).toEqual('66.67%');
+    });
+  });
+
+  describe('formatMillions', () => {
+    it('works', () => {
+      expect(formatMillions(1e6)).toEqual('1.000 M');
+      expect(formatMillions(1e6 + 1)).toEqual('1.000 M');
+      expect(formatMillions(1234567)).toEqual('1.235 M');
+      expect(formatMillions(345.2)).toEqual('345');
     });
   });
 });

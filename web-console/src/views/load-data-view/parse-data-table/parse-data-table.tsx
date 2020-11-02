@@ -22,8 +22,8 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { FlattenField } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { FlattenField } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-data-table.scss';

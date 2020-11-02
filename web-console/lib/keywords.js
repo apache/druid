@@ -36,6 +36,7 @@ exports.SQL_KEYWORDS = [
   'ASC',
   'DESC',
   'LIMIT',
+  'OFFSET',
   'UNION ALL',
   'JOIN',
   'LEFT',

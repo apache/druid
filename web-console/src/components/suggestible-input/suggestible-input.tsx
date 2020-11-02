@@ -83,6 +83,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
       rightElement={
         suggestions && (
           <Popover
+            boundary={'window'}
             content={
               <Menu>
                 {suggestions.map(suggestion => {

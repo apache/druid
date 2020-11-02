@@ -16,15 +16,7 @@
  * limitations under the License.
  */
 
-import { timeFormatMatches } from './druid-time';
+$card-padding: $pt-grid-size * 2;
 
-describe('timeFormatMatches', () => {
-  it('works for auto', () => {
-    expect(timeFormatMatches('auto', '2019-05-22 22:42:51+0000')).toBeTruthy();
-  });
-
-  it('works for iso', () => {
-    expect(timeFormatMatches('iso', '2019-05-22T22:42:51+0000')).toBeTruthy();
-    expect(timeFormatMatches('iso', '2019-05-22 22:42:51+0000')).toBeFalsy();
-  });
-});
+$card-background-color: $white;
+$dark-card-background-color: $dark-gray3;

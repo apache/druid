@@ -33,7 +33,12 @@ public abstract class LongOutLongDoubleInFunctionVectorProcessor
       int maxVectorSize
   )
   {
-    super(left, right, maxVectorSize, new long[maxVectorSize]);
+    super(
+        CastToTypeVectorProcessor.cast(left, ExprType.LONG),
+        CastToTypeVectorProcessor.cast(right, ExprType.DOUBLE),
+        maxVectorSize,
+        new long[maxVectorSize]
+    );
   }
 
   public abstract long apply(long left, double right);

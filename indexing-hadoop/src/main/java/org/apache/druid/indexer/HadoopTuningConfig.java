@@ -29,6 +29,7 @@ import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 
 import javax.annotation.Nullable;
@@ -56,6 +57,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
+        DEFAULT_APPENDABLE_INDEX,
         DEFAULT_ROW_FLUSH_BOUNDARY,
         0L,
         false,
@@ -83,6 +85,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
+  private final AppendableIndexSpec appendableIndexSpec;
   private final int rowFlushBoundary;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
@@ -108,6 +111,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("shardSpecs") @Nullable Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
+      final @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
@@ -140,8 +144,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
                                                       ? DEFAULT_ROW_FLUSH_BOUNDARY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
+    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
@@ -211,6 +216,13 @@ public class HadoopTuningConfig implements TuningConfig
     return indexSpecForIntermediatePersists;
   }
 
+  @JsonProperty
+  @Override
+  public AppendableIndexSpec getAppendableIndexSpec()
+  {
+    return appendableIndexSpec;
+  }
+
   @JsonProperty("maxRowsInMemory")
   public int getRowFlushBoundary()
   {
@@ -218,6 +230,7 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
+  @Override
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
@@ -327,6 +340,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
+        appendableIndexSpec,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -357,6 +371,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
+        appendableIndexSpec,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -387,6 +402,7 @@ public class HadoopTuningConfig implements TuningConfig
         specs,
         indexSpec,
         indexSpecForIntermediatePersists,
+        appendableIndexSpec,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,

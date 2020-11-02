@@ -165,7 +165,7 @@ public class ExpressionSelectors
 
     // if any unknown column input types, fall back to an expression selector that examines input bindings on a
     // per row basis
-    if (plan.is(ExpressionPlan.Trait.UNKNOWN_INPUTS)) {
+    if (plan.any(ExpressionPlan.Trait.UNKNOWN_INPUTS, ExpressionPlan.Trait.INCOMPLETE_INPUTS)) {
       return new RowBasedExpressionColumnValueSelector(plan, bindings);
     }
 
@@ -207,7 +207,8 @@ public class ExpressionSelectors
       if (plan.any(
           ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
           ExpressionPlan.Trait.NEEDS_APPLIED,
-          ExpressionPlan.Trait.UNKNOWN_INPUTS
+          ExpressionPlan.Trait.UNKNOWN_INPUTS,
+          ExpressionPlan.Trait.INCOMPLETE_INPUTS
       )) {
         return ExpressionMultiValueDimensionSelector.fromValueSelector(baseSelector, extractionFn);
       } else {

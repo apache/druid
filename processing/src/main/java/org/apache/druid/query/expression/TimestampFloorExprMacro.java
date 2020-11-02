@@ -118,24 +118,24 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.LONG;
     }
 
     @Override
-    public boolean canVectorize(InputBindingTypes inputTypes)
+    public boolean canVectorize(InputBindingInspector inspector)
     {
-      return args.get(0).canVectorize(inputTypes);
+      return args.get(0).canVectorize(inspector);
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorProcessor(
-          CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.LONG),
-          inputTypes.getMaxVectorSize()
+          CastToTypeVectorProcessor.cast(args.get(0).buildVectorized(inspector), ExprType.LONG),
+          inspector.getMaxVectorSize()
       )
       {
         @Override
@@ -195,7 +195,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.LONG;
     }

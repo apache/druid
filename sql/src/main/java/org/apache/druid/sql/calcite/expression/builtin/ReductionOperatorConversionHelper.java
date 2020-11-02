@@ -39,7 +39,7 @@ class ReductionOperatorConversionHelper
    * https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
    *
    * @see org.apache.druid.math.expr.Function.ReduceFunction#apply
-   * @see ExprTypeConversion#doubleMathFunction
+   * @see ExprTypeConversion#function
    */
   static final SqlReturnTypeInference TYPE_INFERENCE =
       opBinding -> {
