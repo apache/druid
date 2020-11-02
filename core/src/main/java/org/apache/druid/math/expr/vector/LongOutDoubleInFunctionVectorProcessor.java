@@ -28,7 +28,7 @@ public abstract class LongOutDoubleInFunctionVectorProcessor extends UnivariateF
 {
   public LongOutDoubleInFunctionVectorProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
   {
-    super(processor, maxVectorSize, new long[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExprType.DOUBLE), maxVectorSize, new long[maxVectorSize]);
   }
 
   public abstract long apply(double input);

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -1122,6 +1123,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new HashedPartitionsSpec(2, null, null),
         INDEX_SPEC,
         null,
@@ -1250,6 +1252,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new DynamicPartitionsSpec(2, null),
         INDEX_SPEC,
         null,
@@ -1362,6 +1365,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
         null,
         null,
         null,
@@ -1808,6 +1812,7 @@ public class IndexTaskTest extends IngestionTestBase
     return new IndexTuningConfig(
         null,
         maxRowsPerSegment,
+        null,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,
@@ -1997,5 +2002,13 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig
       );
     }
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IndexTuningConfig.class)
+        .usingGetClass()
+        .verify();
   }
 }

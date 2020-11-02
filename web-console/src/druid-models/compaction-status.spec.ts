@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
+import { CompactionConfig } from './compaction-config';
 import {
-  CompactionConfig,
   CompactionStatus,
   formatCompactionConfigAndStatus,
   zeroCompactionStatus,
-} from './compaction';
+} from './compaction-status';
 
-describe('compaction', () => {
+describe('compaction status', () => {
   const BASIC_CONFIG: CompactionConfig = {};
   const ZERO_STATUS: CompactionStatus = {
     dataSource: 'tbl',

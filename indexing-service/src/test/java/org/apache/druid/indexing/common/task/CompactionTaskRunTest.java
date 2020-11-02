@@ -279,6 +279,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null,
                 null,
                 null,
+                null,
                 new HashedPartitionsSpec(null, 3, null),
                 null,
                 null,

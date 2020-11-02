@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { computeFlattenExprsForData } from './spec-utils';
+import { computeFlattenExprsForData } from './flatten-spec';
 
 describe('spec-utils', () => {
   describe('computeFlattenExprsForData', () => {

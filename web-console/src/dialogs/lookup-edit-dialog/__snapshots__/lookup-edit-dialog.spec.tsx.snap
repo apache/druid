@@ -16,6 +16,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
     >
       <Blueprint3.InputGroup
         disabled={false}
+        intent="none"
         onChange={[Function]}
         placeholder="Enter the lookup name"
         value="test"
@@ -68,6 +69,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           Object {
             "adjustment": [Function],
             "name": "type",
+            "required": true,
             "suggestions": Array [
               "map",
               "cachedNamespace",
@@ -77,7 +79,9 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           Object {
             "defined": [Function],
             "height": "60vh",
+            "issueWithValue": [Function],
             "name": "map",
+            "required": true,
             "type": "json",
           },
           Object {
@@ -85,6 +89,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Globally cached lookup type",
             "name": "extractionNamespace.type",
             "placeholder": "uri",
+            "required": true,
             "suggestions": Array [
               "uri",
               "jdbc",
@@ -97,52 +102,65 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "URI prefix",
             "name": "extractionNamespace.uriPrefix",
             "placeholder": "s3://bucket/some/key/prefix/",
+            "required": [Function],
             "type": "string",
           },
           Object {
             "defined": [Function],
-            "info": "Optional regex for matching the file name under uriPrefix. Only used if uriPrefix is used",
+            "info": <React.Fragment>
+              <p>
+                URI for the file of interest, specified as a file, hdfs, or s3 path
+              </p>
+              <p>
+                The URI prefix option is strictly better than URI and should be used instead
+              </p>
+            </React.Fragment>,
+            "label": "URI (deprecated)",
+            "name": "extractionNamespace.uri",
+            "placeholder": "s3://bucket/some/key/prefix/lookups-01.gz",
+            "required": [Function],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": ".*",
+            "defined": [Function],
+            "info": "Optional regex for matching the file name under uriPrefix.",
             "label": "File regex",
             "name": "extractionNamespace.fileRegex",
-            "placeholder": "(optional)",
             "type": "string",
           },
           Object {
-            "defaultValue": "csv",
             "defined": [Function],
-            "label": "Format",
+            "info": <React.Fragment>
+              <p>
+                The format of the data in the lookup files.
+              </p>
+              <p>
+                The 
+                <Unknown>
+                  simpleJson
+                </Unknown>
+                 lookupParseSpec does not take any parameters. It is simply a line delimited JSON file where the field is the key, and the field's value is the value.
+              </p>
+            </React.Fragment>,
+            "label": "Parse format",
             "name": "extractionNamespace.namespaceParseSpec.format",
+            "required": true,
             "suggestions": Array [
               "csv",
               "tsv",
-              "customJson",
               "simpleJson",
+              "customJson",
             ],
             "type": "string",
           },
           Object {
+            "defaultValue": 0,
             "defined": [Function],
-            "info": "The list of columns in the csv file",
-            "label": "Columns",
-            "name": "extractionNamespace.namespaceParseSpec.columns",
-            "placeholder": "[\\"key\\", \\"value\\"]",
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": "The name of the column containing the key",
-            "label": "Key column",
-            "name": "extractionNamespace.namespaceParseSpec.keyColumn",
-            "placeholder": "Key",
-            "type": "string",
-          },
-          Object {
-            "defined": [Function],
-            "info": "The name of the column containing the value",
-            "label": "Value column",
-            "name": "extractionNamespace.namespaceParseSpec.valueColumn",
-            "placeholder": "Value",
-            "type": "string",
+            "info": "Number of header rows to be skipped. The default number of header rows to be skipped is 0.",
+            "label": "Skip header rows",
+            "name": "extractionNamespace.namespaceParseSpec.skipHeaderRows",
+            "type": "number",
           },
           Object {
             "defaultValue": false,
@@ -154,11 +172,28 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           },
           Object {
             "defined": [Function],
-            "info": "Number of header rows to be skipped. The default number of header rows to be skipped is 0.",
-            "label": "Skip header rows",
-            "name": "extractionNamespace.namespaceParseSpec.skipHeaderRows",
-            "placeholder": "(optional)",
-            "type": "number",
+            "info": "The list of columns in the csv file",
+            "label": "Columns",
+            "name": "extractionNamespace.namespaceParseSpec.columns",
+            "placeholder": "[\\"key\\", \\"value\\"]",
+            "required": [Function],
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": "The name of the column containing the key",
+            "label": "Key column",
+            "name": "extractionNamespace.namespaceParseSpec.keyColumn",
+            "placeholder": "(optional - defaults to the first column)",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "The name of the column containing the value",
+            "label": "Value column",
+            "name": "extractionNamespace.namespaceParseSpec.valueColumn",
+            "placeholder": "(optional - defaults to the second column)",
+            "type": "string",
           },
           Object {
             "defined": [Function],
@@ -179,6 +214,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Key field name",
             "name": "extractionNamespace.namespaceParseSpec.keyFieldName",
             "placeholder": "key",
+            "required": true,
             "type": "string",
           },
           Object {
@@ -186,6 +222,15 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Value field name",
             "name": "extractionNamespace.namespaceParseSpec.valueFieldName",
             "placeholder": "value",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defaultValue": "0",
+            "defined": [Function],
+            "info": "Period between polling for updates",
+            "label": "Poll period",
+            "name": "extractionNamespace.pollPeriod",
             "type": "string",
           },
           Object {
@@ -205,20 +250,15 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Namespace",
             "name": "extractionNamespace.namespace",
             "placeholder": "some_lookup",
+            "required": true,
             "type": "string",
-          },
-          Object {
-            "defined": [Function],
-            "info": "Defines the connectURI value on the The connector config to used",
-            "label": "CreateTables",
-            "name": "extractionNamespace.connectorConfig.createTables",
-            "type": "boolean",
           },
           Object {
             "defined": [Function],
             "info": "Defines the connectURI value on the The connector config to used",
             "label": "Connect URI",
             "name": "extractionNamespace.connectorConfig.connectURI",
+            "required": true,
             "type": "string",
           },
           Object {
@@ -237,6 +277,13 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           },
           Object {
             "defined": [Function],
+            "info": "Should tables be created",
+            "label": "Create tables",
+            "name": "extractionNamespace.connectorConfig.createTables",
+            "type": "boolean",
+          },
+          Object {
+            "defined": [Function],
             "info": <React.Fragment>
               <p>
                 The table which contains the key value pairs. This will become the table value in the SQL query:
@@ -252,6 +299,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Table",
             "name": "extractionNamespace.table",
             "placeholder": "some_lookup_table",
+            "required": true,
             "type": "string",
           },
           Object {
@@ -271,6 +319,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Key column",
             "name": "extractionNamespace.keyColumn",
             "placeholder": "my_key_value",
+            "required": true,
             "type": "string",
           },
           Object {
@@ -290,6 +339,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "label": "Value column",
             "name": "extractionNamespace.valueColumn",
             "placeholder": "my_column_value",
+            "required": true,
             "type": "string",
           },
           Object {
@@ -325,25 +375,17 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 ? FROM namespace.table WHERE filter
               </p>
             </React.Fragment>,
-            "label": "TsColumn",
+            "label": "Timestamp column",
             "name": "extractionNamespace.tsColumn",
             "placeholder": "(optional)",
             "type": "string",
           },
           Object {
-            "defined": [Function],
-            "info": "Period between polling for updates",
-            "label": "Poll period",
-            "name": "extractionNamespace.pollPeriod",
-            "placeholder": "(optional)",
-            "type": "string",
-          },
-          Object {
+            "defaultValue": 0,
             "defined": [Function],
             "info": "How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait",
             "label": "First cache timeout",
             "name": "firstCacheTimeout",
-            "placeholder": "(optional)",
             "type": "number",
           },
           Object {

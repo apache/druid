@@ -165,7 +165,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
         ]
       }
     },
-    "tuningconfig": {
+    "tuningConfig": {
       "type": "index_parallel"
     }
   }

@@ -52,7 +52,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     processQuery: async () => {
       try {
         const configResp = await axios.get('/druid/coordinator/v1/config');
-        setDynamicConfig(configResp.data);
+        setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,

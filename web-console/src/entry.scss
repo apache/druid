@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
+@import '~normalize.css/normalize';
 @import '~fontsource-open-sans/index.css';
 @import './blueprint-overrides';
 @import '~@blueprintjs/core/src/blueprint';
 @import '~@blueprintjs/datetime/src/blueprint-datetime';
+@import '~react-splitter-layout/lib/index';
 @import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
 
 html,
 body {
@@ -44,6 +44,10 @@ body {
     *:focus {
       outline: none !important;
     }
+  }
+
+  .ace-solarized-dark {
+    background-color: rgba($dark-gray1, 0.5);
   }
 }
 

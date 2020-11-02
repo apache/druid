@@ -32,8 +32,8 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
-import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
+import { LookupSpec } from '../../druid-models';
 import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage,
@@ -167,7 +167,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
     if (!lookupEntriesAndTiers) return;
 
-    const target: any = lookupEntriesAndTiers.lookupEntries.find((lookupEntry: any) => {
+    const target: any = lookupEntriesAndTiers.lookupEntries.find(lookupEntry => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
     if (id === '') {
@@ -179,7 +179,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           lookupEdit: {
             name: '',
             tier: loadingEntriesAndTiers ? loadingEntriesAndTiers.tiers[0] : '',
-            spec: { type: '' },
+            spec: { type: 'map', map: {} },
             version: new Date().toISOString(),
           },
         };

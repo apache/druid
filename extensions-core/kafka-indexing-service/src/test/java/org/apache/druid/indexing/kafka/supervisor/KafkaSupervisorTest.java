@@ -270,6 +270,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             null
         ),
         null
@@ -3070,6 +3071,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         kafkaHost,
         dataSchema,
         new KafkaSupervisorTuningConfig(
+            null,
             1000,
             null,
             50000,
@@ -3109,6 +3111,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
     KafkaSupervisorTuningConfig modifiedTuningConfig = new KafkaSupervisorTuningConfig(
+        null,
         42, // This is different
         null,
         50000,
@@ -3404,6 +3407,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     };
 
     final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
@@ -3514,6 +3518,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     };
 
     final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
