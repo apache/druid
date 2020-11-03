@@ -437,7 +437,7 @@ Content: List of JSON Resource-Action objects, e.g.:
 
 The "name" field for resources in the permission definitions are regexes used to match resource names during authorization checks.
 
-Please see [Defining permissions](#defining-permissions) for more details.
+Please see [Defining permissions](../../operations/security-user-auth.md#defining-permissions) for more details.
 
 ##### Cache Load Status
 `GET(/druid-ext/basic-security/authorization/loadStatus)`

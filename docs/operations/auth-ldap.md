@@ -82,7 +82,7 @@ Note the `memberOf` attribute in the results; it shows the groups that the user
 	druid.auth.authorizer.ldapauth.roleProvider.type=ldap
    ```
 
-   Notice that the LDAP user created in the previous step, internal@example.com, serves as the internal client user and the initial admin user.
+   Notice that the LDAP user created in the previous step, `internal@example.com`, serves as the internal client user and the initial admin user.
 
 ## Use LDAP groups to assign roles
 

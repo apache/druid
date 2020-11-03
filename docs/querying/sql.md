@@ -1221,5 +1221,5 @@ Druid SQL planning occurs on the Broker and is configured by
 
 ## Security
 
-Please see [Defining SQL permissions](../development/extensions-core/druid-basic-security.html#sql-permissions) in the
+Please see [Defining SQL permissions](../operations/security-user-auth.md#sql-permissions) in the
 basic security documentation for information on what permissions are needed for making SQL queries.

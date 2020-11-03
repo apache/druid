@@ -35,7 +35,7 @@ There are three resource types:
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * STATE &ndash; Cluster-wide state resources.
 
-For specific resources associated with the types, see the endpoint list below and corresponding descriptions in [API Reference](api-reference).
+For specific resources associated with the types, see the endpoint list below and corresponding descriptions in [API Reference](./api-reference.md).
 
 There are two actions:
 
@@ -122,7 +122,7 @@ There is only one possible resource name for the "STATE" config resource type, "
 
 ### HTTP methods
 
-For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](../../operations/api-reference.md).
+For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](./api-reference.md).
 
 GET requires READ permission, while POST and DELETE require WRITE permission.
 
@@ -130,11 +130,11 @@ GET requires READ permission, while POST and DELETE require WRITE permission.
 
 Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
 
-Queries on the [INFORMATION_SCHEMA tables](../../querying/sql.html#information-schema) will
+Queries on the [INFORMATION_SCHEMA tables](../querying/sql.md#information-schema) will
 return information about datasources that the caller has DATASOURCE READ access to. Other
 datasources will be omitted.
 
-Queries on the [system schema tables](../../querying/sql.html#system-schema) require the following permissions:
+Queries on the [system schema tables](../querying/sql.md#system-schema) require the following permissions:
 - `segments`: Segments will be filtered based on DATASOURCE READ permissions.
 - `servers`: The user requires STATE READ permissions.
 - `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
