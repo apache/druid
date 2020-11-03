@@ -40,11 +40,11 @@ This document gives you an overview of security features in Druid and how to con
 
 ## Best practices
 
-* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelists the specific APIs that your users need to access, and implements account lockout and throttling features.
+* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelist the specific APIs that your users need to access, and implements account lockout and throttling features.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow user who only need to query data to write to data sources or view state.  
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 * Run Druid as an unprivileged Unix user on the installation machine (not root).
-   > This is an important point! Administrator users on Druid have the same permission as the Unix user account it is running under. If the Druid process is running under the root user account in the OS, then Administrator users on Druid can read/write all files that the root account has access to, including sensitive files such as /etc/passwd.
+   > This is an important point! Administrator users on Druid have the same permission as the Unix user account it is running under. If the Druid process is running under the root user account in the OS, then Administrator users on Druid can read/write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
 
 You can configure authentication and authorization to control access to the the Druid APIs. The first step is enabling TLS for the cluster nodes. Then configure users, roles, and permissions, as described in the following sections. 
 
@@ -90,7 +90,7 @@ To authenticate requests in Druid, you configure an Authenticator. Authenticator
 
 The following takes you through sample configuration steps for enabling basic auth:  
 
-1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in common.runtime.properties. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
+1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
    druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service", "imply-utility-belt"]
    ```
@@ -144,7 +144,7 @@ The following steps walk through a sample setup procedure:
     ```
     curl -u admin:password -H'Content-Type: application/json' -XPOST --data-binary @pass.json https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname/credentials
     ```
-    The password is conveyed in the pass.json file, the payload of which should be in the form:
+    The password is conveyed in the `pass.json` file in the following form:
    	```
    	{
       "password": "password"
@@ -167,7 +167,7 @@ The following steps walk through a sample setup procedure:
 	```
 	curl -u admin:password -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/basic/roles/myrole/permissions
 	```
-	The payload of perms.json should be in the form:
+	The payload of `perms.json` should be in the form:
    	```
     [
     {
@@ -221,11 +221,11 @@ As an alternative to using the basic metadata authenticator, as shown in the pre
    druid.auth.authorizer.ldapauth.roleProvider.type=ldap
    ```
 
-3. Use the Druid API to create the group mapping and allocate initial roles. For example, using curl and given a group named "group1" in the directory, run: 
+3. Use the Druid API to create the group mapping and allocate initial roles. For example, using curl and given a group named `group1` in the directory, run: 
    ```
    curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
    ```
-   The groupmap.json file contents would be something like:
+   The `groupmap.json` file contents would be something like:
    ```
    {
      "name": "group1map",
@@ -262,4 +262,4 @@ As an alternative to using the basic metadata authenticator, as shown in the pre
 
 
 
-Congratulations, you now have permissioned roles with associated users in Druid!
+Congratulations, you have configured permissions for user-assigned roles in Druid!

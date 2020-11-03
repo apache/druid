@@ -23,7 +23,7 @@ title: "LDAP auth"
   -->
 
 
-This page describes how to set up Druid user authentication and authorizion through LDAP. The first step is to enable LDAP authentication and authorization for Druid. You then map an LDAP group to roles and assign permissions and users to roles.
+This page describes how to set up Druid user authentication and authorization through LDAP. The first step is to enable LDAP authentication and authorization for Druid. You then map an LDAP group to roles and assign permissions and users to roles.
 
 ## Enable LDAP in Druid
 
@@ -39,7 +39,7 @@ ldapwhoami -vv -H ldap://<ip_address>:389  -D"uuser1@example.com" -W
 
 Enter the password associated with the user when prompted and verify that the command succeeded. If it didn't, try the following troubleshooting steps:  
 
-* Verify that you've used the correct port for your LDAP instance. By default, the LDAP port is 389, but doublecheck with your LDAP admin if unable to connect. 
+* Verify that you've used the correct port for your LDAP instance. By default, the LDAP port is 389, but double-check with your LDAP admin if unable to connect. 
 * Check whether a network firewall is not preventing connections to the LDAP port.
 * Check whether LDAP clients need to be specifically whitelisted at the LDAP server to be able to reach it. If so, add the Druid Coordinator server to the AD whitelist. 
 
@@ -141,7 +141,7 @@ You can also provide the name in the form of regular expression. For example, to
 
 ### Step 3: Create group Mapping 
 
-The following shows an example of a group to role mapping. It assumes that a group named "group1" exists in the directory. Also assuming the following role mapping in a file named `groupmap.json`:
+The following shows an example of a group to role mapping. It assumes that a group named `group1` exists in the directory. Also assuming the following role mapping in a file named `groupmap.json`:
 
 ```
 {
