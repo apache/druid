@@ -40,6 +40,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ReflectionQueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -93,8 +94,8 @@ public class DirectDruidClientTest
   {
     httpClient = EasyMock.createMock(HttpClient.class);
     serverSelector = new ServerSelector(
-      dataSegment,
-      new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
     client = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
@@ -354,7 +355,7 @@ public class DirectDruidClientTest
         in
     );
 
-    QueryInterruptedException actualException = null;
+    QueryTimeoutException actualException = null;
     try {
       out.write(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}"));
       Thread.sleep(250);
@@ -362,7 +363,7 @@ public class DirectDruidClientTest
       out.close();
       results.toList();
     }
-    catch (QueryInterruptedException e) {
+    catch (QueryTimeoutException e) {
       actualException = e;
     }
     Assert.assertNotNull(actualException);
@@ -399,16 +400,16 @@ public class DirectDruidClientTest
 
     Sequence results = client.run(QueryPlus.wrap(query));
 
-    QueryInterruptedException actualException = null;
+    QueryTimeoutException actualException = null;
     try {
       results.toList();
     }
-    catch (QueryInterruptedException e) {
+    catch (QueryTimeoutException e) {
       actualException = e;
     }
     Assert.assertNotNull(actualException);
     Assert.assertEquals("Query timeout", actualException.getErrorCode());
-    Assert.assertEquals("Timeout waiting for task.", actualException.getMessage());
+    Assert.assertEquals(StringUtils.format("Query [%s] timed out!", queryId), actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }

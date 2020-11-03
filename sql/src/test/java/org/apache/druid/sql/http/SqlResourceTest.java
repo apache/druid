@@ -38,9 +38,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryCapacityExceededException;
@@ -799,6 +801,25 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(2, success);
     Assert.assertEquals(1, limited);
     Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
+  }
+
+  @Test
+  public void testQueryTimeoutException() throws Exception
+  {
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1);
+    final QueryException timeoutException = doPost(
+        new SqlQuery(
+            "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
+            ResultFormat.OBJECT,
+            false,
+            queryContext,
+            null
+        )
+    ).lhs;
+    Assert.assertNotNull(timeoutException);
+    Assert.assertEquals(timeoutException.getErrorCode(), QueryTimeoutException.ERROR_CODE);
+    Assert.assertEquals(timeoutException.getErrorClass(), QueryTimeoutException.class.getName());
+
   }
 
   @SuppressWarnings("unchecked")
