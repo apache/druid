@@ -12089,7 +12089,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  //agtest
   @Test
   public void testGroupingSetsWithLimit() throws Exception
   {
@@ -12131,6 +12130,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of("d1"),
                                 ImmutableList.of()
                             )
+                        ).setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.<OrderByColumnSpec>of(),
+                              100)
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()

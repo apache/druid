@@ -59,6 +59,33 @@ public class ByteBufferMinMaxOffsetHeap
     this.heapIndexUpdater = heapIndexUpdater;
   }
 
+
+
+  public ByteBufferMinMaxOffsetHeap copy() {
+    LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater updater =
+        heapIndexUpdater.copy();
+
+    // deep copy buf
+    ByteBuffer buffer = ByteBuffer.allocateDirect(buf.capacity());
+
+    int bufPosition = buf.position();
+    int bufLimit = buf.limit();
+    buf.rewind();
+
+    buffer.put(buf);
+    buffer.position(bufPosition);
+    buffer.limit(bufLimit);
+
+    buf.position(bufPosition);
+    buf.limit(bufLimit);
+
+    ByteBufferMinMaxOffsetHeap retVal = new ByteBufferMinMaxOffsetHeap(buffer,this.limit,minComparator,updater);
+    retVal.heapSize = this.heapSize;
+
+    return retVal;
+  }
+
+
   public void reset()
   {
     heapSize = 0;

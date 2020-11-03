@@ -219,6 +219,26 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       this.indexPosition = indexPosition;
     }
 
+    public BufferGrouperOffsetHeapIndexUpdater copy() {
+
+      // deep copy hashtable buffer:
+
+      ByteBuffer buffer = ByteBuffer.allocateDirect(hashTableBuffer.capacity());
+
+      int position = hashTableBuffer.position();
+      int limit = hashTableBuffer.limit();
+      hashTableBuffer.rewind();
+
+      buffer.put(hashTableBuffer);
+      buffer.position(position);
+      buffer.limit(limit);
+
+      hashTableBuffer.position(position);
+      hashTableBuffer.limit(limit);
+
+      return new BufferGrouperOffsetHeapIndexUpdater(buffer,indexPosition);
+    }
+
     public void setHashTableBuffer(ByteBuffer newTableBuffer)
     {
       hashTableBuffer = newTableBuffer;
@@ -317,6 +337,8 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   private CloseableIterator<Entry<KeyType>> makeHeapIterator()
   {
     final int initialHeapSize = offsetHeap.getHeapSize();
+    ByteBufferMinMaxOffsetHeap newHeap = offsetHeap.copy();
+
     return new CloseableIterator<Entry<KeyType>>()
     {
       int curr = 0;
@@ -333,7 +355,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         if (curr >= initialHeapSize) {
           throw new NoSuchElementException();
         }
-        final int offset = offsetHeap.removeMin();
+        final int offset = newHeap.removeMin();
         final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
         curr++;
 
