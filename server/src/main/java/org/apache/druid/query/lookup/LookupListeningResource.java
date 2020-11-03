@@ -29,7 +29,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.LookupInternalResourceFilter;
+import org.apache.druid.server.http.security.InternalInternalResourceFilter;
 import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -42,7 +42,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Path(ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY)
-@ResourceFilters({ ConfigResourceFilter.class, LookupInternalResourceFilter.class })
+@ResourceFilters({ ConfigResourceFilter.class, InternalInternalResourceFilter.class })
 class LookupListeningResource extends ListenerResource
 {
   private static final Logger LOG = new Logger(LookupListeningResource.class);

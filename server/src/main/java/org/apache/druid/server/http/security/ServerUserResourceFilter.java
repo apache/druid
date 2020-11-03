@@ -29,10 +29,10 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 
-public class ServerPermissionsResourceFilter extends AbstractResourceFilter
+public class ServerUserResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public ServerPermissionsResourceFilter(AuthorizerMapper authorizerMapper,
+  public ServerUserResourceFilter(AuthorizerMapper authorizerMapper,
       AuthConfig authConfig
   )
   {
@@ -44,7 +44,7 @@ public class ServerPermissionsResourceFilter extends AbstractResourceFilter
   {
     if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       final ResourceAction resourceAction = new ResourceAction(
-          Resource.SERVER_PERMISSIONS_RESOURCE,
+          Resource.SERVER_USER_RESOURCE,
           getAction(request)
       );
 

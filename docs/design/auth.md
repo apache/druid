@@ -194,3 +194,7 @@ druid.auth.authorizer.<authorizer-name>.name=<authorizer-name>
 ```
 
 These properties provide the authenticator and authorizer names to the implementations as @JsonProperty parameters, potentially useful when multiple authenticators or authorizers of the same type are configured.
+
+## Defining permissions
+
+Please see [authorization model](../design/auth-model.md).

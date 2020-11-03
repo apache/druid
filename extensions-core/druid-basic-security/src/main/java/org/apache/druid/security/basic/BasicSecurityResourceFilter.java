@@ -50,10 +50,18 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource(SECURITY_RESOURCE_NAME, ResourceType.CONFIG),
-        getAction(request)
-    );
+    final ResourceAction resourceAction;
+    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      resourceAction = new ResourceAction(
+          Resource.SERVER_SERVER_RESOURCE,
+          getAction(request)
+      );
+    } else {
+      resourceAction = new ResourceAction(
+          new Resource(SECURITY_RESOURCE_NAME, ResourceType.CONFIG),
+          getAction(request)
+      );
+    }
 
     final Access authResult = AuthorizationUtils.authorizeResourceAction(
         getReq(),
