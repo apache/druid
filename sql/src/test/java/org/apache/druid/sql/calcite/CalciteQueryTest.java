@@ -16096,7 +16096,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   /**
    * TIMESTAMPADD is converted to timestamp_shift function call and its parameters will be converted to a Period string or an expression
-   * see {@linkplain https://github.com/apache/druid/issues/10530} for more information
+   * see https://github.com/apache/druid/issues/10530 for more information
    */
   @Test
   public void testTimeStampAddConversion() throws Exception
