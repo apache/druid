@@ -53,7 +53,6 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
   // ByteBuffer slices used by the grouper
   private ByteBuffer totalBuffer;
-  private ByteBuffer hashTableBuffer;
   private ByteBuffer offsetHeapBuffer;
 
   // Updates the heap index field for buckets, created passed to the heap when
