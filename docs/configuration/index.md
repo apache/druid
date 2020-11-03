@@ -893,7 +893,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|PT30S|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|PT1M|
 
-The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, please see (../design/overlord.md).
+The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord Process](../design/overlord.md).
 
 |Property|Description|Default|
 |--------|-----------|-------|
