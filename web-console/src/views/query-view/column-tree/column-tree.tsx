@@ -31,8 +31,7 @@ import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
-import { copyAndAlert, groupBy, prettyPrintSql } from '../../../utils';
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnMetadata, copyAndAlert, groupBy, oneOf, prettyPrintSql } from '../../../utils';
 import { dataTypeToIcon } from '../query-utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
@@ -340,8 +339,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     }}
                                   />
                                   {parsedQuery &&
-                                    (columnData.DATA_TYPE === 'BIGINT' ||
-                                      columnData.DATA_TYPE === 'FLOAT') && (
+                                    oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT') && (
                                       <NumberMenuItems
                                         table={tableName}
                                         schema={schemaName}

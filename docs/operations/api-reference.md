@@ -694,6 +694,10 @@ Retrieves current overlord dynamic configuration.
 Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
 to filter by interval and limit the number of results respectively.
 
+* `/druid/indexer/v1/workers`
+
+Retrieves a list of all the worker nodes in the cluster along with its metadata.
+
 * `/druid/indexer/v1/scaling`
 
 Retrieves overlord scaling events if auto-scaling runners are in use.

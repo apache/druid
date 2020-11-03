@@ -52,7 +52,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
     processQuery: async () => {
       try {
         const configResp = await axios(`/druid/indexer/v1/worker`);
-        setDynamicConfig(configResp.data);
+        setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
@@ -89,6 +90,7 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertNotNull(config.getBasePersistDirectory());
+    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(0, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
@@ -119,7 +121,8 @@ public class RealtimeTuningConfigTest
                      + "  \"handoffConditionTimeout\": 100,\n"
                      + "  \"alertTimeout\": 70,\n"
                      + "  \"indexSpec\": { \"metricCompression\" : \"NONE\" },\n"
-                     + "  \"indexSpecForIntermediatePersists\": { \"dimensionCompression\" : \"uncompressed\" }\n"
+                     + "  \"indexSpecForIntermediatePersists\": { \"dimensionCompression\" : \"uncompressed\" },\n"
+                     + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
                      + "}";
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -134,6 +137,7 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertEquals("/tmp/xxx", config.getBasePersistDirectory().toString());
+    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(70, config.getAlertTimeout());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());

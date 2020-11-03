@@ -22,9 +22,7 @@ import { sum } from 'd3-array';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils/capabilities';
-import { deepGet } from '../../../utils/object-change';
+import { Capabilities, deepGet, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SegmentCounts {
