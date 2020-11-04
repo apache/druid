@@ -91,7 +91,10 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
   {
-    if (adjustBytesInMemoryFlag && strategy == null) {
+    if (adjustBytesInMemoryFlag == false) {
+      return null;
+    }
+    if (strategy == null) {
       strategy = new DoublesSketchSizeAdjustStrategy(this.k);
     }
     return strategy;

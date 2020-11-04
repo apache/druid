@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
 
@@ -32,13 +31,13 @@ import java.util.Map;
 public class CountAdjustmentHolder
 {
   private static final Logger log = new Logger(CountAdjustmentHolder.class);
-  private final HashMap<String, OnheapIncrementalIndex.MetricAdjustmentHolder> metricTypeAndHolderMap;
+  private final HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap;
   @Nullable
   private int[] appendBytesAll;
   @Nullable
   private int[] rollupRowsAll;
 
-  public CountAdjustmentHolder(HashMap<String, OnheapIncrementalIndex.MetricAdjustmentHolder> metricTypeAndHolderMap)
+  public CountAdjustmentHolder(HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap)
   {
     this.metricTypeAndHolderMap = metricTypeAndHolderMap;
     initAdjustment();
@@ -49,9 +48,9 @@ public class CountAdjustmentHolder
 
   private void initAdjustment()
   {
-    final Iterator<Map.Entry<String, OnheapIncrementalIndex.MetricAdjustmentHolder>> iterator = metricTypeAndHolderMap.entrySet().iterator();
+    final Iterator<Map.Entry<String, MetricAdjustmentHolder>> iterator = metricTypeAndHolderMap.entrySet().iterator();
     while (iterator.hasNext()) {
-      final OnheapIncrementalIndex.MetricAdjustmentHolder metricAdjustmentHolder = iterator.next().getValue();
+      final MetricAdjustmentHolder metricAdjustmentHolder = iterator.next().getValue();
       metricAdjustmentHolder.computeAppendingInfo();
       // merge sort and when rollupRow equals then sum appendbytes
       mergeSortAndEqualSum(metricAdjustmentHolder);
@@ -59,7 +58,7 @@ public class CountAdjustmentHolder
 
   }
 
-  private void mergeSortAndEqualSum(OnheapIncrementalIndex.MetricAdjustmentHolder metricAdjustmentHolder)
+  private void mergeSortAndEqualSum(MetricAdjustmentHolder metricAdjustmentHolder)
   {
     final int[] appendBytes = metricAdjustmentHolder.getMetricTypeAppendingBytes();
     final int[] rollupRows = metricAdjustmentHolder.getMetricTypeRollupRows();

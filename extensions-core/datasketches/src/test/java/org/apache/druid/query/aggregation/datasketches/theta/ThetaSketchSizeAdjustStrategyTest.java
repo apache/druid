@@ -26,7 +26,9 @@ import org.apache.datasketches.theta.Union;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
 import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
+import org.apache.druid.query.aggregation.MetricAdjustmentHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -38,6 +40,7 @@ import org.openjdk.jol.info.GraphLayout;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -112,17 +115,14 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
     ThetaSketchSizeAdjustStrategy strategy = new ThetaSketchSizeAdjustStrategy(size);
     int[] rollupCardinals = strategy.adjustWithRollupNum();
     int[] appendBytes = strategy.appendBytesOnRollupNum();
-    AggregatorFactory[] metrics = {
-        new SketchMergeAggregatorFactory("theta01", "theta01",
-            size, null, null, null
-        ), new SketchMergeAggregatorFactory("theta02", "theta02",
-        size, null, null, null),
-        new SketchMergeAggregatorFactory("theta03", "theta03",
-            size, null, null, null)
-    };
     IncrementalIndex notAdjustIndex;
     IncrementalIndex adjustIndex;
     for (int i = 0; i < rollupCardinals.length; i++) {
+      AggregatorFactory[] metrics = {
+          new SketchMergeAggregatorFactory("theta01", "theta01", size, null, null, null),
+          new SketchMergeAggregatorFactory("theta02", "theta02", size, null, null, null),
+          new SketchMergeAggregatorFactory("theta03", "theta03", size, null, null, null)
+      };
       notAdjustIndex = new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
@@ -132,18 +132,24 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
           )
           .setMaxRowCount(MAX_ROWS)
           .setMaxBytesInMemory(MAX_BYTES)
-          .setAdjustmentBytesInMemoryFlag(false)
           .buildOnheap();
+
+      AggregatorFactory[] metrics2 = {
+          new SketchMergeAggregatorFactory("theta01", "theta01", size, null, null, null),
+          new SketchMergeAggregatorFactory("theta02", "theta02", size, null, null, null),
+          new SketchMergeAggregatorFactory("theta03", "theta03", size, null, null, null)
+      };
+      CountAdjustmentHolder adjustmentHolder = createAdjustmentHolder(metrics2, MAX_BYTES, true);
       adjustIndex = new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withQueryGranularity(Granularities.MINUTE)
-                  .withMetrics(metrics)
+                  .withMetrics(metrics2)
                   .build()
           )
           .setMaxRowCount(MAX_ROWS)
           .setMaxBytesInMemory(MAX_BYTES)
-          .setAdjustmentBytesInMemoryFlag(true)
+          .setAdjustmentHolder(adjustmentHolder)
           .buildOnheap();
       for (int j = 0; j < rollupCardinals[i]; ++j) {
         String diffVal = random.nextInt(Integer.MAX_VALUE) + "";
@@ -174,4 +180,34 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
     }
   }
 
+  private CountAdjustmentHolder createAdjustmentHolder(
+      AggregatorFactory[] metrics, long maxBytesInMemory, final boolean
+      adjustmentFlag
+  )
+  {
+    HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+    if (maxBytesInMemory < 0 || adjustmentFlag == false) {
+      return null;
+    }
+    for (AggregatorFactory metric : metrics) {
+      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
+          .getMaxIntermediateSizeAdjustStrategy(adjustmentFlag);
+      if (maxIntermediateSizeAdjustStrategy == null) {
+        continue;
+      }
+      final String tempMetricType = maxIntermediateSizeAdjustStrategy.getAdjustmentMetricType();
+      final MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(
+          tempMetricType,
+          k -> new MetricAdjustmentHolder(maxIntermediateSizeAdjustStrategy)
+      );
+      if (metricAdjustmentHolder != null) {
+        metricAdjustmentHolder.selectStrategyByType(maxIntermediateSizeAdjustStrategy);
+      }
+    }
+    CountAdjustmentHolder adjustmentHolder = null;
+    if (metricTypeAndHolderMap.size() > 0) {
+      adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+    }
+    return adjustmentHolder;
+  }
 }

@@ -38,11 +38,11 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -67,10 +67,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
-  protected final boolean adjustmentBytesInMemoryFlag; // control adjustment
-  private final HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
   @Nullable
-  private CountAdjustmentHolder adjustmentHolder = null;
+  private final CountAdjustmentHolder adjustmentHolder;
 
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -84,37 +82,21 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean sortFacts,
       int maxRowCount,
       long maxBytesInMemory,
-      boolean adjustmentBytesInMemoryFlag
+      @Nullable CountAdjustmentHolder adjustmentHolder
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
-    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
-    for (AggregatorFactory metric : this.getMetricAggs()) {
-      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
-          .getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
-      if (maxIntermediateSizeAdjustStrategy == null) {
-        continue;
-      }
-      final String tempMetricType = maxIntermediateSizeAdjustStrategy.getAdjustmentMetricType();
-      final MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(tempMetricType, k -> new MetricAdjustmentHolder(maxIntermediateSizeAdjustStrategy));
-      if (metricAdjustmentHolder != null) {
-        metricAdjustmentHolder.selectStrategyByType(maxIntermediateSizeAdjustStrategy);
-      }
-    }
-    if (canAdjust()) {
-      adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
-    }
+    this.adjustmentHolder = adjustmentHolder;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
         : new PlainFactsHolder(sortFacts, dimsComparator());
-    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentBytesInMemoryFlag, canAdjust());
+    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentHolder != null);
   }
 
   private boolean canAdjust()
   {
-    return adjustmentBytesInMemoryFlag && maxBytesInMemory != Long.MAX_VALUE
-        && metricTypeAndHolderMap.size() > 0;
+    return adjustmentHolder != null && maxBytesInMemory != Long.MAX_VALUE;
   }
 
   /**
@@ -136,13 +118,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    *
    * @return long max aggregator size in bytes
    */
-  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema, boolean adjustmentBytesInMemoryFlag, boolean canAdjust)
+  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema, boolean adjustmentFlag)
   {
     long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
         .mapToLong(aggregator -> {
-          if (aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag) != null && canAdjust) {
-            final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
+          if (aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentFlag) != null) {
+            final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentFlag);
             return aggregator.getMaxIntermediateSizeWithNulls() + maxIntermediateSizeAdjustStrategy.initAppendBytes()
                 + Long.BYTES * 2L;
           }
@@ -466,8 +448,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     if (selectors != null) {
       selectors.clear();
     }
-    metricTypeAndHolderMap.clear();
-    adjustmentHolder = null;
   }
 
   /**
@@ -533,7 +513,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
           sortFacts,
           maxRowCount,
           maxBytesInMemory,
-          adjustmentBytesInMemoryFlag
+          adjustmentHolder
       );
     }
   }
@@ -567,116 +547,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     public int hashCode()
     {
       return Objects.hash(this.getClass());
-    }
-  }
-
-  public static class MetricAdjustmentHolder
-  {
-    private MaxIntermediateSizeAdjustStrategy metricTypeAdjustmentStrategy;
-    private int metricCount = 0;
-    private int[] appendBytesAll;
-    private int[] rollupRowsAll;
-    private HashMap<Object, MaxIntermediateSizeAdjustStrategy> inputAndStrategyMap = new HashMap<>();
-    private HashMap<Object, AtomicInteger> inputAndCountMap = new HashMap<>();
-
-    public MetricAdjustmentHolder(MaxIntermediateSizeAdjustStrategy metricTypeAdjustmentStrategy)
-    {
-      this.metricTypeAdjustmentStrategy = metricTypeAdjustmentStrategy;
-    }
-
-    public void selectStrategyByType(MaxIntermediateSizeAdjustStrategy metricTypeAdjustmentStrategy)
-    {
-      switch (this.metricTypeAdjustmentStrategy.getAdjustmentType()) {
-        case MAX:
-          if (this.metricTypeAdjustmentStrategy.compareTo(metricTypeAdjustmentStrategy) < 0) {
-            this.metricTypeAdjustmentStrategy = metricTypeAdjustmentStrategy;
-          }
-          ++metricCount;
-          break;
-        case MERGE:
-          inputAndStrategyMap.put(metricTypeAdjustmentStrategy.getInputVal(), metricTypeAdjustmentStrategy);
-          final AtomicInteger atomicInteger = inputAndCountMap.computeIfAbsent(metricTypeAdjustmentStrategy.getInputVal(), k -> new AtomicInteger(0));
-          atomicInteger.incrementAndGet();
-          break;
-        default:
-      }
-    }
-
-    public void computeAppendingInfo()
-    {
-      switch (this.metricTypeAdjustmentStrategy.getAdjustmentType()) {
-        case MAX:
-          appendBytesAll = Arrays.stream(metricTypeAdjustmentStrategy.appendBytesOnRollupNum()).map(appendingByte -> appendingByte * metricCount).toArray();
-          break;
-        case MERGE:
-          final Iterator<Map.Entry<Object, MaxIntermediateSizeAdjustStrategy>> iterator = inputAndStrategyMap.entrySet().iterator();
-          while (iterator.hasNext()) {
-            final Map.Entry<Object, MaxIntermediateSizeAdjustStrategy> next = iterator.next();
-            final Object inputVal = next.getKey();
-            final MaxIntermediateSizeAdjustStrategy strategy = next.getValue();
-            mergeSortAndEqualSum(strategy, inputAndCountMap.get(inputVal).get());
-          }
-          break;
-        default:
-      }
-    }
-
-    public int[] getMetricTypeAppendingBytes()
-    {
-      if (this.metricTypeAdjustmentStrategy.getAdjustmentType() == MaxIntermediateSizeAdjustStrategy.AdjustmentType.MAX) {
-        appendBytesAll = Arrays.stream(metricTypeAdjustmentStrategy.appendBytesOnRollupNum()).map(appendingByte -> appendingByte * metricCount).toArray();
-      }
-      return appendBytesAll;
-    }
-
-    public int[] getMetricTypeRollupRows()
-    {
-      if (this.metricTypeAdjustmentStrategy.getAdjustmentType() == MaxIntermediateSizeAdjustStrategy.AdjustmentType.MAX) {
-        rollupRowsAll = metricTypeAdjustmentStrategy.adjustWithRollupNum();
-      }
-      return rollupRowsAll;
-    }
-
-    private void mergeSortAndEqualSum(MaxIntermediateSizeAdjustStrategy metricTypeAdjustmentStrategy, int count)
-    {
-      int[] appendBytes = Arrays.stream(metricTypeAdjustmentStrategy.appendBytesOnRollupNum()).map(appendBt -> appendBt * count).toArray();
-      int[] rollupRows = metricTypeAdjustmentStrategy.adjustWithRollupNum();
-      if (appendBytesAll == null) {
-        appendBytesAll = appendBytes;
-        rollupRowsAll = rollupRows;
-      } else {
-        int i = 0, j = 0, k = 0;
-        int[] tempAppendBytesAll = new int[rollupRowsAll.length + rollupRows.length];
-        int[] tempRollupRowsAll = new int[rollupRowsAll.length + rollupRows.length];
-        while (i < rollupRowsAll.length && j < rollupRows.length) {
-          if (rollupRowsAll[i] == rollupRows[j]) {
-            tempRollupRowsAll[k] = rollupRows[j];
-            tempAppendBytesAll[k] = appendBytesAll[i++] + appendBytes[j++];
-          } else if (rollupRowsAll[i] > rollupRows[j]) {
-            tempRollupRowsAll[k] = rollupRows[j];
-            tempAppendBytesAll[k] = appendBytes[j++];
-          } else {
-            tempRollupRowsAll[k] = rollupRowsAll[i];
-            tempAppendBytesAll[k] = appendBytesAll[i++];
-          }
-          k++;
-        }
-        while (i < rollupRowsAll.length) {
-          tempRollupRowsAll[k] = rollupRowsAll[i];
-          tempAppendBytesAll[k++] = appendBytesAll[i++];
-        }
-        while (j < rollupRows.length) {
-          tempRollupRowsAll[k] = rollupRows[j];
-          tempAppendBytesAll[k++] = appendBytes[j++];
-        }
-
-        if (k <= tempAppendBytesAll.length) {
-          appendBytesAll = new int[k];
-          rollupRowsAll = new int[k];
-          System.arraycopy(tempAppendBytesAll, 0, appendBytesAll, 0, k);
-          System.arraycopy(tempRollupRowsAll, 0, rollupRowsAll, 0, k);
-        }
-      }
     }
   }
 }

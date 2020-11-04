@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -117,7 +118,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean sortFacts,
         int maxRowCount,
         long maxBytesInMemory,
-        boolean adjustmentBytesInMemoryFlag
+        CountAdjustmentHolder adjustmentHolder
     )
     {
       super(
@@ -127,7 +128,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           sortFacts,
           maxRowCount,
           maxBytesInMemory,
-          adjustmentBytesInMemoryFlag
+          adjustmentHolder
       );
     }
 
@@ -137,7 +138,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         AggregatorFactory[] metrics,
         int maxRowCount,
         long maxBytesInMemory,
-        boolean adjustmentBytesInMemoryFlag
+        CountAdjustmentHolder adjustmentHolder
     )
     {
       super(
@@ -151,7 +152,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           true,
           maxRowCount,
           maxBytesInMemory,
-          adjustmentBytesInMemoryFlag
+          adjustmentHolder
       );
     }
 

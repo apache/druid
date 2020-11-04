@@ -28,12 +28,14 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
+import org.apache.druid.query.aggregation.MetricAdjustmentHolder;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -54,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -166,7 +169,16 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       @Override
       public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
       {
+        if (adjustBytesInMemoryFlag == false) {
+          return null;
+        }
         return customAggStrategy;
+      }
+
+      @Override
+      public String getComplexTypeName()
+      {
+        return "custom";
       }
 
       @Override
@@ -229,12 +241,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       public ValueType getType()
       {
         return ValueType.COMPLEX;
-      }
-
-      @Override
-      public String getComplexTypeName()
-      {
-        return "custom";
       }
 
       @Override
@@ -313,7 +319,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
-        .setAdjustmentBytesInMemoryFlag(false)
         .buildOnheap();
     IncrementalIndexAddResult addResult1 = null;
     for (int i = 0; i < MAX_ROWS; i++) {
@@ -327,6 +332,13 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     index.close();
 
     initCustomAggAdjustStrategy();
+    HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+    MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(
+        "custom", k -> new MetricAdjustmentHolder(customAggStrategy)
+    );
+    metricAdjustmentHolder.selectStrategyByType(customAggStrategy);
+    CountAdjustmentHolder adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+
     final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -336,7 +348,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
-        .setAdjustmentBytesInMemoryFlag(true)
+        .setAdjustmentHolder(adjustmentHolder)
         .buildOnheap();
 
     final int addThreadCount = 2;
