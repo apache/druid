@@ -2419,7 +2419,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     name: 'spec.dataSchema.granularitySpec.queryGranularity',
                     label: 'Query granularity',
                     type: 'string',
-                    suggestions: ['NONE', 'SECOND', 'MINUTE', 'HOUR', 'DAY'],
+                    suggestions: [
+                      'none',
+                      'second',
+                      'minute',
+                      'fifteen_minute',
+                      'thirty_minute',
+                      'hour',
+                      'day',
+                      'week',
+                      'month',
+                      'quarter',
+                      'year',
+                      'all',
+                    ],
                     info: (
                       <>
                         This granularity determines how timestamps will be truncated (not at all, to

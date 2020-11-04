@@ -983,45 +983,6 @@ export function getIoConfigTuningFormFields(
             </>
           ),
         },
-        {
-          name: 'inputSource.maxCacheCapacityBytes',
-          label: 'Max cache capacity bytes',
-          type: 'number',
-          defaultValue: 1073741824,
-          info: (
-            <>
-              <p>
-                Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are
-                not removed until the ingestion task completes.
-              </p>
-            </>
-          ),
-        },
-        {
-          name: 'inputSource.maxFetchCapacityBytes',
-          label: 'Max fetch capacity bytes',
-          type: 'number',
-          defaultValue: 1073741824,
-          info: (
-            <>
-              <p>
-                Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched
-                files are removed immediately once they are read.
-              </p>
-            </>
-          ),
-        },
-        {
-          name: 'inputSource.prefetchTriggerBytes',
-          label: 'Prefetch trigger bytes',
-          type: 'number',
-          placeholder: 'maxFetchCapacityBytes / 2',
-          info: (
-            <>
-              <p>Threshold to trigger prefetching the objects.</p>
-            </>
-          ),
-        },
       ];
 
     case 'index_parallel:local':
@@ -2091,14 +2052,14 @@ export function updateSchemaWithSample(
   }
 
   if (rollup) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'HOUR');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
     const metrics = getMetricSpecs(headerAndRows, typeHints);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }
   } else {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'NONE');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'none');
     newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
   }
 
