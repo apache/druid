@@ -22,6 +22,10 @@ package org.apache.druid.benchmark.indexing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
+import org.apache.druid.query.aggregation.MetricAdjustmentHolder;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -50,6 +54,7 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -140,6 +145,11 @@ public class ComplexMetricAdjustStrategyBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
+    CountAdjustmentHolder adjustmentHolder = createAdjustmentHolder(
+        schemaInfo.getAggsArray(),
+        maxBytesInMemory,
+        adjustFlag
+    );
     return new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -149,7 +159,7 @@ public class ComplexMetricAdjustStrategyBenchmark
         )
         .setMaxRowCount(rowsPerSegment * 10)
         .setMaxBytesInMemory(maxBytesInMemory * 10)
-        .setAdjustmentBytesInMemoryFlag(adjustFlag)
+        .setAdjustmentHolder(adjustmentHolder)
         .buildOnheap();
   }
 
@@ -170,5 +180,36 @@ public class ComplexMetricAdjustStrategyBenchmark
   {
     incIndex.close();
     incIndex = null;
+  }
+
+  private CountAdjustmentHolder createAdjustmentHolder(
+      AggregatorFactory[] metrics, long maxBytesInMemory, final boolean
+      adjustmentFlag
+  )
+  {
+    HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+    if (maxBytesInMemory < 0 || adjustmentFlag == false) {
+      return null;
+    }
+    for (AggregatorFactory metric : metrics) {
+      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
+          .getMaxIntermediateSizeAdjustStrategy(adjustmentFlag);
+      if (maxIntermediateSizeAdjustStrategy == null) {
+        continue;
+      }
+      final String tempMetricType = maxIntermediateSizeAdjustStrategy.getAdjustmentMetricType();
+      final MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(
+          tempMetricType,
+          k -> new MetricAdjustmentHolder(maxIntermediateSizeAdjustStrategy)
+      );
+      if (metricAdjustmentHolder != null) {
+        metricAdjustmentHolder.selectStrategyByType(maxIntermediateSizeAdjustStrategy);
+      }
+    }
+    CountAdjustmentHolder adjustmentHolder = null;
+    if (metricTypeAndHolderMap.size() > 0) {
+      adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+    }
+    return adjustmentHolder;
   }
 }
