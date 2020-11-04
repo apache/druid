@@ -54,7 +54,7 @@ public class ScheduledExecutors
           {
             runnable.run(); // (Exceptions are handled for us)
             if (exec.isShutdown()) {
-              log.warn("ScheduledExecutorService is ShutDown. Return 'Signal.STOP' and stopped rescheduling %s (delay %s)", this, delay);
+              log.debug("ScheduledExecutorService is ShutDown. Return 'Signal.STOP' and stopped rescheduling %s (delay %s)", this, delay);
               return Signal.STOP;
             } else {
               return Signal.REPEAT;
