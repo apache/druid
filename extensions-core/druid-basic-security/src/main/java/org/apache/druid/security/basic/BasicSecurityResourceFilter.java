@@ -34,12 +34,15 @@ import org.apache.druid.server.security.ResourceType;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
+@Deprecated
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
   private static final String SECURITY_RESOURCE_NAME = "security";
 
   @Inject
-  public BasicSecurityResourceFilter(AuthorizerMapper authorizerMapper)
+  public BasicSecurityResourceFilter(
+      AuthorizerMapper authorizerMapper
+  )
   {
     super(authorizerMapper);
   }
@@ -47,33 +50,26 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    final ResourceAction resourceAction;
-    if (getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
-      resourceAction = new ResourceAction(
-          Resource.SERVER_SERVER_RESOURCE,
-          getAction(request)
-      );
-    } else {
-      resourceAction = new ResourceAction(
+    if (getAuthVersion().equals(AuthConfig.AUTH_VERSION_1)) {
+      final ResourceAction resourceAction = new ResourceAction(
           new Resource(SECURITY_RESOURCE_NAME, ResourceType.CONFIG),
           getAction(request)
       );
-    }
 
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
-        getReq(),
-        resourceAction,
-        getAuthorizerMapper()
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new WebApplicationException(
-          Response.status(Response.Status.FORBIDDEN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                  .build()
+      final Access authResult = AuthorizationUtils.authorizeResourceAction(
+          getReq(),
+          resourceAction,
+          getAuthorizerMapper()
       );
-    }
 
+      if (!authResult.isAllowed()) {
+        throw new WebApplicationException(
+            Response.status(Response.Status.FORBIDDEN)
+                .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                .build()
+        );
+      }
+    }
     return request;
   }
 }

@@ -53,7 +53,7 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class SecurityResourceFilterTest extends ResourceFilterTestHelper
 {
-  @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
+  @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}, authVersion={4}, performAuth={5}")
   public static Collection<Object[]> data()
   {
     return ImmutableList.copyOf(
@@ -83,18 +83,24 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   private final String requestMethod;
   private final ResourceFilter resourceFilter;
   private final Injector injector;
+  private final String authVersion;
+  private final boolean performAuth;
 
   public SecurityResourceFilterTest(
       String requestPath,
       String requestMethod,
       ResourceFilter resourceFilter,
-      Injector injector
+      Injector injector,
+      String authVersion,
+      boolean performAuth
   )
   {
     this.requestPath = requestPath;
     this.requestMethod = requestMethod;
     this.resourceFilter = resourceFilter;
     this.injector = injector;
+    this.authVersion = authVersion;
+    this.performAuth = performAuth;
   }
 
   @Before
@@ -106,7 +112,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   @Test
   public void testResourcesFilteringAccess()
   {
-    setUpMockExpectations(requestPath, true, requestMethod);
+    setUpMockExpectations(requestPath, true, requestMethod, authVersion, performAuth);
     EasyMock.replay(req, request, authorizerMapper);
     resourceFilter.getRequestFilter().filter(request);
     EasyMock.verify(req, request, authorizerMapper);
@@ -115,10 +121,14 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   @Test(expected = ForbiddenException.class)
   public void testResourcesFilteringNoAccess()
   {
-    setUpMockExpectations(requestPath, false, requestMethod);
+    setUpMockExpectations(requestPath, false, requestMethod, authVersion, performAuth);
     EasyMock.replay(req, request, authorizerMapper);
     try {
       resourceFilter.getRequestFilter().filter(request);
+      if (!performAuth) {
+        // if auth does not need to be performed, exception will not be thrown so do it manually
+        throw new ForbiddenException();
+      }
       Assert.fail();
     }
     catch (ForbiddenException e) {

@@ -25,6 +25,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -33,6 +34,7 @@ import com.google.inject.Module;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ResourceFilter;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -58,14 +60,25 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ResourceFilterTestHelper
 {
-  private static Set<Class<? extends ResourceFilter>> whitelistedForTestFilters = ImmutableSet.of(
+  private static final Set<Class<? extends ResourceFilter>> LEGACY_FILTERS = ImmutableSet.of(
       ConfigResourceFilter.class,
-      DatasourceResourceFilter.class,
-      RulesResourceFilter.class,
       StateResourceFilter.class
+  );
+
+  public static Set<Class<? extends ResourceFilter>> currentFilters = Sets.newHashSet(
+      DatasourceResourceFilter.class,
+      RulesResourceFilter.class
+  );
+
+  private static final Set<Class<? extends ResourceFilter>> NEW_FILTERS = ImmutableSet.of(
+      InternalInternalResourceFilter.class,
+      ServerServerResourceFilter.class,
+      ServerStatusResourceFilter.class,
+      ServerUserResourceFilter.class
   );
 
   public HttpServletRequest req;
@@ -76,7 +89,7 @@ public class ResourceFilterTestHelper
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     request = EasyMock.createStrictMock(ContainerRequest.class);
-    authorizerMapper = EasyMock.createStrictMock(AuthorizerMapper.class);
+    authorizerMapper = EasyMock.createMock(AuthorizerMapper.class);
 
     // Memory barrier
     synchronized (this) {
@@ -88,7 +101,9 @@ public class ResourceFilterTestHelper
   public void setUpMockExpectations(
       String requestPath,
       boolean authCheckResult,
-      String requestMethod
+      String requestMethod,
+      String authVersion,
+      boolean performAuth
   )
   {
     EasyMock.expect(request.getPath()).andReturn(requestPath).anyTimes();
@@ -124,24 +139,32 @@ public class ResourceFilterTestHelper
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .atLeastOnce();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authCheckResult);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(authorizerMapper.getAuthorizer(
-        EasyMock.anyString()
-    )).andReturn(
-        new Authorizer()
-        {
-          @Override
-          public Access authorize(AuthenticationResult authenticationResult1, Resource resource, Action action)
-          {
-            return new Access(authCheckResult);
-          }
 
-        }
-    ).atLeastOnce();
+    EasyMock.expect(authorizerMapper.getAuthVersion()).andReturn(authVersion).anyTimes();
+    if (performAuth) {
+      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+          .andReturn(authenticationResult)
+          .atLeastOnce();
+      EasyMock.expect(authorizerMapper.getAuthorizer(
+          EasyMock.anyString()
+      )).andReturn(
+          new Authorizer()
+          {
+            @Override
+            public Access authorize(AuthenticationResult authenticationResult1, Resource resource, Action action)
+            {
+              return new Access(authCheckResult);
+            }
+            @Override
+            public Access authorizeV2(AuthenticationResult authenticationResult1, Resource resource, Action action)
+            {
+              return new Access(authCheckResult);
+            }
+          }
+      ).atLeastOnce();
+      req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authCheckResult);
+      EasyMock.expectLastCall().anyTimes();
+    }
   }
 
   public static Collection<Object[]> getRequestPathsWithAuthorizer(final AnnotatedElement classOrMethod)
@@ -239,29 +262,38 @@ public class ResourceFilterTestHelper
                   {
                     final List<Class<? extends ResourceFilter>> resourceFilters =
                         method.getAnnotation(ResourceFilters.class) == null ? baseResourceFilters :
-                        ImmutableList.copyOf(method.getAnnotation(ResourceFilters.class).value());
-                    final List<Class<? extends ResourceFilter>> enabledForTestResourceFilters = getEnabledForTestFilters(
-                        resourceFilters);
+                            ImmutableList.copyOf(method.getAnnotation(ResourceFilters.class).value());
+                    final List<Pair<Class<? extends ResourceFilter>, String>> filterVersionPairs = resourceFilters
+                        .stream().flatMap(
+                            (java.util.function.Function<Class<? extends ResourceFilter>, Stream<Pair<Class<? extends ResourceFilter>, String>>>) filter ->
+                                Stream.of(
+                                    new Pair<>(filter, AuthConfig.AUTH_VERSION_1),
+                                    new Pair<>(filter, AuthConfig.AUTH_VERSION_2)
+                                )).collect(Collectors.toList());
                     return Collections2.transform(
-                        enabledForTestResourceFilters,
-                        new Function<Class<? extends ResourceFilter>, Object[]>()
+                        filterVersionPairs,
+                        new Function<Pair<Class<? extends ResourceFilter>, String>, Object[]>()
                         {
                           @Override
-                          public Object[] apply(Class<? extends ResourceFilter> input)
+                          public Object[] apply(Pair<Class<? extends ResourceFilter>, String> filterVersionPair)
                           {
                             if (method.getAnnotation(Path.class) != null) {
-                              return new Object[]{
+                              return new Object[] {
                                   StringUtils.format("%s%s", basepath, method.getAnnotation(Path.class).value()),
-                                  httpMethodFromAnnotation(input, method),
-                                  injector.getInstance(input),
-                                  injector
+                                  httpMethodFromAnnotation(filterVersionPair.lhs, method),
+                                  injector.getInstance(filterVersionPair.lhs),
+                                  injector,
+                                  filterVersionPair.rhs,
+                                  performAuth(filterVersionPair.lhs, filterVersionPair.rhs)
                               };
                             } else {
-                              return new Object[]{
+                              return new Object[] {
                                   basepath,
-                                  httpMethodFromAnnotation(input, method),
-                                  injector.getInstance(input),
-                                  injector
+                                  httpMethodFromAnnotation(filterVersionPair.lhs, method),
+                                  injector.getInstance(filterVersionPair.lhs),
+                                  injector,
+                                  filterVersionPair.rhs,
+                                  performAuth(filterVersionPair.lhs, filterVersionPair.rhs)
                               };
                             }
                           }
@@ -283,10 +315,17 @@ public class ResourceFilterTestHelper
     }
   }
 
-  private static List<Class<? extends ResourceFilter>> getEnabledForTestFilters(List<Class<? extends ResourceFilter>> filters)
+  // the new filters will perform authorization only if auth version is v2
+  // current filters mostly datasource realted ones will work same for both v1 and v2
+  // legacy filters will perform authorization only if auth version is v1
+  public static boolean performAuth(Class<? extends ResourceFilter> filter, String authVersion)
   {
-    List<Class<? extends ResourceFilter>> filtered = filters.stream()
-        .filter(aClass -> whitelistedForTestFilters.contains(aClass)).collect(Collectors.toList());
-    return filtered;
+    if (NEW_FILTERS.contains(filter) && authVersion.equals(AuthConfig.AUTH_VERSION_2)) {
+      return true;
+    } else if (currentFilters.contains(filter)) {
+      return true;
+    } else {
+      return LEGACY_FILTERS.contains(filter) && authVersion.equals(AuthConfig.AUTH_VERSION_1);
+    }
   }
 }

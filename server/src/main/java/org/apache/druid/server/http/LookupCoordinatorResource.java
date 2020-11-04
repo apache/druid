@@ -39,8 +39,8 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.LookupStatusResourceFilter;
 import org.apache.druid.server.http.security.ServerServerResourceFilter;
+import org.apache.druid.server.http.security.ServerUserResourceFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.server.security.Access;
@@ -109,7 +109,7 @@ public class LookupCoordinatorResource
   @GET
   @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @ResourceFilters({ ConfigResourceFilter.class, LookupStatusResourceFilter.class })
+  @ResourceFilters({ ConfigResourceFilter.class, ServerUserResourceFilter.class })
   public Response getTiers(
       @DefaultValue("false") @QueryParam("discover") boolean discover,
       @Context HttpServletRequest request

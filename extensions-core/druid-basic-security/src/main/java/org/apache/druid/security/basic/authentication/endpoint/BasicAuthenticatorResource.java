@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
+import org.apache.druid.server.http.security.ServerServerResourceFilter;
 import org.apache.druid.server.security.AuthValidator;
 
 import javax.servlet.http.HttpServletRequest;
@@ -65,7 +66,7 @@ public class BasicAuthenticatorResource
   @Path("/loadStatus")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response getLoadStatus(
       @Context HttpServletRequest req
   )
@@ -83,7 +84,7 @@ public class BasicAuthenticatorResource
   @Path("/refreshAll")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response refreshAll(
       @Context HttpServletRequest req
   )
@@ -100,7 +101,7 @@ public class BasicAuthenticatorResource
   @Path("/db/{authenticatorName}/users")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response getAllUsers(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName
@@ -120,7 +121,7 @@ public class BasicAuthenticatorResource
   @Path("/db/{authenticatorName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response getUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
@@ -143,7 +144,7 @@ public class BasicAuthenticatorResource
   @Path("/db/{authenticatorName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response createUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
@@ -166,7 +167,7 @@ public class BasicAuthenticatorResource
   @Path("/db/{authenticatorName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response deleteUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
@@ -189,7 +190,7 @@ public class BasicAuthenticatorResource
   @Path("/db/{authenticatorName}/users/{userName}/credentials")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response updateUserCredentials(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
@@ -210,7 +211,7 @@ public class BasicAuthenticatorResource
   @Path("/db/{authenticatorName}/cachedSerializedUserMap")
   @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response getCachedSerializedUserMap(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName
@@ -227,7 +228,7 @@ public class BasicAuthenticatorResource
   @Path("/listen/{authenticatorName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({ BasicSecurityResourceFilter.class, ServerServerResourceFilter.class })
   public Response authenticatorUpdateListener(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,

@@ -52,9 +52,11 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
 {
   private static final Pattern WORD = Pattern.compile("\\w+");
 
-  @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
+  @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}, authVersion={4}, performAuth={5}")
   public static Collection<Object[]> data()
   {
+    ResourceFilterTestHelper.currentFilters.add(TaskResourceFilter.class);
+    ResourceFilterTestHelper.currentFilters.add(SupervisorResourceFilter.class);
     return ImmutableList.copyOf(
         Iterables.concat(
             getRequestPaths(OverlordResource.class, ImmutableList.of(
@@ -79,6 +81,8 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   private final ResourceFilter resourceFilter;
   private final Injector injector;
   private final Task noopTask = NoopTask.create();
+  private final String authVersion;
+  private final boolean performAuth;
 
   private static boolean mockedOnceTsqa;
   private static boolean mockedOnceSM;
@@ -89,13 +93,17 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
       String requestPath,
       String requestMethod,
       ResourceFilter resourceFilter,
-      Injector injector
+      Injector injector,
+      String authVersion,
+      boolean performAuth
   )
   {
     this.requestPath = requestPath;
     this.requestMethod = requestMethod;
     this.resourceFilter = resourceFilter;
     this.injector = injector;
+    this.authVersion = authVersion;
+    this.performAuth = performAuth;
   }
 
   @Before
@@ -174,7 +182,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   @Test
   public void testResourcesFilteringAccess()
   {
-    setUpMockExpectations(requestPath, true, requestMethod);
+    setUpMockExpectations(requestPath, true, requestMethod, authVersion, performAuth);
     EasyMock.expect(request.getEntity(Task.class)).andReturn(noopTask).anyTimes();
     // As request object is a strict mock the ordering of expected calls matters
     // therefore adding the expectation below again as getEntity is called before getMethod
@@ -186,11 +194,15 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   @Test(expected = ForbiddenException.class)
   public void testDatasourcesResourcesFilteringNoAccess()
   {
-    setUpMockExpectations(requestPath, false, requestMethod);
+    setUpMockExpectations(requestPath, false, requestMethod, authVersion, performAuth);
     EasyMock.expect(request.getEntity(Task.class)).andReturn(noopTask).anyTimes();
     EasyMock.replay(req, request, authorizerMapper);
     try {
       resourceFilter.getRequestFilter().filter(request);
+      if (!performAuth) {
+        // if auth does not need to be performed, exception will not be thrown so do it manually
+        throw new ForbiddenException();
+      }
     }
     catch (ForbiddenException e) {
       throw e;
