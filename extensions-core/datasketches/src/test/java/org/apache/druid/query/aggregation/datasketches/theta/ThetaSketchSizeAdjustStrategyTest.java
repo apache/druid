@@ -180,10 +180,7 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
     }
   }
 
-  private CountAdjustmentHolder createAdjustmentHolder(
-      AggregatorFactory[] metrics, long maxBytesInMemory, final boolean
-      adjustmentFlag
-  )
+  private CountAdjustmentHolder createAdjustmentHolder(AggregatorFactory[] metrics, long maxBytesInMemory, final boolean adjustmentFlag)
   {
     HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
     if (maxBytesInMemory < 0 || adjustmentFlag == false) {
