@@ -53,7 +53,11 @@ public class ScheduledExecutors
           public Signal call()
           {
             runnable.run(); // (Exceptions are handled for us)
-            return Signal.REPEAT;
+            if (exec.isShutdown()) {
+              return Signal.STOP;
+            } else {
+              return Signal.REPEAT;
+            }
           }
         }
     );
