@@ -26,6 +26,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -78,7 +79,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(null, null));
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, 2);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -121,7 +122,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(null, null));
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", interval, null);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -140,7 +141,7 @@ public class RulesResourceTest
         .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(null, null));
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, -1);
     Map<String, Object> rulesHistory = (Map) response.getEntity();
@@ -181,7 +182,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(null, null));
 
     Response response = rulesResource.getDatasourceRuleHistory(null, 2);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -224,7 +225,7 @@ public class RulesResourceTest
             .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(null, null));
 
     Response response = rulesResource.getDatasourceRuleHistory(interval, null);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
@@ -243,7 +244,7 @@ public class RulesResourceTest
         .once();
     EasyMock.replay(auditManager);
 
-    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, null, null);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(null, null));
 
     Response response = rulesResource.getDatasourceRuleHistory(null, -1);
     Map<String, Object> rulesHistory = (Map) response.getEntity();

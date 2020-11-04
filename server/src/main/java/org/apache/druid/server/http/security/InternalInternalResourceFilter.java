@@ -32,17 +32,15 @@ import org.apache.druid.server.security.ResourceAction;
 public class InternalInternalResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public InternalInternalResourceFilter(AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
-  )
+  public InternalInternalResourceFilter(AuthorizerMapper authorizerMapper)
   {
-    super(authorizerMapper, authConfig);
+    super(authorizerMapper);
   }
 
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       final ResourceAction resourceAction = new ResourceAction(
           Resource.INTERNAL_INTERNAL_RESOURCE,
           getAction(request)

@@ -216,9 +216,9 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper, authConfig),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, authConfig),
-        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper, authConfig),
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
+        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
     );
@@ -239,21 +239,18 @@ public class SystemSchema extends AbstractSchema
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
-    private final AuthConfig authConfig;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
-        AuthorizerMapper authorizerMapper,
-        AuthConfig authConfig
+        AuthorizerMapper authorizerMapper
     )
     {
       this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
-      this.authConfig = authConfig;
     }
 
     @Override
@@ -484,19 +481,16 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final InventoryView serverInventoryView;
-    private final AuthConfig authConfig;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         InventoryView serverInventoryView,
-        AuthorizerMapper authorizerMapper,
-        AuthConfig authConfig
+        AuthorizerMapper authorizerMapper
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
-      this.authConfig = authConfig;
     }
 
     @Override
@@ -519,7 +513,7 @@ public class SystemSchema extends AbstractSchema
           root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
           "authenticationResult in dataContext"
       );
-      checkStateReadAccessForServers(authenticationResult, authorizerMapper, authConfig.getAuthVersion());
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper, authorizerMapper.getAuthVersion());
 
       final FluentIterable<Object[]> results = FluentIterable
           .from(() -> druidServers)
@@ -645,13 +639,11 @@ public class SystemSchema extends AbstractSchema
   {
     private final TimelineServerView serverView;
     private final AuthorizerMapper authorizerMapper;
-    private final AuthConfig authConfig;
 
-    public ServerSegmentsTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper, AuthConfig authConfig)
+    public ServerSegmentsTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper)
     {
       this.serverView = serverView;
       this.authorizerMapper = authorizerMapper;
-      this.authConfig = authConfig;
     }
 
     @Override
@@ -673,7 +665,7 @@ public class SystemSchema extends AbstractSchema
           root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
           "authenticationResult in dataContext"
       );
-      checkStateReadAccessForServers(authenticationResult, authorizerMapper, authConfig.getAuthVersion());
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper, authorizerMapper.getAuthVersion());
 
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();

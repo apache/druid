@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
-import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -103,8 +103,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getTiers(false, null);
     Assert.assertEquals(200, response.getStatus());
@@ -123,8 +122,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getTiers(false, null);
     Assert.assertEquals(404, response.getStatus());
@@ -143,8 +141,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getTiers(false, null);
     Assert.assertEquals(500, response.getStatus());
@@ -165,8 +162,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getTiers(true, null);
     Assert.assertEquals(200, response.getStatus());
@@ -189,8 +185,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getTiers(true, null);
     Assert.assertEquals(500, response.getStatus());
@@ -215,8 +210,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificLookup(LOOKUP_TIER, LOOKUP_NAME, null);
     Assert.assertEquals(200, response.getStatus());
@@ -234,8 +228,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(LOOKUP_TIER, true, null);
     Assert.assertEquals(200, response.getStatus());
@@ -256,8 +249,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificLookup(LOOKUP_TIER, LOOKUP_NAME, null);
     Assert.assertEquals(404, response.getStatus());
@@ -274,8 +266,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     Assert.assertEquals(400, lookupCoordinatorResource.getSpecificLookup("foo", null, null).getStatus());
     Assert.assertEquals(400, lookupCoordinatorResource.getSpecificLookup("foo", "", null).getStatus());
@@ -298,8 +289,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificLookup(LOOKUP_TIER, LOOKUP_NAME, null);
     Assert.assertEquals(500, response.getStatus());
@@ -331,8 +321,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.deleteTier(
         LOOKUP_TIER,
@@ -376,8 +365,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.deleteLookup(
         LOOKUP_TIER,
@@ -423,8 +411,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.deleteLookup(
         LOOKUP_TIER,
@@ -471,8 +458,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.deleteLookup(
         LOOKUP_TIER,
@@ -503,8 +489,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     Assert.assertEquals(400, lookupCoordinatorResource.deleteLookup("foo", null, null, null, null).getStatus());
     Assert.assertEquals(400, lookupCoordinatorResource.deleteLookup(null, null, null, null, null).getStatus());
@@ -537,8 +522,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.updateAllLookups(
         SINGLE_TIER_MAP_SOURCE.openStream(),
@@ -583,8 +567,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.updateAllLookups(
         SINGLE_TIER_MAP_SOURCE.openStream(),
@@ -629,8 +612,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.updateAllLookups(
         SINGLE_TIER_MAP_SOURCE.openStream(),
@@ -677,8 +659,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.createOrUpdateLookup(
         LOOKUP_TIER,
@@ -727,8 +708,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.createOrUpdateLookup(
         LOOKUP_TIER,
@@ -778,8 +758,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.createOrUpdateLookup(
         LOOKUP_TIER,
@@ -818,8 +797,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     EasyMock.replay(lookupCoordinatorManager, request);
@@ -871,8 +849,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(LOOKUP_TIER, false, null);
     Assert.assertEquals(200, response.getStatus());
@@ -893,8 +870,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false, null);
     Assert.assertEquals(404, response.getStatus());
@@ -911,8 +887,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false, null);
     Assert.assertEquals(400, response.getStatus());
@@ -931,8 +906,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false, null);
     Assert.assertEquals(404, response.getStatus());
@@ -952,8 +926,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false, null);
     Assert.assertEquals(500, response.getStatus());
@@ -977,8 +950,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getAllLookupsStatus(false, null);
@@ -1012,8 +984,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getLookupStatusForTier(LOOKUP_TIER, false, null);
@@ -1044,8 +1015,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getSpecificLookupStatus(LOOKUP_TIER, LOOKUP_NAME, false, null);
@@ -1064,8 +1034,7 @@ public class LookupCoordinatorResourceTest
         EasyMock.createStrictMock(LookupCoordinatorManager.class),
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     HostAndPort newNode = HostAndPort.fromParts("localhost", 4352);
@@ -1088,8 +1057,7 @@ public class LookupCoordinatorResourceTest
         EasyMock.createStrictMock(LookupCoordinatorManager.class),
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     HostAndPort newNode = HostAndPort.fromParts("localhost", 4352);
@@ -1121,8 +1089,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getAllNodesStatus(false, null);
@@ -1157,8 +1124,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getAllNodesStatus(false, false);
@@ -1194,8 +1160,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getNodesStatusInTier(LOOKUP_TIER);
@@ -1224,8 +1189,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
 
     final Response response = lookupCoordinatorResource.getSpecificNodeStatus(LOOKUP_TIER, LOOKUP_NODE);
@@ -1272,8 +1236,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getAllLookupSpecs(null);
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -1295,8 +1258,7 @@ public class LookupCoordinatorResourceTest
         lookupCoordinatorManager,
         MAPPER,
         MAPPER,
-        null,
-        new AuthConfig()
+        new AuthorizerMapper(null, null)
     );
     final Response response = lookupCoordinatorResource.getAllLookupSpecs(null);
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());

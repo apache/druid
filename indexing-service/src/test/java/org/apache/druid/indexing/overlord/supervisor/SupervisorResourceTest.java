@@ -86,7 +86,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   {
     supervisorResource = new SupervisorResource(
         taskMaster,
-        new AuthorizerMapper(null)
+        new AuthorizerMapper(null, null)
         {
           @Override
           public Authorizer getAuthorizer(String name)

@@ -20,6 +20,7 @@
 package org.apache.druid.security.ranger.authorizer;
 
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
@@ -48,13 +49,13 @@ public class RangerAuthorizerTest
   @Test
   public void testOperations()
   {
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.WRITE).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.WRITE).isAllowed());
+    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ, AuthConfig.AUTH_VERSION_1).isAllowed());
+    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ, AuthConfig.AUTH_VERSION_1).isAllowed());
+    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.READ, AuthConfig.AUTH_VERSION_1).isAllowed());
+    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.WRITE, AuthConfig.AUTH_VERSION_1).isAllowed());
+    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.READ, AuthConfig.AUTH_VERSION_1).isAllowed());
+    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.WRITE, AuthConfig.AUTH_VERSION_1).isAllowed());
 
-    Assert.assertFalse(rangerAuthorizer.authorize(bob, aliceDatasource, Action.READ).isAllowed());
+    Assert.assertFalse(rangerAuthorizer.authorize(bob, aliceDatasource, Action.READ, AuthConfig.AUTH_VERSION_1).isAllowed());
   }
 }

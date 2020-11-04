@@ -121,7 +121,8 @@ public class AuthorizationUtils
       final Access access = authorizer.authorize(
           authenticationResult,
           resourceAction.getResource(),
-          resourceAction.getAction()
+          resourceAction.getAction(),
+          authorizerMapper.getAuthVersion()
       );
       if (!access.isAllowed()) {
         return access;
@@ -277,7 +278,8 @@ public class AuthorizationUtils
                 ra -> authorizer.authorize(
                     authenticationResult,
                     ra.getResource(),
-                    ra.getAction()
+                    ra.getAction(),
+                    authorizerMapper.getAuthVersion()
                 )
             );
             if (!access.isAllowed()) {

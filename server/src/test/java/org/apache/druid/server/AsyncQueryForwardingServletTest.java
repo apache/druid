@@ -132,7 +132,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 binder.bind(AuthorizerMapper.class).toInstance(
-                    new AuthorizerMapper(null)
+                    new AuthorizerMapper(null, null)
                     {
 
                       @Override

@@ -65,20 +65,17 @@ public class RulesResource
   private final MetadataRuleManager databaseRuleManager;
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
-  private final AuthConfig authConfig;
 
   @Inject
   public RulesResource(
       MetadataRuleManager databaseRuleManager,
       AuditManager auditManager,
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
+      AuthorizerMapper authorizerMapper
   )
   {
     this.databaseRuleManager = databaseRuleManager;
     this.auditManager = auditManager;
     this.authorizerMapper = authorizerMapper;
-    this.authConfig = authConfig;
   }
 
   @GET
@@ -88,7 +85,7 @@ public class RulesResource
   {
     final Map<String, List<Rule>> rules = databaseRuleManager.getAllRules();
 
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       final Map<String, List<Rule>> filteredRules = new HashMap<>();
       AuthorizationUtils.filterAuthorizedResources(
           request,

@@ -25,7 +25,6 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -45,12 +44,9 @@ import javax.ws.rs.core.PathSegment;
 public class RulesResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public RulesResourceFilter(
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
-  )
+  public RulesResourceFilter(AuthorizerMapper authorizerMapper)
   {
-    super(authorizerMapper, authConfig);
+    super(authorizerMapper);
   }
 
   @Override

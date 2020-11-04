@@ -32,7 +32,7 @@ public class AuthTestUtils
     defaultMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
     TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
 
-    TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
+    TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null, null) {
       @Override
       public Authorizer getAuthorizer(String name)
       {

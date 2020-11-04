@@ -65,25 +65,22 @@ public class CoordinatorCompactionConfigsResource
 {
   private final JacksonConfigManager manager;
   private final AuthorizerMapper authorizerMapper;
-  private final AuthConfig authConfig;
 
   @Inject
   public CoordinatorCompactionConfigsResource(
       JacksonConfigManager manager,
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
+      AuthorizerMapper authorizerMapper
   )
   {
     this.manager = manager;
     this.authorizerMapper = authorizerMapper;
-    this.authConfig = authConfig;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig(@Context HttpServletRequest request)
   {
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       return Response
           .ok(getFilteredConfigsByDatasource(CoordinatorCompactionConfig.current(manager), request, Action.READ))
           .build();
@@ -136,7 +133,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       if (!AuthorizationUtils.authorizeResourceAction(req, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(
           newConfig.getDataSource()), authorizerMapper).isAllowed()) {
         return Response.status(Response.Status.FORBIDDEN).build();
@@ -169,7 +166,7 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig(@PathParam("dataSource") String dataSource, @Context HttpServletRequest req)
   {
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       if (!AuthorizationUtils.authorizeResourceAction(
           req,
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource),
@@ -202,7 +199,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       if (!AuthorizationUtils.authorizeResourceAction(
           req,
           AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource),

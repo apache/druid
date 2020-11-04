@@ -192,7 +192,7 @@ public class SystemSchemaTest extends CalciteTestBase
                               .addMockedMethod("getStatus")
                               .createMock();
     request = EasyMock.createMock(Request.class);
-    authMapper = new AuthorizerMapper(null)
+    authMapper = new AuthorizerMapper(null, null)
     {
       @Override
       public Authorizer getAuthorizer(String name)
@@ -526,9 +526,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper,
-        new AuthConfig()
-    );
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
         new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),

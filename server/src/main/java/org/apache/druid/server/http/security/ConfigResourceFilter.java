@@ -45,15 +45,15 @@ import org.apache.druid.server.security.ResourceType;
 public class ConfigResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public ConfigResourceFilter(AuthorizerMapper authorizerMapper, AuthConfig authConfig)
+  public ConfigResourceFilter(AuthorizerMapper authorizerMapper)
   {
-    super(authorizerMapper, authConfig);
+    super(authorizerMapper);
   }
 
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_1)) {
+    if (getAuthVersion().equals(AuthConfig.AUTH_VERSION_1)) {
       final ResourceAction resourceAction = new ResourceAction(
           new Resource("CONFIG", ResourceType.CONFIG),
           getAction(request)

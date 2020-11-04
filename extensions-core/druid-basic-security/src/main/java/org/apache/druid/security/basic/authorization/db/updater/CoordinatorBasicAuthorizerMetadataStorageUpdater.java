@@ -97,7 +97,6 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private final BasicAuthorizerCacheNotifier cacheNotifier;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
-  private final AuthConfig authConfig;
   private final int numRetries = 5;
 
   private final Map<String, BasicAuthorizerUserMapBundle> cachedUserMaps;
@@ -118,8 +117,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       BasicAuthorizerCacheNotifier cacheNotifier,
-      ConfigManager configManager, // -V6022: ConfigManager creates the db table we need, set a dependency here
-      AuthConfig authConfig
+      ConfigManager configManager // -V6022: ConfigManager creates the db table we need, set a dependency here
   )
   {
     this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthorizerMetadataStorageUpdater-Exec--%d");
@@ -133,7 +131,6 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     this.cachedGroupMappingMaps = new ConcurrentHashMap<>();
     this.cachedRoleMaps = new ConcurrentHashMap<>();
     this.authorizerNames = new HashSet<>();
-    this.authConfig = authConfig;
   }
 
   @LifecycleStart
@@ -182,7 +179,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
                                         dbConfig.getInitialAdminUser(),
                                         dbConfig.getInitialAdminRole(),
                                         dbConfig.getInitialAdminGroupMapping(),
-                                        authConfig.getAuthVersion()
+                                        authorizerMapper.getAuthVersion()
           );
         }
       }

@@ -31,7 +31,6 @@ import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -56,11 +55,10 @@ public class TaskResourceFilter extends AbstractResourceFilter
   @Inject
   public TaskResourceFilter(
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
+      AuthorizerMapper authorizerMapper
   )
   {
-    super(authorizerMapper, authConfig);
+    super(authorizerMapper);
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
   }
 

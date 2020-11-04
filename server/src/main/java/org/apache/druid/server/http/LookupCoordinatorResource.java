@@ -91,22 +91,19 @@ public class LookupCoordinatorResource
   private final ObjectMapper smileMapper;
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
-  private final AuthConfig authConfig;
 
   @Inject
   public LookupCoordinatorResource(
       final LookupCoordinatorManager lookupCoordinatorManager,
       final @Smile ObjectMapper smileMapper,
       final @Json ObjectMapper jsonMapper,
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
+      AuthorizerMapper authorizerMapper
   )
   {
     this.smileMapper = smileMapper;
     this.jsonMapper = jsonMapper;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.authorizerMapper = authorizerMapper;
-    this.authConfig = authConfig;
   }
 
   @GET
@@ -150,7 +147,7 @@ public class LookupCoordinatorResource
     try {
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
           .getKnownLookups();
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         knownLookups = filterByLookupAccess(knownLookups, request, authorizerMapper, Action.READ);
       }
       if (knownLookups == null) {
@@ -189,7 +186,7 @@ public class LookupCoordinatorResource
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
       }
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         final Access access = AuthorizationUtils
             .authorizeAllResourceActions(req, TIER_LOOKUP_RA_GENERATOR.apply(map, Action.WRITE), authorizerMapper);
         if (!access.isAllowed()) {
@@ -226,7 +223,7 @@ public class LookupCoordinatorResource
                        .build();
       }
 
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         Map<String, LookupExtractorFactoryMapContainer> tierLookups = lookupCoordinatorManager.getTierLookups(tier);
         final Access access = AuthorizationUtils
             .authorizeAllResourceActions(req, LOOKUP_RA_GENERATOR.apply(tierLookups, Action.WRITE), authorizerMapper);
@@ -272,7 +269,7 @@ public class LookupCoordinatorResource
                        .build();
       }
 
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         final Access access = AuthorizationUtils
             .authorizeResourceAction(req, new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.WRITE), authorizerMapper);
         if (!access.isAllowed()) {
@@ -318,7 +315,7 @@ public class LookupCoordinatorResource
                        .build();
       }
 
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         final Access access = AuthorizationUtils
             .authorizeResourceAction(req, new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.WRITE), authorizerMapper);
         if (!access.isAllowed()) {
@@ -374,7 +371,7 @@ public class LookupCoordinatorResource
                        .build();
       }
 
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         final Access access = AuthorizationUtils
             .authorizeResourceAction(req, new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.READ), authorizerMapper);
         if (!access.isAllowed()) {
@@ -418,7 +415,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new RE("No lookups found")))
                        .build();
       }
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         map = filterByLookupAccess(map, request, authorizerMapper, Action.READ);
       }
       final Map<String, LookupExtractorFactoryMapContainer> tierLookups = map.get(tier);
@@ -456,7 +453,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         configuredLookups = filterByLookupAccess(configuredLookups, request, authorizerMapper, Action.READ);
       }
 
@@ -511,7 +508,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         configuredLookups = filterByLookupAccess(configuredLookups, request, authorizerMapper, Action.READ);
       }
 
@@ -563,7 +560,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
-      if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
         final Access access = AuthorizationUtils
             .authorizeResourceAction(request, new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.READ), authorizerMapper);
         if (!access.isAllowed()) {

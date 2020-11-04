@@ -97,7 +97,7 @@ public class AuthorizerMapperModule implements DruidModule
         AllowAllAuthorizer allowAllAuthorizer = new AllowAllAuthorizer();
         authorizerMap.put(AuthConfig.ALLOW_ALL_NAME, allowAllAuthorizer);
 
-        return new AuthorizerMapper(null)
+        return new AuthorizerMapper(null, authConfig.getAuthVersion())
         {
           @Override
           public Authorizer getAuthorizer(String name)
@@ -138,7 +138,7 @@ public class AuthorizerMapperModule implements DruidModule
         authorizerMap.put(authorizerName, authorizer);
       }
 
-      return new AuthorizerMapper(authorizerMap);
+      return new AuthorizerMapper(authorizerMap, authConfig.getAuthVersion());
     }
   }
 

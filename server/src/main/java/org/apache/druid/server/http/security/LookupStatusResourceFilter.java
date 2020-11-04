@@ -32,18 +32,15 @@ import org.apache.druid.server.security.ResourceAction;
 public class LookupStatusResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public LookupStatusResourceFilter(
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
-  )
+  public LookupStatusResourceFilter(AuthorizerMapper authorizerMapper)
   {
-    super(authorizerMapper, authConfig);
+    super(authorizerMapper);
   }
 
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       final ResourceAction resourceAction = new ResourceAction(
           Resource.LOOKUP_STATUS_RESOURCE,
           getAction(request)

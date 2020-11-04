@@ -144,7 +144,7 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      final Access access = authorize(authenticationResult, authConfig);
+      final Access access = authorize(authenticationResult);
       if (!access.isAllowed()) {
         throw new ISE("Unauthorized");
       }
@@ -203,10 +203,10 @@ public class QueryLifecycle
    *
    * @return authorization result
    */
-  public Access authorize(final AuthenticationResult authenticationResult, final AuthConfig authConfig)
+  public Access authorize(final AuthenticationResult authenticationResult)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       return doAuthorize(
           authenticationResult,
           AuthorizationUtils.authorizeAllResourceActions(

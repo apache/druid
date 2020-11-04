@@ -45,7 +45,6 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFull;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -136,7 +135,7 @@ public class CoordinatorBasicAuthorizerResourceTest
                 null,
                 null
             )
-        )
+        ), null
     );
 
     storageUpdater = new CoordinatorBasicAuthorizerMetadataStorageUpdater(
@@ -146,8 +145,7 @@ public class CoordinatorBasicAuthorizerResourceTest
         new BasicAuthCommonCacheConfig(null, null, null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthorizerCacheNotifier(),
-        null,
-        new AuthConfig()
+        null
     );
 
     resource = new BasicAuthorizerResource(

@@ -102,7 +102,7 @@ public class OverlordResourceTest
         Optional.of(taskRunner)
     ).anyTimes();
 
-    AuthorizerMapper authMapper = new AuthorizerMapper(null)
+    AuthorizerMapper authMapper = new AuthorizerMapper(null, null)
     {
       @Override
       public Authorizer getAuthorizer(String name)

@@ -95,7 +95,7 @@ public class TestUtils
             .addValue(RowIngestionMetersFactory.class, rowIngestionMetersFactory)
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
             .addValue(IndexingServiceClient.class, INDEXING_SERVICE_CLIENT)
-            .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
+            .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of(), null))
             .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(IndexTaskClientFactory.class, TASK_CLIENT_FACTORY)

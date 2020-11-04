@@ -39,19 +39,16 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
   private static final String SECURITY_RESOURCE_NAME = "security";
 
   @Inject
-  public BasicSecurityResourceFilter(
-      AuthorizerMapper authorizerMapper,
-      AuthConfig authConfig
-  )
+  public BasicSecurityResourceFilter(AuthorizerMapper authorizerMapper)
   {
-    super(authorizerMapper, authConfig);
+    super(authorizerMapper);
   }
 
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
     final ResourceAction resourceAction;
-    if (getAuthConfig().getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       resourceAction = new ResourceAction(
           Resource.SERVER_SERVER_RESOURCE,
           getAction(request)

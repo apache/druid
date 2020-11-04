@@ -53,9 +53,11 @@ public class LookupIntrospectionResourceTest
       EasyMock.createMock(LookupIntrospectHandler.class);
 
   private LookupIntrospectionResource lookupIntrospectionResource =
-      new LookupIntrospectionResource(mockLookupExtractorFactoryContainerProvider, new AuthConfig(),
+      new LookupIntrospectionResource(mockLookupExtractorFactoryContainerProvider,
           new AuthorizerMapper(
-              ImmutableMap.of(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthorizer()))
+              ImmutableMap.of(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthorizer()),
+              null
+          )
       );
 
   private URI baseUri;

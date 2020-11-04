@@ -27,12 +27,12 @@ import java.util.Map;
 public class AuthorizerMapper
 {
   private Map<String, Authorizer> authorizerMap;
+  private String authVersion;
 
-  public AuthorizerMapper(
-      Map<String, Authorizer> authorizerMap
-  )
+  public AuthorizerMapper(Map<String, Authorizer> authorizerMap, String authVersion)
   {
     this.authorizerMap = authorizerMap;
+    this.authVersion = authVersion == null ? AuthConfig.AUTH_VERSION_1 : authVersion;
   }
 
   public Authorizer getAuthorizer(String name)
@@ -43,5 +43,10 @@ public class AuthorizerMapper
   public Map<String, Authorizer> getAuthorizerMap()
   {
     return authorizerMap;
+  }
+
+  public String getAuthVersion()
+  {
+    return authVersion;
   }
 }

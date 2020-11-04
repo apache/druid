@@ -46,25 +46,22 @@ public class LookupIntrospectionResource
   private static final Logger LOGGER = new Logger(LookupIntrospectionResource.class);
 
   private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
-  private final AuthConfig authConfig;
   private AuthorizerMapper authorizerMapper;
 
   @Inject
   public LookupIntrospectionResource(
       @Context LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider,
-      AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
   )
   {
     this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
   @Path("/{lookupId}")
   public Object introspectLookup(@PathParam("lookupId") final String lookupId, @Context HttpServletRequest request)
   {
-    if (authConfig.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
       final Access access = AuthorizationUtils.authorizeResourceAction(request,
           new ResourceAction(new Resource(lookupId, ResourceType.LOOKUP), Action.READ),
           authorizerMapper
