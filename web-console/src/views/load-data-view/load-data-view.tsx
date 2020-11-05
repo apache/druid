@@ -1273,32 +1273,35 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     if (issue) {
-      this.setState({
-        parserQueryState: initRun ? QueryState.INIT : new QueryState({ error: new Error(issue) }),
-      });
+      this.setState(({ parserQueryState }) => ({
+        parserQueryState: initRun
+          ? QueryState.INIT
+          : new QueryState({ error: new Error(issue), lastData: parserQueryState.getSomeData() }),
+      }));
       return;
     }
 
-    this.setState({
-      parserQueryState: new QueryState({ loading: true }),
-    });
+    this.setState(({ parserQueryState }) => ({
+      parserQueryState: new QueryState({ loading: true, lastData: parserQueryState.getSomeData() }),
+    }));
 
     let sampleResponse: SampleResponse;
     try {
       sampleResponse = await sampleForParser(spec, sampleStrategy);
     } catch (e) {
-      this.setState({
-        parserQueryState: new QueryState({ error: e }),
-      });
+      this.setState(({ parserQueryState }) => ({
+        parserQueryState: new QueryState({ error: e, lastData: parserQueryState.getSomeData() }),
+      }));
       return;
     }
 
-    this.setState({
+    this.setState(({ parserQueryState }) => ({
       cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       parserQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse(sampleResponse, '__time', inputFormatColumns),
+        lastData: parserQueryState.getSomeData(),
       }),
-    });
+    }));
   }
 
   renderParserStep() {
@@ -1322,11 +1325,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           Please enter the parser details on the right <Icon icon={IconNames.ARROW_RIGHT} />
         </CenterMessage>
       );
-    } else if (parserQueryState.isLoading()) {
-      mainFill = <Loader />;
-    } else if (parserQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${parserQueryState.getErrorMessage()}`}</CenterMessage>;
-    } else if (parserQueryState.data) {
+    } else {
+      const data = parserQueryState.getSomeData();
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -1344,14 +1344,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               />
             )}
           </div>
-          <ParseDataTable
-            sampleData={parserQueryState.data}
-            columnFilter={columnFilter}
-            canFlatten={canFlatten}
-            flattenedColumnsOnly={specialColumnsOnly}
-            flattenFields={flattenFields}
-            onFlattenFieldSelect={this.onFlattenFieldSelect}
-          />
+          {data && (
+            <ParseDataTable
+              sampleData={data}
+              columnFilter={columnFilter}
+              canFlatten={canFlatten}
+              flattenedColumnsOnly={specialColumnsOnly}
+              flattenFields={flattenFields}
+              onFlattenFieldSelect={this.onFlattenFieldSelect}
+            />
+          )}
+          {parserQueryState.isLoading() && <Loader />}
+          {parserQueryState.error && (
+            <CenterMessage>{`Error: ${parserQueryState.getErrorMessage()}`}</CenterMessage>
+          )}
         </div>
       );
     }
@@ -1541,29 +1547,38 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     if (!cacheRows) {
-      this.setState({
+      this.setState(({ timestampQueryState }) => ({
         timestampQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: new Error('must complete parse step') }),
-      });
+          : new QueryState({
+              error: new Error('must complete parse step'),
+              lastData: timestampQueryState.getSomeData(),
+            }),
+      }));
       return;
     }
 
-    this.setState({
-      timestampQueryState: new QueryState({ loading: true }),
-    });
+    this.setState(({ timestampQueryState }) => ({
+      timestampQueryState: new QueryState({
+        loading: true,
+        lastData: timestampQueryState.getSomeData(),
+      }),
+    }));
 
     let sampleResponse: SampleResponse;
     try {
       sampleResponse = await sampleForTimestamp(spec, cacheRows);
     } catch (e) {
-      this.setState({
-        timestampQueryState: new QueryState({ error: e }),
-      });
+      this.setState(({ timestampQueryState }) => ({
+        timestampQueryState: new QueryState({
+          error: e,
+          lastData: timestampQueryState.getSomeData(),
+        }),
+      }));
       return;
     }
 
-    this.setState({
+    this.setState(({ timestampQueryState }) => ({
       timestampQueryState: new QueryState({
         data: {
           headerAndRows: headerAndRowsFromSampleResponse(
@@ -1573,8 +1588,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           ),
           spec,
         },
+        lastData: timestampQueryState.getSomeData(),
       }),
-    });
+    }));
   }
 
   renderTimestampStep() {
@@ -1593,11 +1609,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Icon icon={IconNames.ARROW_RIGHT} />
         </CenterMessage>
       );
-    } else if (timestampQueryState.isLoading()) {
-      mainFill = <Loader />;
-    } else if (timestampQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${timestampQueryState.getErrorMessage()}`}</CenterMessage>;
-    } else if (timestampQueryState.data) {
+    } else {
+      const data = timestampQueryState.getSomeData();
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -1612,16 +1625,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               onChange={() => this.setState({ specialColumnsOnly: !specialColumnsOnly })}
             />
           </div>
-          <ParseTimeTable
-            sampleBundle={timestampQueryState.data}
-            columnFilter={columnFilter}
-            possibleTimestampColumnsOnly={specialColumnsOnly}
-            selectedColumnName={parseTimeTableSelectedColumnName(
-              timestampQueryState.data.headerAndRows,
-              timestampSpec,
-            )}
-            onTimestampColumnSelect={this.onTimestampColumnSelect}
-          />
+          {data && (
+            <ParseTimeTable
+              sampleBundle={data}
+              columnFilter={columnFilter}
+              possibleTimestampColumnsOnly={specialColumnsOnly}
+              selectedColumnName={parseTimeTableSelectedColumnName(
+                data.headerAndRows,
+                timestampSpec,
+              )}
+              onTimestampColumnSelect={this.onTimestampColumnSelect}
+            />
+          )}
+          {timestampQueryState.isLoading() && <Loader />}
+          {timestampQueryState.error && (
+            <CenterMessage>{`Error: ${timestampQueryState.getErrorMessage()}`}</CenterMessage>
+          )}
         </div>
       );
     }
@@ -1736,37 +1755,47 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     if (!cacheRows) {
-      this.setState({
+      this.setState(({ transformQueryState }) => ({
         transformQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: new Error('must complete parse step') }),
-      });
+          : new QueryState({
+              error: new Error('must complete parse step'),
+              lastData: transformQueryState.getSomeData(),
+            }),
+      }));
       return;
     }
 
-    this.setState({
-      transformQueryState: new QueryState({ loading: true }),
-    });
+    this.setState(({ transformQueryState }) => ({
+      transformQueryState: new QueryState({
+        loading: true,
+        lastData: transformQueryState.getSomeData(),
+      }),
+    }));
 
     let sampleResponse: SampleResponse;
     try {
       sampleResponse = await sampleForTransform(spec, cacheRows);
     } catch (e) {
-      this.setState({
-        transformQueryState: new QueryState({ error: e }),
-      });
+      this.setState(({ transformQueryState }) => ({
+        transformQueryState: new QueryState({
+          error: e,
+          lastData: transformQueryState.getSomeData(),
+        }),
+      }));
       return;
     }
 
-    this.setState({
+    this.setState(({ transformQueryState }) => ({
       transformQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse(
           sampleResponse,
           undefined,
           ['__time'].concat(inputFormatColumns),
         ),
+        lastData: transformQueryState.getSomeData(),
       }),
-    });
+    }));
   }
 
   renderTransformStep() {
@@ -1784,11 +1813,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (transformQueryState.isInit()) {
       mainFill = <CenterMessage>{`Please fill in the previous steps`}</CenterMessage>;
-    } else if (transformQueryState.isLoading()) {
-      mainFill = <Loader />;
-    } else if (transformQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${transformQueryState.getErrorMessage()}`}</CenterMessage>;
-    } else if (transformQueryState.data) {
+    } else {
+      const data = transformQueryState.getSomeData();
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -1804,17 +1830,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               disabled={!transforms.length}
             />
           </div>
-          <TransformTable
-            sampleData={transformQueryState.data}
-            columnFilter={columnFilter}
-            transformedColumnsOnly={specialColumnsOnly}
-            transforms={transforms}
-            selectedColumnName={transformTableSelectedColumnName(
-              transformQueryState.data,
-              selectedTransform,
-            )}
-            onTransformSelect={this.onTransformSelect}
-          />
+          {data && (
+            <TransformTable
+              sampleData={data}
+              columnFilter={columnFilter}
+              transformedColumnsOnly={specialColumnsOnly}
+              transforms={transforms}
+              selectedColumnName={transformTableSelectedColumnName(data, selectedTransform)}
+              onTransformSelect={this.onTransformSelect}
+            />
+          )}
+          {transformQueryState.isLoading() && <Loader />}
+          {transformQueryState.error && (
+            <CenterMessage>{`Error: ${transformQueryState.getErrorMessage()}`}</CenterMessage>
+          )}
         </div>
       );
     }
@@ -1951,30 +1980,33 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     if (!cacheRows) {
-      this.setState({
+      this.setState(({ filterQueryState }) => ({
         filterQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: new Error('must complete parse step') }),
-      });
+          : new QueryState({
+              error: new Error('must complete parse step'),
+              lastData: filterQueryState.getSomeData(),
+            }),
+      }));
       return;
     }
 
-    this.setState({
-      filterQueryState: new QueryState({ loading: true }),
-    });
+    this.setState(({ filterQueryState }) => ({
+      filterQueryState: new QueryState({ loading: true, lastData: filterQueryState.getSomeData() }),
+    }));
 
     let sampleResponse: SampleResponse;
     try {
       sampleResponse = await sampleForFilter(spec, cacheRows);
     } catch (e) {
-      this.setState({
-        filterQueryState: new QueryState({ error: e }),
-      });
+      this.setState(({ filterQueryState }) => ({
+        filterQueryState: new QueryState({ error: e, lastData: filterQueryState.getSomeData() }),
+      }));
       return;
     }
 
     if (sampleResponse.data.length) {
-      this.setState({
+      this.setState(({ filterQueryState }) => ({
         filterQueryState: new QueryState({
           data: headerAndRowsFromSampleResponse(
             sampleResponse,
@@ -1982,8 +2014,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ['__time'].concat(inputFormatColumns),
             true,
           ),
+          lastData: filterQueryState.getSomeData(),
         }),
-      });
+      }));
       return;
     }
 
@@ -1993,9 +2026,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       const specNoFilter = deepSet(spec, 'spec.dataSchema.transformSpec.filter', null);
       sampleResponseNoFilter = await sampleForFilter(specNoFilter, cacheRows);
     } catch (e) {
-      this.setState({
-        filterQueryState: new QueryState({ error: e }),
-      });
+      this.setState(({ filterQueryState }) => ({
+        filterQueryState: new QueryState({ error: e, lastData: filterQueryState.getSomeData() }),
+      }));
       return;
     }
 
@@ -2006,12 +2039,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       true,
     );
 
-    this.setState({
+    this.setState(({ filterQueryState }) => ({
       // cacheRows: sampleResponseNoFilter.cacheKey,
       filterQueryState: new QueryState({
         data: deepSet(headerAndRowsNoFilter, 'rows', []),
+        lastData: filterQueryState.getSomeData(),
       }),
-    });
+    }));
   }
 
   private getMemoizedDimensionFiltersFromSpec = memoize(spec => {
@@ -2026,11 +2060,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (filterQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
-    } else if (filterQueryState.isLoading()) {
-      mainFill = <Loader />;
-    } else if (filterQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${filterQueryState.getErrorMessage()}`}</CenterMessage>;
-    } else if (filterQueryState.data) {
+    } else {
+      const data = filterQueryState.getSomeData();
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -2040,17 +2071,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               placeholder="Search columns"
             />
           </div>
-          <FilterTable
-            sampleData={filterQueryState.data}
-            columnFilter={columnFilter}
-            dimensionFilters={dimensionFilters}
-            selectedFilterName={filterTableSelectedColumnName(
-              filterQueryState.data,
-              selectedFilter,
-            )}
-            onShowGlobalFilter={this.onShowGlobalFilter}
-            onFilterSelect={this.onFilterSelect}
-          />
+          {data && (
+            <FilterTable
+              sampleData={data}
+              columnFilter={columnFilter}
+              dimensionFilters={dimensionFilters}
+              selectedFilterName={filterTableSelectedColumnName(data, selectedFilter)}
+              onShowGlobalFilter={this.onShowGlobalFilter}
+              onFilterSelect={this.onFilterSelect}
+            />
+          )}
+          {filterQueryState.isLoading() && <Loader />}
+          {filterQueryState.error && (
+            <CenterMessage>{`Error: ${filterQueryState.getErrorMessage()}`}</CenterMessage>
+          )}
         </div>
       );
     }
@@ -2233,29 +2267,32 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       deepGet(spec, 'spec.dataSchema.dimensionsSpec') || EMPTY_OBJECT;
 
     if (!cacheRows) {
-      this.setState({
+      this.setState(({ schemaQueryState }) => ({
         schemaQueryState: initRun
           ? QueryState.INIT
-          : new QueryState({ error: new Error('must complete parse step') }),
-      });
+          : new QueryState({
+              error: new Error('must complete parse step'),
+              lastData: schemaQueryState.getSomeData(),
+            }),
+      }));
       return;
     }
 
-    this.setState({
-      schemaQueryState: new QueryState({ loading: true }),
-    });
+    this.setState(({ schemaQueryState }) => ({
+      schemaQueryState: new QueryState({ loading: true, lastData: schemaQueryState.getSomeData() }),
+    }));
 
     let sampleResponse: SampleResponse;
     try {
       sampleResponse = await sampleForSchema(spec, cacheRows);
     } catch (e) {
-      this.setState({
-        schemaQueryState: new QueryState({ error: e }),
-      });
+      this.setState(({ schemaQueryState }) => ({
+        schemaQueryState: new QueryState({ error: e, lastData: schemaQueryState.getSomeData() }),
+      }));
       return;
     }
 
-    this.setState({
+    this.setState(({ schemaQueryState }) => ({
       schemaQueryState: new QueryState({
         data: {
           headerAndRows: headerAndRowsFromSampleResponse(
@@ -2266,8 +2303,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           dimensionsSpec,
           metricsSpec,
         },
+        lastData: schemaQueryState.getSomeData(),
       }),
-    });
+    }));
   }
 
   renderSchemaStep() {
@@ -2287,11 +2325,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (schemaQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
-    } else if (schemaQueryState.isLoading()) {
-      mainFill = <Loader />;
-    } else if (schemaQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${schemaQueryState.getErrorMessage()}`}</CenterMessage>;
-    } else if (schemaQueryState.data) {
+    } else {
+      const data = schemaQueryState.getSomeData();
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -2301,13 +2336,19 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               placeholder="Search columns"
             />
           </div>
-          <SchemaTable
-            sampleBundle={schemaQueryState.data}
-            columnFilter={columnFilter}
-            selectedDimensionSpecIndex={selectedDimensionSpecIndex}
-            selectedMetricSpecIndex={selectedMetricSpecIndex}
-            onDimensionOrMetricSelect={this.onDimensionOrMetricSelect}
-          />
+          {data && (
+            <SchemaTable
+              sampleBundle={data}
+              columnFilter={columnFilter}
+              selectedDimensionSpecIndex={selectedDimensionSpecIndex}
+              selectedMetricSpecIndex={selectedMetricSpecIndex}
+              onDimensionOrMetricSelect={this.onDimensionOrMetricSelect}
+            />
+          )}
+          {schemaQueryState.isLoading() && <Loader />}
+          {schemaQueryState.error && (
+            <CenterMessage>{`Error: ${schemaQueryState.getErrorMessage()}`}</CenterMessage>
+          )}
         </div>
       );
     }
