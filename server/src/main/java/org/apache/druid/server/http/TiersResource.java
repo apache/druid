@@ -24,18 +24,27 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
-import org.apache.druid.server.http.security.ServerServerResourceFilter;
+import org.apache.druid.server.http.security.ServerUserResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,15 +54,17 @@ import java.util.stream.Collectors;
 /**
  */
 @Path("/druid/coordinator/v1/tiers")
-@ResourceFilters({ StateResourceFilter.class, ServerServerResourceFilter.class })
+@ResourceFilters({ StateResourceFilter.class, ServerUserResourceFilter.class })
 public class TiersResource
 {
   private final InventoryView serverInventoryView;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
-  public TiersResource(InventoryView serverInventoryView)
+  public TiersResource(InventoryView serverInventoryView, AuthorizerMapper authorizerMapper)
   {
     this.serverInventoryView = serverInventoryView;
+    this.authorizerMapper = authorizerMapper;
   }
 
   private enum TierMetadataKeys
@@ -99,13 +110,24 @@ public class TiersResource
   @GET
   @Path("/{tierName}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getTierDataSources(@PathParam("tierName") String tierName, @QueryParam("simple") String simple)
+  public Response getTierDataSources(
+      @PathParam("tierName") String tierName,
+      @QueryParam("simple") String simple,
+      @Context HttpServletRequest request
+  )
   {
     if (simple != null) {
       Map<String, Map<Interval, Map<IntervalProperties, Object>>> tierToStatsPerInterval = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         if (druidServer.getTier().equalsIgnoreCase(tierName)) {
-          for (DataSegment dataSegment : druidServer.iterateAllSegments()) {
+          Iterable<DataSegment> filteredSegments = AuthorizationUtils.filterAuthorizedResources(
+              AuthorizationUtils.authenticationResultFromRequest(request),
+              druidServer.iterateAllSegments(),
+              input -> Collections.singleton(
+                  new ResourceAction(new Resource(input.getDataSource(), ResourceType.DATASOURCE), Action.READ)),
+              authorizerMapper
+          );
+          for (DataSegment dataSegment : filteredSegments) {
             Map<IntervalProperties, Object> properties = tierToStatsPerInterval
                 .computeIfAbsent(dataSegment.getDataSource(), dsName -> new HashMap<>())
                 .computeIfAbsent(dataSegment.getInterval(), interval -> new EnumMap<>(IntervalProperties.class));

@@ -71,6 +71,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -858,12 +859,9 @@ public class LookupCoordinatorResource
     lookups.keySet().forEach(tier -> filteredLookups.compute(tier, (tier1, lookupFactory) -> {
           final Map<String, LookupExtractorFactoryMapContainer> filteredMap = new HashMap<>(lookupFactory);
           lookupFactory.keySet().forEach(loookupId -> {
-            // so that it does not complain about auth being done already,
-            // last call to authorizeResourceAction will set this attribute again
-            request.removeAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
-            final Access access = AuthorizationUtils.authorizeResourceAction(
+            final Access access = AuthorizationUtils.authorizeAllResourceActions(
                 request,
-                new ResourceAction(new Resource(loookupId, ResourceType.LOOKUP), action),
+                Collections.singleton(new ResourceAction(new Resource(loookupId, ResourceType.LOOKUP), action)),
                 authorizerMapper
             );
             if (access.isAllowed()) {
@@ -873,6 +871,9 @@ public class LookupCoordinatorResource
           return filteredMap;
         }
     ));
+    // We're filtering, so having access to none of the objects isn't an authorization failure (in terms of whether
+    // to send an error response or not.)
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     return filteredLookups;
   }
 

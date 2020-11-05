@@ -244,11 +244,13 @@ public class CoordinatorCompactionConfigsResource
                 .singleton(new ResourceAction(new Resource(input.getDataSource(), ResourceType.DATASOURCE), action)),
             authorizerMapper
         );
-    // remove so that it does not complain about it when checking for server server permission
-    request.removeAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
+    // add base compaction configs, if user has server server permissions
     if (AuthorizationUtils
-        .authorizeResourceAction(request, new ResourceAction(Resource.SERVER_SERVER_RESOURCE, action), authorizerMapper)
-        .isAllowed()) {
+        .authorizeAllResourceActions(
+            AuthorizationUtils.authenticationResultFromRequest(request),
+            Collections.singleton(new ResourceAction(Resource.SERVER_SERVER_RESOURCE, action)),
+            authorizerMapper
+        ).isAllowed()) {
       return CoordinatorCompactionConfig.from(compactionConfig, Lists.newArrayList(dataSourceCompactionConfigs));
     }
     return CoordinatorCompactionConfig.from(Lists.newArrayList(dataSourceCompactionConfigs));

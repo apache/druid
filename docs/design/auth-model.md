@@ -145,6 +145,7 @@ Below are the endpoints protected/filtered using datasource permissions. These p
 |`GET /druid/coordinator/v1/rules`|coordinator|
 |`GET/POST /druid/coordinator/v1/rules/{dataSourceName}`|coordinator|
 |`GET /druid/coordinator/v1/rules/{dataSourceName}/history`|coordinator|
+|`GET /druid/coordinator/v1/tiers/{tierName}`|coordinator|
 |`GET/POST /druid/v2/datasources/...`|broker|
 |`GET/POST /druid/coordinator/v1/metadata/...`|coordinator|
 |`GET/POST /druid/coordinator/v1/config/compaction`|coordinator|
@@ -184,8 +185,6 @@ cluster managers. This resource name is used in SQL queries asking for server in
 |`GET /druid/coordinator/v1/servers/{serverName}`|coordinator|
 |`GET /druid/coordinator/v1/servers/{serverName}/segments`|coordinator|
 |`GET /druid/coordinator/v1/servers/{serverName}/segments/{segmentId}`|coordinator|
-|`GET /druid/coordinator/v1/tiers`|coordinator|
-|`GET /druid/coordinator/v1/tiers/{tierName}`|coordinator|
 |`GET /druid/indexer/v1/worker`|overlord|
 |`POST /druid/indexer/v1/worker`|overlord|
 |`GET /druid/indexer/v1/worker/history`|overlord|
@@ -219,6 +218,8 @@ to some `SERVER` resources during routine work.
 |--------|---------|
 |`POST /druid/indexer/v1/sampler`|overlord|
 |`GET /druid/coordinator/v1/lookups/config`|coordinator|
+|`GET /druid/coordinator/v1/tiers`|coordinator|
+|`GET /druid/coordinator/v1/tiers/{tierName}`|coordinator|
 
 ### INTERNAL
 
@@ -290,7 +291,7 @@ These are some example policies that be used. Policies are of form `ACTION:RESOU
 1. Cluster manager can have following policies - `READ:DATASOURCE:*`, `WRITE:DATASOURCE:*`, `READ:SERVER:*`, `WRITE:SERVER:*`,
  `READ:LOOKUP:*` and `WRITE:LOOKUP:*`.
 1. A user just wanting to read/write to specific datasource and lookup can have following policies - `READ:DATASOURCE:<ds_name>`, 
-`WRITE:DATASOURCE:<ds_name>`, `READ:LOOKUP:<lookupId>`, `WRITE:LOOKUP:<lookupId>`, `READ:SERVER:USER` and `WRITE:SERVER:USER`.
+`WRITE:DATASOURCE:<ds_name>`, `READ:LOOKUP:<lookupId>`, `WRITE:LOOKUP:<lookupId>`, `READ:SERVER:USER`, `WRITE:SERVER:USER` AND `READ:SERVER:STATUS`.
 1. A user just wanting to read from specific datasource and lookup can have following policies - `READ:DATASOURCE:<ds_name>`, 
 `READ:LOOKUP:<lookupId>`, and `READ:SERVER:USER`.
 1. An external monitoring system can just have `READ:SERVER:STATUS` permission.
