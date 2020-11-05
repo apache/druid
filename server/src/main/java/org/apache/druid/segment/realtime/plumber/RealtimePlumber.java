@@ -184,7 +184,7 @@ public class RealtimePlumber implements Plumber
         cachePopulatorStats
     );
 
-    this.adjustmentHolder = createAdjustmentHolder(schema.getAggregators(), config.getMaxBytesInMemoryOrDefault(), config.getMaxBytesInMemoryOrDefault() >= 0);
+    this.adjustmentHolder = createAdjustmentHolder(schema.getAggregators(), config.getMaxBytesInMemoryOrDefault(), config.getMaxBytesInMemoryOrDefault() >= 0 && config.getMaxBytesInMemoryOrDefault() != Long.MAX_VALUE);
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
