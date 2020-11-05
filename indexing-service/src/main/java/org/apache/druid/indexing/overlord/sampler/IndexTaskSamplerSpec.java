@@ -93,4 +93,9 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   {
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
+
+  public InputSource getInputSource()
+  {
+    return inputSource;
+  }
 }
