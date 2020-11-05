@@ -147,6 +147,8 @@ Below are the endpoints protected/filtered using datasource permissions. These p
 |`GET /druid/coordinator/v1/rules/{dataSourceName}/history`|coordinator|
 |`GET/POST /druid/v2/datasources/...`|broker|
 |`GET/POST /druid/coordinator/v1/metadata/...`|coordinator|
+|`GET/POST /druid/coordinator/v1/config/compaction`|coordinator|
+|`GET/DELETE /druid/coordinator/v1/config/compaction/{dataSource}`|coordinator|
 |`POST /druid/indexer/v1/task`|overlord|
 |`GET /druid/indexer/v1/task/{taskid}`|overlord|
 |`GET /druid/indexer/v1/task/{taskid}/status`|overlord|
@@ -199,7 +201,7 @@ cluster managers. This resource name is used in SQL queries asking for server in
 |`GET/POST /druid-ext/basic-security/authorization`|coordinator|
 
 `STATUS` resource name covers following the end points and are relevant to check status of various processes and can be
-used by cluster managers and systems checking status of different drudi processes.
+used by cluster managers and systems checking status of different druid processes.
 
 |Endpoint|Process Type|
 |--------|---------|
