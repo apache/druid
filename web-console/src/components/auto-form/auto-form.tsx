@@ -17,6 +17,7 @@
  */
 
 import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils';
@@ -54,6 +55,7 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  advanced?: Functor<M, boolean>;
   adjustment?: (model: M) => M;
   issueWithValue?: (value: any) => string | undefined;
 }
@@ -68,7 +70,14 @@ export interface AutoFormProps<M> {
   globalAdjustment?: (model: M) => M;
 }
 
-export class AutoForm<T extends Record<string, any>> extends React.PureComponent<AutoFormProps<T>> {
+export interface AutoFormState {
+  showAdvanced: boolean;
+}
+
+export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
+  AutoFormProps<T>,
+  AutoFormState
+> {
   static REQUIRED_INTENT = Intent.PRIMARY;
 
   static makeLabelName(label: string): string {
@@ -138,7 +147,9 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   constructor(props: AutoFormProps<T>) {
     super(props);
-    this.state = {};
+    this.state = {
+      showAdvanced: false,
+    };
   }
 
   private fieldChange = (field: Field<T>, newValue: any) => {
@@ -391,7 +402,6 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderField = (field: Field<T>) => {
     const { model } = this.props;
     if (!model) return;
-    if (!AutoForm.evaluateFunctor(field.defined, model, true)) return;
 
     const label = field.label || AutoForm.makeLabelName(field.name);
     return (
@@ -415,12 +425,44 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
+  renderAdvanced() {
+    const { showAdvanced } = this.state;
+
+    return (
+      <FormGroup key="advanced">
+        <Button
+          text={showAdvanced ? 'Hide advanced' : 'Show advanced'}
+          rightIcon={showAdvanced ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
+          onClick={() => {
+            this.setState(({ showAdvanced }) => ({ showAdvanced: !showAdvanced }));
+          }}
+        />
+      </FormGroup>
+    );
+  }
+
   render(): JSX.Element {
     const { fields, model, showCustom } = this.props;
+    const { showAdvanced } = this.state;
+
+    let hasAdvanced = false;
+    const shownFields = fields.filter(field => {
+      if (AutoForm.evaluateFunctor(field.defined, model, true)) {
+        if (AutoForm.evaluateFunctor(field.advanced, model, false)) {
+          hasAdvanced = true;
+          return showAdvanced;
+        }
+        return true;
+      } else {
+        return false;
+      }
+    });
+
     return (
       <div className="auto-form">
-        {model && fields.map(this.renderField)}
+        {model && shownFields.map(this.renderField)}
         {model && showCustom && showCustom(model) && this.renderCustom()}
+        {hasAdvanced && this.renderAdvanced()}
       </div>
     );
   }

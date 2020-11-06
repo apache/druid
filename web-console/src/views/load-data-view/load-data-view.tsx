@@ -85,7 +85,6 @@ import {
   FlattenField,
   getDimensionMode,
   getIngestionComboType,
-  getIngestionDocLink,
   getIngestionImage,
   getIngestionTitle,
   getIoConfigFormFields,
@@ -160,7 +159,18 @@ import {
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
-import { LearnMore } from './learn-more/learn-more';
+import {
+  ConnectMessage,
+  FilterMessage,
+  ParserMessage,
+  PartitionMessage,
+  PublishMessage,
+  SchemaMessage,
+  SpecMessage,
+  TimestampMessage,
+  TransformMessage,
+  TuningMessage,
+} from './info-messages';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import {
   ParseTimeTable,
@@ -1098,27 +1108,32 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Icon icon={IconNames.ARROW_RIGHT} />
         </CenterMessage>
       );
-    } else if (inputQueryState.isLoading()) {
-      mainFill = <Loader />;
-    } else if (inputQueryState.error) {
-      mainFill = <CenterMessage>{`Error: ${inputQueryState.getErrorMessage()}`}</CenterMessage>;
-    } else if (inputQueryState.data) {
-      const inputData = inputQueryState.data.data;
+    } else {
+      const data = inputQueryState.getSomeData();
+      const inputData = data ? data.data : undefined;
       mainFill = (
-        <TextArea
-          className="raw-lines"
-          readOnly
-          value={
-            inputData.length
-              ? (inputData.every(l => !l.parsed)
-                  ? inputData.map(showBlankLine)
-                  : druidSource
-                  ? inputData.map(showDruidLine)
-                  : inputData.map(showRawLine)
-                ).join('\n')
-              : 'No data returned from sampler'
-          }
-        />
+        <>
+          {inputData && (
+            <TextArea
+              className="raw-lines"
+              readOnly
+              value={
+                inputData.length
+                  ? (inputData.every(l => !l.parsed)
+                      ? inputData.map(showBlankLine)
+                      : druidSource
+                      ? inputData.map(showDruidLine)
+                      : inputData.map(showRawLine)
+                    ).join('\n')
+                  : 'No data returned from sampler'
+              }
+            />
+          )}
+          {inputQueryState.isLoading() && <Loader />}
+          {inputQueryState.error && (
+            <CenterMessage>{`Error: ${inputQueryState.getErrorMessage()}`}</CenterMessage>
+          )}
+        </>
       );
     }
 
@@ -1127,24 +1142,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <Callout className="intro">
-            <p>
-              Druid ingests raw data and converts it into a custom,{' '}
-              <ExternalLink href={`${getLink('DOCS')}/design/segments.html`}>
-                indexed format
-              </ExternalLink>{' '}
-              that is optimized for analytic queries.
-            </p>
-            {inlineMode ? (
-              <>
-                <p>To get started, please paste some data in the box to the left.</p>
-                <p>Click "Apply" to verify your data with Druid.</p>
-              </>
-            ) : (
-              <p>To get started, please specify what data you want to ingest.</p>
-            )}
-            <LearnMore href={getIngestionDocLink(spec)} />
-          </Callout>
+          <ConnectMessage inlineMode={inlineMode} spec={spec} />
           {ingestionComboType ? (
             <>
               <AutoForm
@@ -1375,24 +1373,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <Callout className="intro">
-            <p>
-              Druid requires flat data (non-nested, non-hierarchical). Each row should represent a
-              discrete event.
-            </p>
-            {canFlatten && (
-              <p>
-                If you have nested data, you can{' '}
-                <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#flattenspec`}>
-                  flatten
-                </ExternalLink>{' '}
-                it here. If the provided flattening capabilities are not sufficient, please
-                pre-process your data before ingesting it into Druid.
-              </p>
-            )}
-            <p>Ensure that your data appears correctly in a row/column orientation.</p>
-            <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
-          </Callout>
+          <ParserMessage canFlatten={canFlatten} />
           {!selectedFlattenField && (
             <>
               <AutoForm
@@ -1649,19 +1630,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <Callout className="intro">
-            <p>
-              Druid partitions data based on the primary time column of your data. This column is
-              stored internally in Druid as <Code>__time</Code>.
-            </p>
-            <p>Configure how to define the time column for this data.</p>
-            <p>
-              If your data does not have a time column, you can select "None" to use a placeholder
-              value. If the time information is spread across multiple columns you can combine them
-              into one by selecting "Expression" and defining a transform expression.
-            </p>
-            <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#timestampspec`} />
-          </Callout>
+          <TimestampMessage />
           <FormGroup label="Parse timestamp from">
             <ButtonGroup>
               <Button
@@ -1852,17 +1821,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <Callout className="intro">
-            <p className="optional">Optional</p>
-            <p>
-              Druid can perform per-row{' '}
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/transform-spec.html#transforms`}>
-                transforms
-              </ExternalLink>{' '}
-              of column values allowing you to create new derived columns or alter existing column.
-            </p>
-            <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#transforms`} />
-          </Callout>
+          <TransformMessage />
           {Boolean(transformQueryState.error && transforms.length) && (
             <FormGroup>
               <Button
@@ -2093,15 +2052,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <Callout className="intro">
-            <p className="optional">Optional</p>
-            <p>
-              Druid can{' '}
-              <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink>{' '}
-              out unwanted data by applying per-row filters.
-            </p>
-            <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#filter`} />
-          </Callout>
+          <FilterMessage />
           {!showGlobalFilter && this.renderColumnFilterControls()}
           {!selectedFilter && this.renderGlobalFilterControls()}
         </div>
@@ -2357,19 +2308,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <Callout className="intro">
-            <p>
-              Each column in Druid must have an assigned type (string, long, float, double, complex,
-              etc).
-            </p>
-            {dimensionMode === 'specific' && (
-              <p>
-                Default primitive types have been automatically assigned to your columns. If you
-                want to change the type, click on the column header.
-              </p>
-            )}
-            <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design.html`} />
-          </Callout>
+          <SchemaMessage dimensionMode={dimensionMode} />
           {!somethingSelected && (
             <>
               <FormGroupWithInfo
@@ -2918,11 +2857,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
         </div>
         <div className="control">
-          <Callout className="intro">
-            <p className="optional">Optional</p>
-            <p>Configure how Druid will partition data.</p>
-            <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#partitioning`} />
-          </Callout>
+          <PartitionMessage />
         </div>
         {this.renderNextBar({
           disabled:
@@ -2982,11 +2917,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
         </div>
         <div className="control">
-          <Callout className="intro">
-            <p className="optional">Optional</p>
-            <p>Fine tune how Druid will ingest data.</p>
-            <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#tuningconfig`} />
-          </Callout>
+          <TuningMessage />
         </div>
         {this.renderNextBar({
           disabled: invalidIoConfig(ioConfig),
@@ -3087,9 +3018,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
         </div>
         <div className="control">
-          <Callout className="intro">
-            <p>Configure behavior of indexed data once it reaches Druid.</p>
-          </Callout>
+          <PublishMessage />
         </div>
         {this.renderNextBar({})}
       </>
@@ -3145,15 +3074,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
         </div>
         <div className="control">
-          <Callout className="intro">
-            <p className="optional">Optional</p>
-            <p>
-              Druid begins ingesting data once you submit a JSON ingestion spec. If you modify any
-              values in this view, the values entered in previous sections will update accordingly.
-              If you modify any values in previous sections, this spec will automatically update.
-            </p>
-            <p>Submit the spec to begin loading data into Druid.</p>
-          </Callout>
+          <SpecMessage />
         </div>
         <div className="next-bar">
           {!isEmptyIngestionSpec(spec) && (

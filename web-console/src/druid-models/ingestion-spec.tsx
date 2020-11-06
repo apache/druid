@@ -1571,6 +1571,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 1000,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    advanced: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
   {
@@ -1625,6 +1626,19 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
+    name: 'skipSequenceNumberAvailabilityCheck',
+    type: 'boolean',
+    defaultValue: false,
+    defined: (t: TuningConfig) => t.type === 'kinesis',
+    info: (
+      <>
+        Whether to enable checking if the current sequence number is still available in a particular
+        Kinesis shard. If set to false, the indexing task will attempt to reset the current sequence
+        number (or not), depending on the value of <Code>resetOffsetAutomatically</Code>.
+      </>
+    ),
+  },
+  {
     name: 'intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
@@ -1647,6 +1661,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   {
     name: 'maxPendingPersists',
     type: 'number',
+    advanced: true,
     info: (
       <>
         Maximum number of persists that can be pending but not started. If this limit would be
@@ -1659,6 +1674,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'pushTimeout',
     type: 'number',
     defaultValue: 0,
+    advanced: true,
     info: (
       <>
         Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.
@@ -1670,6 +1686,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 0,
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    advanced: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
@@ -1716,6 +1733,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT10S',
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    advanced: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
@@ -1723,6 +1741,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 5,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    advanced: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
@@ -1739,6 +1758,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    advanced: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
@@ -1746,6 +1766,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 8,
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    advanced: true,
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -1765,6 +1786,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT80S',
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    advanced: true,
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
@@ -1800,6 +1822,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 5000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    advanced: true,
     info: (
       <>
         Length of time in milliseconds to wait for space to become available in the buffer before
@@ -1809,6 +1832,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   },
   {
     name: 'recordBufferFullWait',
+    advanced: true,
     type: 'number',
     defaultValue: 5000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
@@ -1824,6 +1848,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 60000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    advanced: true,
     info: (
       <>
         Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
@@ -1838,6 +1863,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    advanced: true,
     info: (
       <>
         Size of the pool of threads fetching data from Kinesis. There is no benefit in having more
@@ -1850,10 +1876,34 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 100,
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    advanced: true,
     info: (
       <>
         The maximum number of records/events to be fetched from buffer per poll. The actual maximum
         will be <Code>max(maxRecordsPerPoll, max(bufferSize, 1))</Code>.
+      </>
+    ),
+  },
+  {
+    name: 'repartitionTransitionDuration',
+    type: 'duration',
+    defaultValue: 'PT2M',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
+    advanced: true,
+    info: (
+      <>
+        <p>
+          When shards are split or merged, the supervisor will recompute shard -> task group
+          mappings, and signal any running tasks created under the old mappings to stop early at{' '}
+          <Code>(current time + repartitionTransitionDuration)</Code>. Stopping the tasks early
+          allows Druid to begin reading from the new shards more quickly.
+        </p>
+        <p>
+          The repartition transition wait time controlled by this property gives the stream
+          additional time to write records to the new shards after the split/merge, which helps
+          avoid the issues with empty shard handling described at
+          <ExternalLink href="https://github.com/apache/druid/issues/7600">#7600</ExternalLink>.
+        </p>
       </>
     ),
   },
