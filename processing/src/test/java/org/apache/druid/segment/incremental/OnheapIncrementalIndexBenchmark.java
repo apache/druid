@@ -63,8 +63,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
-
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -164,7 +162,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected void concurrentSet(int offset, Aggregator[] value, @Nullable Aggregator adjustmentAggregator)
+    protected void concurrentSet(int offset, Aggregator[] value)
     {
       indexedMap.put(offset, value);
     }

@@ -963,7 +963,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             }
 
             AggregatorType[] aggs = getAggsForRow(rowOffset);
-            for (int i = 0; i < aggs.length; ++i) {
+            for (int i = 0; i < metrics.length; ++i) {
               theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
             }
 
