@@ -241,7 +241,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     submitTaskAndWait(taskSpec, fullDatasourceName, false, true);
     try {
-      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
+      sqlQueryHelper.testQueriesFromFile(queryFilePath);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");

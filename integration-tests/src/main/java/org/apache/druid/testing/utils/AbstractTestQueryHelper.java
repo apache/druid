@@ -65,12 +65,12 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public abstract String getQueryURL(String schemeAndHost);
 
-  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
+  public void testQueriesFromFile(String filePath) throws Exception
   {
-    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(broker), filePath);
+    testQueriesFromFile(getQueryURL(brokerTLS), filePath);
+    testQueriesFromFile(getQueryURL(router), filePath);
+    testQueriesFromFile(getQueryURL(routerTLS), filePath);
   }
 
   public void testQueriesFromString(String str) throws Exception
@@ -81,7 +81,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     testQueriesFromString(getQueryURL(routerTLS), str);
   }
 
-  public void testQueriesFromFile(String url, String filePath, int timesToRun) throws Exception
+  public void testQueriesFromFile(String url, String filePath) throws Exception
   {
     LOG.info("Starting query tests for [%s]", filePath);
     List<QueryResultType> queries =
