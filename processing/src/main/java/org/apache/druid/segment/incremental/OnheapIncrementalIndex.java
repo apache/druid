@@ -19,39 +19,34 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
+import org.apache.druid.query.aggregation.InternalCountAdjustmentAggregator;
 import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -66,23 +61,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    */
   private static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, Aggregator> adjustmentAggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
-  protected final boolean adjustmentBytesInMemoryFlag; // control adjustment
-  protected final int adjustmentBytesInMemoryMaxRollupRows; // adjust when reach max rollup row
-  protected final int adjustmentBytesInMemoryMaxTimeMs; // adjust period millis
-  protected final int[] rowNeedAsyncAdjustAggIndex;
-  protected final int[] rowNeedSyncAdjustAggIndex;
-  protected final ConcurrentHashMap<Integer, Integer[]> indexAdjustedRecorder = new ConcurrentHashMap<>();
-  private final BlockingQueue<List<Integer>> indexReadyListQueue = new LinkedBlockingQueue<>(2);
-  private final AtomicLong atomicCurrentNeedAppendBytes = new AtomicLong(0);
-  protected volatile List<Integer> indexReadyAdjustRecorder = Collections.synchronizedList(new ArrayList<>());
   @Nullable
-  private volatile ListeningExecutorService adjustExecutor;
-  private volatile long adjustBeforeTime;
+  private final CountAdjustmentHolder adjustmentHolder;
 
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -96,69 +82,21 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean sortFacts,
       int maxRowCount,
       long maxBytesInMemory,
-      boolean adjustmentBytesInMemoryFlag,
-      int adjustmentBytesInMemoryMaxRollupRows,
-      int adjustmentBytesInMemoryMaxTimeMs
+      @Nullable CountAdjustmentHolder adjustmentHolder
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
-    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
-    this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows;
-    this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs;
-    int syncCount = 0;
-    int asyncCount = 0;
-    int index = -1;
-    int[] syncIndex = new int[this.getMetricAggs().length];
-    int[] asyncIndex = new int[this.getMetricAggs().length];
-    for (AggregatorFactory metric : this.getMetricAggs()) {
-      index++;
-      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
-          .getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
-      if (maxIntermediateSizeAdjustStrategy == null) {
-        continue;
-      }
-      if (maxIntermediateSizeAdjustStrategy.isSyncAjust()) {
-        syncIndex[syncCount++] = index;
-      } else {
-        asyncIndex[asyncCount++] = index;
-      }
-    }
-    rowNeedSyncAdjustAggIndex = new int[syncCount];
-    System.arraycopy(syncIndex, 0, rowNeedSyncAdjustAggIndex, 0, syncCount);
-
-    rowNeedAsyncAdjustAggIndex = new int[asyncCount];
-    System.arraycopy(asyncIndex, 0, rowNeedAsyncAdjustAggIndex, 0, asyncCount);
-
+    this.adjustmentHolder = adjustmentHolder;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
-                                                   : new PlainFactsHolder(sortFacts, dimsComparator());
-    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentBytesInMemoryFlag, canAdjust());
-
-    if (existsAsyncAdjust()) {
-      // use a blocking single threaded executor to throttle the firehose when adjust bytes size in memory is slow
-      final int maxAdjustingThreadNum = 2;
-      adjustExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + this.hashCode() + "]-incrementalindex-adjust", maxAdjustingThreadNum)
-      );
-    }
+        : new PlainFactsHolder(sortFacts, dimsComparator());
+    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentHolder != null);
   }
 
-  public boolean canAdjust()
+  private boolean canAdjust()
   {
-    return adjustmentBytesInMemoryFlag
-        && maxBytesInMemory != Long.MAX_VALUE
-        && (rowNeedAsyncAdjustAggIndex.length > 0 || rowNeedSyncAdjustAggIndex.length > 0);
-  }
-
-  public boolean existsAsyncAdjust()
-  {
-    return canAdjust() && rowNeedAsyncAdjustAggIndex.length > 0;
-  }
-
-  public boolean existsSyncAdjust()
-  {
-    return canAdjust() && rowNeedSyncAdjustAggIndex.length > 0;
+    return adjustmentHolder != null && maxBytesInMemory != Long.MAX_VALUE;
   }
 
   /**
@@ -177,16 +115,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    * </ul>
    *
    * @param incrementalIndexSchema
-   * @param canAdjust              whether can adjust bytes
+   *
    * @return long max aggregator size in bytes
    */
-  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema, final boolean adjustmentBytesInMemoryFlag, boolean canAdjust)
+  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema, boolean adjustmentFlag)
   {
     long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
         .mapToLong(aggregator -> {
-          if (aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag) != null && canAdjust) {
-            final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
+          if (aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentFlag) != null) {
+            final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = aggregator.getMaxIntermediateSizeAdjustStrategy(adjustmentFlag);
             return aggregator.getMaxIntermediateSizeWithNulls() + maxIntermediateSizeAdjustStrategy.initAppendBytes()
                 + Long.BYTES * 2L;
           }
@@ -195,171 +133,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         })
         .sum();
     return maxAggregatorIntermediateSize;
-  }
-
-  private void startAsyncAdjust()
-  {
-    adjustExecutor.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              asyncAdjustBytes();
-            }
-            catch (Exception e) {
-              log.error(e, "Uncaught method[asyncAdjustBytes] exception:");
-            }
-          }
-
-          private int asyncAdjustBytes()
-          {
-            long startTime = System.currentTimeMillis();
-            List<Integer> tempReadyAdjustList;
-            int totalIndexSize = 0;
-            long totalNeedAppendBytes = 0;
-            while ((tempReadyAdjustList = indexReadyListQueue.poll()) != null) {
-              final HashSet<Integer> distinctIndex;
-              final int indexSize = tempReadyAdjustList.size();
-              distinctIndex = new HashSet(tempReadyAdjustList);
-              final Iterator<Integer> iterator = distinctIndex.iterator();
-              while (iterator.hasNext()) {
-                final Integer index = iterator.next();
-                totalNeedAppendBytes += appendBytesInMemoryByAsyncAdjust(
-                    index,
-                    rowNeedAsyncAdjustAggIndex
-                );
-              }
-              totalIndexSize += indexSize;
-            }
-            atomicCurrentNeedAppendBytes.addAndGet(totalNeedAppendBytes);
-            if (log.isDebugEnabled() && atomicCurrentNeedAppendBytes.get() > 0) {
-              log.debug(
-                  "Rollup rows:[%s],currentBytesInMemory:[%s],currentNeedAppendBytes:[%s],cost:[%s]",
-                  rowNeedAsyncAdjustAggIndex.length,
-                  getBytesInMemory().get(),
-                  atomicCurrentNeedAppendBytes.get(),
-                  System.currentTimeMillis() - startTime
-              );
-            }
-            return totalIndexSize;
-          }
-        });
-  }
-
-  private long appendBytesInMemoryByAsyncAdjust(final int index, int[] rowNeedAdjustAggIndex)
-  {
-    long appendBytesTotal = 0;
-    Integer[] rowAdjustedCount = indexAdjustedRecorder.computeIfAbsent(index,
-        k -> Arrays.stream(new int[rowNeedAdjustAggIndex.length]).boxed().toArray(Integer[]::new));
-    for (int ai = 0; ai < rowNeedAdjustAggIndex.length; ai++) { // current row aggs adjust
-      final AggregatorFactory[] metrics = getMetrics();
-      final Aggregator[] aggs = concurrentGet(index);
-      final MaxIntermediateSizeAdjustStrategy strategy = metrics[rowNeedAdjustAggIndex[ai]]
-          .getMaxIntermediateSizeAdjustStrategy(adjustmentBytesInMemoryFlag);
-      if (strategy.isSyncAjust()) {
-        continue;
-      }
-      final int[] adjustRollupNums = strategy.adjustWithRollupNum();
-      final int[] adjustAppendSizes = strategy.appendBytesOnRollupNum();
-      final Aggregator agg = aggs[rowNeedAdjustAggIndex[ai]];
-      final int curAggCardinalRows = agg.getCardinalRows(); // maybe main cost method
-      for (int i = 0; i < adjustRollupNums.length; i++) {
-        if (curAggCardinalRows < adjustRollupNums[i]) { // adjustRollupNums need sort by asc
-          break;
-        }
-        if (curAggCardinalRows == adjustRollupNums[i]) { // need adjust: appending bytes[adjustAppendSizes]
-          appendBytesTotal += adjustAppendSizes[i];
-          if (log.isDebugEnabled()) {
-            log.debug(
-                "Current bytes[%s] need add adjustAppendSizes[%s],because curAggCardinalRows[%s] reached adjustRollupNums[%s]",
-                getBytesInMemory().get(), adjustAppendSizes[i], curAggCardinalRows, adjustRollupNums[i]);
-          }
-          rowAdjustedCount[ai]++;
-          break;
-        }
-
-        // when curAggCardinalRows great then adjustRollupNums handle
-        if (curAggCardinalRows > adjustRollupNums[i] && rowAdjustedCount[ai] < i + 1) {
-          if (log.isDebugEnabled()) {
-            log.debug(
-                "Current bytes[%s] need add adjustAppendSizes[%s],because index[%s] curAggCardinalRows[%s] exceed adjustRollupNums[%s] but rowAdjustedCount[%s]:%s < needAdjust[%s]",
-                getBytesInMemory().get(), adjustAppendSizes[i], index, curAggCardinalRows, adjustRollupNums[i], ai, rowAdjustedCount[ai], i + 1);
-          }
-          appendBytesTotal += adjustAppendSizes[i];
-          rowAdjustedCount[ai]++;
-        }
-      }
-    } // end for
-    return appendBytesTotal;
-  }
-
-  private void appendBytesInMemoryBySyncAdjust(final Aggregator agg, final AggregatorFactory metric)
-  {
-    if (agg.getCardinalRows() == 0) {
-      return;
-    }
-    final MaxIntermediateSizeAdjustStrategy strategy = metric.getMaxIntermediateSizeAdjustStrategy(
-        adjustmentBytesInMemoryFlag);
-    if (!strategy.isSyncAjust()) {
-      return;
-    }
-    final int[] adjustRollupNums = strategy.adjustWithRollupNum();
-    final int[] adjustAppendSizes = strategy.appendBytesOnRollupNum();
-    final int curAggCardinalRows = agg.getCardinalRows(); // maybe main cost method
-    for (int i = 0; i < adjustRollupNums.length; i++) {
-      if (curAggCardinalRows < adjustRollupNums[i]) { // adjustRollupNums need sort by asc
-        break;
-      }
-      if (curAggCardinalRows == adjustRollupNums[i]) { // need adjust: appending bytes[adjustAppendSizes]
-        if (log.isDebugEnabled()) {
-          log.debug(
-              "Current bytes[%s] need add adjustAppendSizes[%s],because curAggCardinalRows[%s] reached adjustRollupNums[%s]",
-              getBytesInMemory().get(), adjustAppendSizes[i], curAggCardinalRows, adjustRollupNums[i]);
-        }
-        getBytesInMemory().addAndGet(adjustAppendSizes[i]);
-        break;
-      }
-    }
-  }
-
-  public void recordAdjustIndex(final int index)
-  {
-    if (!canAdjust()) {
-      return;
-    }
-    if (existsAsyncAdjust()) {
-      // index record
-      indexReadyAdjustRecorder.add(index);
-
-      // check adjust required
-      final long currTime = System.currentTimeMillis();
-      if (isAdjustmentRequired()) {
-        synchronized (indexReadyAdjustRecorder) {
-          if (!isAdjustmentRequired()) {
-            return;
-          }
-          adjustBeforeTime = currTime;
-          try {
-            indexReadyListQueue.put(new ArrayList<>(indexReadyAdjustRecorder));
-            indexReadyAdjustRecorder.clear();
-          }
-          catch (InterruptedException e) {
-            log.warn(e, "Add ready adjust index list to queue fail.");
-          }
-        }
-        startAsyncAdjust();
-      }
-    }
-  }
-
-  private boolean isAdjustmentRequired()
-  {
-    final int rollupRowTotal = indexReadyAdjustRecorder.size();
-    final long currTime = System.currentTimeMillis();
-    return rollupRowTotal >= adjustmentBytesInMemoryMaxRollupRows
-        || (currTime - adjustBeforeTime) > adjustmentBytesInMemoryMaxTimeMs;
   }
 
   @Override
@@ -403,20 +176,30 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
+    Aggregator adjustmentAggregator = null;
     final AggregatorFactory[] metrics = getMetrics();
     final AtomicInteger numEntries = getNumEntries();
     final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
-      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
-      recordAdjustIndex(priorIndex);
+      adjustmentAggregator = concurrentGetAdjustment(priorIndex);
+      final long rollupAppendingBytes = doAggregate(metrics, aggs, adjustmentAggregator, rowContainer, row, parseExceptionMessages);
+      if (log.isDebugEnabled() && rollupAppendingBytes > 0) {
+        log.debug(
+            "Current bytes[%s] add adjustAppendSizes[%s]=[%s],because curAggCardinalRows[%s] reached threshold",
+            sizeInBytes.get(), rollupAppendingBytes, sizeInBytes.get() + rollupAppendingBytes, adjustmentAggregator.get());
+      }
+      sizeInBytes.addAndGet(rollupAppendingBytes);
     } else {
       aggs = new Aggregator[metrics.length];
+      if (canAdjust()) {
+        adjustmentAggregator = new InternalCountAdjustmentAggregator(adjustmentHolder);
+      }
       factorizeAggs(metrics, aggs, rowContainer, row);
-      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      doAggregate(metrics, aggs, adjustmentAggregator, rowContainer, row, parseExceptionMessages);
 
       final int rowIndex = indexIncrement.getAndIncrement();
-      concurrentSet(rowIndex, aggs);
+      concurrentSet(rowIndex, aggs, adjustmentAggregator);
 
       // Last ditch sanity checks
       if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
@@ -437,39 +220,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         // We lost a race
         parseExceptionMessages.clear();
         aggs = concurrentGet(prev);
-        doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+        adjustmentAggregator = concurrentGetAdjustment(prev);
+        final long rollupAppendingBytes = doAggregate(metrics, aggs, adjustmentAggregator, rowContainer, row, parseExceptionMessages);
+        if (log.isDebugEnabled() && rollupAppendingBytes > 0) {
+          log.debug(
+              "Current bytes[%s] add adjustAppendSizes[%s]=[%s],because curAggCardinalRows[%s] reached threshold",
+              sizeInBytes.get(), rollupAppendingBytes, sizeInBytes.get() + rollupAppendingBytes, adjustmentAggregator.get());
+        }
+        sizeInBytes.addAndGet(rollupAppendingBytes);
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
       }
     }
 
-    if (canAdjust()) {
-      final long appendBytes = atomicCurrentNeedAppendBytes.getAndSet(0);
-      final long sizeInBytesAfter = sizeInBytes.addAndGet(appendBytes);
-      return new AddToFactsResult(numEntries.get(), sizeInBytesAfter, parseExceptionMessages);
-    }
     return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
   }
-
-  @VisibleForTesting
-  public int getAdjustBytesInMemoryPeriod()
-  {
-    return adjustmentBytesInMemoryMaxTimeMs;
-  }
-
-  @VisibleForTesting
-  public int[] getRowNeedAsyncAdjustAggIndex()
-  {
-    return rowNeedAsyncAdjustAggIndex;
-  }
-
-  @VisibleForTesting
-  public int[] getRowNeedSyncAdjustAggIndex()
-  {
-    return rowNeedSyncAdjustAggIndex;
-  }
-
 
   /**
    * Gives an estimated size of row in bytes, it accounts for:
@@ -510,9 +276,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     rowContainer.set(null);
   }
 
-  private void doAggregate(
+  private long doAggregate(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
+      @Nullable Aggregator adjustmentAggregator,
       ThreadLocal<InputRow> rowContainer,
       InputRow row,
       List<String> parseExceptionsHolder
@@ -525,10 +292,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       synchronized (agg) {
         try {
           agg.aggregate();
-          // sync adjust
-          if (existsSyncAdjust()) {
-            appendBytesInMemoryBySyncAdjust(agg, metrics[i]);
-          }
         }
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
@@ -539,6 +302,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     rowContainer.set(null);
+    if (adjustmentAggregator != null) {
+      synchronized (adjustmentAggregator) {
+        adjustmentAggregator.aggregate();
+      }
+      return adjustmentAggregator.getLong();
+    }
+    return 0;
   }
 
   private void closeAggregators()
@@ -548,6 +318,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       for (Aggregator agg : aggs) {
         closer.register(agg);
       }
+    }
+    for (Aggregator agg : adjustmentAggregators.values()) {
+      closer.register(agg);
     }
 
     try {
@@ -564,14 +337,28 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return aggregators.get(offset);
   }
 
-  protected void concurrentSet(int offset, Aggregator[] value)
+  @Nullable
+  protected Aggregator concurrentGetAdjustment(int offset)
+  {
+    // All get operations should be fine
+    if (!canAdjust()) {
+      return null;
+    }
+    return adjustmentAggregators.get(offset);
+  }
+
+  protected void concurrentSet(int offset, Aggregator[] value, @Nullable Aggregator adjustmentAggregator)
   {
     aggregators.put(offset, value);
+    if (adjustmentAggregator != null) {
+      adjustmentAggregators.put(offset, adjustmentAggregator);
+    }
   }
 
   protected void concurrentRemove(int offset)
   {
     aggregators.remove(offset);
+    adjustmentAggregators.remove(offset);
   }
 
   @Override
@@ -656,22 +443,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     super.close();
     closeAggregators();
     aggregators.clear();
+    adjustmentAggregators.clear();
     facts.clear();
     if (selectors != null) {
       selectors.clear();
     }
-    indexReadyAdjustRecorder.clear();
-    indexAdjustedRecorder.clear();
-  }
-
-  @Override
-  public void stopAdjust()
-  {
-    if (!canAdjust()) {
-      return;
-    }
-    indexReadyAdjustRecorder.clear();
-    indexAdjustedRecorder.clear();
   }
 
   /**
@@ -725,4 +501,52 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
+  public static class Builder extends AppendableIndexBuilder
+  {
+    @Override
+    protected OnheapIncrementalIndex buildInner()
+    {
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          maxBytesInMemory,
+          adjustmentHolder
+      );
+    }
+  }
+
+  public static class Spec implements AppendableIndexSpec
+  {
+    public static final String TYPE = "onheap";
+
+    @Override
+    public AppendableIndexBuilder builder()
+    {
+      return new Builder();
+    }
+
+    @Override
+    public long getDefaultMaxBytesInMemory()
+    {
+      // We initially estimated this to be 1/3(max jvm memory), but bytesCurrentlyInMemory only
+      // tracks active index and not the index being flushed to disk, to account for that
+      // we halved default to 1/6(max jvm memory)
+      return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
+    }
+
+    @Override
+    public boolean equals(Object that)
+    {
+      return that.getClass().equals(this.getClass());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(this.getClass());
+    }
+  }
 }

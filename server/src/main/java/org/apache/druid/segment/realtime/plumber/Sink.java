@@ -27,9 +27,11 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -40,6 +42,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -63,11 +67,11 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final DataSchema schema;
   private final ShardSpec shardSpec;
   private final String version;
+  private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final boolean adjustmentBytesInMemoryFlag;
-  private final int adjustmentBytesInMemoryMaxRollupRows;
-  private final int adjustmentBytesInMemoryMaxTimeMs;
+  @Nullable
+  private final CountAdjustmentHolder adjustmentHolder;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
@@ -82,11 +86,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       DataSchema schema,
       ShardSpec shardSpec,
       String version,
+      AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
-      boolean adjustmentBytesInMemoryFlag,
-      int adjustmentBytesInMemoryMaxRollupRows,
-      int adjustmentBytesInMemoryMaxTimeMs,
+      @Nullable CountAdjustmentHolder adjustmentHolder,
       String dedupColumn
   )
   {
@@ -95,11 +98,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         schema,
         shardSpec,
         version,
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
+        adjustmentHolder,
         dedupColumn,
         Collections.emptyList()
     );
@@ -110,11 +112,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       DataSchema schema,
       ShardSpec shardSpec,
       String version,
+      AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
-      boolean adjustmentBytesInMemoryFlag,
-      int adjustmentBytesInMemoryMaxRollupRows,
-      int adjustmentBytesInMemoryMaxTimeMs,
+      @Nullable CountAdjustmentHolder adjustmentHolder,
       String dedupColumn,
       List<FireHydrant> hydrants
   )
@@ -123,11 +124,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.shardSpec = shardSpec;
     this.interval = interval;
     this.version = version;
+    this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
-    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag;
-    this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows;
-    this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs;
+    this.adjustmentHolder = adjustmentHolder;
     this.dedupColumn = dedupColumn;
 
     int maxCount = -1;
@@ -163,16 +163,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   public FireHydrant getCurrHydrant()
   {
     return currHydrant;
-  }
-
-  public void stopAdjust()
-  {
-    synchronized (hydrantLock) {
-      IncrementalIndex index = currHydrant.getIndex();
-      if (index != null) {
-        index.stopAdjust();
-      }
-    }
   }
 
   public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
@@ -347,14 +337,14 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .build();
-    final IncrementalIndex newIndex = new IncrementalIndex.Builder()
+
+    // Build the incremental-index according to the spec that was chosen by the user
+    final IncrementalIndex newIndex = appendableIndexSpec.builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
-        .setAdjustmentBytesInMemoryFlag(adjustmentBytesInMemoryFlag)
-        .setAdjustmentBytesInMemoryMaxRollupRows(adjustmentBytesInMemoryMaxRollupRows)
-        .setadjustmentBytesInMemoryMaxTimeMs(adjustmentBytesInMemoryMaxTimeMs)
-        .buildOnheap();
+        .setAdjustmentHolder(adjustmentHolder)
+        .build();
 
     final FireHydrant old;
     synchronized (hydrantLock) {

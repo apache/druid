@@ -97,7 +97,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -281,8 +280,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null,
                 null,
                 null,
-                null,
-                null,
                 new HashedPartitionsSpec(null, 3, null),
                 null,
                 null,
@@ -450,7 +447,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, null, null, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null
@@ -762,7 +759,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 ),
                 false
             ),
-            IndexTaskTest.createTuningConfig(5000000, null, null, null, null, null, Long.MAX_VALUE, null, false, true)
+            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
         ),
         null
     );
@@ -832,7 +829,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, null, null, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             appendToExisting
         ),
         null

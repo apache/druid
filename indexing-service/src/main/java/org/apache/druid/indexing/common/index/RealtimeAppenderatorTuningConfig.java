@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -38,9 +39,8 @@ import javax.annotation.Nullable;
 import java.io.File;
 
 @JsonTypeName("realtime_appenderator")
-public class RealtimeAppenderatorTuningConfig implements TuningConfig, AppenderatorConfig
+public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
 {
-  private static final int DEFAULT_MAX_ROWS_IN_MEMORY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
   private static final ShardSpec DEFAULT_SHARD_SPEC = new NumberedShardSpec(0, 1);
@@ -54,6 +54,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return FileUtils.createTempDir("druid-realtime-persist");
   }
 
+  private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final boolean adjustmentBytesInMemoryFlag;
@@ -78,6 +79,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
@@ -100,9 +102,10 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
+    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    // initializing this to 0, it will be lazily intialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // initializing this to 0, it will be lazily initialized to a value
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
     this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows == null
@@ -147,6 +150,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+  }
+
+  @Override
+  @JsonProperty
+  public AppendableIndexSpec getAppendableIndexSpec()
+  {
+    return appendableIndexSpec;
   }
 
   @Override
@@ -274,6 +284,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   public RealtimeAppenderatorTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeAppenderatorTuningConfig(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
         adjustmentBytesInMemoryFlag,

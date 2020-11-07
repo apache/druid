@@ -20,19 +20,18 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import org.apache.datasketches.quantiles.DoublesSketch;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 
 import java.util.Arrays;
 
-public class DoublesSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStrategy
+public class DoublesSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStrategy<Integer>
 {
-  private static final Logger log = new Logger(DoublesSketchSizeAdjustStrategy.class);
-  private static final int N_NUM = 10;
+  private static final int N_NUM = 28;
   private static final int K_NUM = 12;
-  private static final int X8 = 8;
+  private static final int XN = 2;
   private static final int START_N = 8;
   private static final int START_K = 16;
+  private static final int INIT_SIZE = 96;
   private static int[][] knSize = new int[K_NUM][N_NUM];
   private final int k;
 
@@ -41,42 +40,46 @@ public class DoublesSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustSt
   private final int[] adjustBytes = new int[N_NUM];
   private final int initAggAppendBytes;
 
-  public DoublesSketchSizeAdjustStrategy(int k, int maxIntermediateSize)
+  public DoublesSketchSizeAdjustStrategy(int k)
   {
     this.k = k;
 
     boolean copyFlag = false;
     for (int ki = START_K, i = 0; i < K_NUM; ki *= 2, i++) {
-      for (int nj = START_N, j = 0; j < N_NUM; nj *= X8, j++) {
-        knSize[i][j] = DoublesSketch.getUpdatableStorageBytes(ki, nj);
+      for (int nj = START_N, j = 0; j < N_NUM; nj *= XN, j++) {
+        knSize[i][j] = DoublesSketch.getUpdatableStorageBytes(ki, nj - 1);
         if (copyFlag == false) {
-          rollupNums[j] = nj / 2;
+          rollupNums[j] = nj - 1;
         }
       }
       copyFlag = true;
     }
 
     int kIndex = this.k / START_K == 0 ? 0 : Integer.numberOfTrailingZeros(this.k / START_K);
-    initAggAppendBytes = -maxIntermediateSize + 64;
+    initAggAppendBytes = -DoublesSketch.getUpdatableStorageBytes(k, DoublesSketchAggregatorFactory.MAX_STREAM_LENGTH) + INIT_SIZE;
 
     int[] tempBytes = new int[adjustBytes.length];
     System.arraycopy(knSize[kIndex], 0, tempBytes, 0, N_NUM);
     // compute appending bytes
     for (int i = 0; i < tempBytes.length; i++) {
-      if (i == 0) {
-        adjustBytes[i] = tempBytes[i];
+      if (i == tempBytes.length - 1) {
+        adjustBytes[i] = adjustBytes[i - 1];
       } else {
-        adjustBytes[i] = tempBytes[i] - tempBytes[i - 1];
+        adjustBytes[i] = tempBytes[i + 1] - tempBytes[i];
       }
     }
-
-    log.debug("%s", this.toString());
   }
 
   @Override
-  public boolean isSyncAjust()
+  public AdjustmentType getAdjustmentType()
   {
-    return false;
+    return AdjustmentType.MAX;
+  }
+
+  @Override
+  public String getAdjustmentMetricType()
+  {
+    return DoublesSketchModule.DOUBLES_SKETCH;
   }
 
   @Override
@@ -97,6 +100,20 @@ public class DoublesSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustSt
     return initAggAppendBytes;
   }
 
+  @Override
+  public Integer getInputVal()
+  {
+    return k;
+  }
+
+  @Override
+  public int compareTo(MaxIntermediateSizeAdjustStrategy<Integer> other)
+  {
+    if (other.getInputVal() == 0) {
+      return -1;
+    }
+    return Integer.compare(k, other.getInputVal());
+  }
   @Override
   public String toString()
   {

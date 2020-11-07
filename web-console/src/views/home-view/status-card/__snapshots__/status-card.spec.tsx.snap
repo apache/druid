@@ -5,7 +5,7 @@ exports[`status card matches snapshot 1`] = `
   class="home-view-card status-card"
 >
   <div
-    class="bp3-card bp3-interactive bp3-elevation-0"
+    class="bp3-card bp3-interactive bp3-elevation-1"
   >
     <h5
       class="bp3-heading"

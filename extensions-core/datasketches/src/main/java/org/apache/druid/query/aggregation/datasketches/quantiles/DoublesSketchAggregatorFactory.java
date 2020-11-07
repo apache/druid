@@ -54,13 +54,14 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public static final int DEFAULT_K = 128;
 
   // Used for sketch size estimation.
-  private static final long MAX_STREAM_LENGTH = 1_000_000_000;
+  public static final long MAX_STREAM_LENGTH = 1_000_000_000;
+  @Nullable
+  private MaxIntermediateSizeAdjustStrategy strategy;
 
   private final String name;
   private final String fieldName;
   private final int k;
   private final byte cacheTypeId;
-  private MaxIntermediateSizeAdjustStrategy strategy;
 
   @JsonCreator
   public DoublesSketchAggregatorFactory(
@@ -90,8 +91,11 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
   {
-    if (adjustBytesInMemoryFlag && strategy == null) {
-      strategy = new DoublesSketchSizeAdjustStrategy(this.k, this.getMaxIntermediateSize());
+    if (adjustBytesInMemoryFlag == false) {
+      return null;
+    }
+    if (strategy == null) {
+      strategy = new DoublesSketchSizeAdjustStrategy(this.k);
     }
     return strategy;
   }

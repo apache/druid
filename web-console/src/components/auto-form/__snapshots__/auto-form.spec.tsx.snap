@@ -12,6 +12,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       allowNumericCharactersOnly={true}
       buttonPosition="right"
       clampValueOnBlur={false}
+      defaultValue=""
       disabled={false}
       fill={true}
       large={false}
@@ -24,7 +25,6 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       selectAllOnFocus={false}
       selectAllOnIncrement={false}
       stepSize={1}
-      value=""
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
@@ -35,6 +35,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       allowNumericCharactersOnly={true}
       buttonPosition="right"
       clampValueOnBlur={false}
+      defaultValue=""
       disabled={false}
       fill={true}
       large={false}
@@ -46,7 +47,6 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       selectAllOnFocus={false}
       selectAllOnIncrement={false}
       stepSize={1000}
-      value=""
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)

@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -61,6 +62,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import javax.annotation.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -115,9 +118,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean sortFacts,
         int maxRowCount,
         long maxBytesInMemory,
-        boolean adjustmentBytesInMemoryFlag,
-        int adjustmentBytesInMemoryMaxRollupRows,
-        int adjustmentBytesInMemoryMaxTimeMs
+        CountAdjustmentHolder adjustmentHolder
     )
     {
       super(
@@ -127,9 +128,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           sortFacts,
           maxRowCount,
           maxBytesInMemory,
-          adjustmentBytesInMemoryFlag,
-          adjustmentBytesInMemoryMaxRollupRows,
-          adjustmentBytesInMemoryMaxTimeMs
+          adjustmentHolder
       );
     }
 
@@ -139,9 +138,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         AggregatorFactory[] metrics,
         int maxRowCount,
         long maxBytesInMemory,
-        boolean adjustmentBytesInMemoryFlag,
-        int adjustmentBytesInMemoryMaxRollupRows,
-        int adjustmentBytesInMemoryMaxTimeMs
+        CountAdjustmentHolder adjustmentHolder
     )
     {
       super(
@@ -155,9 +152,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           true,
           maxRowCount,
           maxBytesInMemory,
-          adjustmentBytesInMemoryFlag,
-          adjustmentBytesInMemoryMaxRollupRows,
-          adjustmentBytesInMemoryMaxTimeMs
+          adjustmentHolder
       );
     }
 
@@ -169,7 +164,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected void concurrentSet(int offset, Aggregator[] value)
+    protected void concurrentSet(int offset, Aggregator[] value, @Nullable Aggregator adjustmentAggregator)
     {
       indexedMap.put(offset, value);
     }

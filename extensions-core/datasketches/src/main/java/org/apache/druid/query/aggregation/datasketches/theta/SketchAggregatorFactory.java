@@ -46,13 +46,13 @@ import java.util.List;
 public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_SKETCH_SIZE = 16384;
+  @Nullable
+  private ThetaSketchSizeAdjustStrategy strategy;
 
   protected final String name;
   protected final String fieldName;
   protected final int size;
   private final byte cacheId;
-  @Nullable
-  private ThetaSketchSizeAdjustStrategy strategy;
 
   public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
   {
@@ -69,7 +69,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public synchronized MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
   {
-    if (adjustBytesInMemoryFlag && strategy == null) {
+    if (adjustBytesInMemoryFlag == false) {
+      return null;
+    }
+    if (strategy == null) {
       strategy = new ThetaSketchSizeAdjustStrategy(this.size);
     }
     return strategy;
@@ -186,20 +189,20 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + Integer.BYTES + fieldNameBytes.length)
-        .put(cacheId)
-        .putInt(size)
-        .put(fieldNameBytes)
-        .array();
+                     .put(cacheId)
+                     .putInt(size)
+                     .put(fieldNameBytes)
+                     .array();
   }
 
   @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{"
-        + "fieldName='" + fieldName + '\''
-        + ", name='" + name + '\''
-        + ", size=" + size
-        + '}';
+           + "fieldName='" + fieldName + '\''
+           + ", name='" + name + '\''
+           + ", size=" + size
+           + '}';
   }
 
 

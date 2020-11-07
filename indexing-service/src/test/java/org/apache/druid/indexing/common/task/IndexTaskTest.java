@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -102,7 +103,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -848,7 +848,7 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             null,
-            createTuningConfig(2, 2, null, null, null, null, 2L, null, false, true),
+            createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null
@@ -891,7 +891,7 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             null,
-            createTuningConfig(3, 2, null, null, null, null, 2L, null, true, true),
+            createTuningConfig(3, 2, null, 2L, null, true, true),
             false
         ),
         null
@@ -933,7 +933,7 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             null,
-            createTuningConfig(3, 2, null, null, null, null, 2L, null, false, true),
+            createTuningConfig(3, 2, null, 2L, null, false, true),
             false
         ),
         null
@@ -985,7 +985,7 @@ public class IndexTaskTest extends IngestionTestBase
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final List<String> columns = Arrays.asList("time", "dim", "val");
     // ignore parse exception
-    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, null, null, null, false, false);
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, false);
 
     // GranularitySpec.intervals and numShards must be null to verify reportParseException=false is respected both in
     // IndexTask.determineShardSpecs() and IndexTask.generateAndPublishSegments()
@@ -1044,7 +1044,7 @@ public class IndexTaskTest extends IngestionTestBase
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final List<String> columns = Arrays.asList("time", "dim", "val");
     // report parse exception
-    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, null, null, null, false, true);
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, true);
     final IndexIngestionSpec indexIngestionSpec;
     if (useInputFormatApi) {
       indexIngestionSpec = createIngestionSpec(
@@ -1115,8 +1115,6 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
         null,
         null,
         null,
@@ -1255,8 +1253,6 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        null,
-        null,
         new DynamicPartitionsSpec(2, null),
         INDEX_SPEC,
         null,
@@ -1369,8 +1365,6 @@ public class IndexTaskTest extends IngestionTestBase
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
         null,
         null,
         null,
@@ -1501,7 +1495,7 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // report parse exception
-    final IndexTuningConfig tuningConfig = createTuningConfig(2, 1, null, null, null, null, null, null, true, true);
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, 1, null, null, null, true, true);
     final IndexIngestionSpec ingestionSpec;
     if (useInputFormatApi) {
       ingestionSpec = createIngestionSpec(
@@ -1573,7 +1567,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     final List<String> columns = Arrays.asList("ts", "", "");
     // report parse exception
-    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, null, null, null, false, true);
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, true);
     final IndexIngestionSpec ingestionSpec;
     if (useInputFormatApi) {
       ingestionSpec = createIngestionSpec(
@@ -1645,7 +1639,7 @@ public class IndexTaskTest extends IngestionTestBase
                   null
               ),
               null,
-              createTuningConfig(3, 2, null, null, null, null, 2L, null, false, true),
+              createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
           null
@@ -1709,7 +1703,7 @@ public class IndexTaskTest extends IngestionTestBase
                   null
               ),
               null,
-              createTuningConfig(3, 2, null, null, null, null, 2L, null, false, true),
+              createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
           null
@@ -1784,9 +1778,6 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        null,
-        null,
-        null,
         forceGuaranteedRollup,
         true
     );
@@ -1802,9 +1793,6 @@ public class IndexTaskTest extends IngestionTestBase
         1,
         null,
         null,
-        null,
-        null,
-        null,
         partitionsSpec,
         forceGuaranteedRollup,
         true
@@ -1815,9 +1803,6 @@ public class IndexTaskTest extends IngestionTestBase
       @Nullable Integer maxRowsPerSegment,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
-      @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @Nullable Long maxTotalRows,
       @Nullable PartitionsSpec partitionsSpec,
       boolean forceGuaranteedRollup,
@@ -1827,11 +1812,9 @@ public class IndexTaskTest extends IngestionTestBase
     return new IndexTuningConfig(
         null,
         maxRowsPerSegment,
+        null,
         maxRowsInMemory,
         maxBytesInMemory,
-        adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         maxTotalRows,
         null,
         null,
@@ -2019,5 +2002,13 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig
       );
     }
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IndexTuningConfig.class)
+        .usingGetClass()
+        .verify();
   }
 }

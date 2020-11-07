@@ -28,12 +28,14 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
+import org.apache.druid.query.aggregation.MetricAdjustmentHolder;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -54,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -64,22 +67,33 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
   private static final int MAX_ROWS = 100000;
   private static final int MAX_BYTES = 100_000_000;
-
   private MaxIntermediateSizeAdjustStrategy customAggStrategy = null;
   private Aggregator customAgg = null;
   private AggregatorFactory customMetric = null;
 
-  public void initCustomAggAdjustStrategy(boolean isSyncAggAdjust)
+  public void initCustomAggAdjustStrategy()
   {
     customAggStrategy = new MaxIntermediateSizeAdjustStrategy()
     {
+      @Override
+      public int compareTo(Object o)
+      {
+        return 0;
+      }
+
       final int[] rollupNums = {2, 20, 40, 400};
       final int[] appendBytesWithNum = {1000, 1000, 1000, 1000};
 
       @Override
-      public boolean isSyncAjust()
+      public AdjustmentType getAdjustmentType()
       {
-        return isSyncAggAdjust;
+        return AdjustmentType.MAX;
+      }
+
+      @Override
+      public String getAdjustmentMetricType()
+      {
+        return "custom";
       }
 
       @Override
@@ -99,6 +113,12 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       {
         return 100;
       }
+
+      @Override
+      public Object getInputVal()
+      {
+        return 1;
+      }
     };
 
     customAgg = new Aggregator()
@@ -109,20 +129,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       public void aggregate()
       {
         occupy.incrementAndGet();
-      }
-
-      @Override
-      public int getCardinalRows()
-      {
-        if (!isSyncAggAdjust) {
-          try {
-            Thread.sleep(1);
-          }
-          catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-        }
-        return (int) get();
       }
 
       @Nullable
@@ -163,7 +169,16 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       @Override
       public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy(boolean adjustBytesInMemoryFlag)
       {
+        if (adjustBytesInMemoryFlag == false) {
+          return null;
+        }
         return customAggStrategy;
+      }
+
+      @Override
+      public String getComplexTypeName()
+      {
+        return "custom";
       }
 
       @Override
@@ -235,12 +250,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public String getComplexTypeName()
-      {
-        return "custom";
-      }
-
-      @Override
       public int getMaxIntermediateSize()
       {
         return 4;
@@ -296,93 +305,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCustomAggAsyncAdjustStrategy() throws IndexSizeExceededException, InterruptedException
-  {
-    initCustomAggAdjustStrategy(false);
-    final AggregatorFactory[] metrics = {new LongSumAggregatorFactory("sum1", "sum1"),
-        new LongMinAggregatorFactory("min1", "min1"), customMetric};
-    final OnheapIncrementalIndex index = new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.MINUTE)
-                .withMetrics(metrics)
-                .build()
-        )
-        .setMaxRowCount(MAX_ROWS)
-        .setMaxBytesInMemory(MAX_BYTES)
-        .buildOnheap();
-    IncrementalIndexAddResult addResult1 = null;
-    for (int i = 0; i < MAX_ROWS; i++) {
-      addResult1 = index.add(new MapBasedInputRow(
-          0,
-          Collections.singletonList("billy"),
-          ImmutableMap.of("billy", 1, "sum1", i, "min1", i, "custom", 1)
-      ));
-    }
-    final long notAdjustBytes = addResult1.getBytesInMemory();
-    index.stopAdjust();
-    index.close();
-
-    initCustomAggAdjustStrategy(false);
-    final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.MINUTE)
-                .withMetrics(metrics)
-                .build()
-        )
-        .setMaxRowCount(MAX_ROWS)
-        .setMaxBytesInMemory(MAX_BYTES)
-        .setAdjustmentBytesInMemoryFlag(true)
-        .setAdjustmentBytesInMemoryMaxRollupRows(1000)
-        .setadjustmentBytesInMemoryMaxTimeMs(1000)
-        .buildOnheap();
-    Thread.sleep(indexAdjust.getAdjustBytesInMemoryPeriod());
-
-    final int addThreadCount = 2;
-    Thread[] addThreads = new Thread[addThreadCount];
-    final CountDownLatch downLatch = new CountDownLatch(addThreadCount);
-    for (int t = 0; t < addThreadCount; ++t) {
-      addThreads[t] = new Thread(() -> {
-        try {
-          for (int i = 0; i < MAX_ROWS / addThreadCount; i++) {
-            indexAdjust.add(new MapBasedInputRow(
-                0,
-                Collections.singletonList("billy"),
-                ImmutableMap.of("billy", 1, "sum1", i, "min1", i, "custom", 1)
-            ));
-
-          }
-          downLatch.countDown();
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      });
-      addThreads[t].start();
-    }
-    downLatch.await();
-    Thread.sleep(indexAdjust.getAdjustBytesInMemoryPeriod());
-    indexAdjust.add(new MapBasedInputRow(
-        0,
-        Collections.singletonList("billy"),
-        ImmutableMap.of("billy", 1, "sum1", 1, "min1", 1, "custom", 1)
-    ));
-
-    final long adjustBytes = indexAdjust.getBytesInMemory().get();
-    final long actualAppendBytes = adjustBytes - notAdjustBytes;
-    final int[] appendBytess = customAggStrategy.appendBytesOnRollupNum();
-
-    indexAdjust.stopAdjust();
-    indexAdjust.close();
-    Assert.assertEquals(Arrays.stream(appendBytess).sum() + customAggStrategy.initAppendBytes(), actualAppendBytes);
-    Assert.assertEquals(true, indexAdjust.rowNeedAsyncAdjustAggIndex.length == 1 && indexAdjust.rowNeedAsyncAdjustAggIndex[0] == 2);
-  }
-
-  @Test
   public void testCustomAggSyncAdjustStrategy() throws IndexSizeExceededException, InterruptedException
   {
-    initCustomAggAdjustStrategy(true);
+    initCustomAggAdjustStrategy();
     final AggregatorFactory[] metrics = {new LongSumAggregatorFactory("sum1", "sum1"),
         new LongMinAggregatorFactory("min1", "min1"), customMetric};
     final OnheapIncrementalIndex index = new IncrementalIndex.Builder()
@@ -394,9 +319,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
-        .setAdjustmentBytesInMemoryFlag(false)
-        .setAdjustmentBytesInMemoryMaxRollupRows(1000)
-        .setadjustmentBytesInMemoryMaxTimeMs(1000)
         .buildOnheap();
     IncrementalIndexAddResult addResult1 = null;
     for (int i = 0; i < MAX_ROWS; i++) {
@@ -407,9 +329,16 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       ));
     }
     final long notAdjustBytes = addResult1.getBytesInMemory();
-    index.stopAdjust();
+    index.close();
 
-    initCustomAggAdjustStrategy(true);
+    initCustomAggAdjustStrategy();
+    HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+    MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(
+        "custom", k -> new MetricAdjustmentHolder(customAggStrategy)
+    );
+    metricAdjustmentHolder.selectStrategyByType(customAggStrategy);
+    CountAdjustmentHolder adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+
     final OnheapIncrementalIndex indexAdjust = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -419,9 +348,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         )
         .setMaxRowCount(MAX_ROWS)
         .setMaxBytesInMemory(MAX_BYTES)
-        .setAdjustmentBytesInMemoryFlag(true)
-        .setAdjustmentBytesInMemoryMaxRollupRows(1000)
-        .setadjustmentBytesInMemoryMaxTimeMs(1000)
+        .setAdjustmentHolder(adjustmentHolder)
         .buildOnheap();
 
     final int addThreadCount = 2;
@@ -452,13 +379,11 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         ImmutableMap.of("billy", 1, "sum1", 1, "min1", 1, "custom", 1)
     ));
     final long adjustBytes = addResult.getBytesInMemory();
-    indexAdjust.stopAdjust();
     indexAdjust.close();
 
     final long actualAppendBytes = adjustBytes - notAdjustBytes;
     final int[] appendBytess = customAggStrategy.appendBytesOnRollupNum();
     Assert.assertEquals(Arrays.stream(appendBytess).sum() + customAggStrategy.initAppendBytes(), actualAppendBytes);
-    Assert.assertEquals(true, indexAdjust.rowNeedSyncAdjustAggIndex.length == 1 && indexAdjust.rowNeedSyncAdjustAggIndex[0] == 2);
   }
 
   @Test

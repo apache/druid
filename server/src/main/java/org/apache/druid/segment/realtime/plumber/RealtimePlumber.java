@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
@@ -51,6 +52,10 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
+import org.apache.druid.query.aggregation.MetricAdjustmentHolder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.Metadata;
@@ -61,7 +66,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -79,6 +83,8 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -86,6 +92,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -117,6 +124,8 @@ public class RealtimePlumber implements Plumber
   );
   private final QuerySegmentWalker texasRanger;
   private final Cache cache;
+  @Nullable
+  private final CountAdjustmentHolder adjustmentHolder;
 
   private volatile long nextFlush = 0;
   private volatile boolean shuttingDown = false;
@@ -175,7 +184,43 @@ public class RealtimePlumber implements Plumber
         cachePopulatorStats
     );
 
+    this.adjustmentHolder = createAdjustmentHolder(schema.getAggregators(), config.getMaxBytesInMemoryOrDefault(), config.getMaxBytesInMemoryOrDefault() >= 0 && config.getMaxBytesInMemoryOrDefault() != Long.MAX_VALUE);
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
+  }
+
+  private CountAdjustmentHolder createAdjustmentHolder(AggregatorFactory[] aggregators, long maxBytesInMemory, boolean adjustmentFlag)
+  {
+    if (maxBytesInMemory < 0 || adjustmentFlag == false) {
+      return null;
+    }
+    HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+    for (AggregatorFactory metric : aggregators) {
+      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
+          .getMaxIntermediateSizeAdjustStrategy(adjustmentFlag);
+      if (maxIntermediateSizeAdjustStrategy == null) {
+        continue;
+      }
+      final String tempMetricType = maxIntermediateSizeAdjustStrategy.getAdjustmentMetricType();
+      final MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(
+          tempMetricType,
+          k -> new MetricAdjustmentHolder(maxIntermediateSizeAdjustStrategy)
+      );
+      if (metricAdjustmentHolder != null) {
+        metricAdjustmentHolder.selectStrategyByType(maxIntermediateSizeAdjustStrategy);
+      }
+    }
+    CountAdjustmentHolder adjustmentHolder = null;
+    if (metricTypeAndHolderMap.size() > 0) {
+      adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+    }
+    return adjustmentHolder;
+  }
+
+  @Nullable
+  @VisibleForTesting
+  public CountAdjustmentHolder getAdjustmentHolder()
+  {
+    return adjustmentHolder;
   }
 
   public DataSchema getSchema()
@@ -260,11 +305,10 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isAdjustmentBytesInMemoryFlag(),
-          config.getAdjustmentBytesInMemoryMaxRollupRows(),
-          config.getAdjustmentBytesInMemoryMaxTimeMs(),
+          config.getMaxBytesInMemoryOrDefault(),
+          adjustmentHolder,
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -726,11 +770,10 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isAdjustmentBytesInMemoryFlag(),
-          config.getAdjustmentBytesInMemoryMaxRollupRows(),
-          config.getAdjustmentBytesInMemoryMaxTimeMs(),
+          config.getMaxBytesInMemoryOrDefault(),
+          adjustmentHolder,
           config.getDedupColumn(),
           hydrants
       );

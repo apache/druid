@@ -81,7 +81,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -881,8 +880,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
-            null,
-            null,
             null,
             null,
             null,

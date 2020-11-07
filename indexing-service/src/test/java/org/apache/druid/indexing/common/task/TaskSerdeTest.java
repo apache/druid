@@ -249,6 +249,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
                 null,
                 null,
@@ -332,6 +333,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
                 null,
                 null,
@@ -402,6 +404,7 @@ public class TaskSerdeTest
             ),
 
             new RealtimeTuningConfig(
+                null,
                 1,
                 10L,
                 null,

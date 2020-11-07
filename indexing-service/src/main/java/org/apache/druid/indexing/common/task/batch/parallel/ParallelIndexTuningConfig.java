@@ -28,12 +28,12 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.util.Objects;
 
 public class ParallelIndexTuningConfig extends IndexTuningConfig
@@ -99,8 +99,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
-        null,
-        null,
         null
     );
   }
@@ -109,11 +107,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   public ParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
@@ -141,11 +137,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     super(
         targetPartitionSize,
         maxRowsPerSegment,
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         maxTotalRows,
         null,
         numShards,
@@ -258,11 +252,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     return new ParallelIndexTuningConfig(
         null,
         null,
+        getAppendableIndexSpec(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
-        isAdjustmentBytesInMemoryFlag(),
-        getAdjustmentBytesInMemoryMaxRollupRows(),
-        getAdjustmentBytesInMemoryMaxTimeMs(),
         null,
         null,
         getSplitHintSpec(),

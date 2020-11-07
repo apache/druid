@@ -831,6 +831,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
         null,
         null,

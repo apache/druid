@@ -747,6 +747,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -830,6 +831,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1258,6 +1260,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1368,6 +1371,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1481,6 +1485,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
         null,
         null,

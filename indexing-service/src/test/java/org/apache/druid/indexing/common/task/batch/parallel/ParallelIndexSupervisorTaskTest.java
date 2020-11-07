@@ -195,6 +195,7 @@ public class ParallelIndexSupervisorTaskTest
       final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
           null,
           null,
+          null,
           10,
           1000L,
           null,

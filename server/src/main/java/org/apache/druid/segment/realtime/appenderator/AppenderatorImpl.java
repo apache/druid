@@ -54,6 +54,10 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAdjustmentHolder;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
+import org.apache.druid.query.aggregation.MetricAdjustmentHolder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -64,7 +68,6 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -140,6 +143,8 @@ public class AppenderatorImpl implements Appenderator
   private final Lock commitLock = new ReentrantLock();
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  @Nullable
+  private final CountAdjustmentHolder adjustmentHolder;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -200,7 +205,36 @@ public class AppenderatorImpl implements Appenderator
       this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
     }
 
-    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
+    maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
+    this.adjustmentHolder = createAdjustmentHolder(maxBytesTuningConfig, maxBytesTuningConfig >= 0 && maxBytesTuningConfig != Long.MAX_VALUE);
+  }
+
+  private CountAdjustmentHolder createAdjustmentHolder(long maxBytesInMemory, boolean adjustmentFlag)
+  {
+    if (maxBytesInMemory < 0 || adjustmentFlag == false) {
+      return null;
+    }
+    HashMap<String, MetricAdjustmentHolder> metricTypeAndHolderMap = new HashMap<>();
+    for (AggregatorFactory metric : schema.getAggregators()) {
+      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric
+          .getMaxIntermediateSizeAdjustStrategy(adjustmentFlag);
+      if (maxIntermediateSizeAdjustStrategy == null) {
+        continue;
+      }
+      final String tempMetricType = maxIntermediateSizeAdjustStrategy.getAdjustmentMetricType();
+      final MetricAdjustmentHolder metricAdjustmentHolder = metricTypeAndHolderMap.computeIfAbsent(
+          tempMetricType,
+          k -> new MetricAdjustmentHolder(maxIntermediateSizeAdjustStrategy)
+      );
+      if (metricAdjustmentHolder != null) {
+        metricAdjustmentHolder.selectStrategyByType(maxIntermediateSizeAdjustStrategy);
+      }
+    }
+    CountAdjustmentHolder adjustmentHolder = null;
+    if (metricTypeAndHolderMap.size() > 0) {
+      adjustmentHolder = new CountAdjustmentHolder(metricTypeAndHolderMap);
+    }
+    return adjustmentHolder;
   }
 
   @Override
@@ -342,7 +376,6 @@ public class AppenderatorImpl implements Appenderator
         );
       } else {
         isPersistRequired = true;
-        sink.stopAdjust();
       }
     }
     return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
@@ -406,11 +439,10 @@ public class AppenderatorImpl implements Appenderator
           schema,
           identifier.getShardSpec(),
           identifier.getVersion(),
+          tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          tuningConfig.isAdjustmentBytesInMemoryFlag(),
-          tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
-          tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
+          adjustmentHolder,
           null
       );
 
@@ -1126,11 +1158,10 @@ public class AppenderatorImpl implements Appenderator
             schema,
             identifier.getShardSpec(),
             identifier.getVersion(),
+            tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
-            tuningConfig.isAdjustmentBytesInMemoryFlag(),
-            tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
-            tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
+            adjustmentHolder,
             null,
             hydrants
         );

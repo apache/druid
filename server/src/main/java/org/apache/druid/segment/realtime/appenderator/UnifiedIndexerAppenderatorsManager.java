@@ -49,6 +49,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -380,6 +381,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public boolean isReportParseExceptions()
     {
       return baseConfig.isReportParseExceptions();
+    }
+
+    @Override
+    public AppendableIndexSpec getAppendableIndexSpec()
+    {
+      return baseConfig.getAppendableIndexSpec();
     }
 
     @Override
