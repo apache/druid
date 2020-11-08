@@ -77,6 +77,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -85,6 +86,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -121,6 +123,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -255,6 +258,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getAppendableIndexSpec(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isAdjustmentBytesInMemoryFlag(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),

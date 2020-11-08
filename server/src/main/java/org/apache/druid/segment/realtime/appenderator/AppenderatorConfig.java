@@ -74,4 +74,9 @@ public interface AppenderatorConfig extends TuningConfig
 
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
+
+  default Boolean isAdjustmentBytesInMemoryFlag()
+  {
+    return false;
+  }
 }

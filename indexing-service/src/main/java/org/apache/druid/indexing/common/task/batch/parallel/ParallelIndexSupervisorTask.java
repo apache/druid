@@ -322,12 +322,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     return new PartialRangeSegmentGenerateParallelIndexTaskRunner(
-       toolbox,
-       getId(),
-       getGroupId(),
-       ingestionSchema,
-       getContext(),
-       intervalToPartitions
+        toolbox,
+        getId(),
+        getGroupId(),
+        ingestionSchema,
+        getContext(),
+        intervalToPartitions
     );
   }
 
@@ -631,7 +631,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (intervalToPartitions.isEmpty()) {
       String msg = "No valid rows for single dimension partitioning."
-          + " All rows may have invalid timestamps or multiple dimension values.";
+                   + " All rows may have invalid timestamps or multiple dimension values.";
       LOG.warn(msg);
       return TaskStatus.success(getId(), msg);
     }
@@ -773,7 +773,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private static <S extends PartitionStat, L extends PartitionLocation>
-        Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
+      Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
       Map<String, ? extends GeneratedPartitionsReport<S>> subTaskIdToReport,
       BiFunction<String, S, L> createPartitionLocationFunction
   )
@@ -932,9 +932,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
-        tuningConfig.isAdjustmentBytesInMemoryFlag(),
-        tuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
-        tuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
         null,
         null,
         null,

@@ -206,7 +206,10 @@ public class AppenderatorImpl implements Appenderator
     }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
-    this.adjustmentHolder = createAdjustmentHolder(maxBytesTuningConfig, maxBytesTuningConfig >= 0 && maxBytesTuningConfig != Long.MAX_VALUE);
+    this.adjustmentHolder = createAdjustmentHolder(
+        tuningConfig.getMaxBytesInMemory(),
+        tuningConfig.isAdjustmentBytesInMemoryFlag()
+    );
   }
 
   private CountAdjustmentHolder createAdjustmentHolder(long maxBytesInMemory, boolean adjustmentFlag)

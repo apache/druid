@@ -68,6 +68,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -76,6 +77,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -105,6 +107,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        adjustmentBytesInMemoryFlag,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -225,6 +228,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getAppendableIndexSpec(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isAdjustmentBytesInMemoryFlag(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),

@@ -209,9 +209,6 @@ public class ClientCompactionTaskQuerySerdeTest
                 2000L,
                 null,
                 null,
-                null,
-                null,
-                null,
                 new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
                 new DynamicPartitionsSpec(100, 30000L),
                 new IndexSpec(

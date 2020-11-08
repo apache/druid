@@ -30,7 +30,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.Objects;
 
@@ -56,8 +55,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -88,8 +85,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxRowsInMemory,
         maxBytesInMemory,
         adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -168,8 +163,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         isAdjustmentBytesInMemoryFlag(),
-        getAdjustmentBytesInMemoryMaxRollupRows(),
-        getAdjustmentBytesInMemoryMaxTimeMs(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
@@ -237,9 +230,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return "KinesisIndexTaskTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
-        ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
-        ", adjustmentBytesInMemoryMaxRollupRows=" + getAdjustmentBytesInMemoryMaxRollupRows() +
-        ", adjustmentBytesInMemoryMaxTimeMs=" + getAdjustmentBytesInMemoryMaxTimeMs() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +

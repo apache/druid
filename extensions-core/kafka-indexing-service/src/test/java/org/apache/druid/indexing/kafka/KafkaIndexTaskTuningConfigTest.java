@@ -124,8 +124,6 @@ public class KafkaIndexTaskTuningConfigTest
         1,
         null,
         null,
-        null,
-        null,
         2,
         10L,
         new Period("PT3S"),
@@ -170,8 +168,6 @@ public class KafkaIndexTaskTuningConfigTest
     KafkaIndexTaskTuningConfig base = new KafkaIndexTaskTuningConfig(
         null,
         1,
-        null,
-        null,
         null,
         null,
         2,
@@ -225,8 +221,6 @@ public class KafkaIndexTaskTuningConfigTest
         1,
         null,
         null,
-        null,
-        null,
         2,
         10L,
         new Period("PT3S"),
@@ -274,7 +268,7 @@ public class KafkaIndexTaskTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(KafkaIndexTaskTuningConfig.class)
-        .usingGetClass()
-        .verify();
+                  .usingGetClass()
+                  .verify();
   }
 }

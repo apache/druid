@@ -92,7 +92,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     this.adjustmentFlag = adjustmentHolder != null && maxBytesInMemory != 0;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
         : new PlainFactsHolder(sortFacts, dimsComparator());
-    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentHolder != null);
+    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema, adjustmentFlag);
   }
 
   private boolean canAdjust()

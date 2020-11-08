@@ -222,9 +222,6 @@ public class CompactionTask extends AbstractBatchIndexTask
           indexTuningConfig.getAppendableIndexSpec(),
           indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getMaxBytesInMemory(),
-          indexTuningConfig.isAdjustmentBytesInMemoryFlag(),
-          indexTuningConfig.getAdjustmentBytesInMemoryMaxRollupRows(),
-          indexTuningConfig.getAdjustmentBytesInMemoryMaxTimeMs(),
           indexTuningConfig.getMaxTotalRows(),
           indexTuningConfig.getNumShards(),
           null,
@@ -859,8 +856,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     ParallelIndexTuningConfig computeTuningConfig()
     {
       ParallelIndexTuningConfig newTuningConfig = tuningConfig == null
-                                          ? ParallelIndexTuningConfig.defaultConfig()
-                                          : tuningConfig;
+                                                  ? ParallelIndexTuningConfig.defaultConfig()
+                                                  : tuningConfig;
       PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
       if (partitionsSpec instanceof DynamicPartitionsSpec) {
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;

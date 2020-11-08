@@ -145,8 +145,6 @@ public class KinesisIndexTaskTuningConfigTest
         1,
         3L,
         null,
-        null,
-        null,
         2,
         100L,
         new Period("PT3S"),
@@ -208,8 +206,6 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         1,
         3L,
-        null,
-        null,
         null,
         2,
         100L,
@@ -301,8 +297,6 @@ public class KinesisIndexTaskTuningConfigTest
         1,
         (long) 3,
         null,
-        null,
-        null,
         2,
         100L,
         new Period("PT3S"),
@@ -363,7 +357,7 @@ public class KinesisIndexTaskTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(KinesisIndexTaskTuningConfig.class)
-        .usingGetClass()
-        .verify();
+                  .usingGetClass()
+                  .verify();
   }
 }

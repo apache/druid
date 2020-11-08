@@ -28,7 +28,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 
 public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
@@ -39,8 +38,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") @Nullable Period intermediatePersistPeriod,
@@ -65,8 +62,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxRowsInMemory,
         maxBytesInMemory,
         adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -95,8 +90,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         isAdjustmentBytesInMemoryFlag(),
-        getAdjustmentBytesInMemoryMaxRollupRows(),
-        getAdjustmentBytesInMemoryMaxTimeMs(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
@@ -125,9 +118,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
-        ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
-        ", adjustmentBytesInMemoryMaxRollupRows=" + getAdjustmentBytesInMemoryMaxRollupRows() +
-        ", adjustmentBytesInMemoryMaxTimeMs=" + getAdjustmentBytesInMemoryMaxTimeMs() +
+           ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +

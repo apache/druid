@@ -20,10 +20,8 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.segment.incremental.IncrementalIndex;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 
 /**
@@ -70,14 +68,4 @@ public interface Aggregator extends Closeable
 
   @Override
   void close();
-
-  /**
-   * Appending bytes by aggregator cardinal rows, if required adjust bytesInMemory{@link IncrementalIndex#bytesInMemory}
-   *
-   * @return
-   */
-  default int getCardinalRows()
-  {
-    return 0;
-  }
 }

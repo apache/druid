@@ -33,7 +33,6 @@ public class DoublesSketchBuildAggregator implements Aggregator
 
   @Nullable
   private UpdateDoublesSketch sketch;
-  private int aggCount = 0;
 
   public DoublesSketchBuildAggregator(final ColumnValueSelector<Double> valueSelector, final int size)
   {
@@ -48,7 +47,6 @@ public class DoublesSketchBuildAggregator implements Aggregator
       return;
     }
     sketch.update(valueSelector.getDouble());
-    aggCount++;
   }
 
   @Override
@@ -67,12 +65,6 @@ public class DoublesSketchBuildAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public synchronized int getCardinalRows()
-  {
-    return aggCount;
   }
 
   @Override

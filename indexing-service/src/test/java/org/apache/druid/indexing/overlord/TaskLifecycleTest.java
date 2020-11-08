@@ -155,7 +155,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -755,9 +754,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
-                null,
-                null,
-                null,
                 indexSpec,
                 null,
                 3,
@@ -833,9 +829,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 10000,
                 null,
                 10,
-                null,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1268,9 +1261,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
-                null,
-                null,
-                null,
                 indexSpec,
                 null,
                 null,
@@ -1373,9 +1363,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 10000,
                 null,
                 10,
-                null,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1487,9 +1474,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         null,
         1000,
-        null,
-        null,
-        null,
         null,
         new Period("P1Y"),
         null, //default window period of 10 minutes

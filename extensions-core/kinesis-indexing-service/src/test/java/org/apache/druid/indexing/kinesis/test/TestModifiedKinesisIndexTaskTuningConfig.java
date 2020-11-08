@@ -29,7 +29,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 
 @JsonTypeName("KinesisTuningConfig")
@@ -43,8 +42,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -76,8 +73,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         maxRowsInMemory,
         maxBytesInMemory,
         adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -112,8 +107,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getMaxRowsInMemory(),
         base.getMaxBytesInMemory(),
         base.isAdjustmentBytesInMemoryFlag(),
-        base.getAdjustmentBytesInMemoryMaxRollupRows(),
-        base.getAdjustmentBytesInMemoryMaxTimeMs(),
         base.getMaxRowsPerSegment(),
         base.getMaxTotalRows(),
         base.getIntermediatePersistPeriod(),

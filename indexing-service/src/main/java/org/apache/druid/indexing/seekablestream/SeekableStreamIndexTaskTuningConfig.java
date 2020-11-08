@@ -30,7 +30,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.Objects;
 
@@ -43,8 +42,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final boolean adjustmentBytesInMemoryFlag;
-  private final int adjustmentBytesInMemoryMaxRollupRows;
-  private final int adjustmentBytesInMemoryMaxTimeMs;
   private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -69,8 +66,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
       @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @Nullable Integer maxRowsPerSegment,
       @Nullable Long maxTotalRows,
       @Nullable Period intermediatePersistPeriod,
@@ -100,13 +95,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
-    this.adjustmentBytesInMemoryMaxRollupRows = adjustmentBytesInMemoryMaxRollupRows == null
-        ? 1000
-        : adjustmentBytesInMemoryMaxRollupRows;
-    this.adjustmentBytesInMemoryMaxTimeMs = adjustmentBytesInMemoryMaxTimeMs == null
-        ? 1000
-        : adjustmentBytesInMemoryMaxTimeMs;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? true : adjustmentBytesInMemoryFlag;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
@@ -167,27 +156,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
-  }
-
-  @Override
-  @JsonProperty
-  public boolean isAdjustmentBytesInMemoryFlag()
-  {
-    return adjustmentBytesInMemoryFlag;
-  }
-
-  @Override
-  @JsonProperty
-  public int getAdjustmentBytesInMemoryMaxRollupRows()
-  {
-    return adjustmentBytesInMemoryMaxRollupRows;
-  }
-
-  @Override
-  @JsonProperty
-  public int getAdjustmentBytesInMemoryMaxTimeMs()
-  {
-    return adjustmentBytesInMemoryMaxTimeMs;
   }
 
   @Override
@@ -284,6 +252,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return segmentWriteOutMediumFactory;
   }
 
+  @Override
+  public Boolean isAdjustmentBytesInMemoryFlag()
+  {
+    return adjustmentBytesInMemoryFlag;
+  }
+
   @JsonProperty
   public Period getIntermediateHandoffPeriod()
   {
@@ -330,9 +304,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
            maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
-        adjustmentBytesInMemoryFlag == that.adjustmentBytesInMemoryFlag &&
-        adjustmentBytesInMemoryMaxRollupRows == that.adjustmentBytesInMemoryMaxRollupRows &&
-        adjustmentBytesInMemoryMaxTimeMs == that.adjustmentBytesInMemoryMaxTimeMs &&
+           adjustmentBytesInMemoryFlag == that.adjustmentBytesInMemoryFlag &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -358,8 +330,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         maxRowsInMemory,
         maxBytesInMemory,
         adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         partitionsSpec,
         intermediatePersistPeriod,
         basePersistDirectory,

@@ -29,7 +29,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 
 @JsonTypeName("KafkaTuningConfig")
@@ -43,8 +42,6 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
-      @JsonProperty("adjustmentBytesInMemoryMaxRollupRows") @Nullable Integer adjustmentBytesInMemoryMaxRollupRows,
-      @JsonProperty("adjustmentBytesInMemoryMaxTimeMs") @Nullable Integer adjustmentBytesInMemoryMaxTimeMs,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") @Nullable Period intermediatePersistPeriod,
@@ -70,8 +67,6 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
         maxRowsInMemory,
         maxBytesInMemory,
         adjustmentBytesInMemoryFlag,
-        adjustmentBytesInMemoryMaxRollupRows,
-        adjustmentBytesInMemoryMaxTimeMs,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
