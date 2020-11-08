@@ -268,7 +268,7 @@ public class KafkaIndexTaskTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(KafkaIndexTaskTuningConfig.class)
-                  .usingGetClass()
-                  .verify();
+        .usingGetClass()
+        .verify();
   }
 }

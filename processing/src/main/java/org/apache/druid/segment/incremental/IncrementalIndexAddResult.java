@@ -33,7 +33,6 @@ public class IncrementalIndexAddResult
   @Nullable
   private final String reasonOfNotAdded;
 
-
   private IncrementalIndexAddResult(
       int rowCount,
       long bytesInMemory,

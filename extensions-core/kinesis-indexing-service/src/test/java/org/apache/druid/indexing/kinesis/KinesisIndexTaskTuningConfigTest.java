@@ -357,7 +357,7 @@ public class KinesisIndexTaskTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(KinesisIndexTaskTuningConfig.class)
-                  .usingGetClass()
-                  .verify();
+        .usingGetClass()
+        .verify();
   }
 }
