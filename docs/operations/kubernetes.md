@@ -31,4 +31,4 @@ $docker pull apache/druid:0.16.0-incubating
 
 [druid-operator](https://github.com/druid-io/druid-operator) can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
 
-Druid clusters deployed on Kubernetes can function without Zookeeper using [druid–kubernetes-extensions](../../development/extensions-core/kubernetes.md) .
+Druid clusters deployed on Kubernetes can function without Zookeeper using [druid–kubernetes-extensions](../development/extensions-core/kubernetes.md) .
