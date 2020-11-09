@@ -129,4 +129,23 @@
     </dependency>
 
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.5</version>
+        <configuration>
+          <excludes>
+            <!-- Initialization code -->
+            <exclude>org/apache/druid/k8s/discovery/K8sDiscoveryModule.java</exclude>
+
+            <!-- K8S Api Glue, not unit testable -->
+            <exclude>org/apache/druid/k8s/discovery/DefaultK8sApiClient.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
