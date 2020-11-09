@@ -165,6 +165,8 @@ Below are the endpoints protected/filtered using datasource permissions. These p
 |`GET /druid/indexer/v1/task/{taskid}/log`|overlord|
 |`GET /druid/indexer/v1/task/{taskid}/reports`|overlord|
 
+Note - When reindexing from an existing datasource, user needs read on source datasource permission in addition to
+write on destination datasource.  
 
 ### SERVER
 
@@ -318,7 +320,7 @@ will be filtered based on DATASOURCE READ permissions.
 - `tasks`: Tasks will be filtered based on DATASOURCE READ permissions.
 
 ### Backwards compatibility and rolling upgrade to auth v2 model from v1
-Unless the flag `druid.auth.authVersion` is set to `v2`, older model will be used. For rolling upgradw to v2 model 
+Unless the flag `druid.auth.authVersion` is set to `v2`, older model will be used. For rolling upgrade to v2 model 
 there are few prerequisites -
 1. Define the new permissions and policies in the auth system you are using.
 1. Make sure the auth extension you are using supports the newer model, you need to make sure the `Authorizer` implementation

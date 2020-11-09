@@ -44,7 +44,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -163,14 +165,25 @@ public class OverlordResource
   public Response taskPost(final Task task, @Context final HttpServletRequest req)
   {
     final String dataSource = task.getDataSource();
-    final ResourceAction resourceAction = new ResourceAction(
+    final List<ResourceAction> resourceActions = new ArrayList<>();
+
+    resourceActions.add(new ResourceAction(
         new Resource(dataSource, ResourceType.DATASOURCE),
         Action.WRITE
-    );
+    ));
 
-    Access authResult = AuthorizationUtils.authorizeResourceAction(
+    // if its a reindex task from druid, make sure the user has read permissions on the source druid datasource
+    if (task instanceof IndexTask && ((IndexTask) task).getIngestionSchema().getIOConfig()
+        .getInputSource() instanceof DruidInputSource) {
+      final String readFromDataSource = ((DruidInputSource) ((IndexTask) task).getIngestionSchema()
+          .getIOConfig()
+          .getInputSource()).getDataSource();
+      resourceActions.add(new ResourceAction(new Resource(readFromDataSource, ResourceType.DATASOURCE), Action.READ));
+    }
+
+    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        resourceAction,
+        resourceActions,
         authorizerMapper
     );
 
