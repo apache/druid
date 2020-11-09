@@ -41,6 +41,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.Result;
@@ -627,6 +628,62 @@ public class QueryResourceTest
         "druid",
         testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get("identity")
     );
+  }
+
+  @Test
+  public void testQueryTimeoutException() throws Exception
+  {
+    final QuerySegmentWalker timeoutSegmentWalker = new QuerySegmentWalker()
+    {
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+      {
+        throw new QueryTimeoutException();
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+      {
+        return getQueryRunnerForIntervals(null, null);
+      }
+    };
+
+    final QueryResource timeoutQueryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            timeoutSegmentWalker,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+    expectPermissiveHappyPathAuth();
+    Response response = timeoutQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(QueryTimeoutException.STATUS_CODE, response.getStatus());
+    QueryTimeoutException ex;
+    try {
+      ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryTimeoutException.class);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    Assert.assertEquals("Query Timed Out!", ex.getMessage());
+    Assert.assertEquals(QueryTimeoutException.ERROR_CODE, ex.getErrorCode());
   }
 
   @Test(timeout = 60_000L)
