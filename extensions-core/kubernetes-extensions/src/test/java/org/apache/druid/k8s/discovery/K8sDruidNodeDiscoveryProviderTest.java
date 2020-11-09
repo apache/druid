@@ -104,7 +104,7 @@ public class K8sDruidNodeDiscoveryProviderTest
     );
     EasyMock.expect(mockK8sApiClient.watchPods(
         podInfo.getPodNamespace(), labelSelector, "v2", NodeRole.ROUTER)).andReturn(
-            new MockWatchResult(Collections.EMPTY_LIST, true, false)
+            new MockWatchResult(Collections.emptyList(), true, false)
     );
     EasyMock.expect(mockK8sApiClient.watchPods(
         podInfo.getPodNamespace(), labelSelector, "v2", NodeRole.ROUTER)).andReturn(

@@ -36,7 +36,7 @@ public class DiscoveryDruidNodeList
   )
   {
     this.resourceVersion = Preconditions.checkNotNull(resourceVersion, "NULL resource version!");
-    this.druidNodes = druidNodes == null ? Collections.EMPTY_MAP : druidNodes;
+    this.druidNodes = druidNodes == null ? Collections.emptyMap() : druidNodes;
   }
 
   public String getResourceVersion()
