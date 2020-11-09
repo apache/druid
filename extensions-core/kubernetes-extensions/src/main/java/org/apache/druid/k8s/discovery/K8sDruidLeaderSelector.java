@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.discovery;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.annotations.Self;
@@ -40,6 +41,8 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
   private final LeaderElectorAsyncWrapper leaderLatch;
 
   private volatile boolean leader = false;
+
+  @SuppressFBWarnings(value = "VO_VOLATILE_INCREMENT", justification = "incremented but in single thread")
   private volatile int term = 0;
 
   public K8sDruidLeaderSelector(@Self DruidNode self, String lockResourceName, String lockResourceNamespace, K8sDiscoveryConfig discoveryConfig, K8sLeaderElectorFactory k8sLeaderElectorFactory)
