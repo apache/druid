@@ -39,11 +39,13 @@ import java.util.concurrent.TimeUnit;
  * Common code used by various implementations of DruidNodeDiscovery.
  *
  * User code is supposed to arrange for following methods to be called,
- * childAdded(DiscoveryDruidNode)
- * childRemove(DiscoveryDruidNode)
- * cacheInitialized()
- * resetNodes(Map<String, DiscoveryDruidNode>)
+ * {@link #childAdded(DiscoveryDruidNode)}
+ * {@link #childRemoved(DiscoveryDruidNode)}
+ * {@link #cacheInitialized()}
+ * {@link #resetNodes(Map)}
  *
+ * Then {@link #registerListener(DruidNodeDiscovery.Listener)} and {@link #getAllNodes()} can be delegated to the
+ * implementation here.
  */
 public class BaseNodeRoleWatcher
 {
