@@ -20,9 +20,9 @@
 package org.apache.druid.k8s.discovery;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiClient;
@@ -116,7 +116,7 @@ public class DefaultK8sApiClient implements K8sApiClient
               coreV1Api.listNamespacedPodCall(namespace, null, true, null, null,
                                               labelSelector, null, lastKnownResourceVersion, 0, true, null
               ),
-              new TypeToken<Watch.Response<V1Pod>>()
+              new TypeReference<Watch.Response<V1Pod>>()
               {
               }.getType()
           );

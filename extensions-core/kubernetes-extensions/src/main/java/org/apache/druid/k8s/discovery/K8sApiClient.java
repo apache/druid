@@ -31,7 +31,7 @@ public interface K8sApiClient
   DiscoveryDruidNodeList listPods(String namespace, String labelSelector, NodeRole nodeRole);
 
   /**
-   * @return NULL if history not available or else blah
+   * @return NULL if history not available or else return the {@link WatchResult} object
    */
   WatchResult watchPods(String namespace, String labelSelector, String lastKnownResourceVersion, NodeRole nodeRole);
 }

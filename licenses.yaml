@@ -796,6 +796,16 @@ libraries:
 
 ---
 
+name: kubernetes official java client api
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 10.0.0
+libraries:
+  - io.kubernetes: client-java-api
+
+---
+
 name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
