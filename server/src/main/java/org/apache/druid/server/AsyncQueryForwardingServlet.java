@@ -425,6 +425,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
+  @Override
+  public long getTimedOutQueryCount()
+  {
+    // Query timeout metric is not relevant here and this metric is already being tracked in the Broker and the
+    // data nodes using QueryResource
+    return 0L;
+  }
+
   @VisibleForTesting
   static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
