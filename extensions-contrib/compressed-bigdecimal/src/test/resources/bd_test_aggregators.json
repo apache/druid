@@ -1,0 +1,9 @@
+[
+    {
+        "type": "compressedBigDecimal",
+        "name": "revenue",
+        "fieldName": "revenue",
+        "scale": 9,
+        "size": 3
+    }
+]

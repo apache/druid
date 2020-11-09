@@ -873,6 +873,7 @@ artifactId
 com.example
 common.runtime.properties
 druid-cassandra-storage
+druid-compressed-bigdecimal
 druid-distinctcount
 druid-ec2-extensions
 druid-kafka-extraction-namespace
@@ -1833,3 +1834,12 @@ MiB
 GiB
 TiB
 PiB
+- ../docs/development/extensions-contrib/compressed-big-decimal.md
+compressedBigDecimal
+limitSpec
+metricsSpec
+postAggregations
+SaleAmount
+IngestionSpec
+druid-compressed-bigdecimal
+doubleSum
