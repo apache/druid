@@ -24,10 +24,9 @@ package org.apache.druid.query.aggregation;
 public class InternalCountAdjustmentAggregator implements Aggregator
 {
   private long count = 0;
+  private int startIndex = 0;
   private final int[] appendingBytesOnRollupRows;
   private final int[] rollupRows;
-  private int beforeIndex = -1;
-  private int needAppendingBytes = 0;
 
   public InternalCountAdjustmentAggregator(CountAdjustmentHolder countAdjustmentHolder)
   {
@@ -39,30 +38,6 @@ public class InternalCountAdjustmentAggregator implements Aggregator
   public void aggregate()
   {
     ++count;
-    final int appendingIndex = findRollupRows();
-    if (appendingIndex == -1) {
-      needAppendingBytes = 0;
-      return;
-    }
-    needAppendingBytes = appendingBytesOnRollupRows[appendingIndex];
-  }
-
-  private int findRollupRows()
-  {
-    if (beforeIndex == rollupRows.length - 1) {
-      return -1;
-    }
-    for (int i = beforeIndex + 1; i < rollupRows.length; i++) {
-      // rollupRows need sort by asc
-      if (count < rollupRows[i]) {
-        break;
-      }
-      if (count == rollupRows[i]) {
-        beforeIndex = i;
-        return i;
-      }
-    }
-    return -1;
   }
 
   @Override
@@ -74,19 +49,23 @@ public class InternalCountAdjustmentAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) needAppendingBytes;
+    return (float) count;
   }
 
   @Override
   public long getLong()
   {
-    return needAppendingBytes;
+    if (startIndex == rollupRows.length) {
+      return 0;
+    }
+    // rollupRows need sort by asc
+    return count == rollupRows[startIndex] ? appendingBytesOnRollupRows[startIndex++] : 0;
   }
 
   @Override
   public double getDouble()
   {
-    return (double) needAppendingBytes;
+    return (double) count;
   }
 
   @Override

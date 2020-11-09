@@ -294,7 +294,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     // last adjustment agg return appending bytes for row.
     if (canAdjust()) {
-      return aggs[metrics.length].getLong();
+      synchronized (aggs[metrics.length]) {
+        return aggs[metrics.length].getLong();
+      }
     }
     return 0;
   }
