@@ -98,17 +98,17 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
       // Submit initial ingestion task
       submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false);
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(0));
-      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE);
       // Submit append ingestion task
       submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true);
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(1));
-      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE);
       // Submit compaction task
       compactData(indexDatasource, COMPACTION_TASK);
       // Verification post compaction
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(2));
       verifySegmentsCompacted(indexDatasource, expectedSegmentCountList.get(2));
-      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE);
     }
   }
 
