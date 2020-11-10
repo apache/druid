@@ -139,10 +139,11 @@
         <configuration>
           <excludes>
             <!-- Initialization code -->
-            <exclude>org/apache/druid/k8s/discovery/K8sDiscoveryModule.java</exclude>
+            <exclude>org/apache/druid/k8s/discovery/K8sDiscoveryModule*</exclude>
 
             <!-- K8S Api Glue, not unit testable -->
-            <exclude>org/apache/druid/k8s/discovery/DefaultK8sApiClient.java</exclude>
+            <exclude>org/apache/druid/k8s/discovery/DefaultK8sApiClient*</exclude>
+            <exclude>org/apache/druid/k8s/discovery/DefaultK8sLeaderElectorFactory*</exclude>
           </excludes>
         </configuration>
       </plugin>
