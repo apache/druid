@@ -433,6 +433,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         <Button
           text={showAdvanced ? 'Hide advanced' : 'Show advanced'}
           rightIcon={showAdvanced ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
+          minimal
+          fill
           onClick={() => {
             this.setState(({ showAdvanced }) => ({ showAdvanced: !showAdvanced }));
           }}

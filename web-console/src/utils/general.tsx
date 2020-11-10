@@ -306,7 +306,7 @@ export function sortWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],
   suffix: readonly string[],
-  cmp: null | ((a: string, b: string) => number),
+  cmp?: (a: string, b: string) => number,
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
@@ -355,4 +355,29 @@ export function swapElements<T>(items: readonly T[], indexA: number, indexB: num
   newItems[indexA] = newItems[indexB];
   newItems[indexB] = t;
   return newItems;
+}
+
+export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: number): T[] {
+  const indexDiff = fromIndex - toIndex;
+  if (indexDiff > 0) {
+    // move left
+    return [
+      ...items.slice(0, toIndex),
+      items[fromIndex],
+      ...items.slice(toIndex, fromIndex),
+      ...items.slice(fromIndex + 1, items.length),
+    ];
+  } else if (indexDiff < 0) {
+    // move right
+    const targetIndex = toIndex + 1;
+    return [
+      ...items.slice(0, fromIndex),
+      ...items.slice(fromIndex + 1, targetIndex),
+      items[fromIndex],
+      ...items.slice(targetIndex, items.length),
+    ];
+  } else {
+    // do nothing
+    return items.slice();
+  }
 }

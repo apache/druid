@@ -47,7 +47,7 @@ import {
   getMetricSpecSingleFieldName,
   MetricSpec,
 } from './metric-spec';
-import { PLACEHOLDER_TIMESTAMP_SPEC, TimestampSpec } from './timestamp-spec';
+import { TimestampSpec } from './timestamp-spec';
 import { TransformSpec } from './transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
@@ -475,6 +475,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Dimensions',
           type: 'string-array',
           placeholder: '(optional)',
+          advanced: true,
           info: (
             <p>
               The list of dimensions to select. If left empty, no dimensions are returned. If left
@@ -487,6 +488,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Metrics',
           type: 'string-array',
           placeholder: '(optional)',
+          advanced: true,
           info: (
             <p>
               The list of metrics to select. If left empty, no metrics are returned. If left null or
@@ -499,6 +501,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Filter',
           type: 'json',
           placeholder: '(optional)',
+          advanced: true,
           info: (
             <p>
               The{' '}
@@ -1943,34 +1946,6 @@ export function updateIngestionType(
 
   if (inputSourceType) {
     newSpec = deepSet(newSpec, 'spec.ioConfig.inputSource', { type: inputSourceType });
-
-    if (inputSourceType === 'local') {
-      newSpec = deepSet(newSpec, 'spec.ioConfig.inputSource.filter', '*');
-    }
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dataSource', 'new-data-source');
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.granularitySpec')) {
-    const granularitySpec: GranularitySpec = {
-      type: 'uniform',
-      queryGranularity: 'HOUR',
-    };
-    if (ingestionType !== 'index_parallel') {
-      granularitySpec.segmentGranularity = 'HOUR';
-    }
-
-    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec', granularitySpec);
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.timestampSpec')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.timestampSpec', PLACEHOLDER_TIMESTAMP_SPEC);
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.dimensionsSpec')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec', {});
   }
 
   return newSpec;
@@ -2091,7 +2066,8 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', []);
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
   } else {
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
 

@@ -56,8 +56,11 @@ describe('utils', () => {
   // const cacheRows: CacheRows = [{ make: 'Honda', model: 'Civic' }, { make: 'BMW', model: 'M3' }];
 
   it('spec-utils headerFromSampleResponse', () => {
-    expect(headerFromSampleResponse({ data: [{ input: { a: 1 }, parsed: { a: 1 } }] }))
-      .toMatchInlineSnapshot(`
+    expect(
+      headerFromSampleResponse({
+        sampleResponse: { data: [{ input: { a: 1 }, parsed: { a: 1 } }] },
+      }),
+    ).toMatchInlineSnapshot(`
       Array [
         "a",
       ]

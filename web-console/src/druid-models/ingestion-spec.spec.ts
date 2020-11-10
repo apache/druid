@@ -219,7 +219,7 @@ describe('spec utils', () => {
               ],
             },
             "granularitySpec": Object {
-              "queryGranularity": "HOUR",
+              "queryGranularity": "hour",
               "rollup": true,
               "segmentGranularity": "DAY",
               "type": "uniform",
