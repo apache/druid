@@ -49,7 +49,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
   private final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
   private final boolean useEarliestOffset;
 
-  RecordSupplierInputSource(
+  public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
       boolean useEarliestOffset

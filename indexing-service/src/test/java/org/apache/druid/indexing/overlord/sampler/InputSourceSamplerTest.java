@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.sampler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
@@ -37,6 +38,10 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
+import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -62,13 +67,17 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -1163,6 +1172,121 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     );
   }
 
+  /**
+   *
+   * This case tests sampling for multiple json lines in one text block
+   * Currently only RecordSupplierInputSource supports this kind of input, see https://github.com/apache/druid/pull/10383 for more information
+   *
+   * This test combines illegal json block and legal json block together to verify:
+   * 1. all lines in the illegal json block should not be parsed
+   * 2. the illegal json block should not affect the processing of the 2nd record
+   * 3. all lines in legal json block should be parsed successfully
+   *
+   */
+  @Test
+  public void testMultipleJsonStringInOneBlock() throws IOException
+  {
+    if (!ParserType.STR_JSON.equals(parserType) || !useInputFormatApi) {
+      return;
+    }
+
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(StringDimensionSchema.create("dim1PlusBar"))
+    );
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE))
+    );
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        transformSpec
+    );
+
+    List<String> jsonBlockList = ImmutableList.of(
+        // include the line which can't be parsed into JSON object to form a illegal json block
+        String.join("", STR_JSON_ROWS),
+
+        // exclude the last line to form a legal json block
+        String.join("", STR_JSON_ROWS.stream().limit(STR_JSON_ROWS.size() - 1).collect(Collectors.toList()))
+    );
+
+    SamplerResponse response = inputSourceSampler.sample(new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
+                                                         createInputFormat(),
+                                                         dataSchema,
+                                                         new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/));
+
+    //
+    // the 1st json block contains STR_JSON_ROWS.size() lines, and 2nd json block contains STR_JSON_ROWS.size()-1 lines
+    // togther there should STR_JSON_ROWS.size() * 2 - 1 lines
+    //
+    int illegalRows = STR_JSON_ROWS.size();
+    int legalRows = STR_JSON_ROWS.size() - 1;
+    Assert.assertEquals(illegalRows + legalRows, response.getNumRowsRead());
+    Assert.assertEquals(legalRows, response.getNumRowsIndexed());
+    Assert.assertEquals(illegalRows + 2, response.getData().size());
+
+    List<SamplerResponseRow> data = response.getData();
+    List<Map<String, Object>> rawColumnList = this.getRawColumns();
+    int index = 0;
+
+    //
+    // first n rows are related to the first json block which fails to parse
+    //
+    String parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    for (; index < illegalRows; index++) {
+      assertEqualsSamplerResponseRow(
+          new SamplerResponseRow(
+              rawColumnList.get(index),
+              null,
+              true,
+              parseExceptionMessage
+          ),
+          data.get(index)
+      );
+    }
+
+    //
+    // following are parsed rows for legal json block
+    //
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            rawColumnList.get(0),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foobar")
+                .put("met1", 11L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(index++)
+    );
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            rawColumnList.get(3),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foo2bar")
+                .put("met1", 4L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(index)
+    );
+  }
+
   private List<String> getTestRows()
   {
     switch (parserType) {
@@ -1348,5 +1472,98 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
 
     return false;
+  }
+
+  private static class TestRecordSupplier implements RecordSupplier
+  {
+    private final List<String> jsonList;
+    private Set<Integer> partitions;
+    private boolean polled;
+
+    public TestRecordSupplier(List<String> jsonList)
+    {
+      this.jsonList = jsonList;
+      partitions = ImmutableSet.of(5);
+      polled = false;
+    }
+
+    @Override
+    public void assign(Set set)
+    {
+    }
+
+    @Override
+    public void seek(StreamPartition partition, Object sequenceNumber)
+    {
+    }
+
+    @Override
+    public void seekToEarliest(Set set)
+    {
+    }
+
+    @Override
+    public void seekToLatest(Set set)
+    {
+    }
+
+    @Override
+    public Collection<StreamPartition> getAssignment()
+    {
+      return null;
+    }
+
+    @Nonnull
+    @Override
+    public List<OrderedPartitionableRecord> poll(long timeout)
+    {
+      if (polled) {
+        try {
+          Thread.sleep(timeout);
+        }
+        catch (InterruptedException e) {
+        }
+        return Collections.emptyList();
+      }
+
+      polled = true;
+      return jsonList.stream()
+                     .map(jsonText -> new OrderedPartitionableRecord("topic",
+                                                                     0,
+                                                                     0,
+                                                                     Collections.singletonList(StringUtils.toUtf8(jsonText))))
+                     .collect(Collectors.toList());
+    }
+
+    @Nullable
+    @Override
+    public Object getLatestSequenceNumber(StreamPartition partition)
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Object getEarliestSequenceNumber(StreamPartition partition)
+    {
+      return null;
+    }
+
+    @Override
+    public Object getPosition(StreamPartition partition)
+    {
+      return null;
+    }
+
+    @Override
+    public Set getPartitionIds(String stream)
+    {
+      return partitions;
+    }
+
+    @Override
+    public void close()
+    {
+    }
   }
 }
