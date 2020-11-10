@@ -285,6 +285,9 @@ filtered list by the granted permissions. It covers the following endpoints.
 |`GET /druid/coordinator/v1/lookups/status/{tier}`|coordinator|
 |`GET /druid/coordinator/v1/lookups/status/{tier}/{lookup}`|coordinator|
 
+Note - Since lookups are protected using lookup ids, users have to make sure the lookup ids are unique across different 
+lookup tiers to avoid conflicts. 
+
 ### EXAMPLE ROLES-PERMISSION MAPPING
 
 These are some example policies that be used. Policies are of form `ACTION:RESOURCE_TYPE:RESOURCE_NAME`
