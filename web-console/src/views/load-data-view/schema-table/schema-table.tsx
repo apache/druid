@@ -41,6 +41,7 @@ export interface SchemaTableProps {
     metricsSpec: MetricSpec[] | undefined;
   };
   columnFilter: string;
+  selectedAutoDimension: string | undefined;
   selectedDimensionSpecIndex: number;
   selectedMetricSpecIndex: number;
   onAutoDimensionSelect: (dimensionName: string) => void;
@@ -58,6 +59,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
   const {
     sampleBundle,
     columnFilter,
+    selectedAutoDimension,
     selectedDimensionSpecIndex,
     selectedMetricSpecIndex,
     onAutoDimensionSelect,
@@ -65,6 +67,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
     onMetricSelect,
   } = props;
   const { headerAndRows, dimensions, metricsSpec } = sampleBundle;
+
   return (
     <ReactTable
       className="schema-table -striped -highlight"
@@ -109,7 +112,9 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             timestamp ? 'timestamp' : 'dimension',
             dimensionSpecType || 'string',
             {
-              selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex,
+              selected:
+                (dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex) ||
+                selectedAutoDimension === columnName,
             },
           );
           return {

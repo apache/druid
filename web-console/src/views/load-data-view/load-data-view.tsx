@@ -2319,6 +2319,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <SchemaTable
               sampleBundle={data}
               columnFilter={columnFilter}
+              selectedAutoDimension={selectedAutoDimension}
               selectedDimensionSpecIndex={selectedDimensionSpecIndex}
               selectedMetricSpecIndex={selectedMetricSpecIndex}
               onAutoDimensionSelect={this.onAutoDimensionSelect}
@@ -2634,7 +2635,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <div className="edit-controls">
         <FormGroup label="Name">
-          <InputGroup defaultValue={selectedAutoDimension} readOnly />
+          <InputGroup value={selectedAutoDimension} onChange={() => {}} readOnly />
         </FormGroup>
         <FormGroup>
           <Button

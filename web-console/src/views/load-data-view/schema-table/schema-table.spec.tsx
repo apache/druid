@@ -41,6 +41,7 @@ describe('SchemaTable', () => {
           metricsSpec: [],
         }}
         columnFilter=""
+        selectedAutoDimension={undefined}
         selectedDimensionSpecIndex={-1}
         selectedMetricSpecIndex={-1}
         onAutoDimensionSelect={() => {}}
