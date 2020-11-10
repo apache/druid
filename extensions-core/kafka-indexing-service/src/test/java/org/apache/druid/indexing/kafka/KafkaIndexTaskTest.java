@@ -2744,7 +2744,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                      toJsonString(true, "2049", "d3", "y", "10", "23.0", "3.0");
 
       //multiple objects in one Kafka record but some objects are in ill-formed format
-      //the whole ProducerRecord will be discarded
+      //as a result, the whole ProducerRecord will be discarded
       String illformed = "{\"timestamp\":2049, \"dim1\": \"d4\", \"dim2\":\"x\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"2.0\" }" +
                      "{\"timestamp\":2049, \"dim1\": \"d5\", \"dim2\":\"y\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":invalidFormat }" +
                      "{\"timestamp\":2049, \"dim1\": \"d6\", \"dim2\":\"z\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"3.0\" }";
@@ -2755,7 +2755,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
           //well-formed
           new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
           //ill-formed
-          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("illformed")),
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(illformed)),
           //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
           new ProducerRecord<>(topic, 0, null, jb(true, "2049", "d7", "y", "10", "20.0", "1.0"))
       };
