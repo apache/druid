@@ -20,8 +20,8 @@
 package org.apache.druid.discovery;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.compress.utils.Sets;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.DruidNode;
 import org.junit.Assert;
 import org.junit.Test;
@@ -40,7 +40,7 @@ public class BaseNodeRoleWatcherTest
   public void testGeneralUseSimulation()
   {
     BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         NodeRole.BROKER
     );
 
@@ -88,7 +88,7 @@ public class BaseNodeRoleWatcherTest
     nodeRoleWatcher.childRemoved(broker3);
     nodeRoleWatcher.childAdded(broker1);
 
-    Assert.assertEquals(Sets.newHashSet(broker2, broker1), new HashSet<>(nodeRoleWatcher.getAllNodes()));
+    Assert.assertEquals(ImmutableSet.of(broker2, broker1), new HashSet<>(nodeRoleWatcher.getAllNodes()));
 
     List<DiscoveryDruidNode> nodesAdded = new ArrayList<>(presentNodes);
     nodesAdded.add(broker2);
@@ -106,7 +106,7 @@ public class BaseNodeRoleWatcherTest
 
     nodeRoleWatcher.resetNodes(resetNodes);
 
-    Assert.assertEquals(Sets.newHashSet(broker2, broker3), new HashSet<>(nodeRoleWatcher.getAllNodes()));
+    Assert.assertEquals(ImmutableSet.of(broker2, broker3), new HashSet<>(nodeRoleWatcher.getAllNodes()));
 
     nodesAdded.add(broker3);
     nodesRemoved.add(broker1);
