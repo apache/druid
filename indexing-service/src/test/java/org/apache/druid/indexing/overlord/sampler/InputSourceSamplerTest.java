@@ -1218,7 +1218,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         String.join("", STR_JSON_ROWS),
 
         // exclude the last line to form a legal json block
-        String.join("", STR_JSON_ROWS.stream().limit(STR_JSON_ROWS.size() - 1).collect(Collectors.toList()))
+        STR_JSON_ROWS.stream().limit(STR_JSON_ROWS.size() - 1).collect(Collectors.joining())
     );
 
     SamplerResponse response = inputSourceSampler.sample(new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
@@ -1228,7 +1228,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
     //
     // the 1st json block contains STR_JSON_ROWS.size() lines, and 2nd json block contains STR_JSON_ROWS.size()-1 lines
-    // togther there should STR_JSON_ROWS.size() * 2 - 1 lines
+    // together there should STR_JSON_ROWS.size() * 2 - 1 lines
     //
     int illegalRows = STR_JSON_ROWS.size();
     int legalRows = STR_JSON_ROWS.size() - 1;
