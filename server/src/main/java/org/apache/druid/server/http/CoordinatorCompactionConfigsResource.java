@@ -21,9 +21,9 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;

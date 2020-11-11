@@ -45,6 +45,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
@@ -55,6 +57,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public class BasicRoleBasedAuthorizerTest
 {
   private static final String DB_AUTHORIZER_NAME = "metadata";
@@ -74,6 +77,16 @@ public class BasicRoleBasedAuthorizerTest
 
   private SearchResult userSearchResult;
   private SearchResult adminSearchResult;
+  private final String authVersion;
+
+  @Parameterized.Parameters(name = "{index}: authVersion={0}")
+  public static Iterable<String> data() {
+    return Arrays.asList(AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2);
+  }
+
+  public BasicRoleBasedAuthorizerTest(String authVersion) {
+    this.authVersion = authVersion;
+  }
 
   @Before
   public void setUp()
@@ -116,7 +129,7 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     new LDAPRoleProvider(null, groupFilters)
                 )
-            ), null
+            ), authVersion
         ),
         connector,
         tablesConfig,
@@ -173,7 +186,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -181,7 +194,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
   }
@@ -209,7 +222,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -217,7 +230,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
   }
@@ -256,7 +269,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -264,7 +277,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -272,7 +285,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -284,7 +297,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -292,7 +305,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -300,7 +313,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
   }
@@ -340,7 +353,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -348,7 +361,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -356,7 +369,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -368,7 +381,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -376,7 +389,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertTrue(access.isAllowed());
 
@@ -384,7 +397,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
   }
@@ -413,7 +426,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -421,7 +434,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -429,7 +442,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
 
@@ -437,7 +450,7 @@ public class BasicRoleBasedAuthorizerTest
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.READ,
-        AuthConfig.AUTH_VERSION_1
+        authVersion
     );
     Assert.assertFalse(access.isAllowed());
   }

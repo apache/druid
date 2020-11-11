@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -79,10 +81,15 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -109,6 +116,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -122,6 +130,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@RunWith(JUnitParamsRunner.class)
 public class SystemSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
@@ -731,8 +740,33 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testServersTable()
+  @Parameters({ AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2 })
+  public void testServersTable(String authVersion)
   {
+    final List<ResourceAction> expectedResourceActions = new ArrayList<>();
+    authMapper = new AuthorizerMapper(null, authVersion)
+    {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return new Authorizer()
+        {
+          @Override
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
+          {
+            expectedResourceActions.add(new ResourceAction(resource, action));
+            return new Access(true);
+          }
+
+          @Override
+          public Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+          {
+            expectedResourceActions.add(new ResourceAction(resource, action));
+            return new Access(true);
+          }
+        };
+      }
+    };
 
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
                                                      .withConstructor(
@@ -944,6 +978,10 @@ public class SystemSchemaTest extends CalciteTestBase
       Assert.assertArrayEquals(expectedRows.get(i), rows.get(i));
     }
 
+    final List<ResourceAction> actualResourceActions = authVersion.equals(AuthConfig.AUTH_VERSION_2) ?
+        ImmutableList.of(new ResourceAction(Resource.SERVER_SERVER_RESOURCE, Action.READ)) :
+        ImmutableList.of(new ResourceAction(Resource.STATE_RESOURCE, Action.READ));
+    Assert.assertEquals(expectedResourceActions, actualResourceActions);
     // Verify value types.
     verifyTypes(rows, SystemSchema.SERVERS_SIGNATURE);
   }
@@ -984,8 +1022,34 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testServerSegmentsTable()
+  @Parameters({ AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2 })
+  public void testServerSegmentsTable(String authVersion)
   {
+    final List<ResourceAction> expectedResourceActions = new ArrayList<>();
+    authMapper = new AuthorizerMapper(null, authVersion)
+    {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return new Authorizer()
+        {
+          @Override
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
+          {
+            expectedResourceActions.add(new ResourceAction(resource, action));
+            return new Access(true);
+          }
+
+          @Override
+          public Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+          {
+            expectedResourceActions.add(new ResourceAction(resource, action));
+            return new Access(true);
+          }
+        };
+      }
+    };
+
     SystemSchema.ServerSegmentsTable serverSegmentsTable = EasyMock
         .createMockBuilder(SystemSchema.ServerSegmentsTable.class)
         .withConstructor(serverView, authMapper)
@@ -1053,6 +1117,24 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals("server2:1234", row4[0]);
     Assert.assertEquals("test5_2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z_version5", row4[1].toString());
 
+    final List<ResourceAction> actualResourceActions = authVersion.equals(AuthConfig.AUTH_VERSION_2) ?
+        ImmutableList.of(
+            new ResourceAction(Resource.SERVER_SERVER_RESOURCE, Action.READ),
+            new ResourceAction(new Resource("test1", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test2", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test3", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test4", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test5", ResourceType.DATASOURCE), Action.READ)
+        ) :
+        ImmutableList.of(
+            new ResourceAction(Resource.STATE_RESOURCE, Action.READ),
+            new ResourceAction(new Resource("test1", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test2", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test3", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test4", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("test5", ResourceType.DATASOURCE), Action.READ)
+        );
+    Assert.assertEquals(expectedResourceActions, actualResourceActions);
     // Verify value types.
     verifyTypes(rows, SystemSchema.SERVER_SEGMENTS_SIGNATURE);
   }

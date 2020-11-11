@@ -72,6 +72,7 @@ import org.apache.druid.server.http.security.ServerStatusResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -173,8 +174,8 @@ public class OverlordResource
     ));
 
     // if its a reindex task from druid, make sure the user has read permissions on the source druid datasource
-    if (task instanceof IndexTask && ((IndexTask) task).getIngestionSchema().getIOConfig()
-        .getInputSource() instanceof DruidInputSource) {
+    if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2) && task instanceof IndexTask
+        && ((IndexTask) task).getIngestionSchema().getIOConfig().getInputSource() instanceof DruidInputSource) {
       final String readFromDataSource = ((DruidInputSource) ((IndexTask) task).getIngestionSchema()
           .getIOConfig()
           .getInputSource()).getDataSource();
