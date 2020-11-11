@@ -23,15 +23,27 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public class CompactionResourceTest
 {
   private DruidCoordinator mock;
@@ -49,6 +61,47 @@ public class CompactionResourceTest
       1,
       1
   );
+  private AuthorizerMapper authorizerMapper;
+  private HttpServletRequest request;
+
+  @Parameterized.Parameters(name = "{index}: authVersion={0}")
+  public static Iterable<String> data()
+  {
+    return Arrays.asList(AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2);
+  }
+
+  public CompactionResourceTest(String authVersion)
+  {
+    authorizerMapper = new AuthorizerMapper(
+        ImmutableMap.of("auth1",
+            new Authorizer()
+            {
+              @Override
+              public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
+              {
+                return new Access(true);
+              }
+
+              @Override
+              public Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+              {
+                return new Access(true);
+              }
+            }
+        ),
+        authVersion
+    );
+    request = EasyMock.createMock(HttpServletRequest.class);
+    if (authVersion.equals(AuthConfig.AUTH_VERSION_2)) {
+      EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
+      EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+      EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+          .andReturn(new AuthenticationResult("", "auth1", "", null)).once();
+      request.setAttribute(EasyMock.anyString(), EasyMock.anyObject());
+      EasyMock.expectLastCall().once();
+    }
+    EasyMock.replay(request);
+  }
 
   @Before
   public void setUp()
@@ -59,7 +112,7 @@ public class CompactionResourceTest
   @After
   public void tearDown()
   {
-    EasyMock.verify(mock);
+    EasyMock.verify(mock, request);
   }
 
   @Test
@@ -73,7 +126,7 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource("");
+    final Response response = new CompactionResource(mock, authorizerMapper).getCompactionSnapshotForDataSource("", request);
     Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -90,7 +143,7 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(null);
+    final Response response = new CompactionResource(mock, authorizerMapper).getCompactionSnapshotForDataSource(null, request);
     Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -103,7 +156,7 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(expectedSnapshot).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
+    final Response response = new CompactionResource(mock, authorizerMapper).getCompactionSnapshotForDataSource(dataSourceName, request);
     Assert.assertEquals(ImmutableMap.of("latestStatus", ImmutableList.of(expectedSnapshot)), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -116,7 +169,7 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(null).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
+    final Response response = new CompactionResource(mock, authorizerMapper).getCompactionSnapshotForDataSource(dataSourceName, request);
     Assert.assertEquals(400, response.getStatus());
   }
 }

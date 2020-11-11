@@ -150,6 +150,8 @@ Below are the endpoints protected/filtered using datasource permissions. These p
 |`GET/POST /druid/coordinator/v1/metadata/...`|coordinator|
 |`GET/POST /druid/coordinator/v1/config/compaction`|coordinator|
 |`GET/DELETE /druid/coordinator/v1/config/compaction/{dataSource}`|coordinator|
+|`GET /druid/coordinator/v1/compaction/progress`|coordinator|
+|`GET /druid/coordinator/v1/compaction/status`|coordinator|
 |`POST /druid/indexer/v1/task`|overlord|
 |`GET /druid/indexer/v1/task/{taskid}`|overlord|
 |`GET /druid/indexer/v1/task/{taskid}/status`|overlord|
@@ -254,6 +256,7 @@ for druid nodes talking to each other and cluster admins.
 |`POST /druid/v2/candidates`|broker|
 |`GET /druid/coordinator/v1/cluster`|coordinator|
 |`GET /druid/coordinator/v1/cluster/{nodeRole}`|coordinator|
+|`GET /druid/coordinator/v1/compaction/compact`|coordinator|
 |`GET /druid/router/v1/brokers`|router|
 |`GET /druid-internal/v1/segments/`|broker,historical,peon|
 |`GET /druid-internal/v1/segments/changeRequests`|broker,historical,peon|

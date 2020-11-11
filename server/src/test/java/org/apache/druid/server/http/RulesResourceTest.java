@@ -20,19 +20,29 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +57,62 @@ public class RulesResourceTest
   {
     databaseRuleManager = EasyMock.createStrictMock(MetadataRuleManager.class);
     auditManager = EasyMock.createStrictMock(AuditManager.class);
+  }
+
+  @Test
+  public void testGetRules()
+  {
+    final String authorizerName = "testAuthorizer";
+
+    EasyMock.expect(databaseRuleManager.getAllRules()).andReturn(
+        ImmutableMap.of(
+            "ds1",
+            ImmutableList.of(new ForeverLoadRule(null)),
+            "ds2",
+            ImmutableList.of(new ForeverLoadRule(null))
+        )
+    ).once();
+
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager, new AuthorizerMapper(
+        ImmutableMap.of(authorizerName,
+            new Authorizer()
+            {
+              @Override
+              public Access authorize(AuthenticationResult authenticationResult, Resource resource,
+                  Action action
+              )
+              {
+                return null;
+              }
+
+              @Override
+              public Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+              {
+                if (resource.getName().equals("ds1")) {
+                  return new Access(true);
+                }
+                return new Access(false);
+              }
+            }
+        ), AuthConfig.AUTH_VERSION_2));
+
+    final HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+        .andReturn(new AuthenticationResult("", authorizerName, "", null)).once();
+    request.setAttribute(EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(databaseRuleManager, request);
+
+    Response response = rulesResource.getRules(request);
+    final Map<String, List<Rule>> rules = (Map<String, List<Rule>>) response.getEntity();
+    Assert.assertEquals(1, rules.size());
+    Assert.assertEquals(1, rules.get("ds1").size());
+    Assert.assertEquals(new ForeverLoadRule(null), rules.get("ds1").get(0));
+
+    EasyMock.verify(databaseRuleManager, request);
   }
 
   @Test
