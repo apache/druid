@@ -41,8 +41,8 @@ describe('utils', () => {
         dataSource: 'wikipedia',
         granularitySpec: {
           type: 'uniform',
-          segmentGranularity: 'DAY',
-          queryGranularity: 'HOUR',
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
         },
         timestampSpec: {
           column: 'timestamp',
@@ -89,8 +89,8 @@ describe('utils', () => {
             "dataSource": "wikipedia",
             "dimensionsSpec": Object {},
             "granularitySpec": Object {
-              "queryGranularity": "HOUR",
-              "segmentGranularity": "DAY",
+              "queryGranularity": "hour",
+              "segmentGranularity": "day",
               "type": "uniform",
             },
             "timestampSpec": Object {

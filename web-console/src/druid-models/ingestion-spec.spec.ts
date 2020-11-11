@@ -45,8 +45,8 @@ describe('ingestion-spec', () => {
         dataSource: 'wikipedia',
         granularitySpec: {
           type: 'uniform',
-          segmentGranularity: 'DAY',
-          queryGranularity: 'HOUR',
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
           rollup: true,
         },
         parser: {
@@ -183,8 +183,8 @@ describe('spec utils', () => {
         dataSource: 'wikipedia',
         granularitySpec: {
           type: 'uniform',
-          segmentGranularity: 'DAY',
-          queryGranularity: 'HOUR',
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
         },
         timestampSpec: {
           column: 'timestamp',
@@ -221,7 +221,7 @@ describe('spec utils', () => {
             "granularitySpec": Object {
               "queryGranularity": "hour",
               "rollup": true,
-              "segmentGranularity": "DAY",
+              "segmentGranularity": "day",
               "type": "uniform",
             },
             "metricsSpec": Array [

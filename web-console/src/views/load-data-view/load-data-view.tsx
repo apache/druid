@@ -1870,11 +1870,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !transformQueryState.data,
           onNextStep: () => {
             if (!transformQueryState.data) return;
-            if (!isDruidSource(spec)) {
-              this.updateSpec(
-                updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
-              );
+
+            let newSpec = spec;
+            if (!isDruidSource(newSpec)) {
+              newSpec = updateSchemaWithSample(newSpec, transformQueryState.data, 'specific', true);
             }
+
+            if (!deepGet(newSpec, 'spec.dataSchema.granularitySpec.type')) {
+              newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.type', 'uniform');
+            }
+
+            this.updateSpec(newSpec);
           },
         })}
       </>
@@ -2507,13 +2513,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               newSpec = deepDelete(newSpec, 'spec.tuningConfig.forceGuaranteedRollup');
             }
 
-            if (!deepGet(newSpec, 'spec.dataSchema.granularitySpec')) {
-              newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec', {
-                type: 'uniform',
-                queryGranularity: 'hour',
-              });
-            }
-
             this.updateSpec(newSpec);
           },
         })}
@@ -2944,7 +2943,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               {
                 name: 'segmentGranularity',
                 type: 'string',
-                suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
+                suggestions: ['hour', 'day', 'week', 'month', 'year'],
                 defined: (g: GranularitySpec) => g.type === 'uniform',
                 required: true,
                 info: (
