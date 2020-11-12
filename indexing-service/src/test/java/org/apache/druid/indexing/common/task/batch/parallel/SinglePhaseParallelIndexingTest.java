@@ -341,6 +341,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            true,
             null,
             null,
             null,

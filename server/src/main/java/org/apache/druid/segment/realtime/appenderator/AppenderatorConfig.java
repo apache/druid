@@ -26,6 +26,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 
 public interface AppenderatorConfig extends TuningConfig
@@ -75,8 +76,4 @@ public interface AppenderatorConfig extends TuningConfig
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
 
-  default Boolean isAdjustmentBytesInMemoryFlag()
-  {
-    return false;
-  }
 }

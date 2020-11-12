@@ -113,6 +113,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1122,6 +1123,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
+    private final boolean adjustmentBytesInMemoryFlag;
 
     // null if all partitionsSpec related params are null. see getDefaultPartitionsSpec() for details.
     @Nullable
@@ -1194,6 +1196,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+        @JsonProperty("adjustmentBytesInMemoryFlag") @Nullable Boolean adjustmentBytesInMemoryFlag,
         @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
         @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
@@ -1217,6 +1220,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
+          adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag,
           getPartitionsSpec(
               forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
               partitionsSpec,
@@ -1246,13 +1250,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
         @Nullable AppendableIndexSpec appendableIndexSpec,
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
+        @Nullable Boolean adjustmentBytesInMemoryFlag,
         @Nullable PartitionsSpec partitionsSpec,
         @Nullable IndexSpec indexSpec,
         @Nullable IndexSpec indexSpecForIntermediatePersists,
@@ -1272,6 +1277,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+      this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
       this.partitionsSpec = partitionsSpec;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
@@ -1309,6 +1315,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          adjustmentBytesInMemoryFlag,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
@@ -1330,6 +1337,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          adjustmentBytesInMemoryFlag,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
@@ -1364,6 +1372,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public long getMaxBytesInMemory()
     {
       return maxBytesInMemory;
+    }
+
+    @JsonProperty
+    @Override
+    public boolean isAdjustmentBytesInMemoryFlag()
+    {
+      return adjustmentBytesInMemoryFlag;
     }
 
     @JsonProperty
@@ -1532,6 +1547,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
              maxRowsInMemory == that.maxRowsInMemory &&
              maxBytesInMemory == that.maxBytesInMemory &&
+             adjustmentBytesInMemoryFlag == that.adjustmentBytesInMemoryFlag &&
              maxPendingPersists == that.maxPendingPersists &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
              reportParseExceptions == that.reportParseExceptions &&
@@ -1553,6 +1569,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          adjustmentBytesInMemoryFlag,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
@@ -1574,6 +1591,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return "IndexTuningConfig{" +
              "maxRowsInMemory=" + maxRowsInMemory +
              ", maxBytesInMemory=" + maxBytesInMemory +
+             ", adjustmentBytesInMemoryFlag=" + adjustmentBytesInMemoryFlag +
              ", partitionsSpec=" + partitionsSpec +
              ", indexSpec=" + indexSpec +
              ", indexSpecForIntermediatePersists=" + indexSpecForIntermediatePersists +

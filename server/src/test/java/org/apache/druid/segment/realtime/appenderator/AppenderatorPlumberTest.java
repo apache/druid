@@ -65,6 +65,7 @@ public class AppenderatorPlumberTest
         null,
         1,
         null,
+        true,
         null,
         null,
         null,

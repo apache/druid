@@ -165,6 +165,7 @@ public class AppenderatorTester implements AutoCloseable
         null,
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
+        true,
         null,
         null,
         basePersistDirectory,

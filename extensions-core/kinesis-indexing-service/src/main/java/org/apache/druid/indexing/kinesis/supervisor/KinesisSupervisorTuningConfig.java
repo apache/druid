@@ -221,6 +221,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     return "KinesisSupervisorTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
+           ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +

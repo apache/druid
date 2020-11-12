@@ -207,6 +207,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 40000,
                 2000L,
+                true,
                 null,
                 null,
                 new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),

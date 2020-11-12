@@ -41,9 +41,7 @@ public class CountAdjustmentHolder
   {
     this.metricTypeAndHolderMap = metricTypeAndHolderMap;
     initAdjustment();
-    if (log.isDebugEnabled()) {
-      log.debug("Adjustment info:rollupRows:%s,appendBytes:%s", Arrays.toString(rollupRowsAll), Arrays.toString(appendBytesAll));
-    }
+    log.info("Adjustment bytes in memory info:rollupRows:%s,appendBytes:%s", Arrays.toString(rollupRowsAll), Arrays.toString(appendBytesAll));
   }
 
   private void initAdjustment()

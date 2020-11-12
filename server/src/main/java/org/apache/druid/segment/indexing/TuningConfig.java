@@ -49,6 +49,11 @@ public interface TuningConfig
   long getMaxBytesInMemory();
 
   /**
+   * Whether adjustment of bytes(estimated) in memory
+   */
+  boolean isAdjustmentBytesInMemoryFlag();
+
+  /**
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage.
    * If getMaxBytesInMemory() returns 0, the appendable index default will be used.
    */

@@ -402,6 +402,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public boolean isAdjustmentBytesInMemoryFlag()
+    {
+      return baseConfig.isAdjustmentBytesInMemoryFlag();
+    }
+
+    @Override
     public int getMaxPendingPersists()
     {
       return baseConfig.getMaxPendingPersists();

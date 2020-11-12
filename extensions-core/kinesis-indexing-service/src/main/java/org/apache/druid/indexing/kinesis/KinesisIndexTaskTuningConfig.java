@@ -230,6 +230,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return "KinesisIndexTaskTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
+           ", adjustmentBytesInMemoryFlag=" + isAdjustmentBytesInMemoryFlag() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +

@@ -30,6 +30,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.Objects;
 
@@ -95,7 +96,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? true : adjustmentBytesInMemoryFlag;
+    this.adjustmentBytesInMemoryFlag = adjustmentBytesInMemoryFlag == null ? false : adjustmentBytesInMemoryFlag;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
@@ -156,6 +157,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  @Override
+  public boolean isAdjustmentBytesInMemoryFlag()
+  {
+    return adjustmentBytesInMemoryFlag;
   }
 
   @Override
@@ -250,12 +258,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
   {
     return segmentWriteOutMediumFactory;
-  }
-
-  @Override
-  public Boolean isAdjustmentBytesInMemoryFlag()
-  {
-    return adjustmentBytesInMemoryFlag;
   }
 
   @JsonProperty
