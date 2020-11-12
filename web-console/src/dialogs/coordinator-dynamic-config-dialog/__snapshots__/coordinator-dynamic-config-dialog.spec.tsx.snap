@@ -165,6 +165,14 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "name": "decommissioningMaxPercentOfMaxSegmentsToMove",
           "type": "number",
         },
+        Object {
+          "defaultValue": false,
+          "info": <React.Fragment>
+            Boolean flag for whether or not the coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up.
+          </React.Fragment>,
+          "name": "pauseCoordination",
+          "type": "boolean",
+        },
       ]
     }
     model={Object {}}

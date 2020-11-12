@@ -645,10 +645,7 @@ public class IndexGeneratorJob implements Jobby
           null
       );
       try {
-        File baseFlushFile = File.createTempFile("base", "flush");
-        baseFlushFile.delete();
-        baseFlushFile.mkdirs();
-
+        File baseFlushFile = FileUtils.createTempDir("base-flush");
         Set<File> toMerge = new TreeSet<>();
         int indexCount = 0;
         int lineCount = 0;
