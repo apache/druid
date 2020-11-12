@@ -55,7 +55,7 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
-  advanced?: Functor<M, boolean>;
+  hideInMore?: Functor<M, boolean>;
   adjustment?: (model: M) => M;
   issueWithValue?: (value: any) => string | undefined;
 }
@@ -71,7 +71,7 @@ export interface AutoFormProps<M> {
 }
 
 export interface AutoFormState {
-  showAdvanced: boolean;
+  showMore: boolean;
 }
 
 export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
@@ -148,7 +148,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   constructor(props: AutoFormProps<T>) {
     super(props);
     this.state = {
-      showAdvanced: false,
+      showMore: false,
     };
   }
 
@@ -425,18 +425,18 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  renderAdvanced() {
-    const { showAdvanced } = this.state;
+  renderMoreOrLess() {
+    const { showMore } = this.state;
 
     return (
       <FormGroup key="advanced">
         <Button
-          text={showAdvanced ? 'Hide advanced' : 'Show advanced'}
-          rightIcon={showAdvanced ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
+          text={showMore ? 'Show less' : 'Show more'}
+          rightIcon={showMore ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
           minimal
           fill
           onClick={() => {
-            this.setState(({ showAdvanced }) => ({ showAdvanced: !showAdvanced }));
+            this.setState(({ showMore }) => ({ showMore: !showMore }));
           }}
         />
       </FormGroup>
@@ -445,14 +445,14 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   render(): JSX.Element {
     const { fields, model, showCustom } = this.props;
-    const { showAdvanced } = this.state;
+    const { showMore } = this.state;
 
-    let hasAdvanced = false;
+    let shouldShowMore = false;
     const shownFields = fields.filter(field => {
       if (AutoForm.evaluateFunctor(field.defined, model, true)) {
-        if (AutoForm.evaluateFunctor(field.advanced, model, false)) {
-          hasAdvanced = true;
-          return showAdvanced;
+        if (AutoForm.evaluateFunctor(field.hideInMore, model, false)) {
+          shouldShowMore = true;
+          return showMore;
         }
         return true;
       } else {
@@ -464,7 +464,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       <div className="auto-form">
         {model && shownFields.map(this.renderField)}
         {model && showCustom && showCustom(model) && this.renderCustom()}
-        {hasAdvanced && this.renderAdvanced()}
+        {shouldShowMore && this.renderMoreOrLess()}
       </div>
     );
   }

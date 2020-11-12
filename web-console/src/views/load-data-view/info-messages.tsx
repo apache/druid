@@ -184,13 +184,13 @@ export const PublishMessage = React.memo(function PublishMessage() {
 export const SpecMessage = React.memo(function SpecMessage() {
   return (
     <Callout className="intro">
-      <p className="optional">Optional</p>
       <p>
         Druid begins ingesting data once you submit a JSON ingestion spec. If you modify any values
         in this view, the values entered in previous sections will update accordingly. If you modify
         any values in previous sections, this spec will automatically update.
       </p>
       <p>Submit the spec to begin loading data into Druid.</p>
+      <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#ingestion-specs`} />
     </Callout>
   );
 });

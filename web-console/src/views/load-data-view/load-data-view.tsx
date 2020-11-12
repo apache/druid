@@ -262,8 +262,11 @@ const STEPS: Step[] = [
 ];
 
 const SECTIONS: { name: string; steps: Step[] }[] = [
-  { name: 'Connect and parse raw data', steps: ['welcome', 'connect', 'parser', 'timestamp'] },
-  { name: 'Transform data and configure schema', steps: ['transform', 'filter', 'schema'] },
+  { name: 'Connect and parse raw data', steps: ['welcome', 'connect', 'parser'] },
+  {
+    name: 'Transform data and configure schema',
+    steps: ['timestamp', 'transform', 'filter', 'schema'],
+  },
   { name: 'Tune parameters', steps: ['partition', 'tuning', 'publish'] },
   { name: 'Verify and submit', steps: ['spec'] },
 ];

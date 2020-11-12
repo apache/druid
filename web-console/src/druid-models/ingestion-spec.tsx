@@ -475,7 +475,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Dimensions',
           type: 'string-array',
           placeholder: '(optional)',
-          advanced: true,
+          hideInMore: true,
           info: (
             <p>
               The list of dimensions to select. If left empty, no dimensions are returned. If left
@@ -488,7 +488,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Metrics',
           type: 'string-array',
           placeholder: '(optional)',
-          advanced: true,
+          hideInMore: true,
           info: (
             <p>
               The list of metrics to select. If left empty, no metrics are returned. If left null or
@@ -501,7 +501,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Filter',
           type: 'json',
           placeholder: '(optional)',
-          advanced: true,
+          hideInMore: true,
           info: (
             <p>
               The{' '}
@@ -1567,6 +1567,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 3,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
   {
@@ -1574,8 +1575,35 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 1000,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
-    advanced: true,
+    hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
+  },
+  {
+    name: 'totalNumMergeTasks',
+    type: 'number',
+    defaultValue: 10,
+    min: 1,
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+      ),
+    info: <>Number of tasks to merge partial segments after shuffle.</>,
+  },
+  {
+    name: 'maxNumSegmentsToMerge',
+    type: 'number',
+    defaultValue: 100,
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+      ),
+    info: (
+      <>
+        Max limit for the number of segments a single task can merge at the same time after shuffle.
+      </>
+    ),
   },
   {
     name: 'maxRowsInMemory',
@@ -1588,33 +1616,6 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'Default: 1/6 of max JVM memory',
     info: <>Used in determining when intermediate persists to disk should occur.</>,
-  },
-  {
-    name: 'totalNumMergeTasks',
-    type: 'number',
-    defaultValue: 10,
-    min: 1,
-    defined: (t: TuningConfig) =>
-      Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
-    info: <>Number of tasks to merge partial segments after shuffle.</>,
-  },
-  {
-    name: 'maxNumSegmentsToMerge',
-    type: 'number',
-    defaultValue: 100,
-    defined: (t: TuningConfig) =>
-      Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
-    info: (
-      <>
-        Max limit for the number of segments a single task can merge at the same time after shuffle.
-      </>
-    ),
   },
   {
     name: 'resetOffsetAutomatically',
@@ -1664,7 +1665,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   {
     name: 'maxPendingPersists',
     type: 'number',
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         Maximum number of persists that can be pending but not started. If this limit would be
@@ -1677,7 +1678,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'pushTimeout',
     type: 'number',
     defaultValue: 0,
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.
@@ -1689,7 +1690,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 0,
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
-    advanced: true,
+    hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
@@ -1698,6 +1699,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'roaring',
     suggestions: ['concise', 'roaring'],
+    hideInMore: true,
     info: <>Compression format for bitmap indexes.</>,
   },
   {
@@ -1706,6 +1708,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
+    hideInMore: true,
     info: <>Compression format for dimension columns.</>,
   },
   {
@@ -1714,6 +1717,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
+    hideInMore: true,
     info: <>Compression format for primitive type metric columns.</>,
   },
   {
@@ -1722,6 +1726,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'longs',
     suggestions: ['longs', 'auto'],
+    hideInMore: true,
     info: (
       <>
         Encoding format for long-typed columns. Applies regardless of whether they are dimensions or
@@ -1736,7 +1741,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT10S',
     defined: (t: TuningConfig) => t.type === 'index_parallel',
-    advanced: true,
+    hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
@@ -1744,7 +1749,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 5,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
-    advanced: true,
+    hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
@@ -1761,7 +1766,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
-    advanced: true,
+    hideInMore: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
@@ -1769,7 +1774,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 8,
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -1789,7 +1794,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT80S',
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
@@ -1825,7 +1830,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 5000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         Length of time in milliseconds to wait for space to become available in the buffer before
@@ -1835,7 +1840,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   },
   {
     name: 'recordBufferFullWait',
-    advanced: true,
+    hideInMore: true,
     type: 'number',
     defaultValue: 5000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
@@ -1851,7 +1856,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 60000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
@@ -1866,7 +1871,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
     defined: (t: TuningConfig) => t.type === 'kinesis',
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         Size of the pool of threads fetching data from Kinesis. There is no benefit in having more
@@ -1879,7 +1884,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 100,
     defined: (t: TuningConfig) => t.type === 'kinesis',
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         The maximum number of records/events to be fetched from buffer per poll. The actual maximum
@@ -1892,7 +1897,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT2M',
     defined: (t: TuningConfig) => t.type === 'kinesis',
-    advanced: true,
+    hideInMore: true,
     info: (
       <>
         <p>
