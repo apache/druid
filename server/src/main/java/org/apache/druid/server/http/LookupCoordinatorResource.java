@@ -111,10 +111,7 @@ public class LookupCoordinatorResource
   @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @ResourceFilters({ ConfigResourceFilter.class, ServerUserResourceFilter.class })
-  public Response getTiers(
-      @DefaultValue("false") @QueryParam("discover") boolean discover,
-      @Context HttpServletRequest request
-  )
+  public Response getTiers(@DefaultValue("false") @QueryParam("discover") boolean discover)
   {
     try {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups =
@@ -148,12 +145,12 @@ public class LookupCoordinatorResource
     try {
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
           .getKnownLookups();
-      if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
-        knownLookups = filterByLookupAccess(knownLookups, request, authorizerMapper, Action.READ);
-      }
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
+        if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
+          knownLookups = filterByLookupAccess(knownLookups, request, authorizerMapper, Action.READ);
+        }
         return Response.ok().entity(knownLookups).build();
       }
     }
@@ -864,7 +861,7 @@ public class LookupCoordinatorResource
                 Collections.singleton(new ResourceAction(new Resource(loookupId, ResourceType.LOOKUP), action)),
                 authorizerMapper
             );
-            if (access.isAllowed()) {
+            if (!access.isAllowed()) {
               filteredMap.remove(loookupId);
             }
           });

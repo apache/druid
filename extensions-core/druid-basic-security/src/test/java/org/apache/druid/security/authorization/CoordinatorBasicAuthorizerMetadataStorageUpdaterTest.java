@@ -80,7 +80,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   private final AuthorizerMapper authorizerMapper;
 
   @Parameterized.Parameters(name = "{index}: authVersion={0}")
-  public static Iterable<String> data() {
+  public static Iterable<String> data()
+  {
     return Arrays.asList(AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2);
   }
 

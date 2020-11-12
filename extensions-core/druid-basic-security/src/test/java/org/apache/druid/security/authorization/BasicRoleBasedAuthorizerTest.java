@@ -80,11 +80,13 @@ public class BasicRoleBasedAuthorizerTest
   private final String authVersion;
 
   @Parameterized.Parameters(name = "{index}: authVersion={0}")
-  public static Iterable<String> data() {
+  public static Iterable<String> data()
+  {
     return Arrays.asList(AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2);
   }
 
-  public BasicRoleBasedAuthorizerTest(String authVersion) {
+  public BasicRoleBasedAuthorizerTest(String authVersion)
+  {
     this.authVersion = authVersion;
   }
 

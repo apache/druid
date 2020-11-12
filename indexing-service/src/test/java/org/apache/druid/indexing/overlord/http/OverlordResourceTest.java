@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.http;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
@@ -33,8 +34,11 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -43,8 +47,10 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -53,6 +59,8 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -66,15 +74,20 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public class OverlordResourceTest
 {
   private OverlordResource overlordResource;
@@ -87,6 +100,56 @@ public class OverlordResourceTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Parameterized.Parameters(name = "{index}: authVersion={0}")
+  public static Iterable<String> data()
+  {
+    return Arrays.asList(AuthConfig.AUTH_VERSION_1, AuthConfig.AUTH_VERSION_2);
+  }
+
+  private AuthorizerMapper authMapper;
+  private List<ResourceAction> actualResourceActions = new ArrayList<>();
+
+  public OverlordResourceTest(String authVersion)
+  {
+    authMapper = new AuthorizerMapper(null, authVersion)
+    {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return new Authorizer()
+        {
+          @Override
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
+          {
+            if (authVersion.equals(AuthConfig.AUTH_VERSION_2)) {
+              throw new ISE("Unexpected call");
+            }
+            actualResourceActions.add(new ResourceAction(resource, action));
+            if (resource.getName().equals("allow")) {
+              return new Access(true);
+            } else {
+              return new Access(false);
+            }
+          }
+
+          @Override
+          public Access authorizeV2(AuthenticationResult authenticationResult, Resource resource, Action action)
+          {
+            if (authVersion.equals(AuthConfig.AUTH_VERSION_1)) {
+              throw new ISE("Unexpected call");
+            }
+            actualResourceActions.add(new ResourceAction(resource, action));
+            if (resource.getName().equals("allow")) {
+              return new Access(true);
+            } else {
+              return new Access(false);
+            }
+          }
+        };
+      }
+    };
+  }
 
   @Before
   public void setUp()
@@ -101,27 +164,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
     ).anyTimes();
-
-    AuthorizerMapper authMapper = new AuthorizerMapper(null, null)
-    {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new Authorizer()
-        {
-          @Override
-          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
-          {
-            if (resource.getName().equals("allow")) {
-              return new Access(true);
-            } else {
-              return new Access(false);
-            }
-          }
-
-        };
-      }
-    };
 
     overlordResource = new OverlordResource(
         taskMaster,
@@ -920,6 +962,52 @@ public class OverlordResourceTest
     );
     Task task = NoopTask.create();
     overlordResource.taskPost(task, req);
+  }
+
+  @Test
+  public void testSecuredReindexingTaskPost()
+  {
+    expectedException.expect(ForbiddenException.class);
+    expectAuthorizationTokenCheck();
+
+    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
+    DruidInputSource druidInputSource = EasyMock.createMock(DruidInputSource.class);
+
+    EasyMock.expect(dataSchema.getParserMap()).andReturn(null).anyTimes();
+    EasyMock.expect(dataSchema.getDataSource()).andReturn("destination").anyTimes();
+    EasyMock.expect(druidInputSource.needsFormat()).andReturn(false).anyTimes();
+    EasyMock.expect(druidInputSource.getDataSource()).andReturn("source").anyTimes();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        dataSchema,
+        druidInputSource
+    );
+
+    Task task = new IndexTask(
+        "id",
+        new TaskResource("", 1),
+        new IndexTask.IndexIngestionSpec(
+            dataSchema,
+            new IndexTask.IndexIOConfig(null, druidInputSource, null, false),
+            null
+        ),
+        ImmutableMap.of()
+    );
+    final List<ResourceAction> expectedResourceActions = Lists.newArrayList(
+        new ResourceAction(new Resource("destination", ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource("source", ResourceType.DATASOURCE), Action.READ)
+    );
+
+    overlordResource.taskPost(task, req);
+    Assert.assertEquals(expectedResourceActions, actualResourceActions);
+
+    EasyMock.verify(dataSchema, druidInputSource);
   }
 
   @Test
