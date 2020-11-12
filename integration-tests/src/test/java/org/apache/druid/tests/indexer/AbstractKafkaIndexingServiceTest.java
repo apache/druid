@@ -56,7 +56,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
       IntegrationTestingConfig config
   )
   {
-    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(true);
     final Properties consumerProperties = new Properties();
     consumerProperties.putAll(consumerConfigs);
     consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());

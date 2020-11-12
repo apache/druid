@@ -37,9 +37,11 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
   public static final String KEY_PASSWORD_KEY = "ssl.key.password";
   public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
+  public static final boolean DEFAULT_CONSUME_TRANSACTIONALLY = true;
 
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
+  private final boolean consumeTransactionally;
 
 
   @JsonCreator
@@ -50,6 +52,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
+      @JsonProperty("consumeTransactionally") Boolean consumeTransactionally,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
@@ -81,6 +84,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
+    this.consumeTransactionally = consumeTransactionally != null ? consumeTransactionally : DEFAULT_CONSUME_TRANSACTIONALLY;
   }
 
   @JsonProperty
@@ -93,6 +97,12 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
+  }
+
+  @JsonProperty
+  public Boolean getConsumeTransactionally()
+  {
+    return consumeTransactionally;
   }
 
   @JsonProperty
@@ -116,6 +126,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
            ", consumerProperties=" + consumerProperties +
+           ", consumeTransactionally=" + consumeTransactionally +
            ", pollTimeout=" + pollTimeout +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +

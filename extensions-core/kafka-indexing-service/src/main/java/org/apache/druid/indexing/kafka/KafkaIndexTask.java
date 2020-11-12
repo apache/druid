@@ -90,7 +90,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(ioConfig.getConsumeTransactionally());
       final Properties props = new Properties();
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(
           props,
@@ -143,7 +143,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
       props.put("auto.offset.reset", "none");
 
-      return new KafkaRecordSupplier(props, configMapper);
+      return new KafkaRecordSupplier(props, configMapper, ioConfig.getConsumeTransactionally());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

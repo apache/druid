@@ -246,6 +246,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new SeekableStreamStartSequenceNumbers<>("test", Collections.emptyMap(), Collections.emptySet()),
             new SeekableStreamEndSequenceNumbers<>("test", Collections.emptyMap()),
             Collections.emptyMap(),
+            true,
             null,
             null,
             null,
@@ -2445,7 +2446,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     Collection workItems = new ArrayList<>();
     workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
 
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
@@ -3365,7 +3368,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       String kafkaHost
   )
   {
-    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties(true);
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
@@ -3375,6 +3378,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -3486,6 +3490,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -3601,6 +3606,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -3751,6 +3757,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             startPartitions,
             endPartitions,
             ImmutableMap.of("bootstrap.servers", kafkaHost),
+            null,
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             minimumMessageTime,
@@ -3824,7 +3831,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     protected RecordSupplier<Integer, Long> setupRecordSupplier()
     {
-      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(true);
       consumerConfigs.put("metadata.max.age.ms", "1");
       final Properties props = new Properties();
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
