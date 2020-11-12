@@ -444,6 +444,8 @@ HttpClient
 allowAll
 authenticatorChain
 defaultUser
+- ../docs/design/auth-model.md
+INFORMATION_SCHEMA
  - ../docs/design/coordinator.md
 inputSegmentSizeBytes
 skipOffsetFromLatest
@@ -648,7 +650,6 @@ metricColumns
 nominalEntries
 numberOfValues
  - ../docs/development/extensions-core/druid-basic-security.md
-INFORMATION_SCHEMA
 MyBasicAuthenticator
 MyBasicAuthorizer
 authenticatorName

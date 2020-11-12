@@ -112,12 +112,12 @@ This model can be enabled by setting the flag `druid.auth.authVersion=v2`. The i
 personas like admin, viewer etc. in an easy manner.
  
 There are two action types in Druid: READ and WRITE. Depending on HTTP method used for endpoints action is decided, for
-GET and HEAD method actoin is `READ`, for all other methods action is `WRITE`.
+GET and HEAD method action is `READ`, for all other methods action is `WRITE`.
 
 There are 4 resource types in Druid: DATASOURCE, INTERNAL, LOOKUP and SERVER.
 
 1. `DATASOURCE` resource type is concerned with all the actions that can be taken for querying, indexing, setting retention,
-compaction rules for a dataset. Thus, if a user has read/write action on datasource they can control the lifecycle of that datasouce.
+compaction rules for a dataset. Thus, if a user has read/write action on datasource they can control the lifecycle of that datasource.
 
 1. `SERVER` resource type covers all the cluster administration endpoints.
 
@@ -127,7 +127,7 @@ compaction rules for a dataset. Thus, if a user has read/write action on datasou
 
 Examples - A server admin role can have read/write on `DATASOURCE`, `SERVER` and `LOOKUP` resource types. A viewer can have
 just read on all or specific `DATASOURCE`. Many times users may want to create roles with custom permissions, all these 
-is supported using `Resource Name`, each `Resource type` can have mulitple of them. Authorizer uses `Action`, `Resource Type` 
+is supported using `Resource Name`, each `Resource type` can have multiple of them. Authorizer uses `Action`, `Resource Type` 
 and `Resource Name` to authorize users action. For example, while querying a datasource named `ds` a `READ` action on 
 resource type `DATASOURCE` with resource name `ds` is required. Below are the details -
   
@@ -174,7 +174,7 @@ write on destination datasource.
 
 There are 3 possible resource name for the "SERVER" config resource type, `SERVER`, `STATUS` and `USER`.
 
-`SERVER` resoruce name covers following the end points, these are relevant for managing the cluster and can be used by
+`SERVER` resource name covers following the end points, these are relevant for managing the cluster and can be used by
 cluster managers. This resource name is used in SQL queries asking for server information see `SQL Permissions` section below.
 
 |Endpoint|Process Type|
@@ -272,7 +272,7 @@ for druid nodes talking to each other and cluster admins.
 ### LOOKUP
 
 `LOOKUP` is similar to `DATASOURCE` resource type having lookup name as resource name and specifying a lookup permission 
-allows the administrator to grant users access to specific lookup name. Endpoints that return list of lookpus will return
+allows the administrator to grant users access to specific lookup name. Endpoints that return list of lookup will return
 filtered list by the granted permissions. It covers the following endpoints.
 
 |Endpoint|Process Type|
