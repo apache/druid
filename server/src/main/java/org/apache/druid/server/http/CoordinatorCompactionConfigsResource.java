@@ -60,7 +60,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Path("/druid/coordinator/v1/config/compaction")
-@ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorCompactionConfigsResource
 {
   private final JacksonConfigManager manager;
@@ -78,6 +77,7 @@ public class CoordinatorCompactionConfigsResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response getCompactionConfig(@Context HttpServletRequest request)
   {
     if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
@@ -92,7 +92,7 @@ public class CoordinatorCompactionConfigsResource
   @POST
   @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ServerServerResourceFilter.class)
+  @ResourceFilters({ ConfigResourceFilter.class, ServerServerResourceFilter.class })
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
@@ -126,6 +126,7 @@ public class CoordinatorCompactionConfigsResource
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response addOrUpdateCompactionConfig(
       final DataSourceCompactionConfig newConfig,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
@@ -164,6 +165,7 @@ public class CoordinatorCompactionConfigsResource
   @GET
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response getCompactionConfig(@PathParam("dataSource") String dataSource, @Context HttpServletRequest req)
   {
     if (authorizerMapper.getAuthVersion().equals(AuthConfig.AUTH_VERSION_2)) {
@@ -192,6 +194,7 @@ public class CoordinatorCompactionConfigsResource
   @DELETE
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response deleteCompactionConfig(
       @PathParam("dataSource") String dataSource,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
