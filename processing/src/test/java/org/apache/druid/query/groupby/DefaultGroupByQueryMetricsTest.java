@@ -75,7 +75,7 @@ public class DefaultGroupByQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(15, actualEvent.size());
+    Assert.assertEquals(16, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
@@ -87,6 +87,7 @@ public class DefaultGroupByQueryMetricsTest
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
     Assert.assertEquals(expectedInterval.toDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
+    Assert.assertEquals(ImmutableMap.of("bySegment", true), actualEvent.get("context"));
 
     // GroupBy-specific dimensions
     Assert.assertEquals("1", actualEvent.get("numDimensions"));
