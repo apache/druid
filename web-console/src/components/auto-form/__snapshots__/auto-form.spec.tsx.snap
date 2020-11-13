@@ -133,7 +133,7 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Blueprint3.FormGroup
-    key="advanced"
+    key="more-or-less"
   >
     <Blueprint3.Button
       fill={true}
