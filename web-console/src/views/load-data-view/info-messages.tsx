@@ -103,7 +103,6 @@ export const TimestampMessage = React.memo(function TimestampMessage() {
 export const TransformMessage = React.memo(function TransformMessage() {
   return (
     <Callout className="intro">
-      <p className="optional">Optional</p>
       <p>
         Druid can perform per-row{' '}
         <ExternalLink href={`${getLink('DOCS')}/ingestion/transform-spec.html#transforms`}>
@@ -119,11 +118,9 @@ export const TransformMessage = React.memo(function TransformMessage() {
 export const FilterMessage = React.memo(function FilterMessage() {
   return (
     <Callout className="intro">
-      <p className="optional">Optional</p>
       <p>
-        Druid can{' '}
-        <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink> out
-        unwanted data by applying per-row filters.
+        Druid can filter out unwanted data by applying per-row{' '}
+        <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filters</ExternalLink>.
       </p>
       <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#filter`} />
     </Callout>
@@ -156,7 +153,6 @@ export const SchemaMessage = React.memo(function SchemaMessage(props: SchemaMess
 export const PartitionMessage = React.memo(function PartitionMessage() {
   return (
     <Callout className="intro">
-      <p className="optional">Optional</p>
       <p>Configure how Druid will partition data.</p>
       <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#partitioning`} />
     </Callout>
@@ -166,7 +162,6 @@ export const PartitionMessage = React.memo(function PartitionMessage() {
 export const TuningMessage = React.memo(function TuningMessage() {
   return (
     <Callout className="intro">
-      <p className="optional">Optional</p>
       <p>Fine tune how Druid will ingest data.</p>
       <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#tuningconfig`} />
     </Callout>

@@ -140,7 +140,7 @@ exports[`AutoForm matches snapshot 1`] = `
       minimal={true}
       onClick={[Function]}
       rightIcon="chevron-down"
-      text="Show advanced"
+      text="Show more"
     />
   </Blueprint3.FormGroup>
 </div>

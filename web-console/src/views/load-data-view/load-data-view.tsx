@@ -2818,19 +2818,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
     };
 
-    const metricsSpec = deepGet(spec, `spec.dataSchema.metricsSpec`);
-
-    const moveTo = (newIndex: number) => {
-      const newMetricsSpec = moveElement(metricsSpec, selectedMetricSpecIndex, newIndex);
-      const newSpec = deepSet(spec, `spec.dataSchema.metricsSpec`, newMetricsSpec);
-      this.updateSpec(newSpec);
-      close();
-    };
-
-    const reorderMetricMenu = (
-      <ReorderMenu things={metricsSpec} selectedIndex={selectedMetricSpecIndex} moveTo={moveTo} />
-    );
-
     const convertToDimension = (type: string) => {
       const specWithoutMetric = deepDelete(
         spec,
@@ -2866,17 +2853,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           model={selectedMetricSpec}
           onChange={selectedMetricSpec => this.setState({ selectedMetricSpec })}
         />
-        {reorderMetricMenu && (
-          <FormGroup>
-            <Popover content={reorderMetricMenu}>
-              <Button
-                icon={IconNames.ARROWS_HORIZONTAL}
-                text="Reorder metric"
-                rightIcon={IconNames.CARET_DOWN}
-              />
-            </Popover>
-          </FormGroup>
-        )}
         {selectedMetricSpecIndex !== -1 && dimensionMode === 'specific' && (
           <FormGroup>
             <Popover content={convertToDimensionMenu}>

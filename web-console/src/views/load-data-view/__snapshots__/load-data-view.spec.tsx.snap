@@ -46,15 +46,6 @@ exports[`load data view matches snapshot 1`] = `
           onClick={[Function]}
           text="Parse data"
         />
-        <Blueprint3.Button
-          active={false}
-          className="timestamp"
-          disabled={true}
-          icon={false}
-          key="timestamp"
-          onClick={[Function]}
-          text="Parse time"
-        />
       </Blueprint3.ButtonGroup>
     </div>
     <div
@@ -69,6 +60,15 @@ exports[`load data view matches snapshot 1`] = `
       <Blueprint3.ButtonGroup
         className="step-nav-l2"
       >
+        <Blueprint3.Button
+          active={false}
+          className="timestamp"
+          disabled={true}
+          icon={false}
+          key="timestamp"
+          onClick={[Function]}
+          text="Parse time"
+        />
         <Blueprint3.Button
           active={false}
           className="transform"
