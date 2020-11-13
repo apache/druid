@@ -143,6 +143,7 @@ public class StreamChunkParserTest
         ),
         StringUtils.UTF8_STRING
     );
+
     final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
@@ -158,7 +159,7 @@ public class StreamChunkParserTest
         parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
-    Assert.assertTrue(inputFormat.used);
+    Assert.assertTrue(inputFormat.props.used);
   }
 
   private void parseAndAssertResult(StreamChunkParser chunkParser) throws IOException
@@ -174,18 +175,44 @@ public class StreamChunkParserTest
 
   private static class TrackingJsonInputFormat extends JsonInputFormat
   {
-    private boolean used;
+    static class Props
+    {
+      private boolean used;
+    }
+    Props props;
 
-    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
+                                    @Nullable Map<String, Boolean> featureSpec)
     {
       super(flattenSpec, featureSpec, null);
+      props = new Props();
+    }
+
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
+                                    @Nullable Map<String, Boolean> featureSpec,
+                                    boolean lineSplittable,
+                                    Props props)
+    {
+      super(flattenSpec, featureSpec, null, lineSplittable);
+      this.props = props;
     }
 
     @Override
     public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
-      used = true;
+      props.used = true;
       return super.createReader(inputRowSchema, source, temporaryDirectory);
+    }
+
+    @Override
+    public JsonInputFormat withLineSplittable(boolean lineSplittable)
+    {
+      return new TrackingJsonInputFormat(this.getFlattenSpec(),
+                                         this.getFeatureSpec(),
+                                         lineSplittable,
+                                         //pass `props` to new object as reference,
+                                         //so any changes on this property of the new object can also be seen from original object
+                                         this.props);
     }
   }
 }
