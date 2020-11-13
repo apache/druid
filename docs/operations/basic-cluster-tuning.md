@@ -280,6 +280,16 @@ The heap requirements of the Coordinator scale with the number of servers, segme
 
 You can set the Coordinator heap to the same size as your Broker heap, or slightly smaller: both services have to process cluster-wide state and answer API requests about this state.
 
+#### Isolating Primary Replicant Loading Within Its Own Event Loop
+
+`druid.coordinator.loadPrimaryReplicantSeparately` with a period controlled by `druid.coordinator.period.primaryReplicantLoaderPeriod` can be used to remove primary replicant loading from the general coordinator event loop and put it on its own schedule.
+
+This configuration can make sense if you have a large cluster where coordination takes a long time. These long coordination times can block used segments from being loaded by Historical servers. If you constantly find yorself waiting for coordination cycles to complete so primary replicants can be loaded for used segments that are not currently served, this config pairing might be right for you.
+
+By enabling it, you enable a dedicated scheduled event loop on the coordinator for loading primary replicants. The general coordinator event loop will do all of its same jobs as before except for loading of primary replicants. Now, you may find that primary replicants are loaded faster, resulting in used segments being available for client query in more timely manner than before.
+
+Enabling this comes at as cost. The coordinator will now have to maintain another snapshot of the cluster state. Also, primary replicant loading will now be running in parallel to other Coordinator tasks which could result in more cpu use.
+
 ### Overlord
 
 The main performance-related setting on the Overlord is the heap size.
