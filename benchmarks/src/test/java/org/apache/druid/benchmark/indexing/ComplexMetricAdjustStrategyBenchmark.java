@@ -48,10 +48,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,7 +68,7 @@ public class ComplexMetricAdjustStrategyBenchmark
 
   @Param({"20000000000"})
   private long maxBytesInMemory;
-  @Param({"75000"})
+  @Param({"100000"})
   private int rowsPerSegment;
   @Param({"complex"})
   private String schema;
@@ -86,16 +82,6 @@ public class ComplexMetricAdjustStrategyBenchmark
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
-
-  public static void main(String[] args) throws RunnerException
-  {
-    Options opt = new OptionsBuilder()
-        .include(ComplexMetricAdjustStrategyBenchmark.class.getSimpleName())
-        .forks(1)
-        .build();
-
-    new Runner(opt).run();
-  }
 
   @Setup
   public void setup()
