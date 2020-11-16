@@ -1429,6 +1429,8 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.targetRowsPerSegment',
           label: 'Target rows per segment',
           type: 'number',
+          zeroMeansUndefined: true,
+          defaultValue: 5000000,
           defined: (t: TuningConfig) =>
             deepGet(t, 'partitionsSpec.type') === 'hashed' &&
             !deepGet(t, 'partitionsSpec.numShards'),
@@ -1450,6 +1452,8 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.numShards',
           label: 'Num shards',
           type: 'number',
+          zeroMeansUndefined: true,
+          hideInMore: true,
           defined: (t: TuningConfig) =>
             deepGet(t, 'partitionsSpec.type') === 'hashed' &&
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
@@ -1975,7 +1979,6 @@ export function updateIngestionType(
 }
 
 export function issueWithSampleData(sampleData: string[]): JSX.Element | undefined {
-  console.log(sampleData);
   if (sampleData.length) {
     const firstData = sampleData[0];
 

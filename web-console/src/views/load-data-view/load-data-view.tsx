@@ -189,6 +189,8 @@ import {
 
 import './load-data-view.scss';
 
+const DEFAULT_ROLLUP_SETTING = false;
+
 function showRawLine(line: SampleEntry): string {
   if (!line.parsed) return 'No parse';
   const raw = line.parsed.raw;
@@ -1885,12 +1887,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             if (!transformQueryState.data) return false;
 
             let newSpec = spec;
-            if (!isDruidSource(newSpec)) {
+            if (!deepGet(newSpec, 'spec.dataSchema.dimensionsSpec')) {
               newSpec = updateSchemaWithSample(
                 newSpec,
                 transformQueryState.data,
                 'specific',
-                false,
+                DEFAULT_ROLLUP_SETTING,
               );
             }
 
