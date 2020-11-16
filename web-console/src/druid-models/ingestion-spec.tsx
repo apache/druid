@@ -1923,8 +1923,8 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: (
       <>
         <p>
-          When shards are split or merged, the supervisor will recompute shard -> task group
-          mappings, and signal any running tasks created under the old mappings to stop early at{' '}
+          When shards are split or merged, the supervisor will recompute shard, task group mappings,
+          and signal any running tasks created under the old mappings to stop early at{' '}
           <Code>(current time + repartitionTransitionDuration)</Code>. Stopping the tasks early
           allows Druid to begin reading from the new shards more quickly.
         </p>
