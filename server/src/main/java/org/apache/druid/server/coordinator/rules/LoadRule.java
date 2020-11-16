@@ -54,6 +54,17 @@ import java.util.stream.Collectors;
  */
 public abstract class LoadRule implements Rule
 {
+  // enum to indicate what LoadRule should execute.
+  // PRIMARY_ONLY means only load primary replicants.
+  // REPLICA_ONLY means only load non-primary replicants
+  // ALL means to load any replicants regarles of primary status
+  public enum LoadRuleMode
+  {
+    PRIMARY_ONLY,
+    REPLICA_ONLY,
+    ALL
+  }
+
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
   static final String ASSIGNED_COUNT = "assignedCount";
   static final String DROPPED_COUNT = "droppedCount";
@@ -80,7 +91,11 @@ public abstract class LoadRule implements Rule
       final CoordinatorStats stats = new CoordinatorStats();
       assign(params, segment, stats);
 
-      drop(params, segment, stats);
+      // We don't do any drop calls if it is PRIMARY_ONLY execution.
+      if (!params.getLoadRuleMode().equals(LoadRuleMode.PRIMARY_ONLY)) {
+        drop(params, segment, stats);
+      }
+
       for (String tier : targetReplicants.keySet()) {
         stats.addToTieredStat(REQUIRED_CAPACITY, tier, segment.getSize() * targetReplicants.getInt(tier));
       }
@@ -131,8 +146,17 @@ public abstract class LoadRule implements Rule
     // if primary replica already exists or is loading
     final int loading = params.getSegmentReplicantLookup().getTotalReplicants(segment.getId());
     if (!currentReplicants.isEmpty() || loading > 0) {
-      assignReplicas(params, segment, stats, null);
+      // This is nested because we don't want to go into the primary assign code
+      // in the else block if a primary replicant already exists or is loading.
+      // Dont assign replicas if this is a PRIMARY_ONLY execution
+      if (!params.getLoadRuleMode().equals(LoadRuleMode.PRIMARY_ONLY)) {
+        assignReplicas(params, segment, stats, null);
+      }
     } else {
+      // Don't load a Primary if it is REPLICA_ONLY Excecution
+      if (params.getLoadRuleMode().equals(LoadRuleMode.REPLICA_ONLY)) {
+        return;
+      }
       final ServerHolder primaryHolderToLoad = assignPrimary(params, segment);
       if (primaryHolderToLoad == null) {
         // cluster does not have any replicants and cannot identify primary holder
@@ -142,20 +166,23 @@ public abstract class LoadRule implements Rule
 
       int numAssigned = 1; // 1 replica (i.e., primary replica) already assigned
 
-      final String tier = primaryHolderToLoad.getServer().getTier();
-      // assign replicas for the rest of the tier
-      numAssigned += assignReplicasForTier(
-          tier,
-          targetReplicants.getOrDefault(tier, 0),
-          numAssigned, // note that the currentReplicantsInTier is the just-assigned primary replica.
-          params,
-          createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
-          segment
-      );
-      stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
+      // Skip replica assignment after primary is assigned if this is PRIMARY_ONLY assignment.
+      if (!params.getLoadRuleMode().equals(LoadRuleMode.PRIMARY_ONLY)) {
+        final String tier = primaryHolderToLoad.getServer().getTier();
+        // assign replicas for the rest of the tier
+        numAssigned += assignReplicasForTier(
+            tier,
+            targetReplicants.getOrDefault(tier, 0),
+            numAssigned, // note that the currentReplicantsInTier is the just-assigned primary replica.
+            params,
+            createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
+            segment
+        );
+        stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
-      // do assign replicas for the other tiers.
-      assignReplicas(params, segment, stats, tier /* to skip */);
+        // do assign replicas for the other tiers.
+        assignReplicas(params, segment, stats, tier /* to skip */);
+      }
     }
   }
 

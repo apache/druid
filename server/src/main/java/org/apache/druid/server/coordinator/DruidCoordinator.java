@@ -162,6 +162,7 @@ public class DruidCoordinator
   private ListeningExecutorService balancerExec;
 
   private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  private static final String PRIMARY_REPLICANT_LOADING_DUTIES_GROUP = "PrimaryReplicantLoadingDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
@@ -603,9 +604,30 @@ public class DruidCoordinator
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
       final List<Pair<? extends DutiesRunnable, Duration>> dutiesRunnables = new ArrayList<>();
+      LoadRule.LoadRuleMode historicalManagementDutiesLoadRuleMode = LoadRule.LoadRuleMode.ALL;
+      if (config.isLoadPrimaryReplicantSeparately()) {
+        dutiesRunnables.add(
+            Pair.of(
+                new DutiesRunnable(
+                    makePrimaryReplicantManagementDuties(),
+                    startingLeaderCounter,
+                    PRIMARY_REPLICANT_LOADING_DUTIES_GROUP,
+                    RunRules.RunRulesMode.LOAD_RULE_ONLY,
+                    LoadRule.LoadRuleMode.PRIMARY_ONLY
+                ),
+                config.getCoordinatorPrimaryReplicantLoaderPeriod()
+            )
+        );
+        historicalManagementDutiesLoadRuleMode = LoadRule.LoadRuleMode.REPLICA_ONLY;
+      }
       dutiesRunnables.add(
           Pair.of(
-              new DutiesRunnable(makeHistoricalManagementDuties(), startingLeaderCounter, HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP),
+              new DutiesRunnable(
+                  makeHistoricalManagementDuties(),
+                  startingLeaderCounter,
+                  HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP,
+                  historicalManagementDutiesLoadRuleMode
+              ),
               config.getCoordinatorPeriod()
           )
       );
@@ -674,6 +696,14 @@ public class DruidCoordinator
     }
   }
 
+  private List<CoordinatorDuty> makePrimaryReplicantManagementDuties()
+  {
+    return ImmutableList.of(
+        new UpdateCoordinatorStateAndPrepareCluster(),
+        new RunRules(DruidCoordinator.this)
+    );
+  }
+
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     return ImmutableList.of(
@@ -714,12 +744,69 @@ public class DruidCoordinator
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
     private final String dutiesRunnableAlias;
+    private final RunRules.RunRulesMode runRulesMode;
+    private final LoadRule.LoadRuleMode loadRuleMode;
 
-    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
+    protected DutiesRunnable(
+        List<CoordinatorDuty> duties,
+        final int startingLeaderCounter,
+        String alias
+    )
+    {
+      this(
+          duties,
+          startingLeaderCounter,
+          alias,
+          RunRules.RunRulesMode.ALL_RULES,
+          LoadRule.LoadRuleMode.ALL
+      );
+    }
+
+    protected DutiesRunnable(
+        List<CoordinatorDuty> duties,
+        final int startingLeaderCounter,
+        String alias,
+        RunRules.RunRulesMode runRulesMode
+    )
+    {
+      this(
+          duties,
+          startingLeaderCounter,
+          alias,
+          runRulesMode,
+          LoadRule.LoadRuleMode.ALL
+      );
+    }
+
+    protected DutiesRunnable(
+        List<CoordinatorDuty> duties,
+        final int startingLeaderCounter,
+        String alias,
+        LoadRule.LoadRuleMode loadRuleMode
+    )
+    {
+      this(
+          duties,
+          startingLeaderCounter,
+          alias,
+          RunRules.RunRulesMode.ALL_RULES,
+          loadRuleMode
+      );
+    }
+
+    protected DutiesRunnable(
+        List<CoordinatorDuty> duties,
+        final int startingLeaderCounter,
+        String alias,
+        RunRules.RunRulesMode runRulesMode,
+        LoadRule.LoadRuleMode loadRuleMode
+    )
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutiesRunnableAlias = alias;
+      this.runRulesMode = runRulesMode;
+      this.loadRuleMode = loadRuleMode;
     }
 
     @VisibleForTesting
@@ -793,6 +880,8 @@ public class DruidCoordinator
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)
                 .withBalancerStrategy(balancerStrategy)
+                .withRunRulesMode(runRulesMode)
+                .withLoadRuleMode(loadRuleMode)
                 .build();
 
         boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
