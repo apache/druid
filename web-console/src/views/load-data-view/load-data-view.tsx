@@ -67,6 +67,7 @@ import {
   getTimestampExpressionFields,
   getTimestampSchema,
   INPUT_FORMAT_FIELDS,
+  issueWithSampleData,
   METRIC_SPEC_FIELDS,
   removeTimestampTransform,
   TIMESTAMP_SPEC_FIELDS,
@@ -460,18 +461,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return Boolean(!druidSource && spec.type && !issueWithIoConfig(ioConfig));
 
       case 'timestamp':
-        return Boolean(
-          !druidSource && cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec.format'),
-        );
+        return Boolean(!druidSource && cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'));
 
       case 'transform':
       case 'filter':
-        return Boolean(cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec.format'));
+        return Boolean(cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'));
 
       case 'schema':
         return Boolean(
           cacheRows &&
-            deepGet(spec, 'spec.dataSchema.timestampSpec.format') &&
+            deepGet(spec, 'spec.dataSchema.timestampSpec') &&
             deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
         );
 
@@ -480,7 +479,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'publish':
         return Boolean(
           cacheRows &&
-            deepGet(spec, 'spec.dataSchema.timestampSpec.format') &&
+            deepGet(spec, 'spec.dataSchema.timestampSpec') &&
             deepGet(spec, 'spec.dataSchema.dimensionsSpec') &&
             deepGet(spec, 'spec.dataSchema.granularitySpec.type'),
         );
@@ -663,7 +662,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderNextBar(options: { nextStep?: Step; disabled?: boolean; onNextStep?: () => void }) {
+  renderNextBar(options: { nextStep?: Step; disabled?: boolean; onNextStep?: () => boolean }) {
     const { disabled, onNextStep } = options;
     const { step } = this.state;
     const nextStep = options.nextStep || STEPS[STEPS.indexOf(step) + 1] || STEPS[0];
@@ -677,7 +676,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled={disabled || !this.isPreviewSpecSame()}
           onClick={() => {
             if (disabled) return;
-            if (onNextStep) onNextStep();
+            if (onNextStep && !onNextStep()) return;
 
             this.updateStep(nextStep);
           }}
@@ -1217,7 +1216,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !inputQueryState.data,
           nextStep: druidSource ? 'transform' : 'parser',
           onNextStep: () => {
-            if (!inputQueryState.data) return;
+            if (!inputQueryState.data) return false;
             const inputData = inputQueryState.data;
 
             if (druidSource) {
@@ -1266,15 +1265,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
-              this.updateSpec(
-                fillDataSourceNameIfNeeded(
-                  fillInputFormat(
-                    spec,
-                    filterMap(inputQueryState.data.data, l => (l.input ? l.input.raw : undefined)),
-                  ),
-                ),
+              const sampleLines = filterMap(inputQueryState.data.data, l =>
+                l.input ? l.input.raw : undefined,
               );
+
+              const issue = issueWithSampleData(sampleLines);
+              if (issue) {
+                AppToaster.show({
+                  icon: IconNames.WARNING_SIGN,
+                  intent: Intent.WARNING,
+                  message: issue,
+                  timeout: 10000,
+                });
+                return false;
+              }
+
+              this.updateSpec(fillDataSourceNameIfNeeded(fillInputFormat(spec, sampleLines)));
             }
+            return true;
           },
         })}
       </>
@@ -1441,7 +1449,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {this.renderNextBar({
           disabled: !parserQueryState.data,
           onNextStep: () => {
-            if (!parserQueryState.data) return;
+            if (!parserQueryState.data) return false;
             let possibleTimestampSpec: TimestampSpec;
             if (isDruidSource(spec)) {
               possibleTimestampSpec = {
@@ -1460,6 +1468,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               );
               this.updateSpec(newSpec);
             }
+
+            return true;
           },
         })}
       </>
@@ -1872,11 +1882,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {this.renderNextBar({
           disabled: !transformQueryState.data,
           onNextStep: () => {
-            if (!transformQueryState.data) return;
+            if (!transformQueryState.data) return false;
 
             let newSpec = spec;
             if (!isDruidSource(newSpec)) {
-              newSpec = updateSchemaWithSample(newSpec, transformQueryState.data, 'specific', true);
+              newSpec = updateSchemaWithSample(
+                newSpec,
+                transformQueryState.data,
+                'specific',
+                false,
+              );
             }
 
             if (!deepGet(newSpec, 'spec.dataSchema.granularitySpec.type')) {
@@ -1884,6 +1899,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             }
 
             this.updateSpec(newSpec);
+            return true;
           },
         })}
       </>
@@ -2517,6 +2533,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             }
 
             this.updateSpec(newSpec);
+            return true;
           },
         })}
       </>
@@ -2906,6 +2923,68 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const granularitySpec: GranularitySpec =
       deepGet(spec, 'spec.dataSchema.granularitySpec') || EMPTY_OBJECT;
     const isStreaming = oneOf(spec.type, 'kafka', 'kinesis');
+    const dimensions: (string | DimensionSpec)[] | undefined = deepGet(
+      spec,
+      'spec.dataSchema.dimensionsSpec.dimensions',
+    );
+    const dimensionNames = dimensions ? dimensions.map(getDimensionSpecName) : undefined;
+
+    let nonsensicalSingleDimPartitioningMessage: JSX.Element | undefined;
+    const partitionDimension = deepGet(tuningConfig, 'partitionsSpec.partitionDimension');
+    if (
+      dimensions &&
+      Array.isArray(dimensionNames) &&
+      dimensionNames.length &&
+      deepGet(tuningConfig, 'partitionsSpec.type') === 'single_dim' &&
+      typeof partitionDimension === 'string' &&
+      partitionDimension !== dimensionNames[0]
+    ) {
+      const firstDimensionName = dimensionNames[0];
+      nonsensicalSingleDimPartitioningMessage = (
+        <Callout intent={Intent.WARNING}>
+          <p>Your partitioning and sorting configuration does not make sense.</p>
+          <p>
+            For best performance the first dimension in your schema (
+            <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted on,
+            should match the partitioning dimension (<Code>{partitionDimension}</Code>).
+          </p>
+          <p>
+            <Button
+              intent={Intent.WARNING}
+              text={`Put '${partitionDimension}' first in the dimensions list`}
+              onClick={() => {
+                this.updateSpec(
+                  deepSet(
+                    spec,
+                    'spec.dataSchema.dimensionsSpec.dimensions',
+                    moveElement(
+                      dimensions,
+                      dimensions.findIndex(d => getDimensionSpecName(d) === partitionDimension),
+                      0,
+                    ),
+                  ),
+                );
+              }}
+            />
+          </p>
+          <p>
+            <Button
+              intent={Intent.WARNING}
+              text={`Partition on '${firstDimensionName}' instead`}
+              onClick={() => {
+                this.updateSpec(
+                  deepSet(
+                    spec,
+                    'spec.tuningConfig.partitionsSpec.partitionDimension',
+                    firstDimensionName,
+                  ),
+                );
+              }}
+            />
+          </p>
+        </Callout>
+      );
+    }
 
     return (
       <>
@@ -2913,12 +2992,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <H5>Primary partitioning (by time)</H5>
           <AutoForm
             fields={[
-              {
-                name: 'type',
-                type: 'string',
-                suggestions: ['uniform', 'arbitrary'],
-                info: <>This spec is used to generated segments with uniform intervals.</>,
-              },
               {
                 name: 'segmentGranularity',
                 type: 'string',
@@ -2961,7 +3034,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="other">
           <H5>Secondary partitioning</H5>
           <AutoForm
-            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index_parallel')}
+            fields={getPartitionRelatedTuningSpecFormFields(
+              getSpecType(spec) || 'index_parallel',
+              dimensionNames,
+            )}
             model={tuningConfig}
             globalAdjustment={adjustTuningConfig}
             onChange={t => this.updateSpec(deepSet(spec, 'spec.tuningConfig', t))}
@@ -2969,6 +3045,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         <div className="control">
           <PartitionMessage />
+          {nonsensicalSingleDimPartitioningMessage}
         </div>
         {this.renderNextBar({
           disabled:
@@ -3173,7 +3250,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, submitting } = this.state;
 
     const fullSpec = Boolean(
-      deepGet(spec, 'spec.dataSchema.timestampSpec.format') &&
+      deepGet(spec, 'spec.dataSchema.timestampSpec') &&
         deepGet(spec, 'spec.dataSchema.dimensionsSpec') &&
         deepGet(spec, 'spec.dataSchema.granularitySpec.type'),
     );

@@ -91,9 +91,9 @@ export const TimestampMessage = React.memo(function TimestampMessage() {
       </p>
       <p>Configure how to define the time column for this data.</p>
       <p>
-        If your data does not have a time column, you can select "None" to use a placeholder value.
-        If the time information is spread across multiple columns you can combine them into one by
-        selecting "Expression" and defining a transform expression.
+        If your data does not have a time column, you can select <Code>None</Code> to use a
+        placeholder value. If the time information is spread across multiple columns you can combine
+        them into one by selecting <Code>Expression</Code> and defining a transform expression.
       </p>
       <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#timestampspec`} />
     </Callout>

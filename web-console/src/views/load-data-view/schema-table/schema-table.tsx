@@ -101,7 +101,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             Cell: ({ value }) => <TableCell value={value} />,
           };
         } else {
-          const timestamp = columnName === '__time';
+          const isTimestamp = columnName === '__time';
           const dimensionSpecIndex = dimensions
             ? dimensions.findIndex(d => getDimensionSpecName(d) === columnName)
             : -1;
@@ -109,7 +109,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
           const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : undefined;
 
           const columnClassName = classNames(
-            timestamp ? 'timestamp' : 'dimension',
+            isTimestamp ? 'timestamp' : 'dimension',
             dimensionSpecType || 'string',
             {
               selected:
@@ -122,7 +122,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
               <div
                 className="clickable"
                 onClick={() => {
-                  if (timestamp) return;
+                  if (isTimestamp) return;
 
                   if (dimensionSpec) {
                     onDimensionSelect(inflateDimensionSpec(dimensionSpec), dimensionSpecIndex);
@@ -133,15 +133,16 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">
-                  {timestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
+                  {isTimestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
                 </div>
               </div>
             ),
             headerClassName: columnClassName,
             className: columnClassName,
             id: String(i),
+            width: isTimestamp ? 200 : 100,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+            Cell: row => <TableCell value={isTimestamp ? new Date(row.value) : row.value} />,
           };
         }
       })}

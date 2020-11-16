@@ -1384,6 +1384,7 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 
 export function getPartitionRelatedTuningSpecFormFields(
   specType: IngestionType,
+  dimensionSuggestions: string[] | undefined,
 ): Field<TuningConfig>[] {
   switch (specType) {
     case 'index_parallel':
@@ -1401,6 +1402,10 @@ export function getPartitionRelatedTuningSpecFormFields(
               single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
+          adjustment: (t: TuningConfig) => {
+            if (!Array.isArray(dimensionSuggestions) || !dimensionSuggestions.length) return t;
+            return deepSet(t, 'partitionsSpec.partitionDimension', dimensionSuggestions[0]);
+          },
         },
         // partitionsSpec type: dynamic
         {
@@ -1466,6 +1471,7 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.partitionDimensions',
           label: 'Partition dimensions',
           type: 'string-array',
+          placeholder: '(all dimensions)',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
           info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
         },
@@ -1476,7 +1482,19 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'string',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
           required: true,
-          info: <p>The dimension to partition on.</p>,
+          suggestions: dimensionSuggestions,
+          info: (
+            <>
+              <p>The dimension to partition on.</p>
+              <p>
+                This should be the first dimension in your schema which would make it first in the
+                sort order. As{' '}
+                <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#why-partition`}>
+                  Partitioning and sorting are best friends!
+                </ExternalLink>
+              </p>
+            </>
+          ),
         },
         {
           name: 'partitionsSpec.targetRowsPerSegment',
@@ -1954,6 +1972,35 @@ export function updateIngestionType(
   }
 
   return newSpec;
+}
+
+export function issueWithSampleData(sampleData: string[]): JSX.Element | undefined {
+  console.log(sampleData);
+  if (sampleData.length) {
+    const firstData = sampleData[0];
+
+    if (firstData === '{') {
+      return (
+        <>
+          This data looks like regular JSON object. For Druid to parse a text file it must have one
+          row per event. Maybe look at{' '}
+          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+        </>
+      );
+    }
+
+    if (oneOf(firstData, '[', '[]')) {
+      return (
+        <>
+          This data looks like a multi-line JSON array. For Druid to parse a text file it must have
+          one row per event. Maybe look at{' '}
+          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+        </>
+      );
+    }
+  }
+
+  return;
 }
 
 export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
