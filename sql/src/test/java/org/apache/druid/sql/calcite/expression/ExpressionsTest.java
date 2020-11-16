@@ -52,6 +52,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SizeFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
@@ -76,6 +77,7 @@ public class ExpressionsTest extends ExpressionTestBase
       .add("t", ValueType.LONG)
       .add("a", ValueType.LONG)
       .add("b", ValueType.LONG)
+      .add("p", ValueType.LONG)
       .add("x", ValueType.FLOAT)
       .add("y", ValueType.LONG)
       .add("z", ValueType.FLOAT)
@@ -98,6 +100,7 @@ public class ExpressionsTest extends ExpressionTestBase
       .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
       .put("a", 10)
       .put("b", 25)
+      .put("p", 3)
       .put("x", 2.25)
       .put("y", 3.0)
       .put("z", -2.25)
@@ -1980,6 +1983,192 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.fromExpression("repeat(\"s\",\"s\")"),
         null
+    );
+  }
+
+  @Test
+  public void testBinaryByteFormat()
+  {
+    /**
+     * Basic Test
+     */
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(1000)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(1000)"),
+        "1000.00B"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(1024)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(1024)"),
+        "1.00KiB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MAX_VALUE)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(9223372036854775807)"),
+        "8.00EiB"
+    );
+
+    /**
+     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
+     */
+
+    /**
+     * test input with variable reference
+     */
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("b"),
+            testHelper.makeInputRef("p")
+        ),
+        DruidExpression.fromExpression("binary_byte_format(\"b\",\"p\")"),
+        "25.000B"
+    );
+
+    /**
+     * test different precision
+     */
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 0
+            testHelper.makeLiteral(0)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(45000,0)"),
+        "44KiB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 1
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(45000,1)"),
+        "43.9KiB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 2
+            testHelper.makeLiteral(2)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(45000,2)"),
+        "43.95KiB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 3
+            testHelper.makeLiteral(3)
+        ),
+        DruidExpression.fromExpression("binary_byte_format(45000,3)"),
+        "43.945KiB"
+    );
+  }
+
+  @Test
+  public void testDecimalByteFormat()
+  {
+    /**
+     * Basic Test
+     */
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(999)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(999)"),
+        "999.00B"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(1024)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(1024)"),
+        "1.02KB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MAX_VALUE)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(9223372036854775807)"),
+        "9.22EB"
+    );
+
+    /**
+     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
+     */
+
+    /**
+     * test input with variable reference
+     */
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("b"),
+            testHelper.makeInputRef("p")
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(\"b\",\"p\")"),
+        "25.000B"
+    );
+
+    /**
+     * test different precision
+     */
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 0
+            testHelper.makeLiteral(0)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(45678,0)"),
+        "46KB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 1
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(45678,1)"),
+        "45.7KB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 2
+            testHelper.makeLiteral(2)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(45678,2)"),
+        "45.68KB"
+    );
+    testHelper.testExpression(
+        SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 3
+            testHelper.makeLiteral(3)
+        ),
+        DruidExpression.fromExpression("decimal_byte_format(45678,3)"),
+        "45.678KB"
     );
   }
 }

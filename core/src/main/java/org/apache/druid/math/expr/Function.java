@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -3273,6 +3274,89 @@ public interface Function
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(0, val);
       return l.stream();
+    }
+  }
+
+  abstract class SizeFormatFunc implements Function
+  {
+    protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final long bytes = args.get(0).eval(bindings).asLong();
+
+      int precision = 2;
+      if (args.size() > 1) {
+        precision = args.get(1).eval(bindings).asInt();
+      }
+
+      boolean hasSpace = false;
+      if (args.size() > 2) {
+        hasSpace = args.get(2).eval(bindings).asBoolean();
+      }
+
+      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem(), hasSpace));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 1 || args.size() > 3) {
+        throw new IAE("Function[%s] needs 1 or 2 or 3 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+  }
+
+  class DecimalByteFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "decimal_byte_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.DECIMAL_BYTE;
+    }
+  }
+
+  class BinaryByteFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "binary_byte_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.BINARY_BYTE;
+    }
+  }
+
+  class DecimalFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "decimal_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.DECIMAL;
     }
   }
 }

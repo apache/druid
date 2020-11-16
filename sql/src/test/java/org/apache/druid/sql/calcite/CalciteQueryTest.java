@@ -16242,7 +16242,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .dataSource(CalciteTests.DATASOURCE1)
                              .intervals(querySegmentSpec(Filtration.eternity()))
                              .virtualColumns(
-                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P1M',1,'UTC')", ValueType.LONG)
+                                 expressionVirtualColumn(
+                                     "v0",
+                                     "timestamp_shift(\"__time\",'P1M',1,'UTC')",
+                                     ValueType.LONG
+                                 )
                              )
                              .columns("v0")
                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -16266,7 +16270,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .dataSource(CalciteTests.DATASOURCE1)
                              .intervals(querySegmentSpec(Filtration.eternity()))
                              .virtualColumns(
-                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",concat('P', (1 * \"cnt\"), 'M'),1,'UTC')", ValueType.LONG)
+                                 expressionVirtualColumn(
+                                     "v0",
+                                     "timestamp_shift(\"__time\",concat('P', (1 * \"cnt\"), 'M'),1,'UTC')",
+                                     ValueType.LONG
+                                 )
                              )
                              .columns("v0")
                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -16278,6 +16286,44 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         CalciteTests.ROWS1.stream()
                           .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
                           .collect(Collectors.toList())
+    );
+  }
+
+  public void testSizeFormatFunction() throws Exception
+  {
+    testQuery(
+        "SELECT m1, "
+        + "BINARY_BYTE_FORMAT(45678),"
+        + "BINARY_BYTE_FORMAT(m1*12345),"
+        + "BINARY_BYTE_FORMAT(m1*12345, 0), "
+        + "DECIMAL_BYTE_FORMAT(m1*12345), "
+        + "DECIMAL_FORMAT(m1*12345) "
+        + "FROM numfoo WHERE f1 = 0.1 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "'44.61KiB'", ValueType.STRING),
+                                expressionVirtualColumn("v1", "binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v2", "binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
+                                expressionVirtualColumn("v3", "decimal_byte_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v4", "decimal_format((\"m1\" * 12345))", ValueType.STRING))
+                .columns("m1", "v0", "v1", "v2", "v3", "v4")
+                .filters(selector("f1", "0.1", null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{(float) 2.0,
+                         "44.61KiB", // 45678 / 1024
+                         "24.11KiB", // = m1(2.0) * 12345 / 1024
+                         "24KiB", // = m1(2.0) * 12345 / 1024, precision = 0
+                         "24.69KB", // decimal byte format, m1(2.0) * 12345 / 1000,
+                         "24.69K" // decimal format, m1(2.0) * 12345 / 1000,
+            }
+        )
     );
   }
 

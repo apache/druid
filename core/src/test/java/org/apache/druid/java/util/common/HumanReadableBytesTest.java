@@ -395,6 +395,107 @@ public class HumanReadableBytesTest
     Assert.assertEquals("value must be in the range of [0, 5]", message);
   }
 
+  @Test
+  public void testFormatInBinaryByte()
+  {
+    Assert.assertEquals("-8.00 EiB", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("-8.000 EiB", HumanReadableBytes.format(Long.MIN_VALUE, 3, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+
+    Assert.assertEquals("-2.00 GiB", HumanReadableBytes.format(Integer.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("-32.00 KiB", HumanReadableBytes.format(Short.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("-128.00 B", HumanReadableBytes.format(Byte.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("-1.00 B", HumanReadableBytes.format(-1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("0.00 B", HumanReadableBytes.format(0, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.00 B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.00 KiB", HumanReadableBytes.format(1024L, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.00 MiB", HumanReadableBytes.format(1024L * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.00 GiB", HumanReadableBytes.format(1024L * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.00 TiB", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.00 PiB", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("8.00 EiB", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+  }
+
+  @Test
+  public void testPrecisionInBinaryFormat()
+  {
+    Assert.assertEquals("1 KiB", HumanReadableBytes.format(1500, 0, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.5 KiB", HumanReadableBytes.format(1500, 1, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.46 KiB", HumanReadableBytes.format(1500, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+    Assert.assertEquals("1.465 KiB", HumanReadableBytes.format(1500, 3, HumanReadableBytes.UnitSystem.BINARY_BYTE, true));
+  }
+
+  @Test
+  public void testPrecisionInDecimalFormat()
+  {
+    Assert.assertEquals("1 KB", HumanReadableBytes.format(1456, 0, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.5 KB", HumanReadableBytes.format(1456, 1, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.46 KB", HumanReadableBytes.format(1456, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.456 KB", HumanReadableBytes.format(1456, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+  }
+
+  @Test
+  public void testFormatInDecimalByte()
+  {
+    Assert.assertEquals("1.00 B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.00 KB", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.00 MB", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.00 GB", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.00 TB", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("1.00 PB", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("9.22 EB", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+
+    Assert.assertEquals("100.00 KB", HumanReadableBytes.format(99999, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("99.999 KB", HumanReadableBytes.format(99999, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+
+    Assert.assertEquals("999.9 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 1, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("999.95 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+    Assert.assertEquals("999.949 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE, true));
+  }
+
+  @Test
+  public void testFormatInDecimal()
+  {
+    Assert.assertEquals("1.00 ", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("1.00 K", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("1.00 M", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("1.00 G", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("1.00 T", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("1.00 P", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("9.22 E", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+  }
+
+  @Test
+  public void testFormatInDecimalNoSpace()
+  {
+    Assert.assertEquals("1.00", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("1.00K", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("1.00M", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("1.00G", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("1.00T", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("1.00P", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("9.22E", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL, false));
+
+    Assert.assertEquals("1P", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 0, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("9E", HumanReadableBytes.format(Long.MAX_VALUE, 0, HumanReadableBytes.UnitSystem.DECIMAL, false));
+  }
+
+  @Test
+  public void testInvalidPrecisionArgumentLowerBound()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("precision [-1] must be in the range of [0,3]");
+    Assert.assertEquals("1.00", HumanReadableBytes.format(1, -1, HumanReadableBytes.UnitSystem.DECIMAL, false));
+  }
+
+  @Test
+  public void testInvalidPrecisionArgumentUpperBound()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("precision [4] must be in the range of [0,3]");
+    Assert.assertEquals("1.000", HumanReadableBytes.format(1, 3, HumanReadableBytes.UnitSystem.DECIMAL, false));
+    Assert.assertEquals("1.00", HumanReadableBytes.format(1, 4, HumanReadableBytes.UnitSystem.DECIMAL, false));
+  }
+
   private static <T> String validate(T obj)
   {
     Validator validator = Validation.buildDefaultValidatorFactory()

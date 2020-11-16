@@ -227,3 +227,13 @@ supported features:
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
 * other: `parse_long` is supported for numeric and string types
+
+
+## Other functions
+
+| function | description |
+| --- | --- |
+| binary_byte_format(value[, precision]) | Returns the value in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. Supported unit suffix: `B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`. `precision` must be in the range of [0,3] (default: 2). |
+| decimal_byte_format(value[, precision]) | Returns the value in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. Supported unit suffix: `B`, `KB`, `MB`, `GB`, `TB`, `PB`, `EB`. `precision` must be in the range of [0,3] (default: 2). |
+| decimal_format(value[, precision]) | Returns the value in human-readable SI format. Supported unit suffix: `B`, `K`, `M`, `G`, `T`, `P`, `E`. `precision` must be in the range of [0,3] (default: 2). |
+

@@ -566,6 +566,9 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
 |`NVL(expr,expr-for-null)`|Returns 'expr-for-null' if 'expr' is null (or empty string for string type).|
 |`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in a Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
+|`BINARY_BYTE_FORMAT(value, [precision])`|Returns the value in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. Supported unit suffix: `B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`. `precision` must be in the range of [0,3] (default: 2).|
+|`DECIMAL_BYTE_FORMAT(value, [precision])`|Returns the value in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format.Supported unit suffix: `B`, `KB`, `MB`, `GB`, `TB`, `PB`, `EB`. `precision` must be in the range of [0,3] (default: 2).|
+|`DECIMAL_FORMAT(value, [precision])`|Returns the value in human-readable SI format. Supported unit suffix: `B`, `K`, `M`, `G`, `T`, `P`, `E`. `precision` must be in the range of [0,3] (default: 2).|
 
 ## Multi-value string functions
 

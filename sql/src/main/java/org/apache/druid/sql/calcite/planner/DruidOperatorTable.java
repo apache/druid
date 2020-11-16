@@ -91,6 +91,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SizeFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -237,6 +238,13 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new IPv4AddressStringifyOperatorConversion())
           .build();
 
+  private static final List<SqlOperatorConversion> FORMAT_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(SizeFormatOperatorConversion.BINARY_BYTE_FORMAT)
+          .add(SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT)
+          .add(SizeFormatOperatorConversion.DECIMAL_FORMAT)
+          .build();
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
           .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
@@ -295,6 +303,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .addAll(MULTIVALUE_STRING_OPERATOR_CONVERSIONS)
           .addAll(REDUCTION_OPERATOR_CONVERSIONS)
           .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
+          .addAll(FORMAT_OPERATOR_CONVERSIONS)
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

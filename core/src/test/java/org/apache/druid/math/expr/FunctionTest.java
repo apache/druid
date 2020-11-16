@@ -22,11 +22,14 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -36,6 +39,9 @@ import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private Expr.ObjectBinding bindings;
 
   @Before
@@ -517,6 +523,64 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+  }
+
+  @Test
+  public void testSizeFormat()
+  {
+    assertExpr("binary_byte_format(-1024)", "-1.00KiB");
+    assertExpr("binary_byte_format(1024)", "1.00KiB");
+    assertExpr("binary_byte_format(1024*1024)", "1.00MiB");
+    assertExpr("binary_byte_format(1024*1024*1024)", "1.00GiB");
+    assertExpr("binary_byte_format(1024*1024*1024*1024)", "1.00TiB");
+    assertExpr("binary_byte_format(1024*1024*1024*1024*1024)", "1.00PiB");
+
+    assertExpr("decimal_byte_format(-1000)", "-1.00KB");
+    assertExpr("decimal_byte_format(1000)", "1.00KB");
+    assertExpr("decimal_byte_format(1000*1000)", "1.00MB");
+    assertExpr("decimal_byte_format(1000*1000*1000)", "1.00GB");
+    assertExpr("decimal_byte_format(1000*1000*1000*1000)", "1.00TB");
+
+    assertExpr("decimal_format(-1000)", "-1.00K");
+    assertExpr("decimal_format(1000)", "1.00K");
+    assertExpr("decimal_format(1000*1000)", "1.00M");
+    assertExpr("decimal_format(1000*1000*1000)", "1.00G");
+    assertExpr("decimal_format(1000*1000*1000*1000)", "1.00T");
+  }
+
+  @Test
+  public void testSizeFormatWithDifferentPrecision()
+  {
+    assertExpr("binary_byte_format(1024, 0)", "1KiB");
+    assertExpr("binary_byte_format(1024*1024, 1)", "1.0MiB");
+    assertExpr("binary_byte_format(1024*1024*1024, 2)", "1.00GiB");
+    assertExpr("binary_byte_format(1024*1024*1024*1024, 3)", "1.000TiB");
+
+    assertExpr("decimal_byte_format(1234, 0)", "1KB");
+    assertExpr("decimal_byte_format(1234*1000, 1)", "1.2MB");
+    assertExpr("decimal_byte_format(1234*1000*1000, 2)", "1.23GB");
+    assertExpr("decimal_byte_format(1234*1000*1000*1000, 3)", "1.234TB");
+
+    assertExpr("decimal_format(1234, 0)", "1K");
+    assertExpr("decimal_format(1234*1000,1)", "1.2M");
+    assertExpr("decimal_format(1234*1000*1000,2)", "1.23G");
+    assertExpr("decimal_format(1234*1000*1000*1000,3)", "1.234T");
+  }
+
+  @Test
+  public void testSizeFormatInvalidArgumentLowerBound()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("precision [-1] must be in the range of [0,4]");
+    assertExpr("binary_byte_format(1024, -1)", "1KiB");
+  }
+
+  @Test
+  public void testSizeFormatInvalidArgumentUpperBound()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("precision [4] must be in the range of [0,3]");
+    assertExpr("binary_byte_format(1024, 4)", "1KiB");
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
