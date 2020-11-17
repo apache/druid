@@ -32,7 +32,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -74,16 +73,6 @@ public class K8sDruidNodeAnnouncerTest
     );
 
     List<Map<String, Object>> expectedPatchList = Lists.newArrayList(
-        ImmutableMap.of(
-            "op", "add",
-            "path", "/metadata/labels",
-            "value", Collections.emptyMap()
-        ),
-        ImmutableMap.of(
-            "op", "add",
-            "path", "/metadata/annotations",
-            "value", Collections.emptyMap()
-        ),
         ImmutableMap.of(
             "op", "add",
             "path", "/metadata/labels/druidDiscoveryAnnouncement-router",

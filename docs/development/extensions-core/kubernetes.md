@@ -39,7 +39,9 @@ This extension works together with HTTP based segment and task management in Dru
 `druid.indexer.runner.type=httpRemote`
 `druid.discovery.type=k8s`
 
-For Node Discovery, Each Druid process running inside a pod "announces" itself by adding few "labels" and "annotations" in the pod spec. So, to add those, Druid process needs to be aware of pod name and namespace which it reads from environment variables `POD_NAME` and `POD_NAMESPACE`. These variable names can be changed, see configuration below. But in the end, each pod needs to have pod name and namespace added as environment variables.
+For Node Discovery, Each Druid process running inside a pod "announces" itself by adding few "labels" and "annotations" in the pod spec. So, to add those...
+- Druid process needs to be aware of pod name and namespace which it reads from environment variables `POD_NAME` and `POD_NAMESPACE`. These variable names can be changed, see configuration below. But in the end, each pod needs to have pod name and namespace added as environment variables.
+- Label/Annotation path in the pod spec must exist, which is easily satisfied if there is at least one label/annotation in the pod spec already. This limitation may be removed in future.
 
 Additionally, this extension has following configuration.
 

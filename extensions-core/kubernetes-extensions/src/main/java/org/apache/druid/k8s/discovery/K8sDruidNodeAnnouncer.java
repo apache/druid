@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -94,9 +93,12 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
 
     try {
       List<Map<String, Object>> patches = new ArrayList<>();
-      // Note: we need to create empty labels and annotations paths if they don't exist in the pod spec already
-      patches.add(createPatchObj(OP_ADD, POD_LABELS_PATH_PREFIX, Collections.emptyMap()));
-      patches.add(createPatchObj(OP_ADD, POD_ANNOTATIONS_PATH_PREFIX, Collections.emptyMap()));
+
+      // Note: We assume here that at least one label and annotation exists on the pod already, so that
+      // paths where labels/annotations are created, pre-exist.
+      // See https://github.com/kubernetes-sigs/kustomize/issues/2986 , we can add workaround of getting pod spec,
+      // checking if label/annotation path exists and create if not, however that could lead to race conditions
+      // so assuming the existence for now.
       patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(roleAnnouncementLabel), ANNOUNCEMENT_DONE));
       patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(idAnnouncementLabel), encodeHostPort(discoveryDruidNode.getDruidNode().getHostAndPortToUse())));
       patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(clusterIdentifierAnnouncementLabel), discoveryConfig.getClusterIdentifier()));
@@ -104,7 +106,7 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
 
       // Creating patch string outside of retry block to not retry json serialization failures
       String jsonPatchStr = jsonMapper.writeValueAsString(patches);
-      LOGGER.debug("Patch For Announcement: [%s]", jsonPatchStr);
+      LOGGER.info("Json Patch For Node Announcement: [%s]", jsonPatchStr);
 
       RetryUtils.retry(
           () -> {
