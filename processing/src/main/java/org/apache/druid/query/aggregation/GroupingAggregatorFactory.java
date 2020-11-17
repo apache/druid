@@ -202,7 +202,7 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   }
 
   /**
-   * Gives the list of grouping dimensions, return a long value where each bit at position X in the returned value
+   * Given the list of grouping dimensions, returns a long value where each bit at position X in the returned value
    * corresponds to the dimension in groupings at same position X. X is the position relative to the right end. if
    * keyDimensions contain the grouping dimension at position X, the bit is set to 1 at position X, otherwise it is
    * set to 0. An example adapted from Microsoft SQL documentation
