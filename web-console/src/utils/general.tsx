@@ -19,6 +19,7 @@
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
+import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
@@ -26,6 +27,10 @@ import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons/toaster';
+
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
 
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
@@ -117,14 +122,15 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   return haystack.includes(needle);
 }
 
-export function sqlQueryCustomTableFilter(filter: Filter): string {
-  const columnName = JSON.stringify(filter.id);
+export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return `${columnName} = '${needle}'`;
+    return SqlRef.columnWithQuotes(filter.id).equal(SqlLiteral.create(needle));
   } else {
-    return `LOWER(${columnName}) LIKE LOWER('%${needle}%')`;
+    return SqlFunction.simple('LOWER', [SqlRef.columnWithQuotes(filter.id)]).like(
+      SqlLiteral.create(`%${needle.toLowerCase()}%`),
+    );
   }
 }
 
@@ -133,6 +139,10 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
 export function caseInsensitiveContains(testString: string, searchString: string): boolean {
   if (!searchString) return true;
   return testString.toLowerCase().includes(searchString.toLowerCase());
+}
+
+export function oneOf<T>(thing: T, ...options: T[]): boolean {
+  return options.includes(thing);
 }
 
 // ----------------------------

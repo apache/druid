@@ -482,7 +482,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     final String querySpec = generatedTestConfig.getStreamQueryPropsTransform()
                                                 .apply(getResourceAsString(QUERIES_FILE));
     // this query will probably be answered from the indexing tasks but possibly from 2 historical segments / 2 indexing
-    this.queryHelper.testQueriesFromString(querySpec, 2);
+    this.queryHelper.testQueriesFromString(querySpec);
     LOG.info("Shutting down supervisor");
     indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
     // Clear supervisor ID to not shutdown again.
@@ -503,7 +503,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     );
 
     // this query will be answered by at least 1 historical segment, most likely 2, and possibly up to all 4
-    this.queryHelper.testQueriesFromString(querySpec, 2);
+    this.queryHelper.testQueriesFromString(querySpec);
   }
 
   long getSumOfEventSequence(int numEvents)

@@ -55,20 +55,26 @@ describe('general', () => {
   });
 
   describe('sqlQueryCustomTableFilter', () => {
-    it('works', () => {
+    it('works with contains', () => {
       expect(
-        sqlQueryCustomTableFilter({
-          id: 'datasource',
-          value: `hello`,
-        }),
-      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('%hello%')"`);
+        String(
+          sqlQueryCustomTableFilter({
+            id: 'datasource',
+            value: `Hello`,
+          }),
+        ),
+      ).toEqual(`LOWER("datasource") LIKE '%hello%'`);
+    });
 
+    it('works with exact', () => {
       expect(
-        sqlQueryCustomTableFilter({
-          id: 'datasource',
-          value: `"hello"`,
-        }),
-      ).toMatchInlineSnapshot(`"\\"datasource\\" = 'hello'"`);
+        String(
+          sqlQueryCustomTableFilter({
+            id: 'datasource',
+            value: `"hello"`,
+          }),
+        ),
+      ).toEqual(`"datasource" = 'hello'`);
     });
   });
 

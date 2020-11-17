@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 
 import javax.annotation.Nullable;
@@ -112,9 +113,9 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     catch (IOException e) {
       // check for timeout, a failure here might be related to a timeout, so lets just attribute it
       if (checkTimeout()) {
-        TimeoutException timeoutException = timeoutQuery();
+        QueryTimeoutException timeoutException = timeoutQuery();
         timeoutException.addSuppressed(e);
-        throw interruptQuery(timeoutException);
+        throw timeoutException;
       } else {
         throw interruptQuery(e);
       }
@@ -155,14 +156,14 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       try {
         long timeLeftMillis = timeoutAt - System.currentTimeMillis();
         if (checkTimeout(timeLeftMillis)) {
-          throw interruptQuery(timeoutQuery());
+          throw timeoutQuery();
         }
         InputStream is = hasTimeout ? future.get(timeLeftMillis, TimeUnit.MILLISECONDS) : future.get();
 
         if (is != null) {
           jp = objectMapper.getFactory().createParser(is);
         } else if (checkTimeout()) {
-          throw interruptQuery(timeoutQuery());
+          throw timeoutQuery();
         } else {
           // if we haven't timed out completing the future, then this is the likely cause
           throw interruptQuery(new ResourceLimitExceededException("url[%s] max bytes limit reached.", url));
@@ -180,15 +181,18 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           );
         }
       }
-      catch (IOException | InterruptedException | ExecutionException | CancellationException | TimeoutException e) {
+      catch (IOException | InterruptedException | ExecutionException | CancellationException e) {
         throw interruptQuery(e);
+      }
+      catch (TimeoutException e) {
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out!", queryId), host);
       }
     }
   }
 
-  private TimeoutException timeoutQuery()
+  private QueryTimeoutException timeoutQuery()
   {
-    return new TimeoutException(StringUtils.format("url[%s] timed out", url));
+    return new QueryTimeoutException(StringUtils.nonStrictFormat("url[%s] timed out", url), host);
   }
 
   private QueryInterruptedException interruptQuery(Exception cause)

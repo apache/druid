@@ -52,7 +52,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     processQuery: async () => {
       try {
         const configResp = await axios.get('/druid/coordinator/v1/config');
-        setDynamicConfig(configResp.data);
+        setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,
@@ -261,6 +261,18 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
                 segment movements, an operator can prevent active services from overload by
                 prioritizing balancing, or decrease decommissioning time instead. The value should
                 be between 0 and 100.
+              </>
+            ),
+          },
+          {
+            name: 'pauseCoordination',
+            type: 'boolean',
+            defaultValue: false,
+            info: (
+              <>
+                Boolean flag for whether or not the coordinator should execute its various duties of
+                coordinating the cluster. Setting this to true essentially pauses all coordination
+                work while allowing the API to remain up.
               </>
             ),
           },

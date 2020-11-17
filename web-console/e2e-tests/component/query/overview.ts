@@ -18,8 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { clickButton } from '../../util/playwright';
-import { setInput } from '../../util/playwright';
+import { clickButton, setInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**

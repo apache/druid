@@ -165,5 +165,8 @@ export class QueryManager<Q, R> {
 
   public terminate(): void {
     this.terminated = true;
+    if (this.currentRunCancelFn) {
+      this.currentRunCancelFn();
+    }
   }
 }

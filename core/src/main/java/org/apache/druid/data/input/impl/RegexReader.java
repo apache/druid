@@ -71,9 +71,9 @@ public class RegexReader extends TextReader
   }
 
   @Override
-  protected Map<String, Object> toMap(String intermediateRow)
+  protected List<Map<String, Object>> toMap(String intermediateRow)
   {
-    return parseLine(intermediateRow);
+    return Collections.singletonList(parseLine(intermediateRow));
   }
 
   private Map<String, Object> parseLine(String line)

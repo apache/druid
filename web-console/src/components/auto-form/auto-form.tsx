@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
 import React from 'react';
 
-import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
+import { deepDelete, deepGet, deepSet } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
@@ -55,6 +55,7 @@ export interface Field<M> {
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
   adjustment?: (model: M) => M;
+  issueWithValue?: (value: any) => string | undefined;
 }
 
 export interface AutoFormProps<M> {
@@ -91,6 +92,48 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     } else {
       return functor;
     }
+  }
+
+  static issueWithModel<M>(model: M | undefined, fields: readonly Field<M>[]): string | undefined {
+    if (typeof model === 'undefined') {
+      return `model is undefined`;
+    }
+
+    // Precompute which fields are defined because fields could be defined twice and only one should do the checking
+    const definedFields: Record<string, Field<M>> = {};
+    for (const field of fields) {
+      const fieldDefined = AutoForm.evaluateFunctor(field.defined, model, true);
+      if (fieldDefined) {
+        definedFields[field.name] = field;
+      }
+    }
+
+    for (const field of fields) {
+      const fieldValue = deepGet(model, field.name);
+      const fieldValueDefined = typeof fieldValue !== 'undefined';
+      const fieldThatIsDefined = definedFields[field.name];
+      if (fieldThatIsDefined) {
+        if (fieldThatIsDefined === field) {
+          const fieldRequired = AutoForm.evaluateFunctor(field.required, model, false);
+          if (fieldRequired) {
+            if (!fieldValueDefined) {
+              return `field ${field.name} is required`;
+            }
+          }
+
+          if (fieldValueDefined && field.issueWithValue) {
+            const valueIssue = field.issueWithValue(fieldValue);
+            if (valueIssue) return `field ${field.name} has issue ${valueIssue}`;
+          }
+        }
+      } else {
+        // The field is undefined
+        if (fieldValueDefined) {
+          return `field ${field.name} is defined but it should not be`;
+        }
+      }
+    }
+    return;
   }
 
   constructor(props: AutoFormProps<T>) {
@@ -274,6 +317,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         onChange={(v: any) => this.fieldChange(field, v)}
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         height={field.height}
+        issueWithValue={field.issueWithValue}
       />
     );
   }

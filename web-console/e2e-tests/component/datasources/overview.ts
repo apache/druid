@@ -18,9 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { clickButton } from '../../util/playwright';
-import { getLabeledInput } from '../../util/playwright';
-import { setLabeledInput } from '../../util/playwright';
+import { clickButton, getLabeledInput, setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 import { readPartitionSpec } from '../load-data/config/partition';
 
@@ -36,10 +34,13 @@ enum DatasourceColumn {
   SEGMENT_LOAD_DROP,
   TOTAL_DATA_SIZE,
   SEGMENT_SIZE,
+  SEGMENT_GRANULARITY,
   TOTAL_ROWS,
   AVG_ROW_SIZE,
   REPLICATED_SIZE,
   COMPACTION,
+  PERCENT_COMPACTED,
+  LEFT_TO_BE_COMPACTED,
   RETENTION,
   ACTIONS,
 }

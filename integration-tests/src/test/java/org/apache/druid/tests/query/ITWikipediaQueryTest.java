@@ -79,7 +79,7 @@ public class ITWikipediaQueryTest
   @Test
   public void testWikipediaQueriesFromFile() throws Exception
   {
-    queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE, 2);
+    queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
   }
 
   @Test
