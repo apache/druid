@@ -29,6 +29,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
@@ -194,6 +195,30 @@ public class SqlInputSourceTest
     Stream<InputSplit<String>> sqlSplits = sqlInputSource.createSplits(inputFormat, null);
     Assert.assertEquals(SQLLIST2, sqlSplits.map(InputSplit::get).collect(Collectors.toList()));
     Assert.assertEquals(2, sqlInputSource.estimateNumSplits(inputFormat, null));
+  }
+
+  @Test
+  public void testSample() throws Exception
+  {
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
+    try {
+      final File tempDir = createFirehoseTmpDir("testSingleSplit");
+      SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST1, true, testUtils.getDerbyFirehoseConnector(), mapper);
+      InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
+      CloseableIterator<InputRowListPlusRawValues> resultIterator = sqlReader.sample();
+      final List<InputRowListPlusRawValues> rows = new ArrayList<>();
+      while (resultIterator.hasNext()) {
+        InputRowListPlusRawValues row = resultIterator.next();
+        Assert.assertNull(row.getParseException());
+        rows.add(row);
+      }
+      assertResult(rows.stream().flatMap(r -> r.getInputRows().stream()).collect(Collectors.toList()), SQLLIST1);
+    }
+    finally {
+      testUtils.dropTable(TABLE_NAME_1);
+    }
   }
 
   @Test

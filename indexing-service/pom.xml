@@ -215,6 +215,10 @@
             <artifactId>datasketches-memory</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>net.thisptr</groupId>
+            <artifactId>jackson-jq</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

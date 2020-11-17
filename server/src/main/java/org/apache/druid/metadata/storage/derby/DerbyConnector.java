@@ -84,7 +84,7 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected String getSerialType()
+  public String getSerialType()
   {
     return SERIAL_TYPE;
   }
@@ -102,7 +102,7 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected int getStreamingFetchSize()
+  public int getStreamingFetchSize()
   {
     // Derby only supports fetch size of 1
     return 1;
