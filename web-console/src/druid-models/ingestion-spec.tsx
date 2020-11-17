@@ -47,7 +47,7 @@ import {
   getMetricSpecSingleFieldName,
   MetricSpec,
 } from './metric-spec';
-import { PLACEHOLDER_TIMESTAMP_SPEC, TimestampSpec } from './timestamp-spec';
+import { TimestampSpec } from './timestamp-spec';
 import { TransformSpec } from './transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
@@ -475,6 +475,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Dimensions',
           type: 'string-array',
           placeholder: '(optional)',
+          hideInMore: true,
           info: (
             <p>
               The list of dimensions to select. If left empty, no dimensions are returned. If left
@@ -487,6 +488,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Metrics',
           type: 'string-array',
           placeholder: '(optional)',
+          hideInMore: true,
           info: (
             <p>
               The list of metrics to select. If left empty, no metrics are returned. If left null or
@@ -499,6 +501,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Filter',
           type: 'json',
           placeholder: '(optional)',
+          hideInMore: true,
           info: (
             <p>
               The{' '}
@@ -983,45 +986,6 @@ export function getIoConfigTuningFormFields(
             </>
           ),
         },
-        {
-          name: 'inputSource.maxCacheCapacityBytes',
-          label: 'Max cache capacity bytes',
-          type: 'number',
-          defaultValue: 1073741824,
-          info: (
-            <>
-              <p>
-                Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are
-                not removed until the ingestion task completes.
-              </p>
-            </>
-          ),
-        },
-        {
-          name: 'inputSource.maxFetchCapacityBytes',
-          label: 'Max fetch capacity bytes',
-          type: 'number',
-          defaultValue: 1073741824,
-          info: (
-            <>
-              <p>
-                Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched
-                files are removed immediately once they are read.
-              </p>
-            </>
-          ),
-        },
-        {
-          name: 'inputSource.prefetchTriggerBytes',
-          label: 'Prefetch trigger bytes',
-          type: 'number',
-          placeholder: 'maxFetchCapacityBytes / 2',
-          info: (
-            <>
-              <p>Threshold to trigger prefetching the objects.</p>
-            </>
-          ),
-        },
       ];
 
     case 'index_parallel:local':
@@ -1420,6 +1384,7 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 
 export function getPartitionRelatedTuningSpecFormFields(
   specType: IngestionType,
+  dimensionSuggestions: string[] | undefined,
 ): Field<TuningConfig>[] {
   switch (specType) {
     case 'index_parallel':
@@ -1437,6 +1402,10 @@ export function getPartitionRelatedTuningSpecFormFields(
               single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
+          adjustment: (t: TuningConfig) => {
+            if (!Array.isArray(dimensionSuggestions) || !dimensionSuggestions.length) return t;
+            return deepSet(t, 'partitionsSpec.partitionDimension', dimensionSuggestions[0]);
+          },
         },
         // partitionsSpec type: dynamic
         {
@@ -1460,6 +1429,8 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.targetRowsPerSegment',
           label: 'Target rows per segment',
           type: 'number',
+          zeroMeansUndefined: true,
+          defaultValue: 5000000,
           defined: (t: TuningConfig) =>
             deepGet(t, 'partitionsSpec.type') === 'hashed' &&
             !deepGet(t, 'partitionsSpec.numShards'),
@@ -1481,6 +1452,8 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.numShards',
           label: 'Num shards',
           type: 'number',
+          zeroMeansUndefined: true,
+          hideInMore: true,
           defined: (t: TuningConfig) =>
             deepGet(t, 'partitionsSpec.type') === 'hashed' &&
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
@@ -1502,6 +1475,7 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.partitionDimensions',
           label: 'Partition dimensions',
           type: 'string-array',
+          placeholder: '(all dimensions)',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
           info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
         },
@@ -1512,7 +1486,19 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'string',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
           required: true,
-          info: <p>The dimension to partition on.</p>,
+          suggestions: dimensionSuggestions,
+          info: (
+            <>
+              <p>The dimension to partition on.</p>
+              <p>
+                This should be the first dimension in your schema which would make it first in the
+                sort order. As{' '}
+                <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#why-partition`}>
+                  Partitioning and sorting are best friends!
+                </ExternalLink>
+              </p>
+            </>
+          ),
         },
         {
           name: 'partitionsSpec.targetRowsPerSegment',
@@ -1603,6 +1589,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 3,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
   {
@@ -1610,7 +1597,35 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 1000,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
+  },
+  {
+    name: 'totalNumMergeTasks',
+    type: 'number',
+    defaultValue: 10,
+    min: 1,
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+      ),
+    info: <>Number of tasks to merge partial segments after shuffle.</>,
+  },
+  {
+    name: 'maxNumSegmentsToMerge',
+    type: 'number',
+    defaultValue: 100,
+    defined: (t: TuningConfig) =>
+      Boolean(
+        t.type === 'index_parallel' &&
+          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+      ),
+    info: (
+      <>
+        Max limit for the number of segments a single task can merge at the same time after shuffle.
+      </>
+    ),
   },
   {
     name: 'maxRowsInMemory',
@@ -1625,33 +1640,6 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'totalNumMergeTasks',
-    type: 'number',
-    defaultValue: 10,
-    min: 1,
-    defined: (t: TuningConfig) =>
-      Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
-    info: <>Number of tasks to merge partial segments after shuffle.</>,
-  },
-  {
-    name: 'maxNumSegmentsToMerge',
-    type: 'number',
-    defaultValue: 100,
-    defined: (t: TuningConfig) =>
-      Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
-    info: (
-      <>
-        Max limit for the number of segments a single task can merge at the same time after shuffle.
-      </>
-    ),
-  },
-  {
     name: 'resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
@@ -1660,6 +1648,19 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
         than the earliest available offset for that particular partition.
+      </>
+    ),
+  },
+  {
+    name: 'skipSequenceNumberAvailabilityCheck',
+    type: 'boolean',
+    defaultValue: false,
+    defined: (t: TuningConfig) => t.type === 'kinesis',
+    info: (
+      <>
+        Whether to enable checking if the current sequence number is still available in a particular
+        Kinesis shard. If set to false, the indexing task will attempt to reset the current sequence
+        number (or not), depending on the value of <Code>resetOffsetAutomatically</Code>.
       </>
     ),
   },
@@ -1686,6 +1687,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   {
     name: 'maxPendingPersists',
     type: 'number',
+    hideInMore: true,
     info: (
       <>
         Maximum number of persists that can be pending but not started. If this limit would be
@@ -1698,6 +1700,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'pushTimeout',
     type: 'number',
     defaultValue: 0,
+    hideInMore: true,
     info: (
       <>
         Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.
@@ -1709,6 +1712,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 0,
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
@@ -1717,6 +1721,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'roaring',
     suggestions: ['concise', 'roaring'],
+    hideInMore: true,
     info: <>Compression format for bitmap indexes.</>,
   },
   {
@@ -1725,6 +1730,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
+    hideInMore: true,
     info: <>Compression format for dimension columns.</>,
   },
   {
@@ -1733,6 +1739,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
+    hideInMore: true,
     info: <>Compression format for primitive type metric columns.</>,
   },
   {
@@ -1741,6 +1748,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'longs',
     suggestions: ['longs', 'auto'],
+    hideInMore: true,
     info: (
       <>
         Encoding format for long-typed columns. Applies regardless of whether they are dimensions or
@@ -1755,6 +1763,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT10S',
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
@@ -1762,6 +1771,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 5,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
+    hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
@@ -1778,6 +1788,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    hideInMore: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
@@ -1785,6 +1796,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 8,
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    hideInMore: true,
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -1804,6 +1816,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'duration',
     defaultValue: 'PT80S',
     defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    hideInMore: true,
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
@@ -1839,6 +1852,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 5000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    hideInMore: true,
     info: (
       <>
         Length of time in milliseconds to wait for space to become available in the buffer before
@@ -1848,6 +1862,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   },
   {
     name: 'recordBufferFullWait',
+    hideInMore: true,
     type: 'number',
     defaultValue: 5000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
@@ -1863,6 +1878,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 60000,
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    hideInMore: true,
     info: (
       <>
         Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
@@ -1877,6 +1893,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    hideInMore: true,
     info: (
       <>
         Size of the pool of threads fetching data from Kinesis. There is no benefit in having more
@@ -1889,10 +1906,34 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     defaultValue: 100,
     defined: (t: TuningConfig) => t.type === 'kinesis',
+    hideInMore: true,
     info: (
       <>
         The maximum number of records/events to be fetched from buffer per poll. The actual maximum
         will be <Code>max(maxRecordsPerPoll, max(bufferSize, 1))</Code>.
+      </>
+    ),
+  },
+  {
+    name: 'repartitionTransitionDuration',
+    type: 'duration',
+    defaultValue: 'PT2M',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
+    hideInMore: true,
+    info: (
+      <>
+        <p>
+          When shards are split or merged, the supervisor will recompute shard, task group mappings,
+          and signal any running tasks created under the old mappings to stop early at{' '}
+          <Code>(current time + repartitionTransitionDuration)</Code>. Stopping the tasks early
+          allows Druid to begin reading from the new shards more quickly.
+        </p>
+        <p>
+          The repartition transition wait time controlled by this property gives the stream
+          additional time to write records to the new shards after the split/merge, which helps
+          avoid the issues with empty shard handling described at
+          <ExternalLink href="https://github.com/apache/druid/issues/7600">#7600</ExternalLink>.
+        </p>
       </>
     ),
   },
@@ -1932,37 +1973,37 @@ export function updateIngestionType(
 
   if (inputSourceType) {
     newSpec = deepSet(newSpec, 'spec.ioConfig.inputSource', { type: inputSourceType });
-
-    if (inputSourceType === 'local') {
-      newSpec = deepSet(newSpec, 'spec.ioConfig.inputSource.filter', '*');
-    }
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dataSource', 'new-data-source');
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.granularitySpec')) {
-    const granularitySpec: GranularitySpec = {
-      type: 'uniform',
-      queryGranularity: 'HOUR',
-    };
-    if (ingestionType !== 'index_parallel') {
-      granularitySpec.segmentGranularity = 'HOUR';
-    }
-
-    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec', granularitySpec);
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.timestampSpec')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.timestampSpec', PLACEHOLDER_TIMESTAMP_SPEC);
-  }
-
-  if (!deepGet(spec, 'spec.dataSchema.dimensionsSpec')) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec', {});
   }
 
   return newSpec;
+}
+
+export function issueWithSampleData(sampleData: string[]): JSX.Element | undefined {
+  if (sampleData.length) {
+    const firstData = sampleData[0];
+
+    if (firstData === '{') {
+      return (
+        <>
+          This data looks like regular JSON object. For Druid to parse a text file it must have one
+          row per event. Maybe look at{' '}
+          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+        </>
+      );
+    }
+
+    if (oneOf(firstData, '[', '[]')) {
+      return (
+        <>
+          This data looks like a multi-line JSON array. For Druid to parse a text file it must have
+          one row per event. Maybe look at{' '}
+          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+        </>
+      );
+    }
+  }
+
+  return;
 }
 
 export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
@@ -2080,7 +2121,8 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', []);
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
   } else {
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
 
@@ -2091,14 +2133,14 @@ export function updateSchemaWithSample(
   }
 
   if (rollup) {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'HOUR');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
     const metrics = getMetricSpecs(headerAndRows, typeHints);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }
   } else {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'NONE');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'none');
     newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
   }
 

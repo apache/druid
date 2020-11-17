@@ -41,8 +41,8 @@ describe('utils', () => {
         dataSource: 'wikipedia',
         granularitySpec: {
           type: 'uniform',
-          segmentGranularity: 'DAY',
-          queryGranularity: 'HOUR',
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
         },
         timestampSpec: {
           column: 'timestamp',
@@ -56,8 +56,11 @@ describe('utils', () => {
   // const cacheRows: CacheRows = [{ make: 'Honda', model: 'Civic' }, { make: 'BMW', model: 'M3' }];
 
   it('spec-utils headerFromSampleResponse', () => {
-    expect(headerFromSampleResponse({ data: [{ input: { a: 1 }, parsed: { a: 1 } }] }))
-      .toMatchInlineSnapshot(`
+    expect(
+      headerFromSampleResponse({
+        sampleResponse: { data: [{ input: { a: 1 }, parsed: { a: 1 } }] },
+      }),
+    ).toMatchInlineSnapshot(`
       Array [
         "a",
       ]
@@ -86,8 +89,8 @@ describe('utils', () => {
             "dataSource": "wikipedia",
             "dimensionsSpec": Object {},
             "granularitySpec": Object {
-              "queryGranularity": "HOUR",
-              "segmentGranularity": "DAY",
+              "queryGranularity": "hour",
+              "segmentGranularity": "day",
               "type": "uniform",
             },
             "timestampSpec": Object {
