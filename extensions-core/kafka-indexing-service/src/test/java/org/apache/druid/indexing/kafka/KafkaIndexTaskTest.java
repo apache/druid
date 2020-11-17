@@ -2815,6 +2815,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 4L)),
             kafkaServer.consumerProperties(),
+            null,
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
