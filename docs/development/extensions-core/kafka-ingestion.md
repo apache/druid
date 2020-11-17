@@ -33,10 +33,11 @@ manage failures, and ensure that the scalability and replication requirements ar
 This service is provided in the `druid-kafka-indexing-service` core Apache Druid extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
-> The Kafka indexing service supports transactional topics which were introduced in Kafka 0.11.x. These changes make the
+> The Kafka indexing service supports transactional topics which were introduced in Kafka 0.11.x. It is the default behavior of Druid and make the
 > Kafka consumer that Druid uses incompatible with older brokers. Ensure that your Kafka brokers are version 0.11.x or
-> better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade)
-> if you are using older version of Kafka brokers.
+> better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
+> In addition, if you need Druid to consume lower version Kafka which is non-transactional like `0.10.x.x`, you could set `consumeTransactionally ` false in `KafkaSupervisorIOConfig`.
+
 
 ## Tutorial
 
