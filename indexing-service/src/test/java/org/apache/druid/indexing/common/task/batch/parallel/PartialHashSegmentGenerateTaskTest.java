@@ -34,7 +34,9 @@ import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.util.List;
@@ -49,6 +51,9 @@ public class PartialHashSegmentGenerateTaskTest
       new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
       ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
   );
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private PartialHashSegmentGenerateTask target;
 
@@ -138,5 +143,28 @@ public class PartialHashSegmentGenerateTaskTest
           partitionAnalysis.getBucketAnalysis(interval).intValue()
       );
     }
+  }
+
+  @Test
+  public void requiresGranularitySpecInputIntervals()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Missing intervals in granularitySpec");
+
+    new PartialHashSegmentGenerateTask(
+        ParallelIndexTestingFactory.AUTOMATIC_ID,
+        ParallelIndexTestingFactory.GROUP_ID,
+        ParallelIndexTestingFactory.TASK_RESOURCE,
+        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.NUM_ATTEMPTS,
+        ParallelIndexTestingFactory.createIngestionSpec(
+            new LocalInputSource(new File("baseDir"), "filer"),
+            new JsonInputFormat(null, null, null),
+            new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
+            ParallelIndexTestingFactory.createDataSchema(null)
+        ),
+        ParallelIndexTestingFactory.CONTEXT,
+        null
+    );
   }
 }

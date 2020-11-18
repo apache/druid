@@ -64,17 +64,6 @@ public class PerfectRollupWorkerTaskTest
   }
 
   @Test
-  public void requiresGranularitySpecInputIntervals()
-  {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Missing intervals in granularitySpec");
-
-    new PerfectRollupWorkerTaskBuilder()
-        .granularitySpecInputIntervals(Collections.emptyList())
-        .build();
-  }
-
-  @Test
   public void succeedsWithValidPartitionsSpec()
   {
     new PerfectRollupWorkerTaskBuilder().build();
