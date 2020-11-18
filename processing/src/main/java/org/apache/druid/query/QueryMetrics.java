@@ -217,6 +217,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets {@link Query#getContext()} of the given query as dimension.
    */
+  @PublicApi
   void context(QueryType query);
 
   void server(String host);
