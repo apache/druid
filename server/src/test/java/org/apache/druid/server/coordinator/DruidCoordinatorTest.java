@@ -55,6 +55,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -67,8 +68,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -81,6 +85,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class DruidCoordinatorTest extends CuratorTestBase
 {
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
@@ -105,6 +110,23 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
   private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
+  private boolean loadPrimaryReplicantSeparately;
+
+  public DruidCoordinatorTest(boolean loadPrimaryReplicantSeparately)
+  {
+    this.loadPrimaryReplicantSeparately = loadPrimaryReplicantSeparately;
+  }
+
+  @Parameterized.Parameters(name = "{index}: loadPrimaryReplicantSeparately:{0}")
+  public static Iterable<Object[]> data()
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {true},
+            {false}
+        }
+    );
+  }
 
   @Before
   public void setUp() throws Exception
@@ -146,7 +168,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         10,
         new Duration("PT0s"),
         Duration.ZERO,
-        false
+        loadPrimaryReplicantSeparately
     );
     pathChildrenCache = new PathChildrenCache(
         curator,

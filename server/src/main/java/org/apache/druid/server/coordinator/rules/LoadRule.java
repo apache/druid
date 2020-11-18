@@ -88,7 +88,10 @@ public abstract class LoadRule implements Rule
       targetReplicants.putAll(getTieredReplicants());
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
+
       final CoordinatorStats stats = new CoordinatorStats();
+      // Populate the tiered coordinator stats to ensure returned stats are in predictable state
+      populateTieredStats(stats);
       assign(params, segment, stats);
 
       // We don't do any drop calls if it is PRIMARY_ONLY execution.
@@ -165,10 +168,10 @@ public abstract class LoadRule implements Rule
       }
 
       int numAssigned = 1; // 1 replica (i.e., primary replica) already assigned
+      final String tier = primaryHolderToLoad.getServer().getTier();
 
       // Skip replica assignment after primary is assigned if this is PRIMARY_ONLY assignment.
       if (!params.getLoadRuleMode().equals(LoadRuleMode.PRIMARY_ONLY)) {
-        final String tier = primaryHolderToLoad.getServer().getTier();
         // assign replicas for the rest of the tier
         numAssigned += assignReplicasForTier(
             tier,
@@ -178,11 +181,13 @@ public abstract class LoadRule implements Rule
             createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
             segment
         );
-        stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
         // do assign replicas for the other tiers.
         assignReplicas(params, segment, stats, tier /* to skip */);
       }
+
+      // Update stats for the primary server holder tier
+      stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
     }
   }
 
@@ -502,6 +507,22 @@ public abstract class LoadRule implements Rule
       if (entry.getValue() < 0) {
         throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
       }
+    }
+  }
+
+  /**
+   * Ensure that {@link CoordinatorStats} is populated for all Tiers for both
+   * DROPPED_COUNT and LOADED_COUNT tiered stats. This utility method helps
+   * ensure that stats are fully populated even in the case where LoadRule
+   * didn't update all tiered stats before finishing.
+   *
+   * @param stats {@link CoordinatorStats} object that we want to modify
+   */
+  private void populateTieredStats(final CoordinatorStats stats)
+  {
+    for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
+      stats.addToTieredStat(DROPPED_COUNT, entry.getKey(), 0);
+      stats.addToTieredStat(ASSIGNED_COUNT, entry.getKey(), 0);
     }
   }
 

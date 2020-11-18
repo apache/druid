@@ -47,8 +47,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -58,6 +61,7 @@ import java.util.concurrent.Executors;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class RunRulesTest
 {
   public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
@@ -70,6 +74,25 @@ public class RunRulesTest
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
   private SegmentsMetadataManager segmentsMetadataManager;
+  private LoadRule.LoadRuleMode loadRuleMode;
+
+  public RunRulesTest(LoadRule.LoadRuleMode loadRuleMode)
+  {
+    this.loadRuleMode = loadRuleMode;
+  }
+
+  // Each test needs to run successfully using all LoadRule.LoadRuleMode values
+  @Parameterized.Parameters(name = "{index}: loadRuleMode:{0}")
+  public static Iterable<Object[]> data()
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {LoadRule.LoadRuleMode.ALL},
+            {LoadRule.LoadRuleMode.PRIMARY_ONLY},
+            {LoadRule.LoadRuleMode.REPLICA_ONLY}
+        }
+    );
+  }
 
   @Before
   public void setUp()
@@ -111,17 +134,31 @@ public class RunRulesTest
   }
 
   /**
-   * Nodes:
-   * hot - 1 replicant
-   * normal - 1 replicant
-   * cold - 1 replicant
+   * Tests segment assign functionality across tiers with rules that overlap. Since a segment can only match 1 rule,
+   * the segments won't always have replicants on tiers for every interval covered by the rule.
+   *
+   * Rule 1: T0 - T6 1 replicant on hot tier
+   * Rule 2: T0 - T12 1 replicant on normal tier
+   * Rule 3: T0 - T0 (next day) 1 replicant on cold tier.
+   *
+   * Servers: 1 server on hot tier, 1 server on normal tier, 1 servr on cold tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). None loaded before test.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - Load 6 replicants in hot tier. Load 6 replicants in normal tier. Load 12 replicants in cold tier
+   * PRIMARY_ONLY - Load 6 replicants in hot tier. Load 6 replicants in normal tier. Load 12 replicants in cold tier
+   * REPLICA_ONLY - Load 0 replicants.
    */
   @Test
   public void testRunThreeTiersOneReplicant()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -179,9 +216,15 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(6L, stats.getTieredStat("assignedCount", "hot"));
-    Assert.assertEquals(6L, stats.getTieredStat("assignedCount", "normal"));
-    Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "cold"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(6L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(6L, stats.getTieredStat("assignedCount", "normal"));
+      Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "cold"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "normal"));
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "cold"));
+    }
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -219,20 +262,35 @@ public class RunRulesTest
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(dataSegments)
-        .withDatabaseRuleManager(databaseRuleManager);
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withLoadRuleMode(loadRuleMode);
   }
 
   /**
-   * Nodes:
-   * hot - 2 replicants
-   * cold - 1 replicant
+   * Tests segment assign functionality across tiers with rules that overlap. Since a segment can only match 1 rule,
+   * the segments won't always have replicants on tiers for every interval covered by the rule.
+   *
+   * Rule 1: T0 - T6 2 replicants on hot tier
+   * Rule 2: T0 - T0 (next day) 1 replicant on cold tier
+   *
+   * Servers: 2 servers on hot tier, 1 servr on cold tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). None loaded before test.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - Load 12 replicants in hot tier. Load 18 replicants in cold tier
+   * PRIMARY_ONLY - Load 6 replicants in hot tier. Load 18 replicants in cold tier
+   * REPLICA_ONLY - Load 0 replicants.
    */
   @Test
   public void testRunTwoTiersTwoReplicants()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -254,12 +312,12 @@ public class RunRulesTest
         .addTier(
             "hot",
             new ServerHolder(
-                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 1)
                     .toImmutableDruidServer(),
                 mockPeon
             ),
             new ServerHolder(
-                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 1)
                     .toImmutableDruidServer(),
                 mockPeon
             )
@@ -282,8 +340,16 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "hot"));
-    Assert.assertEquals(18L, stats.getTieredStat("assignedCount", "cold"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL)) {
+      Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(18L, stats.getTieredStat("assignedCount", "cold"));
+    } else if (loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(6L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(18L, stats.getTieredStat("assignedCount", "cold"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "cold"));
+    }
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -292,16 +358,32 @@ public class RunRulesTest
   }
 
   /**
-   * Nodes:
-   * hot - 1 replicant
-   * normal - 1 replicant
+   * Tests segment assign functionality across tiers with rules that overlap. Since a segment can only match 1 rule,
+   * the segments won't always have replicants on tiers for every interval covered by the rule. This test also has
+   * segments pre-loaded onto some servers before test execution.
+   *
+   * Rule 1: T0 - T12 1 replicant on hot tier
+   * Rule 2: T0 - T0 (next day) 1 replicant on normal tier
+   *
+   * Servers: 1 server on hot tier, 1 server on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). All 24 segments loade onto normal tier server
+   * before test.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - Load 12 replicants in hot tier. Load 0 replicants on normal tier.
+   * PRIMARY_ONLY - Load 0 replicants.
+   * REPLICA_ONLY - Load 12 replicants on hot tier. Load 0 replicants on normal tier.
    */
   @Test
   public void testRunTwoTiersWithExistingSegments()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -349,7 +431,11 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "hot"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "hot"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+    }
     Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "normal"));
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
@@ -358,16 +444,38 @@ public class RunRulesTest
     EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Tests segment assign functionality across tiers with rules that overlap. Since a segment can only match 1 rule,
+   * the segments won't always have replicants on tiers for every interval covered by the rule. This test also tests what
+   * happens when one of the tiers in the load rules does not exist with servers to load segments to.
+   *
+   * Rule 1: T0 - T12 1 replicant on hot tier
+   * Rule 2: T0 - T0 (next day) 1 replicant on normal tier
+   *
+   * Servers: 1 server on normal tier (meaning there is no hot tier server for segments thatt match that rule)
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). The segments are not loaded before the test.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - Load 12 replicants in normal tier and emit 12 alerts due to no servers existing
+   * PRIMARY_ONLY - load 12 replicants in normal tier and emit 12 alerts due to no servers existing
+   * REPLICA_ONLY - Load 0 replicants and emit 0 alerts.
+   */
   @Test
   public void testRunTwoTiersTierDoesNotExist()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
-    emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall().times(12);
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
+      EasyMock.expectLastCall().times(12);
+    }
     EasyMock.replay(emitter);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -403,13 +511,24 @@ public class RunRulesTest
         .withEmitter(emitter)
         .build();
 
-    ruleRunner.run(params);
+    params = ruleRunner.run(params);
+    CoordinatorStats stats = params.getCoordinatorStats();
+
+
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(12L, stats.getTieredStat("assignedCount", "normal"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "normal"));
+    }
 
     exec.shutdown();
     EasyMock.verify(emitter);
     EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Tests that nothing is loaded when there are not matching LoadRules.
+   */
   @Test
   public void testRunRuleDoesNotExist()
   {
@@ -455,6 +574,22 @@ public class RunRulesTest
     EasyMock.verify(emitter, mockPeon);
   }
 
+  /**
+   * Tests a basic DropRule to ensure proper segments are dropped.
+   *
+   * Rule 1: T0 - T12 1 replicant on normal tier
+   * Rule 2: T0 - T0 (next day) DropRule
+   *
+   * Servers: 1 server on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). The segments are loaded on the test server.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 12 segments dropped
+   * PRIMARY_ONLY - 12 segments dropped
+   * REPLICA_ONLY - 12 segments dropped
+   */
   @Test
   public void testDropRemove()
   {
@@ -508,12 +643,99 @@ public class RunRulesTest
     EasyMock.verify(coordinator);
   }
 
+  /**
+   * Test that if RunRulesMode is LOAD_RULES_ONLY, rules that are not a LoadRule
+   * are not ran.
+   *
+   * Rule 1: T0 - T12 1 replicant on normal tier
+   * Rule 2: T0 - T0 (next day) DropRule
+   *
+   * Servers: 1 server on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). The segments are loaded on the test server.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 0 segments dropped because we are in LOAD_RULES_ONLY mode
+   * PRIMARY_ONLY - 12 segments dropped because we are in LOAD_RULES_ONLY mode
+   * REPLICA_ONLY - 12 segments dropped because we are in LOAD_RULES_ONLY mode
+   */
+  @Test
+  public void testNonLoadRuleIsNotRunInLoadRuleOnlyMode()
+  {
+    mockEmptyPeon();
+
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
+    EasyMock.replay(coordinator);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
+            new IntervalLoadRule(
+                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.of("normal", 1)
+            ),
+            new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidServer server = new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : usedSegments) {
+      server.addDataSegment(segment);
+    }
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("normal", new ServerHolder(server.toImmutableDruidServer(), mockPeon))
+        .build();
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategy(balancerStrategy)
+        .withRunRulesMode(RunRules.RunRulesMode.LOAD_RULE_ONLY)
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    // Despite matching DropRule, we delete 0 segments, because we are in LOAD_RULE_ONLY mode
+    Assert.assertEquals(0L, stats.getGlobalStat("deletedCount"));
+
+    exec.shutdown();
+    EasyMock.verify(coordinator);
+  }
+
+  /**
+   * Test that segment is properly dropped by LoadRule and segments are properly deleted by DropRule
+   *
+   * Rule 1: T0 - T12 1 replicant on normal tier
+   * Rule 2: T0 - T0 (next day) DropRule
+   *
+   * Servers: 2 servers on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). The T0-T1 segment is loaded on server1. All 24
+   * segments are loaded on server2
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 1 segment dropped and 12 segments deleted
+   * PRIMARY_ONLY - 0 segments dropped and 12 segments deleted
+   * REPLICA_ONLY - 1 segment dropped and 12 segments deleted
+   */
   @Test
   public void testDropTooManyInSameTier()
   {
     mockCoordinator();
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -563,21 +785,44 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("droppedCount", "normal"));
+    }
     Assert.assertEquals(12L, stats.getGlobalStat("deletedCount"));
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Test assign, drop, and delete functionality across tiers
+   *
+   * Rule 1: T0 - T12 1 replicant on hot tier
+   * Rule 2: T0 - T0 (next day) DropRule
+   *
+   * Servers: 1 server on hot tier, 1 serer on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). The T0-T1 segment is loaded on hot tier server. All 24
+   * segments are loaded on normal tier server
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 11 segments assigned to hot. 1 segment dropped from normal. 12 segments deleted from normal
+   * PRIMARY_ONLY - 0 segments assigned to hot. 0 segments dropped from normal. 12 segments deleted from normal
+   * REPLICA_ONLY - 11 segments assigned to hot. 1 segment dropped from normal. 12 segments deleted from normal
+   */
   @Test
   public void testDropTooManyInDifferentTiers()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+      mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -618,19 +863,45 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
-    Assert.assertEquals(12L, stats.getGlobalStat("deletedCount"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      Assert.assertEquals(11L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
+      Assert.assertEquals(12L, stats.getGlobalStat("deletedCount"));
+    } else if (loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(0L, stats.getTieredStat("droppedCount", "normal"));
+      Assert.assertEquals(12L, stats.getGlobalStat("deletedCount"));
+    }
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Test delete functionality across tiers
+   *
+   * Rule 1: T0 - T12 1 replicant on hot tier
+   * Rule 2: T0 - T0 (next day) DropRule
+   *
+   * Servers: 1 server on hot tier, 1 serer on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). All 24 segments are loaded on normal tier server
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 0 segments dropped. 12 segments deleted from normal.
+   * PRIMARY_ONLY - 0 segments dropped. 12 segments deleted from normal.
+   * REPLICA_ONLY - 0 segments dropped. 12 segments deleted from normal.
+   */
   @Test
   public void testDontDropInDifferentTiers()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    // We won't load any non-primary replicants in PRIMARY_ONLY Mode
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -665,18 +936,37 @@ public class RunRulesTest
         .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withLoadRuleMode(loadRuleMode)
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertTrue(stats.getTiers("droppedCount").isEmpty());
+    Assert.assertEquals(0L, stats.getTieredStat("droppedCount", "hot"));
+    Assert.assertEquals(0L, stats.getTieredStat("droppedCount", "normal"));
     Assert.assertEquals(12L, stats.getGlobalStat("deletedCount"));
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Test that a LoadRule will match for 1 used segment and that used segment will be dropped from the one server it
+   * lives on.
+   *
+   * Rule 1: T0 - T1 0 replicant on normal tier
+   *
+   * Servers: 3 servers on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). Server1 has segment from T0-T1 loaded. Server2
+   * has segment from T1-T2 loaded. Server3 has segment from T1-T2 loaded and segment from T2-T3 loaded.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 1 segment dropped.
+   * PRIMARY_ONLY - 0 segment dropped.
+   * REPLICA_ONLY - 1 segment dropped.
+   */
   @Test
   public void testDropServerActuallyServesSegment()
   {
@@ -702,14 +992,15 @@ public class RunRulesTest
     server3.addDataSegment(usedSegments.get(1));
     server3.addDataSegment(usedSegments.get(2));
 
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(anotherMockPeon.getLoadQueueSize()).andReturn(10L).atLeastOnce();
     EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(new HashSet<>()).anyTimes();
-
     EasyMock.replay(anotherMockPeon);
 
     DruidCluster druidCluster = DruidClusterBuilder
@@ -735,12 +1026,17 @@ public class RunRulesTest
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withLoadRuleMode(loadRuleMode)
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("droppedCount", "normal"));
+    }
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
@@ -748,15 +1044,31 @@ public class RunRulesTest
   }
 
   /**
-   * Nodes:
-   * hot - 2 replicants
+   * Test that replicant throttle works when it is hit applying LoadRule. Throttle is set to 24 and no new replicants
+   * should be assigned once that number is hit.
+   *
+   * Rule 1: T0 - T0 (next day) 2 replicants on hot tier
+   *
+   * Servers: 2 servers on hot tier.
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day), plus one overflow segment that also matches the
+   * load rule. Segments not loaded anywhere before test.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 48 segments assigned on first call to run(). 0 assigned on second call to run()
+   * PRIMARY_ONLY - 24 segments assigned on first call to run(). 0 assigned on second call to run()
+   * REPLICA_ONLY - 0 segments assigned on either call to run()
    */
   @Test
   public void testReplicantThrottle()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    // REPLICA_ONLY mode doesn't load any segments here.
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock
@@ -797,7 +1109,13 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(48L, stats.getTieredStat("assignedCount", "hot"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL)) {
+      Assert.assertEquals(48L, stats.getTieredStat("assignedCount", "hot"));
+    } else if (loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(24L, stats.getTieredStat("assignedCount", "hot"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+    }
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -822,11 +1140,16 @@ public class RunRulesTest
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withLoadRuleMode(loadRuleMode)
             .build()
     );
     stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(1L, stats.getTieredStat("assignedCount", "hot"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(1L, stats.getTieredStat("assignedCount", "hot"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+    }
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -835,9 +1158,19 @@ public class RunRulesTest
   }
 
   /**
-   * Nodes:
-   * hot - nothing loaded
-   * _default_tier - 1 segment loaded
+   * Test that replicant throttle works when it is hit applying LoadRule across tiers. Throttle is set to 7
+   *
+   * Rule 1: T0 - T0 (next day) 1 replicant on hot tier, 1 replicant on DruidServer.DEFAULT_TIER
+   *
+   * Servers: 1 server on hot tier, 1 server on DruidServer.DEFAULT_TIER
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). Segments not loaded anywhere before test
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 31 segments assigned (replication throttle hit)
+   * PRIMARY_ONLY - 24 segments assigned (No throttle because we only loaded primary)
+   * REPLICA_ONLY - 0 segments assigned
    */
   @Test
   public void testReplicantThrottleAcrossTiers()
@@ -855,8 +1188,10 @@ public class RunRulesTest
     coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock
@@ -910,8 +1245,16 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = runner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(24L, stats.getTieredStat("assignedCount", "hot"));
-    Assert.assertEquals(7L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL)) {
+      Assert.assertEquals(24L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(7L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    } else if (loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(24L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", "hot"));
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    }
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -919,12 +1262,30 @@ public class RunRulesTest
     exec.shutdown();
   }
 
+  /**
+   * Test that replicant throttle does not apply when dropping segments
+   *
+   * Rule 1: T0 - T0 (next day) 1 replicant on normal tier
+   *
+   * Servers: 2 segments on normal tier
+   *
+   * Segments: 24 hourly segments covering from T0 to T0 (next day). One extra overflow segment that also
+   * matches load rule too. All segments loaded on both servers
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 25 segments dropped
+   * PRIMARY_ONLY - 0 segments dropped
+   * REPLICA_ONLY - 25 segments dropped
+   */
   @Test
   public void testDropReplicantThrottle()
   {
     mockCoordinator();
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if( loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock
@@ -984,17 +1345,37 @@ public class RunRulesTest
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withLoadRuleMode(loadRuleMode)
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    // There is no throttling on drop
-    Assert.assertEquals(25L, stats.getTieredStat("droppedCount", "normal"));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      // There is no throttling on drop
+      Assert.assertEquals(25L, stats.getTieredStat("droppedCount", "normal"));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("droppedCount", "normal"));
+    }
     EasyMock.verify(mockPeon);
     exec.shutdown();
   }
 
+  /**
+   * Test basica segment assign using 2 segments that have same interval and different version
+   *
+   * Rule 1: load forever, 1 replicant
+   *
+   * Servers: 1 server
+   *
+   * Segments: 2 segments, each with same interval but different version. Not loaded before test.
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 1 replicant loaded
+   * PRIMARY_ONLY - 1 replicant loaded
+   * REPLICA_ONLY - 0 replicants loaded
+   */
   @Test
   public void testRulesRunOnNonOvershadowedSegmentsOnly()
   {
@@ -1025,8 +1406,10 @@ public class RunRulesTest
     usedSegments.add(v2);
 
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
+      EasyMock.expectLastCall().once();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -1063,13 +1446,18 @@ public class RunRulesTest
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
         .withBalancerStrategy(balancerStrategy)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .withLoadRuleMode(loadRuleMode)
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(1, stats.getTieredStat("assignedCount", "_default_tier"));
+    } else {
+      Assert.assertEquals(0, stats.getTieredStat("assignedCount", "_default_tier"));
+    }
     Assert.assertEquals(1, stats.getTiers("assignedCount").size());
-    Assert.assertEquals(1, stats.getTieredStat("assignedCount", "_default_tier"));
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -1082,10 +1470,19 @@ public class RunRulesTest
   }
 
   /**
-   * Tier - __default_tier
-   * Nodes - 2
-   * Replicants - 3
-   * Random balancer strategy should not assign anything and not get into loop as there are not enough nodes for replication
+   * Test that no assign happens if there is nowhere to assign it.
+   *
+   * Rule 1: LoadForever 3 replicants in DruidServer.DEFAULT_TIER
+   *
+   * Servers: 2 servers in DruidSerer.DEFAULT_TIER
+   *
+   * Segments: One segment in test datasource
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 0 replicants loaded
+   * PRIMARY_ONLY - 0 replicants loaded
+   * REPLICA_ONLY - 0 replicants loaded
    */
   @Test(timeout = 5000L)
   public void testTwoNodesOneTierThreeReplicantsRandomStrategyNotEnoughNodes()
@@ -1146,19 +1543,29 @@ public class RunRulesTest
     EasyMock.verify(mockPeon);
   }
 
-
   /**
-   * Tier - __default_tier
-   * Nodes - 1
-   * Replicants - 1
-   * Random balancer strategy should select the only node
+   * Test basic segment assign.
+   *
+   * Rule 1: LoadForever 1 replicants in DruidServer.DEFAULT_TIER
+   *
+   * Servers: 1 server in DruidSerer.DEFAULT_TIER
+   *
+   * Segments: One segment in test datasource
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 1 replicants loaded
+   * PRIMARY_ONLY - 1 replicants loaded
+   * REPLICA_ONLY - 0 replicants loaded
    */
   @Test(timeout = 5000L)
   public void testOneNodesOneTierOneReplicantRandomStrategyEnoughSpace()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    if (!loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+      mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+      EasyMock.expectLastCall().atLeastOnce();
+    }
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
@@ -1201,7 +1608,11 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.PRIMARY_ONLY)) {
+      Assert.assertEquals(1L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    } else {
+      Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    }
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -1209,10 +1620,19 @@ public class RunRulesTest
   }
 
   /**
-   * Tier - __default_tier
-   * Nodes - 1
-   * Replicants - 1
-   * Random balancer strategy should not assign anything as there is not enough space
+   * Test no assign because not enough space. random balancer.
+   *
+   * Rule 1: LoadForever 1 replicants in DruidServer.DEFAULT_TIER
+   *
+   * Servers: 1 server in DruidSerer.DEFAULT_TIER
+   *
+   * Segments: One segment in test datasource
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 0 replicants loaded
+   * PRIMARY_ONLY - 0 replicants loaded
+   * REPLICA_ONLY - 0 replicants loaded
    */
   @Test(timeout = 5000L)
   public void testOneNodesOneTierOneReplicantRandomStrategyNotEnoughSpace()
@@ -1261,7 +1681,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
     Assert.assertEquals(dataSegment.getSize() * numReplicants, stats.getTieredStat(LoadRule.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER));
-    Assert.assertTrue(stats.getTiers("assignedCount").isEmpty()); // since primary assignment failed
+    Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
@@ -1269,10 +1689,19 @@ public class RunRulesTest
   }
 
   /**
-   * Tier - __default_tier
-   * Nodes - 1
-   * Replicants - 1
-   * Cost balancer strategy should not assign anything as there is not enough space
+   * Test no assign because not enough space. cost balancer.
+   *
+   * Rule 1: LoadForever 1 replicants in DruidServer.DEFAULT_TIER
+   *
+   * Servers: 1 server in DruidSerer.DEFAULT_TIER
+   *
+   * Segments: One segment in test datasource
+   *
+   * Expected Results For Each LoadRuleMode:
+   *
+   * ALL - 0 replicants loaded
+   * PRIMARY_ONLY - 0 replicants loaded
+   * REPLICA_ONLY - 0 replicants loaded
    */
   @Test
   public void testOneNodesOneTierOneReplicantCostBalancerStrategyNotEnoughSpace()
@@ -1322,7 +1751,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
     Assert.assertEquals(dataSegment.getSize() * numReplicants, stats.getTieredStat(LoadRule.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER));
-    Assert.assertTrue(stats.getTiers("assignedCount").isEmpty()); // since primary assignment should fail
+    Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
