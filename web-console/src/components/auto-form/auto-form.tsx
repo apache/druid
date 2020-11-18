@@ -17,6 +17,7 @@
  */
 
 import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils';
@@ -54,6 +55,7 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  hideInMore?: Functor<M, boolean>;
   adjustment?: (model: M) => M;
   issueWithValue?: (value: any) => string | undefined;
 }
@@ -68,7 +70,14 @@ export interface AutoFormProps<M> {
   globalAdjustment?: (model: M) => M;
 }
 
-export class AutoForm<T extends Record<string, any>> extends React.PureComponent<AutoFormProps<T>> {
+export interface AutoFormState {
+  showMore: boolean;
+}
+
+export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
+  AutoFormProps<T>,
+  AutoFormState
+> {
   static REQUIRED_INTENT = Intent.PRIMARY;
 
   static makeLabelName(label: string): string {
@@ -138,7 +147,9 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   constructor(props: AutoFormProps<T>) {
     super(props);
-    this.state = {};
+    this.state = {
+      showMore: false,
+    };
   }
 
   private fieldChange = (field: Field<T>, newValue: any) => {
@@ -391,7 +402,6 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderField = (field: Field<T>) => {
     const { model } = this.props;
     if (!model) return;
-    if (!AutoForm.evaluateFunctor(field.defined, model, true)) return;
 
     const label = field.label || AutoForm.makeLabelName(field.name);
     return (
@@ -415,12 +425,46 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
+  renderMoreOrLess() {
+    const { showMore } = this.state;
+
+    return (
+      <FormGroup key="more-or-less">
+        <Button
+          text={showMore ? 'Show less' : 'Show more'}
+          rightIcon={showMore ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
+          minimal
+          fill
+          onClick={() => {
+            this.setState(({ showMore }) => ({ showMore: !showMore }));
+          }}
+        />
+      </FormGroup>
+    );
+  }
+
   render(): JSX.Element {
     const { fields, model, showCustom } = this.props;
+    const { showMore } = this.state;
+
+    let shouldShowMore = false;
+    const shownFields = fields.filter(field => {
+      if (AutoForm.evaluateFunctor(field.defined, model, true)) {
+        if (AutoForm.evaluateFunctor(field.hideInMore, model, false)) {
+          shouldShowMore = true;
+          return showMore;
+        }
+        return true;
+      } else {
+        return false;
+      }
+    });
+
     return (
       <div className="auto-form">
-        {model && fields.map(this.renderField)}
+        {model && shownFields.map(this.renderField)}
         {model && showCustom && showCustom(model) && this.renderCustom()}
+        {shouldShowMore && this.renderMoreOrLess()}
       </div>
     );
   }

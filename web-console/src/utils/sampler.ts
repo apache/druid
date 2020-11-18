@@ -139,33 +139,41 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   return sampleSpec;
 }
 
-export function headerFromSampleResponse(
-  sampleResponse: SampleResponse,
-  ignoreColumn?: string,
-  columnOrder?: string[],
-): string[] {
+export interface HeaderFromSampleResponseOptions {
+  sampleResponse: SampleResponse;
+  ignoreTimeColumn?: boolean;
+  columnOrder?: string[];
+  suffixColumnOrder?: string[];
+}
+
+export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
+  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder } = options;
+
   let columns = sortWithPrefixSuffix(
     dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
     columnOrder || ['__time'],
-    [],
+    suffixColumnOrder || [],
     alphanumericCompare,
   );
 
-  if (ignoreColumn) {
-    columns = columns.filter(c => c !== ignoreColumn);
+  if (ignoreTimeColumn) {
+    columns = columns.filter(c => c !== '__time');
   }
 
   return columns;
 }
 
+export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSampleResponseOptions {
+  parsedOnly?: boolean;
+}
+
 export function headerAndRowsFromSampleResponse(
-  sampleResponse: SampleResponse,
-  ignoreColumn?: string,
-  columnOrder?: string[],
-  parsedOnly = false,
+  options: HeaderAndRowsFromSampleResponseOptions,
 ): HeaderAndRows {
+  const { sampleResponse, parsedOnly } = options;
+
   return {
-    header: headerFromSampleResponse(sampleResponse, ignoreColumn, columnOrder),
+    header: headerFromSampleResponse(options),
     rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
   };
 }
@@ -446,11 +454,11 @@ export async function sampleForTransform(
     );
 
     specialDimensionSpec.dimensions = dedupe(
-      headerFromSampleResponse(
-        sampleResponseHack,
-        '__time',
-        ['__time'].concat(inputFormatColumns),
-      ).concat(transforms.map(t => t.name)),
+      headerFromSampleResponse({
+        sampleResponse: sampleResponseHack,
+        ignoreTimeColumn: true,
+        columnOrder: ['__time'].concat(inputFormatColumns),
+      }).concat(transforms.map(t => t.name)),
     );
   }
 
@@ -505,11 +513,11 @@ export async function sampleForFilter(
     );
 
     specialDimensionSpec.dimensions = dedupe(
-      headerFromSampleResponse(
-        sampleResponseHack,
-        '__time',
-        ['__time'].concat(inputFormatColumns),
-      ).concat(transforms.map(t => t.name)),
+      headerFromSampleResponse({
+        sampleResponse: sampleResponseHack,
+        ignoreTimeColumn: true,
+        columnOrder: ['__time'].concat(inputFormatColumns),
+      }).concat(transforms.map(t => t.name)),
     );
   }
 

@@ -1481,7 +1481,7 @@ You can optionally only configure caching to be enabled on the Historical by set
 |`druid.historical.cache.useCache`|true, false|Enable the cache on the Historical.|false|
 |`druid.historical.cache.populateCache`|true, false|Populate the cache on the Historical.|false|
 |`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
-|`druid.historical.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
+|`druid.historical.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 

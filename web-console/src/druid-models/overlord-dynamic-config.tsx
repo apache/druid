@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
-export * from './compaction-config';
-export * from './compaction-status';
-export * from './lookup-spec';
-export * from './time';
-export * from './timestamp-spec';
-export * from './transform-spec';
-export * from './input-source';
-export * from './input-format';
-export * from './flatten-spec';
-export * from './filter';
-export * from './dimension-spec';
-export * from './metric-spec';
-export * from './ingestion-spec';
-export * from './coordinator-dynamic-config';
-export * from './overlord-dynamic-config';
+import { Field } from '../components';
+
+export interface OverlordDynamicConfig {
+  selectStrategy?: Record<string, any>;
+  autoScaler?: Record<string, any>;
+}
+
+export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
+  {
+    name: 'selectStrategy',
+    type: 'json',
+  },
+  {
+    name: 'autoScaler',
+    type: 'json',
+  },
+];
