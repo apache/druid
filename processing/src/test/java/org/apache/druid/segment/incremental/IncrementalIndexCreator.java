@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -131,7 +132,7 @@ public class IncrementalIndexCreator implements Closeable
   public static AppendableIndexSpec parseIndexType(String indexType) throws JsonProcessingException
   {
     return JSON_MAPPER.readValue(
-        String.format("{\"type\": \"%s\"}", indexType),
+        String.format(Locale.ENGLISH, "{\"type\": \"%s\"}", indexType),
         AppendableIndexSpec.class
     );
   }
