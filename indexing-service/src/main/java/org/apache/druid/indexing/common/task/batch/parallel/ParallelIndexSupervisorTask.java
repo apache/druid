@@ -567,8 +567,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         partitionsSpec.getNumShards() == null
         || ingestionSchemaToUse.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
     if (needsInputSampling) {
-      // 0. need to determine numShards by scanning the data
-      LOG.info("numShards is unspecified, beginning %s phase.", PartialDimensionCardinalityTask.TYPE);
+      // 0. need to determine intervals and numShards by scanning the data
+      LOG.info("Needs to determine intervals or numShards, beginning %s phase.", PartialDimensionCardinalityTask.TYPE);
       ParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport> cardinalityRunner =
           createRunner(
               toolbox,
