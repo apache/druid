@@ -149,7 +149,7 @@ then
 fi
 
 DRUID_DIRS_TO_CREATE=${DRUID_DIRS_TO_CREATE-'var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache'}
-if [ "X${DRUID_DIRS_TO_CREATE}" != "X" ]
+if [ -n "${DRUID_DIRS_TO_CREATE}" ]
 then
     mkdir -p ${DRUID_DIRS_TO_CREATE}
 fi

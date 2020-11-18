@@ -25,15 +25,13 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
-RUN mvn -B -ff -q dependency:go-offline \
-      install \
-      -Pdist,bundle-contrib-exts \
-      -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true
+#RUN mvn -B -ff -q dependency:go-offline \
+#      install \
+#      -Pdist,bundle-contrib-exts \
+#      -Pskip-static-checks,skip-tests \
+#      -Dmaven.javadoc.skip=true
 
-RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
-      -Dexpression=project.version -DforceStdout=true \
-    ) \
+RUN VERSION=0.21.0-SNAPSHOT \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
  && ln -s /opt/apache-druid-${VERSION} /opt/druid
 
