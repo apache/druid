@@ -1282,7 +1282,7 @@ public class RunRulesTest
   public void testDropReplicantThrottle()
   {
     mockCoordinator();
-    if( loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
+    if (loadRuleMode.equals(LoadRule.LoadRuleMode.ALL) || loadRuleMode.equals(LoadRule.LoadRuleMode.REPLICA_ONLY)) {
       mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
       EasyMock.expectLastCall().atLeastOnce();
     }
