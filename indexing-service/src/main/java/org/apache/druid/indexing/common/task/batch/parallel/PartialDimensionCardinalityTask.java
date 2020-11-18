@@ -164,6 +164,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
     );
+    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     try (
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
@@ -171,7 +172,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
             dataSchema,
             inputSource,
             inputFormat,
-            Objects::nonNull,
+            determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
             parseExceptionHandler
         );
