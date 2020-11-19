@@ -2446,9 +2446,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     Collection workItems = new ArrayList<>();
     workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
 
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
