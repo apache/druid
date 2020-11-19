@@ -12155,6 +12155,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingAggregatorWithPostAggregator() throws Exception
   {
+    List<Object[]> resultList;
+    if (NullHandling.sqlCompatible()) {
+      resultList = ImmutableList.of(
+          new Object[]{NULL_STRING, 2L, 1L, "INDIVIDUAL"},
+          new Object[]{"", 1L, 1L, "INDIVIDUAL"},
+          new Object[]{"a", 2L, 1L, "INDIVIDUAL"},
+          new Object[]{"abc", 1L, 1L, "INDIVIDUAL"},
+          new Object[]{NULL_STRING, 6L, 0L, "ALL"}
+      );
+    } else {
+      resultList = ImmutableList.of(
+          new Object[]{"", 3L, 1L, "INDIVIDUAL"},
+          new Object[]{"a", 2L, 1L, "INDIVIDUAL"},
+          new Object[]{"abc", 1L, 1L, "INDIVIDUAL"},
+          new Object[]{NULL_STRING, 6L, 0L, "ALL"}
+      );
+    }
     testQuery(
         "SELECT dim2, SUM(cnt), GROUPING(dim2), \n"
         + "CASE WHEN GROUPING(dim2) = 0 THEN 'ALL' ELSE 'INDIVIDUAL' END\n"
@@ -12189,12 +12206,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{"", 3L, 1L, "INDIVIDUAL"},
-            new Object[]{"a", 2L, 1L, "INDIVIDUAL"},
-            new Object[]{"abc", 1L, 1L, "INDIVIDUAL"},
-            new Object[]{NULL_STRING, 6L, 0L, "ALL"}
-        )
+        resultList
     );
   }
 
