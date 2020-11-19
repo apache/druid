@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -60,19 +60,25 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static PeriodGranularity getGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
+  private static Period getPeriod(final List<Expr> args, final Expr.ObjectBinding bindings)
   {
-    return ExprUtils.toPeriodGranularity(
-        args.get(1),
-        null,
-        args.size() > 3 ? args.get(3) : null,
-        bindings
-    );
+    return new Period(args.get(1).eval(bindings).asString());
   }
 
   private static int getStep(final List<Expr> args, final Expr.ObjectBinding bindings)
   {
     return args.get(2).eval(bindings).asInt();
+  }
+
+  private static ISOChronology getTimeZone(final List<Expr> args, final Expr.ObjectBinding bindings)
+  {
+    final Expr timeZoneArg = args.size() > 3 ? args.get(3) : null;
+    if (timeZoneArg == null) {
+      return ISOChronology.getInstance(null);
+    } else {
+      final String zone = timeZoneArg.eval(bindings).asString();
+      return ISOChronology.getInstance(zone != null ? DateTimes.inferTzFromString(zone) : null);
+    }
   }
 
   private static class TimestampShiftExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
@@ -84,9 +90,8 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     TimestampShiftExpr(final List<Expr> args)
     {
       super(FN_NAME, args);
-      final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
-      period = granularity.getPeriod();
-      chronology = ISOChronology.getInstance(granularity.getTimeZone());
+      period = getPeriod(args, ExprUtils.nilBindings());
+      chronology = getTimeZone(args, ExprUtils.nilBindings());
       step = getStep(args, ExprUtils.nilBindings());
     }
 
@@ -123,9 +128,8 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final PeriodGranularity granularity = getGranularity(args, bindings);
-      final Period period = granularity.getPeriod();
-      final Chronology chronology = ISOChronology.getInstance(granularity.getTimeZone());
+      final Period period = getPeriod(args, bindings);
+      final Chronology chronology = getTimeZone(args, bindings);
       final int step = getStep(args, bindings);
       return ExprEval.of(chronology.add(period, args.get(0).eval(bindings).asLong(), step));
     }

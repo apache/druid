@@ -1475,7 +1475,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),1,'UTC')"
+            "timestamp_shift(\"t\",'P13M',1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
@@ -1521,7 +1521,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),-1,'UTC')"
+            "timestamp_shift(\"t\",'P13M',-1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
