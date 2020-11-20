@@ -108,6 +108,7 @@ public class QueryResource implements QueryCountStatsProvider
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
+  private final AtomicLong timedOutQueryCount = new AtomicLong();
 
   @Inject
   public QueryResource(
@@ -332,7 +333,7 @@ public class QueryResource implements QueryCountStatsProvider
       return ioReaderWriter.gotError(e);
     }
     catch (QueryTimeoutException timeout) {
-      interruptedQueryCount.incrementAndGet();
+      timedOutQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(timeout, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotTimeout(timeout);
     }
@@ -513,5 +514,11 @@ public class QueryResource implements QueryCountStatsProvider
   public long getInterruptedQueryCount()
   {
     return interruptedQueryCount.get();
+  }
+
+  @Override
+  public long getTimedOutQueryCount()
+  {
+    return timedOutQueryCount.get();
   }
 }

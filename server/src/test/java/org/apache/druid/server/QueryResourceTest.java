@@ -684,6 +684,8 @@ public class QueryResourceTest
     }
     Assert.assertEquals("Query Timed Out!", ex.getMessage());
     Assert.assertEquals(QueryTimeoutException.ERROR_CODE, ex.getErrorCode());
+    Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
+
   }
 
   @Test(timeout = 60_000L)
