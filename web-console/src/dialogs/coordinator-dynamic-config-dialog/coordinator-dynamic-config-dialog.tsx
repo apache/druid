@@ -18,7 +18,6 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React, { useState } from 'react';
 
 import { SnitchDialog } from '..';
@@ -32,7 +31,7 @@ import {
 import { COORDINATOR_DYNAMIC_CONFIG_FIELDS, CoordinatorDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
-import { AppToaster } from '../../singletons/toaster';
+import { Api, AppToaster } from '../../singletons';
 import { getDruidErrorMessage } from '../../utils';
 
 import './coordinator-dynamic-config-dialog.scss';
@@ -50,7 +49,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
-      const historyResp = await axios(`/druid/coordinator/v1/config/history?count=100`);
+      const historyResp = await Api.instance.get(`/druid/coordinator/v1/config/history?count=100`);
       return historyResp.data;
     },
     initQuery: null,
@@ -59,7 +58,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
   useQueryManager<null, Record<string, any>>({
     processQuery: async () => {
       try {
-        const configResp = await axios.get('/druid/coordinator/v1/config');
+        const configResp = await Api.instance.get('/druid/coordinator/v1/config');
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
@@ -77,7 +76,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   async function saveConfig(comment: string) {
     try {
-      await axios.post('/druid/coordinator/v1/config', dynamicConfig, {
+      await Api.instance.post('/druid/coordinator/v1/config', dynamicConfig, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,

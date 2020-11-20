@@ -16,26 +16,6 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
-import React from 'react';
-
-import { Capabilities } from '../../utils';
-
-import { IngestionView } from './ingestion-view';
-
-describe('tasks view', () => {
-  it('matches snapshot', () => {
-    const taskView = shallow(
-      <IngestionView
-        openDialog={'test'}
-        taskGroupId={'test'}
-        datasourceId={'datasource'}
-        goToDatasource={() => {}}
-        goToQuery={() => {}}
-        goToLoadData={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(taskView).toMatchSnapshot();
-  });
-});
+export * from './api';
+export * from './toaster';
+export * from './url-baser';

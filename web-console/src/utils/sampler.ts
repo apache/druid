@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-
 import {
   DimensionsSpec,
   getSpecType,
@@ -34,6 +32,7 @@ import {
   TransformSpec,
   upgradeSpec,
 } from '../druid-models';
+import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import {
@@ -181,7 +180,7 @@ export function headerAndRowsFromSampleResponse(
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
-    statusResp = await axios.get(`/proxy/overlord/status`);
+    statusResp = await Api.instance.get(`/proxy/overlord/status`);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -197,7 +196,7 @@ export async function postToSampler(
 
   let sampleResp: any;
   try {
-    sampleResp = await axios.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

@@ -18,7 +18,6 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
 import ReactTable from 'react-table';
@@ -35,6 +34,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { Api } from '../../singletons';
 import {
   addFilter,
   Capabilities,
@@ -182,7 +182,7 @@ FROM sys.servers
 ORDER BY "rank" DESC, "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
-    const allServiceResp = await axios.get('/druid/coordinator/v1/servers?simple');
+    const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
     const allServices = allServiceResp.data;
     return allServices.map((s: any) => {
       return {
@@ -221,7 +221,9 @@ ORDER BY "rank" DESC, "service" DESC`;
         }
 
         if (capabilities.hasCoordinatorAccess()) {
-          const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
+          const loadQueueResponse = await Api.instance.get(
+            '/druid/coordinator/v1/loadqueue?simple',
+          );
           const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
@@ -235,7 +237,7 @@ ORDER BY "rank" DESC, "service" DESC`;
         if (capabilities.hasOverlordAccess()) {
           let middleManagers: MiddleManagerQueryResultRow[];
           try {
-            const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
+            const middleManagerResponse = await Api.instance.get('/druid/indexer/v1/workers');
             middleManagers = middleManagerResponse.data;
           } catch (e) {
             if (
@@ -589,7 +591,7 @@ ORDER BY "rank" DESC, "service" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.instance.post(
             `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
             {},
           );
@@ -618,7 +620,7 @@ ORDER BY "rank" DESC, "service" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.instance.post(
             `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
             {},
           );

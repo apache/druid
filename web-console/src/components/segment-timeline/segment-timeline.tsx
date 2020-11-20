@@ -17,12 +17,12 @@
  */
 
 import { FormGroup, HTMLSelect, Radio, RadioGroup } from '@blueprintjs/core';
-import axios from 'axios';
 import { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Api } from '../../singletons';
+import { Capabilities } from '../../utils';
 import { formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils/index';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
 import { Loader } from '../loader/loader';
@@ -266,10 +266,10 @@ ORDER BY "start" DESC`;
             before.setMonth(before.getMonth() - timeSpan);
             const beforeIso = before.toISOString();
 
-            datasources = (await axios.get(`/druid/coordinator/v1/datasources`)).data;
+            datasources = (await Api.instance.get(`/druid/coordinator/v1/datasources`)).data;
             intervals = (await Promise.all(
               datasources.map(async datasource => {
-                const intervalMap = (await axios.get(
+                const intervalMap = (await Api.instance.get(
                   `/druid/coordinator/v1/datasources/${datasource}/intervals?simple`,
                 )).data;
 
