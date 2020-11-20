@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -34,7 +35,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   private static final Logger log = new Logger(DruidProcessingConfig.class);
 
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
-  public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
+  public static final HumanReadableBytes DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = HumanReadableBytes.valueOf(-1);
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
 
@@ -43,14 +44,17 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
   public HumanReadableBytes intermediateComputeSizeBytesConfigured()
   {
-    return HumanReadableBytes.valueOf(DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
+    return DEFAULT_PROCESSING_BUFFER_SIZE_BYTES;
   }
 
   public int intermediateComputeSizeBytes()
   {
-    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured().getBytesInInt();
-    if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
-      return sizeBytesConfigured;
+    HumanReadableBytes sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
+    if (!DEFAULT_PROCESSING_BUFFER_SIZE_BYTES.equals(sizeBytesConfigured)) {
+      if (sizeBytesConfigured.getBytes() > Integer.MAX_VALUE) {
+        throw new IAE("druid.processing.buffer.sizeBytes must be less than 2GiB");
+      }
+      return sizeBytesConfigured.getBytesInInt();
     } else if (computedBufferSizeBytes.get() != null) {
       return computedBufferSizeBytes.get();
     }
