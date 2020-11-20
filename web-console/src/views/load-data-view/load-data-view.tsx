@@ -120,8 +120,7 @@ import {
   upgradeSpec,
 } from '../../druid-models';
 import { getLink } from '../../links';
-import { Api, AppToaster } from '../../singletons';
-import { UrlBaser } from '../../singletons';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
   deepDelete,
   deepGet,

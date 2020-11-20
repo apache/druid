@@ -21,8 +21,7 @@ import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { Loader } from '../../components';
-import { Api, AppToaster } from '../../singletons';
-import { UrlBaser } from '../../singletons';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { QueryManager, QueryState } from '../../utils';
 
 import './show-log.scss';

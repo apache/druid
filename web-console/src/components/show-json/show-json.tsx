@@ -21,8 +21,7 @@ import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
-import { Api, AppToaster } from '../../singletons';
-import { UrlBaser } from '../../singletons';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { downloadFile } from '../../utils';
 import { Loader } from '../loader/loader';
 
