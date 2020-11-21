@@ -4100,7 +4100,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20200927-1.30.10
+version: v1-rev20190523-1.26.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4110,7 +4110,7 @@ name: Google Compute Engine API
 license_category: binary
 module: extensions/gce-extensions
 license_name: Apache License version 2.0
-version: v1-rev20201005-1.30.10
+version: v1-rev20190607-1.26.0
 libraries:
   - com.google.apis: google-api-services-compute
 
@@ -4130,7 +4130,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.30.10
+version: 1.26.0
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4140,7 +4140,7 @@ name: Google HTTP Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.37.0
+version: 1.26.0
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
@@ -4151,7 +4151,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.31.0
+version: 1.22.0
 libraries:
   - com.google.oauth-client: google-oauth-client
 
