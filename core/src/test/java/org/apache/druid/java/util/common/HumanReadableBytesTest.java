@@ -360,6 +360,14 @@ public class HumanReadableBytesTest
     Assert.assertEquals(bytes, deserialized);
   }
 
+  @Test
+  public void testGetInt()
+  {
+    expectedException.expectMessage("Number [2147483648] exceeds range of Integer.MAX_VALUE");
+    HumanReadableBytes bytes = new HumanReadableBytes("2GiB");
+    bytes.getBytesInInt();
+  }
+
   static class TestBytesRange
   {
     @HumanReadableBytesRange(min = 0, max = 5)
