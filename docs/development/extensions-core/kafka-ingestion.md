@@ -37,6 +37,7 @@ This service is provided in the `druid-kafka-indexing-service` core Apache Druid
 > Kafka consumer that Druid uses incompatible with older brokers. Ensure that your Kafka brokers are version 0.11.x or
 > better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
 > In addition, if you need Druid to consume lower version Kafka which is non-transactional like `0.10.x.x`, you could set `consumeTransactionally ` false in `KafkaSupervisorIOConfig`.
+> And make sure the offsets are sequential, because thers is no offset gap check in Druid anymore.
 
 
 ## Tutorial

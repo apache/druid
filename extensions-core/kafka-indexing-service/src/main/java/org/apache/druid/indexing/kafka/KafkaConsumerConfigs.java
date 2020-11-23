@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +31,7 @@ import java.util.Map;
  */
 public class KafkaConsumerConfigs
 {
+  private static final Logger log = new Logger(KafkaConsumerConfigs.class);
 
   public static Map<String, Object> getConsumerProperties(Boolean consumeTransactionally)
   {
@@ -39,7 +41,10 @@ public class KafkaConsumerConfigs
     props.put("auto.offset.reset", "none");
     props.put("enable.auto.commit", "false");
     if (consumeTransactionally) {
+      log.info("Set isolation.level read_committed, Druid Kafka Consumer will consume non-transactional and COMMITTED transactional records.");
       props.put("isolation.level", "read_committed");
+    } else {
+      log.info("Ignore isolation.level, Druid Kafka Consumer will consume all records.");
     }
     return props;
   }
