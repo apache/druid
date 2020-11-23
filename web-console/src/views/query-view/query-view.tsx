@@ -426,9 +426,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         hoverOpenDelay={800}
       >
         <Switch
-          className="smart-query-limit"
+          className="auto-limit"
           checked={Boolean(wrapQueryLimit)}
-          label="Smart query limit"
+          label="Auto limit"
           onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
         />
       </Tooltip>
@@ -459,6 +459,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       }
     }
 
+    const someQueryResult = queryResultState.getSomeData();
     const runeMode = QueryView.isJsonLike(queryString);
     return (
       <SplitterLayout
@@ -501,10 +502,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           </div>
         </div>
         <div className="output-pane">
-          {queryResult && (
+          {someQueryResult && (
             <QueryOutput
               runeMode={runeMode}
-              queryResult={queryResult}
+              queryResult={someQueryResult}
               onQueryChange={this.handleQueryChange}
             />
           )}
@@ -514,6 +515,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               moveCursorTo={position => {
                 this.moveToPosition(position);
               }}
+              queryString={queryString}
+              onQueryStringChange={this.handleQueryStringChange}
             />
           )}
           {queryResultState.loading && (

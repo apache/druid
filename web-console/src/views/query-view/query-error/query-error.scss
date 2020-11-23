@@ -16,12 +16,19 @@
  * limitations under the License.
  */
 
+@import '../../../blueprint-overrides/common/colors';
+
 .query-error {
-  background: #232d35;
   padding: 20px 22px;
 
-  .cursor-link {
-    color: #2aabd2;
+  .bp3-dark & {
+    background: $dark-gray3;
+  }
+
+  .cursor-link,
+  .more-or-less,
+  .suggestion {
+    color: $blue4;
     text-decoration: underline;
     cursor: pointer;
   }

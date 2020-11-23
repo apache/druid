@@ -18,7 +18,7 @@
 
 import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { pluralIfNeeded, queryDruidSql } from '../../utils';
-import { deepGet } from '../../utils/object-change';
+import { deepGet, pluralIfNeeded, queryDruidSql } from '../../utils/object-change';
 import { postToSampler } from '../../utils/sampler';
 
 export interface CheckControls {

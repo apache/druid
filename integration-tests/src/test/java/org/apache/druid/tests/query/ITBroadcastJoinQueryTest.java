@@ -95,8 +95,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
                   replaceJoinTemplate(
                       getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_RESOURCE),
                       BROADCAST_JOIN_DATASOURCE
-                  ),
-                  1
+                  )
               );
               return true;
             }
@@ -110,8 +109,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       // now do some queries
       queryHelper.testQueriesFromString(
           queryHelper.getQueryURL(config.getRouterUrl()),
-          replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE),
-          1
+          replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE)
       );
     }
     finally {

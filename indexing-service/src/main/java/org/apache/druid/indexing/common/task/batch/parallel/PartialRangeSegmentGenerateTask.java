@@ -31,7 +31,7 @@ import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
-import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
+import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;

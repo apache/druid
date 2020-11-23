@@ -22,7 +22,9 @@ import {
   formatBytesCompact,
   formatInteger,
   formatMegabytes,
+  formatMillions,
   formatPercent,
+  moveElement,
   sortWithPrefixSuffix,
   sqlQueryCustomTableFilter,
   swapElements,
@@ -54,20 +56,26 @@ describe('general', () => {
   });
 
   describe('sqlQueryCustomTableFilter', () => {
-    it('works', () => {
+    it('works with contains', () => {
       expect(
-        sqlQueryCustomTableFilter({
-          id: 'datasource',
-          value: `hello`,
-        }),
-      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('%hello%')"`);
+        String(
+          sqlQueryCustomTableFilter({
+            id: 'datasource',
+            value: `Hello`,
+          }),
+        ),
+      ).toEqual(`LOWER("datasource") LIKE '%hello%'`);
+    });
 
+    it('works with exact', () => {
       expect(
-        sqlQueryCustomTableFilter({
-          id: 'datasource',
-          value: `"hello"`,
-        }),
-      ).toMatchInlineSnapshot(`"\\"datasource\\" = 'hello'"`);
+        String(
+          sqlQueryCustomTableFilter({
+            id: 'datasource',
+            value: `"hello"`,
+          }),
+        ),
+      ).toEqual(`"datasource" = 'hello'`);
     });
   });
 
@@ -86,6 +94,15 @@ describe('general', () => {
     it('works downward', () => {
       expect(swapElements(array, 2, 3)).toEqual(['a', 'b', 'd', 'c', 'e']);
       expect(swapElements(array, 2, 4)).toEqual(['a', 'b', 'e', 'd', 'c']);
+    });
+  });
+
+  describe('moveElement', () => {
+    it('moves items in an array', () => {
+      expect(moveElement(['a', 'b', 'c'], 2, 0)).toEqual(['c', 'a', 'b']);
+      expect(moveElement(['a', 'b', 'c'], 1, 1)).toEqual(['a', 'b', 'c']);
+      expect(moveElement(['F', 'B', 'W', 'B'], 2, 1)).toEqual(['F', 'W', 'B', 'B']);
+      expect(moveElement([1, 2, 3], 2, 1)).toEqual([1, 3, 2]);
     });
   });
 
@@ -116,6 +133,15 @@ describe('general', () => {
   describe('formatPercent', () => {
     it('works', () => {
       expect(formatPercent(2 / 3)).toEqual('66.67%');
+    });
+  });
+
+  describe('formatMillions', () => {
+    it('works', () => {
+      expect(formatMillions(1e6)).toEqual('1.000 M');
+      expect(formatMillions(1e6 + 1)).toEqual('1.000 M');
+      expect(formatMillions(1234567)).toEqual('1.235 M');
+      expect(formatMillions(345.2)).toEqual('345');
     });
   });
 });

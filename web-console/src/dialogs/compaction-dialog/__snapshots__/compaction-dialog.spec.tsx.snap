@@ -80,11 +80,32 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -93,6 +114,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -156,14 +178,14 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
@@ -298,11 +320,32 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -311,6 +354,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -374,14 +418,14 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
@@ -516,11 +560,32 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -529,6 +594,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -592,14 +658,14 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
@@ -734,11 +800,32 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
+            </React.Fragment>,
+            "label": "Target rows per segment",
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
             </React.Fragment>,
             "label": "Num shards",
             "name": "tuningConfig.partitionsSpec.numShards",
             "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
@@ -747,6 +834,7 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             </p>,
             "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -810,14 +898,14 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "type": "number",
           },
           Object {
-            "defaultValue": 1,
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
+            "label": "Total num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {

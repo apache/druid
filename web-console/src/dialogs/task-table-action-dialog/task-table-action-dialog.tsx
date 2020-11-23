@@ -20,8 +20,8 @@ import React, { useState } from 'react';
 
 import { ShowJson, ShowLog } from '../../components';
 import { API_ENDPOINTS } from '../../singletons/api';
+import { deepGet } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface TaskTableActionDialogProps {

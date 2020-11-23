@@ -157,7 +157,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </div>
 
       <Collapse isOpen={isOpen}>
-        <Card>
+        <Card elevation={2}>
           <FormGroup>
             <ControlGroup>
               <HTMLSelect

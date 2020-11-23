@@ -83,6 +83,17 @@ export function deepSet<T extends Record<string, any>>(value: T, path: string, x
   return valueCopy;
 }
 
+export function deepSetMulti<T extends Record<string, any>>(
+  value: T,
+  changes: Record<string, any>,
+): T {
+  let newValue = value;
+  for (const k in changes) {
+    newValue = deepSet(newValue, k, changes[k]);
+  }
+  return newValue;
+}
+
 export function deepDelete<T extends Record<string, any>>(value: T, path: string): T {
   const valueCopy = shallowCopy(value);
   const parts = parsePath(path);

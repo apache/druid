@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -199,8 +200,54 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       String met1
   )
   {
+    return jb(false, timestamp, dim1, dim2, dimLong, dimFloat, met1);
+  }
+
+  protected static byte[] jb(boolean prettyPrint,
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return StringUtils.toUtf8(toJsonString(prettyPrint,
+                                           timestamp,
+                                           dim1,
+                                           dim2,
+                                           dimLong,
+                                           dimFloat,
+                                           met1));
+  }
+
+  protected static List<byte[]> jbl(
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return Collections.singletonList(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1));
+  }
+
+  protected static String toJsonString(boolean prettyPrint,
+                             String timestamp,
+                             String dim1,
+                             String dim2,
+                             String dimLong,
+                             String dimFloat,
+                             String met1
+  )
+  {
     try {
-      return new ObjectMapper().writeValueAsBytes(
+      ObjectMapper mapper = new ObjectMapper();
+      if (prettyPrint) {
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+      }
+      return mapper.writeValueAsString(
           ImmutableMap.builder()
                       .put("timestamp", timestamp)
                       .put("dim1", dim1)
@@ -214,18 +261,6 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  protected static List<byte[]> jbl(
-      String timestamp,
-      String dim1,
-      String dim2,
-      String dimLong,
-      String dimFloat,
-      String met1
-  )
-  {
-    return Collections.singletonList(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1));
   }
 
   protected File getSegmentDirectory()

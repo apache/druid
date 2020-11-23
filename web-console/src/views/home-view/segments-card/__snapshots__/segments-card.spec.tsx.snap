@@ -6,7 +6,7 @@ exports[`segments card matches snapshot 1`] = `
   href="#segments"
 >
   <div
-    class="bp3-card bp3-interactive bp3-elevation-0"
+    class="bp3-card bp3-interactive bp3-elevation-1"
   >
     <h5
       class="bp3-heading"

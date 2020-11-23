@@ -57,7 +57,8 @@ Available Metrics
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|number of bytes returned in SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
@@ -74,7 +75,8 @@ Available Metrics
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Real-time
 
@@ -86,7 +88,8 @@ Available Metrics
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Jetty
 
@@ -181,7 +184,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
 
-### Indexing service
+## Indexing service
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -201,6 +204,16 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
 |`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
 |`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
+
+## Shuffle metrics (Native parallel task)
+
+The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`
+See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more details.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/shuffle/bytes`|Number of bytes shuffled per emission period.|supervisorTaskId|Varies|
+|`ingest/shuffle/requests`|Number of shuffle requests per emission period.|supervisorTaskId|Varies|
 
 ## Coordination
 
@@ -222,13 +235,25 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
-|`segment/overShadowed/count`|Number of overshadowed segments.||Varies.|
+|`segment/overShadowed/count`|Number of overshadowed segments.| |Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|tier.|Varies.|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|tier.|Varies.|
 |`tier/total/capacity`|Total capacity in bytes available in each tier.|tier.|Varies.|
+|`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies.|
+|`compactTask/maxSlot/count`|Max number of task slots that can be used for auto compaction tasks in the auto compaction run.| |Varies.|
+|`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. (this is max slot minus any currently running compaction task)| |Varies.|
+|`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource.|Varies.|
+|`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource.|Varies.|
+|`interval/waitCompact/count`|Total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource.|Varies.|
+|`segment/compacted/bytes`|Total bytes of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
+|`segment/compacted/count`|Total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
+|`interval/compacted/count`|Total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
+|`segment/skipCompact/bytes`|Total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
+|`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
+|`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](
 ../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class

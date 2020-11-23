@@ -39,16 +39,22 @@ import {
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { Api, API_ENDPOINTS } from '../../singletons/api';
+import {
+  CompactionConfig,
+  CompactionStatus,
+  formatCompactionConfigAndStatus,
+  zeroCompactionStatus,
+} from '../../druid-models';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
-  CompactionConfig,
-  CompactionStatus,
+  Capabilities,
+  CapabilitiesMode,
   countBy,
+  deepGet,
   formatBytes,
-  formatCompactionConfigAndStatus,
   formatInteger,
-  formatMegabytes,
+  formatMillions,
   formatPercent,
   getDruidErrorMessage,
   LocalStorageKeys,
@@ -57,13 +63,10 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  zeroCompactionStatus,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { Rule, RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
@@ -74,6 +77,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment load/drop queues',
     'Total data size',
     'Segment size',
+    'Segment granularity',
     'Total rows',
     'Avg. row size',
     'Replicated size',
@@ -88,7 +92,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Availability',
     'Segment load/drop queues',
     'Total data size',
-    'Segment size',
     'Compaction',
     '% Compacted',
     'Left to be compacted',
@@ -101,6 +104,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment load/drop queues',
     'Total data size',
     'Segment size',
+    'Segment granularity',
     'Total rows',
     'Avg. row size',
     'Replicated size',
@@ -120,7 +124,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 }
 
 const formatTotalDataSize = formatBytes;
-const formatSegmentSize = formatMegabytes;
+const formatSegmentRows = formatMillions;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
@@ -144,42 +148,57 @@ function progress(done: number, awaiting: number): number {
 
 const PERCENT_BRACES = [formatPercent(1)];
 
-interface Datasource {
-  datasource: string;
-  rules: Rule[];
-  compactionConfig?: CompactionConfig;
-  compactionStatus?: CompactionStatus;
-  [key: string]: any;
+interface DatasourceQueryResultRow {
+  readonly datasource: string;
+  readonly num_segments: number;
+  readonly num_available_segments: number;
+  readonly num_segments_to_load: number;
+  readonly num_segments_to_drop: number;
+  readonly minute_aligned_segments: number;
+  readonly hour_aligned_segments: number;
+  readonly day_aligned_segments: number;
+  readonly month_aligned_segments: number;
+  readonly year_aligned_segments: number;
+  readonly total_data_size: number;
+  readonly replicated_size: number;
+  readonly min_segment_rows: number;
+  readonly avg_segment_rows: number;
+  readonly max_segment_rows: number;
+  readonly total_rows: number;
+  readonly avg_row_size: number;
+}
+
+function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
+  return (
+    Number(Boolean(row.num_segments)) +
+    Number(Boolean(row.minute_aligned_segments)) +
+    Number(Boolean(row.hour_aligned_segments)) +
+    Number(Boolean(row.day_aligned_segments)) +
+    Number(Boolean(row.month_aligned_segments)) +
+    Number(Boolean(row.year_aligned_segments))
+  );
+}
+
+interface Datasource extends DatasourceQueryResultRow {
+  readonly rules: Rule[];
+  readonly compactionConfig?: CompactionConfig;
+  readonly compactionStatus?: CompactionStatus;
+  readonly unused?: boolean;
 }
 
 interface DatasourcesAndDefaultRules {
-  datasources: Datasource[];
-  defaultRules: Rule[];
-}
-
-interface DatasourceQueryResultRow {
-  datasource: string;
-  num_segments: number;
-  num_available_segments: number;
-  num_segments_to_load: number;
-  num_segments_to_drop: number;
-  total_data_size: number;
-  replicated_size: number;
-  min_segment_size: number;
-  avg_segment_size: number;
-  max_segment_size: number;
-  total_rows: number;
-  avg_row_size: number;
+  readonly datasources: Datasource[];
+  readonly defaultRules: Rule[];
 }
 
 interface RetentionDialogOpenOn {
-  datasource: string;
-  rules: Rule[];
+  readonly datasource: string;
+  readonly rules: Rule[];
 }
 
 interface CompactionDialogOpenOn {
-  datasource: string;
-  compactionConfig: CompactionConfig;
+  readonly datasource: string;
+  readonly compactionConfig: CompactionConfig;
 }
 
 export interface DatasourcesViewProps {
@@ -229,19 +248,25 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
-  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS total_data_size,
-  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS replicated_size,
-  MIN("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS min_segment_size,
-  (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
-    COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
-  ) AS avg_segment_size,
-  MAX("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) AS max_segment_size,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments,
+  SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
+  SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
+  MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows,
+  AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows,
+  MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
-  (
-    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0)) /
-    SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0))
-  ) AS avg_row_size
+  CASE
+    WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0
+    THEN (
+      SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
+      SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)
+    )
+    ELSE 0
+  END AS avg_row_size
 FROM sys.segments
 GROUP BY 1`;
 
@@ -307,11 +332,16 @@ GROUP BY 1`;
                 num_segments: numSegments,
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
+                minute_aligned_segments: -1,
+                hour_aligned_segments: -1,
+                day_aligned_segments: -1,
+                month_aligned_segments: -1,
+                year_aligned_segments: -1,
                 replicated_size: -1,
                 total_data_size: totalDataSize,
-                min_segment_size: -1,
-                avg_segment_size: totalDataSize / numSegments,
-                max_segment_size: -1,
+                min_segment_rows: -1,
+                avg_segment_rows: -1,
+                max_segment_rows: -1,
                 total_rows: -1,
                 avg_row_size: -1,
               };
@@ -361,7 +391,7 @@ GROUP BY 1`;
         const allDatasources = (datasources as any).concat(
           unused.map(d => ({ datasource: d, unused: true })),
         );
-        allDatasources.forEach((ds: Datasource) => {
+        allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compactionConfig = compactionConfigs[ds.datasource];
           ds.compactionStatus = compactionStatuses[ds.datasource];
@@ -432,8 +462,8 @@ GROUP BY 1`;
           return resp.data;
         }}
         confirmButtonText="Mark as unused all segments"
-        successText="All segments in data source have been marked as unused"
-        failText="Failed to mark as unused all segments in data source"
+        successText="All segments in datasource have been marked as unused"
+        failText="Failed to mark as unused all segments in datasource"
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
@@ -463,8 +493,8 @@ GROUP BY 1`;
           return resp.data;
         }}
         confirmButtonText="Mark as used all segments"
-        successText="All non-overshadowed segments in data source have been marked as used"
-        failText="Failed to mark as used all non-overshadowed segments in data source"
+        successText="All non-overshadowed segments in datasource have been marked as used"
+        failText="Failed to mark as used all non-overshadowed segments in datasource"
         intent={Intent.PRIMARY}
         onClose={() => {
           this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
@@ -498,8 +528,8 @@ GROUP BY 1`;
         }}
         confirmButtonText={`Mark as ${usedWord} segments in the interval`}
         confirmButtonDisabled={!/.\/./.test(useUnuseInterval)}
-        successText={`Segments in the interval in data source have been marked as ${usedWord}`}
-        failText={`Failed to mark as ${usedWord} segments in the interval in data source`}
+        successText={`Segments in the interval in datasource have been marked as ${usedWord}`}
+        failText={`Failed to mark as ${usedWord} segments in the interval in datasource`}
         intent={Intent.PRIMARY}
         onClose={() => {
           this.setState({ datasourceToMarkSegmentsByIntervalIn: undefined });
@@ -537,7 +567,7 @@ GROUP BY 1`;
           return resp.data;
         }}
         confirmButtonText="Permanently delete unused segments"
-        successText="Kill task was issued. Unused segments in data source will be deleted"
+        successText="Kill task was issued. Unused segments in datasource will be deleted"
         failText="Failed submit kill task"
         intent={Intent.DANGER}
         onClose={() => {
@@ -546,6 +576,10 @@ GROUP BY 1`;
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
         }}
+        warningChecks={[
+          `I understand that this operation will delete all metadata about the unused segments of ${killDatasource} and removes them from deep storage.`,
+          'I understand that this operation cannot be undone.',
+        ]}
       >
         <p>
           {`Are you sure you want to permanently delete unused segments in '${killDatasource}'?`}
@@ -869,11 +903,11 @@ GROUP BY 1`;
 
     const totalDataSizeValues = datasources.map(d => formatTotalDataSize(d.total_data_size));
 
-    const minSegmentSizeValues = datasources.map(d => formatSegmentSize(d.min_segment_size));
+    const minSegmentRowsValues = datasources.map(d => formatSegmentRows(d.min_segment_rows));
 
-    const avgSegmentSizeValues = datasources.map(d => formatSegmentSize(d.avg_segment_size));
+    const avgSegmentRowsValues = datasources.map(d => formatSegmentRows(d.avg_segment_rows));
 
-    const maxSegmentSizeValues = datasources.map(d => formatSegmentSize(d.max_segment_size));
+    const maxSegmentRowsValues = datasources.map(d => formatSegmentRows(d.max_segment_rows));
 
     const totalRowsValues = datasources.map(d => formatTotalRows(d.total_rows));
 
@@ -1011,26 +1045,57 @@ GROUP BY 1`;
               ),
             },
             {
-              Header: twoLines('Segment size (MB)', 'min / avg / max'),
-              show: hiddenColumns.exists('Segment size'),
-              accessor: 'avg_segment_size',
+              Header: twoLines('Segment size (rows)', 'minimum / average / maximum'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment size'),
+              accessor: 'avg_segment_rows',
               filterable: false,
-              width: 150,
+              width: 220,
               Cell: ({ value, original }) => (
                 <>
                   <BracedText
-                    text={formatSegmentSize(original.min_segment_size)}
-                    braces={minSegmentSizeValues}
+                    text={formatSegmentRows(original.min_segment_rows)}
+                    braces={minSegmentRowsValues}
                   />{' '}
                   &nbsp;{' '}
-                  <BracedText text={formatSegmentSize(value)} braces={avgSegmentSizeValues} />{' '}
+                  <BracedText text={formatSegmentRows(value)} braces={avgSegmentRowsValues} />{' '}
                   &nbsp;{' '}
                   <BracedText
-                    text={formatSegmentSize(original.max_segment_size)}
-                    braces={maxSegmentSizeValues}
+                    text={formatSegmentRows(original.max_segment_rows)}
+                    braces={maxSegmentRowsValues}
                   />
                 </>
               ),
+            },
+            {
+              Header: twoLines('Segment', 'granularity'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment granularity'),
+              id: 'segment_granularity',
+              accessor: segmentGranularityCountsToRank,
+              filterable: false,
+              width: 100,
+              Cell: ({ original }) => {
+                const segmentGranularities: string[] = [];
+                if (!original.num_segments) return '-';
+                if (original.num_segments - original.minute_aligned_segments) {
+                  segmentGranularities.push('Sub minute');
+                }
+                if (original.minute_aligned_segments - original.hour_aligned_segments) {
+                  segmentGranularities.push('Minute');
+                }
+                if (original.hour_aligned_segments - original.day_aligned_segments) {
+                  segmentGranularities.push('Hour');
+                }
+                if (original.day_aligned_segments - original.month_aligned_segments) {
+                  segmentGranularities.push('Day');
+                }
+                if (original.month_aligned_segments - original.year_aligned_segments) {
+                  segmentGranularities.push('Month');
+                }
+                if (original.year_aligned_segments) {
+                  segmentGranularities.push('Year');
+                }
+                return segmentGranularities.join(', ');
+              },
             },
             {
               Header: twoLines('Total', 'rows'),
@@ -1044,7 +1109,7 @@ GROUP BY 1`;
             },
             {
               Header: twoLines('Avg. row size', '(bytes)'),
-              show: hiddenColumns.exists('Avg. row size'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Avg. row size'),
               accessor: 'avg_row_size',
               filterable: false,
               width: 100,

@@ -21,7 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.server.coordination.ZkCoordinator;
+import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.inject.Inject;
@@ -34,14 +34,14 @@ import javax.ws.rs.core.Response;
 @Path("/druid/historical/v1")
 public class HistoricalResource
 {
-  private final ZkCoordinator coordinator;
+  private final SegmentLoadDropHandler segmentLoadDropHandler;
 
   @Inject
   public HistoricalResource(
-      ZkCoordinator coordinator
+      SegmentLoadDropHandler segmentLoadDropHandler
   )
   {
-    this.coordinator = coordinator;
+    this.segmentLoadDropHandler = segmentLoadDropHandler;
   }
 
   @GET
@@ -50,14 +50,14 @@ public class HistoricalResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
+    return Response.ok(ImmutableMap.of("cacheInitialized", segmentLoadDropHandler.isStarted())).build();
   }
 
   @GET
   @Path("/readiness")
   public Response getReadiness()
   {
-    if (coordinator.isStarted()) {
+    if (segmentLoadDropHandler.isStarted()) {
       return Response.ok().build();
     } else {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();

@@ -117,12 +117,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new IncrementalIndex.Builder()
+                  return new OnheapIncrementalIndex.Builder()
                       .setIndexSchema(schema)
                       .setDeserializeComplexMetrics(false)
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000)
-                      .buildOnheap();
+                      .build();
                 }
               },
               Closer.create()
@@ -141,11 +141,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new IncrementalIndex.Builder()
+                  return new OffheapIncrementalIndex.Builder()
+                      .setBufferPool(stupidPool)
                       .setIndexSchema(schema)
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000000)
-                      .buildOffheap(stupidPool);
+                      .build();
                 }
               },
               poolCloser
@@ -236,7 +237,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(ParseException.class, result.getParseException().getClass());
     Assert.assertEquals(
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=asdj, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [asdj] to long,]",
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=asdj, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [asdj] to long]",
         result.getParseException().getMessage()
     );
 
@@ -254,7 +255,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(ParseException.class, result.getParseException().getClass());
     Assert.assertEquals(
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=aaa, long=20, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [aaa] to float,]",
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=aaa, long=20, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [aaa] to float]",
         result.getParseException().getMessage()
     );
 
@@ -272,7 +273,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(ParseException.class, result.getParseException().getClass());
     Assert.assertEquals(
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=20, double=}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [] to double,]",
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=20, double=}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [] to double]",
         result.getParseException().getMessage()
     );
   }

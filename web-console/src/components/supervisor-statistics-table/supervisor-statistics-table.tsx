@@ -23,7 +23,7 @@ import ReactTable, { CellInfo, Column } from 'react-table';
 import { useQueryManager } from '../../hooks';
 import { Api, API_ENDPOINTS } from '../../singletons/api';
 import { UrlBaser } from '../../singletons/url-baser';
-import { deepGet } from '../../utils/object-change';
+import { deepGet } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './supervisor-statistics-table.scss';

@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-import { DruidError } from './druid-query';
+import { sane } from 'druid-query-toolkit/build/test-utils';
+
+import { DruidError, getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
 
 describe('DruidQuery', () => {
-  describe('DruidError', () => {
+  describe('DruidError.parsePosition', () => {
     it('works for single error 1', () => {
       const message = `Encountered "COUNT" at line 2, column 12. Was expecting one of: <EOF> "AS" ... "EXCEPT" ... "FETCH" ... "FROM" ... "INTERSECT" ... "LIMIT" ...`;
 
@@ -50,6 +52,94 @@ describe('DruidQuery', () => {
         endRow: 1,
         endColumn: 25,
       });
+    });
+  });
+
+  describe('DruidError.getSuggestion', () => {
+    it('works for ==', () => {
+      const sql = sane`
+        SELECT *
+        FROM wikipedia -- test ==
+        WHERE channel == '#ar.wikipedia'
+      `;
+      const suggestion = DruidError.getSuggestion(`Encountered "= =" at line 3, column 15.`);
+      expect(suggestion!.label).toEqual(`Replace == with =`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT *
+        FROM wikipedia -- test ==
+        WHERE channel = '#ar.wikipedia'
+      `);
+    });
+
+    it('works for == 2', () => {
+      const sql = sane`
+        SELECT
+          channel, COUNT(*) AS "Count"
+        FROM wikipedia
+        WHERE channel == 'de'
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `;
+      const suggestion = DruidError.getSuggestion(
+        `Encountered "= =" at line 4, column 15. Was expecting one of: <EOF> "EXCEPT" ... "FETCH" ... "GROUP" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Replace == with =`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT
+          channel, COUNT(*) AS "Count"
+        FROM wikipedia
+        WHERE channel = 'de'
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `);
+    });
+
+    it('works for incorrectly quoted literal', () => {
+      const sql = sane`
+        SELECT *
+        FROM wikipedia -- test "#ar.wikipedia"
+        WHERE channel = "#ar.wikipedia"
+      `;
+      const suggestion = DruidError.getSuggestion(
+        `org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table`,
+      );
+      expect(suggestion!.label).toEqual(`Replace "#ar.wikipedia" with '#ar.wikipedia'`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT *
+        FROM wikipedia -- test "#ar.wikipedia"
+        WHERE channel = '#ar.wikipedia'
+      `);
+    });
+
+    it('removes comma (,) before FROM', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered "FROM" at line 1, column 14. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove , before FROM`);
+      expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
+        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
+      );
+    });
+
+    it('does nothing there there is nothing to do', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered "channel" at line 1, column 35. Was expecting one of: <EOF> "EXCEPT" ...`,
+      );
+      expect(suggestion).toBeUndefined();
+    });
+  });
+
+  describe('misc', () => {
+    it('parseHtmlError', () => {
+      expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
+    });
+
+    it('parseHtmlError', () => {
+      expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
+    });
+
+    it('parseQueryPlan', () => {
+      expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
     });
   });
 });

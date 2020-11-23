@@ -31,7 +31,7 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorPr
     this.delegate = delegate;
   }
 
-  public static <T> ExprVectorProcessor<T> castToType(ExprVectorProcessor<?> delegate, ExprType type)
+  public static <T> ExprVectorProcessor<T> cast(ExprVectorProcessor<?> delegate, ExprType type)
   {
     final ExprVectorProcessor<?> caster;
     if (delegate.getOutputType() == type) {

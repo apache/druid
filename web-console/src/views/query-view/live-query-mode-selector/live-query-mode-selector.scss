@@ -16,22 +16,25 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
+
 .live-query-mode-selector {
   .auto.auto-on {
-    color: #7ce87c;
+    color: $druid-brand;
   }
 
   .on {
-    color: #7ce87c;
+    color: $druid-brand;
   }
 }
 
 .live-query-mode-selector-portal {
   .auto.auto-on .bp3-text-overflow-ellipsis {
-    color: #7ce87c;
+    color: $druid-brand;
   }
 
   .on .bp3-text-overflow-ellipsis {
-    color: #7ce87c;
+    color: $druid-brand;
   }
 }

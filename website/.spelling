@@ -114,6 +114,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -141,6 +142,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -164,6 +166,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -382,6 +385,7 @@ subsecond
 substring
 subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -403,6 +407,7 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
@@ -1514,6 +1519,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys
@@ -1643,6 +1649,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+allowList
 ANDed
 array_mod
 autoscale
@@ -1656,6 +1663,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+denyList
 doubleMax
 doubleMin
 doubleSum

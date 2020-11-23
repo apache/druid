@@ -41,11 +41,34 @@ public class JsonInputFormat extends NestedInputFormat
   private final ObjectMapper objectMapper;
   private final boolean keepNullColumns;
 
+  /**
+   *
+   * This parameter indicates whether or not the given InputEntity should be split by lines before parsing it.
+   * If it is set to true, the InputEntity must be split by lines first.
+   * If it is set to false, unlike what you could imagine, it means that the InputEntity doesn't have to be split by lines first, but it can still contain multiple lines.
+   * A created InputEntityReader from this format will determine by itself if line splitting is necessary.
+   *
+   * This parameter should always be true for batch ingestion and false for streaming ingestion.
+   * For more information, see: https://github.com/apache/druid/pull/10383.
+   *
+   */
+  private final boolean lineSplittable;
+
   @JsonCreator
   public JsonInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec,
       @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns
+  )
+  {
+    this(flattenSpec, featureSpec, keepNullColumns, true);
+  }
+
+  public JsonInputFormat(
+      JSONPathSpec flattenSpec,
+      Map<String, Boolean> featureSpec,
+      Boolean keepNullColumns,
+      boolean lineSplittable
   )
   {
     super(flattenSpec);
@@ -56,6 +79,7 @@ public class JsonInputFormat extends NestedInputFormat
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
     }
+    this.lineSplittable = lineSplittable;
   }
 
   @JsonProperty
@@ -73,7 +97,22 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+    return this.lineSplittable ?
+           new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns) :
+           new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+  }
+
+  /**
+   * Create a new JsonInputFormat object based on the given parameter
+   *
+   * sub-classes may need to override this method to create an object with correct sub-class type
+   */
+  public JsonInputFormat withLineSplittable(boolean lineSplittable)
+  {
+    return new JsonInputFormat(this.getFlattenSpec(),
+                               this.getFeatureSpec(),
+                               this.keepNullColumns,
+                               lineSplittable);
   }
 
   @Override
@@ -89,12 +128,12 @@ public class JsonInputFormat extends NestedInputFormat
       return false;
     }
     JsonInputFormat that = (JsonInputFormat) o;
-    return Objects.equals(featureSpec, that.featureSpec) && Objects.equals(keepNullColumns, that.keepNullColumns);
+    return this.lineSplittable == that.lineSplittable && Objects.equals(featureSpec, that.featureSpec) && Objects.equals(keepNullColumns, that.keepNullColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns);
+    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns, lineSplittable);
   }
 }

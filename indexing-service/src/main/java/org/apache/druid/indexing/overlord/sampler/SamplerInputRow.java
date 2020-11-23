@@ -102,4 +102,12 @@ public class SamplerInputRow implements InputRow
   {
     return Objects.hash(row, sortKey);
   }
+
+  @Override
+  public String toString()
+  {
+    return "SamplerInputRow{" +
+           "row=" + row +
+           '}';
+  }
 }

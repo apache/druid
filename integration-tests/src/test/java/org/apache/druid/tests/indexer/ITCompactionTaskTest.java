@@ -97,12 +97,12 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       );
 
 
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
       compactData();
 
       // 4 segments across 2 days, compacted into 2 new segments (6 total)
       checkCompactionFinished(6);
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
 
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
