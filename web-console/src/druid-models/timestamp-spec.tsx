@@ -123,7 +123,7 @@ export const TIMESTAMP_SPEC_FIELDS: Field<TimestampSpec>[] = [
     ],
     info: (
       <p>
-        Please specify your timestamp format by using the suggestions menu or typing in a{' '}
+        Specify your timestamp format by using the suggestions menu or typing in a{' '}
         <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html">
           format string
         </ExternalLink>
@@ -135,7 +135,10 @@ export const TIMESTAMP_SPEC_FIELDS: Field<TimestampSpec>[] = [
     name: 'missingValue',
     type: 'string',
     placeholder: '(optional)',
-    info: <p>This value will be used if the specified column can not be found.</p>,
+    info: (
+      <p>Specify a static value for cases when the source time column is missing or is null.</p>
+    ),
+    suggestions: ['2020-01-01T00:00:00Z'],
   },
 ];
 

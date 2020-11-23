@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -48,7 +49,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
   private final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
   private final boolean useEarliestOffset;
 
-  RecordSupplierInputSource(
+  public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
       boolean useEarliestOffset
@@ -102,9 +103,10 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
       @Nullable File temporaryDirectory
   )
   {
+    InputFormat format = inputFormat instanceof JsonInputFormat ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
     return new InputEntityIteratingReader(
         inputRowSchema,
-        inputFormat,
+        format,
         createEntityIterator(),
         temporaryDirectory
     );

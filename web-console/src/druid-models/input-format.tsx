@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Code } from '@blueprintjs/core';
 import React from 'react';
 
 import { AutoForm, ExternalLink, Field } from '../components';
@@ -69,12 +70,6 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     defined: (p: InputFormat) => p.type === 'javascript',
   },
   {
-    name: 'findColumnsFromHeader',
-    type: 'boolean',
-    required: true,
-    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv'),
-  },
-  {
     name: 'skipHeaderRows',
     type: 'number',
     defaultValue: 0,
@@ -82,9 +77,22 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     min: 0,
     info: (
       <>
-        If both skipHeaderRows and hasHeaderRow options are set, skipHeaderRows is first applied.
-        For example, if you set skipHeaderRows to 2 and hasHeaderRow to true, Druid will skip the
-        first two lines and then extract column information from the third line.
+        If this is set, skip the first <Code>skipHeaderRows</Code> rows from each file.
+      </>
+    ),
+  },
+  {
+    name: 'findColumnsFromHeader',
+    type: 'boolean',
+    required: true,
+    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv'),
+    info: (
+      <>
+        If this is set, find the column names from the header row. Note that
+        <Code>skipHeaderRows</Code> will be applied before finding column names from the header. For
+        example, if you set <Code>skipHeaderRows</Code> to 2 and <Code>findColumnsFromHeader</Code>{' '}
+        to true, the task will skip the first two lines and then extract column information from the
+        third line.
       </>
     ),
   },
@@ -93,7 +101,13 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string-array',
     required: true,
     defined: (p: InputFormat) =>
-      (oneOf(p.type, 'csv', 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
+      (oneOf(p.type, 'csv', 'tsv') && p.findColumnsFromHeader === false) || p.type === 'regex',
+    info: (
+      <>
+        Specifies the columns of the data. The columns should be in the same order with the columns
+        of your data.
+      </>
+    ),
   },
   {
     name: 'delimiter',
@@ -106,6 +120,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'listDelimiter',
     type: 'string',
     defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv', 'regex'),
+    placeholder: '(optional, default = ctrl+A)',
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {

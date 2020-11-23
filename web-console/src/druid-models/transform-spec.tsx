@@ -75,6 +75,7 @@ export function getTimestampExpressionFields(transforms: Transform[]): Field<Tra
         `timestamp_parse(concat("date", ' ', "time"))`,
         `timestamp_parse(concat("date", ' ', "time"), 'M/d/yyyy H:mm:ss')`,
         `timestamp_parse(concat("year", '-', "month", '-', "day"))`,
+        `timestamp_parse("local_time", 'yyyy-MM-dd HH:mm:ss', "timezone")`,
       ],
       info: (
         <>

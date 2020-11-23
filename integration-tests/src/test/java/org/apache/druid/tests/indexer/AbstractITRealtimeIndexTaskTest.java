@@ -145,7 +145,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       // and some on historical.  Which it is depends on where in the minute we were
       // when we started posting events.
       try {
-        this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
+        this.queryHelper.testQueriesFromString(getRouterURL(), queryStr);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -164,7 +164,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       );
 
       // queries should be answered by historical
-      this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
+      this.queryHelper.testQueriesFromString(getRouterURL(), queryStr);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

@@ -26,10 +26,10 @@ import { getLabeledInput, selectSuggestibleInput, setLabeledInput } from '../../
  * Possible values for partition step segment granularity.
  */
 export enum SegmentGranularity {
-  HOUR = 'HOUR',
-  DAY = 'DAY',
-  MONTH = 'MONTH',
-  YEAR = 'YEAR',
+  HOUR = 'hour',
+  DAY = 'day',
+  MONTH = 'month',
+  YEAR = 'year',
 }
 
 const PARTITIONING_TYPE = 'Partitioning type';

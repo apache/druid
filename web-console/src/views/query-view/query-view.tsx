@@ -459,6 +459,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       }
     }
 
+    const someQueryResult = queryResultState.getSomeData();
     const runeMode = QueryView.isJsonLike(queryString);
     return (
       <SplitterLayout
@@ -501,10 +502,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           </div>
         </div>
         <div className="output-pane">
-          {queryResult && (
+          {someQueryResult && (
             <QueryOutput
               runeMode={runeMode}
-              queryResult={queryResult}
+              queryResult={someQueryResult}
               onQueryChange={this.handleQueryChange}
             />
           )}

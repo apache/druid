@@ -127,6 +127,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RunWith(JUnitParamsRunner.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
@@ -16013,6 +16014,142 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", 9L},
             new Object[]{"b", 9L}
         )
+    );
+  }
+
+  @Test
+  public void testTimeStampAddZeroDayPeriod() throws Exception
+  {
+    testQuery(
+        "SELECT TIMESTAMPADD(DAY, 0, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "(\"__time\" + 0)", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testTimeStampAddZeroMonthPeriod() throws Exception
+  {
+    testQuery(
+        "SELECT TIMESTAMPADD(MONTH, 0, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P0M',1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testTimeStampAddZeroYearPeriod() throws Exception
+  {
+    skipVectorize();
+
+    testQuery(
+        "SELECT TIMESTAMPADD(YEAR, 0, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P0M',1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  /**
+   * TIMESTAMPADD is converted to timestamp_shift function call and its parameters will be converted to a Period string or an expression
+   * see https://github.com/apache/druid/issues/10530 for more information
+   */
+  @Test
+  public void testTimeStampAddConversion() throws Exception
+  {
+    final PeriodGranularity periodGranularity = new PeriodGranularity(new Period("P1M"), null, null);
+
+    //
+    // 2nd parameter for TIMESTAMPADD is literal, it will be translated to 'P1M' string
+    //
+    testQuery(
+        "SELECT TIMESTAMPADD(MONTH, 1, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P1M',1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        // verify if query results match the given
+        CalciteTests.ROWS1.stream()
+                          .map(r -> new Object[]{periodGranularity.increment(r.getTimestamp()).getMillis()})
+                          .collect(Collectors.toList())
+    );
+
+    //
+    // 2nd parameter for TIMESTAMPADD is an expression, it will be explained as a function call: concat('P', (1 * \"cnt\"), 'M')
+    //
+    testQuery(
+        "SELECT TIMESTAMPADD(MONTH, \"cnt\", \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",concat('P', (1 * \"cnt\"), 'M'),1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        // verify if query results match the given
+        // "cnt" for each row is 1
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
+                          .collect(Collectors.toList())
     );
   }
 

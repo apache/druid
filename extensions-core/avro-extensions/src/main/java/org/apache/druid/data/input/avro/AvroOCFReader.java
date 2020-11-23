@@ -122,8 +122,8 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
   }
 
   @Override
-  protected Map<String, Object> toMap(GenericRecord intermediateRow)
+  protected List<Map<String, Object>> toMap(GenericRecord intermediateRow)
   {
-    return recordFlattener.toMap(intermediateRow);
+    return Collections.singletonList(recordFlattener.toMap(intermediateRow));
   }
 }

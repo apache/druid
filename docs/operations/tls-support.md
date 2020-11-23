@@ -29,17 +29,20 @@ title: "TLS support"
 |`druid.enablePlaintextPort`|Enable/Disable HTTP connector.|`true`|
 |`druid.enableTlsPort`|Enable/Disable HTTPS connector.|`false`|
 
-Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
+Although not recommended, the HTTP and HTTPS connectors can both be enabled at a time. The respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each process. Please see `Configuration` section of individual processes to check the valid and default values for these ports.
 
 ## Jetty server configuration
 
-Apache Druid uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
-reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html) might be helpful.
-To get more in depth knowledge of TLS/SSL support in Java in general, please refer to this [guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html#configuring-sslcontextfactory)
-can help in understanding TLS/SSL configurations listed below. This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
-values for the below mentioned configs among others provided by Java implementation.
+Apache Druid uses Jetty as its embedded web server. 
+
+To get familiar with TLS/SSL, along with related concepts like keys and certificates,
+read [Configuring SSL/TLS](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) in the Jetty documentation.
+To get more in-depth knowledge of TLS/SSL support in Java in general, refer to the [Java Secure Socket Extension (JSSE) Reference Guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
+The [Configuring the Jetty SslContextFactory](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#configuring-sslcontextfactory)
+section can help in understanding TLS/SSL configurations listed below. Finally, [Java Cryptography Architecture
+Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
+values for the configs belong, among others provided by Java implementation.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
