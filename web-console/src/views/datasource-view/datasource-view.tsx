@@ -576,6 +576,10 @@ GROUP BY 1`;
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
         }}
+        warningChecks={[
+          `I understand that this operation will delete all metadata about the unused segments of ${killDatasource} and removes them from deep storage.`,
+          'I understand that this operation cannot be undone.',
+        ]}
       >
         <p>
           {`Are you sure you want to permanently delete unused segments in '${killDatasource}'?`}

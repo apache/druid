@@ -114,6 +114,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -141,6 +142,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -164,6 +166,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -404,6 +407,7 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
