@@ -823,6 +823,7 @@ public class DruidCoordinator
             }
           }
         }
+        // Emit the runtime of the full DutiesRunnable
         params.getEmitter().emit(
             new ServiceMetricEvent.Builder()
                 .setDimension(DruidMetrics.DUTY_GROUP, dutiesRunnableAlias)
