@@ -43,6 +43,7 @@ import java.util.SortedSet;
 public class UnloadUnusedSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(UnloadUnusedSegments.class);
+  private static final String DUTY_ALIAS = "UnloadUnusedSegments";
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -92,6 +93,12 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     }
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
+  }
+
+  @Override
+  public String getDutyAlias()
+  {
+    return DUTY_ALIAS;
   }
 
   private void handleUnusedSegmentsForServer(

@@ -39,4 +39,11 @@ public interface CoordinatorDuty
    */
   @Nullable
   DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
+
+  /**
+   * Implementations of this method return a String alias for the Duty.
+   *
+   * @return String alias of the Duty.
+   */
+  String getDutyAlias();
 }

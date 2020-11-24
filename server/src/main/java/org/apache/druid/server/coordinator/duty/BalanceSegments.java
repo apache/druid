@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 public class BalanceSegments implements CoordinatorDuty
 {
   protected static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
+  private static final String DUTY_ALIAS = "BalanceSegments";
 
   protected final DruidCoordinator coordinator;
 
@@ -81,6 +82,12 @@ public class BalanceSegments implements CoordinatorDuty
       balanceTier(params, tier, servers, stats);
     });
     return params.buildFromExisting().withCoordinatorStats(stats).build();
+  }
+
+  @Override
+  public String getDutyAlias()
+  {
+    return DUTY_ALIAS;
   }
 
   private void balanceTier(

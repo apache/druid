@@ -45,6 +45,7 @@ public class RunRules implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
   private static final int MAX_MISSING_RULES = 10;
+  private static final String DUTY_ALIAS = "RunRules";
 
   private final ReplicationThrottler replicatorThrottler;
 
@@ -153,5 +154,11 @@ public class RunRules implements CoordinatorDuty
                  .withCoordinatorStats(stats)
                  .withBroadcastDatasources(broadcastDatasources)
                  .build();
+  }
+
+  @Override
+  public String getDutyAlias()
+  {
+    return DUTY_ALIAS;
   }
 }

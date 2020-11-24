@@ -27,6 +27,7 @@ import org.apache.druid.timeline.DataSegment;
 public class LogUsedSegments implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(LogUsedSegments.class);
+  private static final String DUTY_ALIAS = "LogUsedSegments";
 
   public LogUsedSegments()
   {
@@ -57,5 +58,11 @@ public class LogUsedSegments implements CoordinatorDuty
     log.info("Found [%,d] used segments.", params.getUsedSegments().size());
 
     return params;
+  }
+
+  @Override
+  public String getDutyAlias()
+  {
+    return DUTY_ALIAS;
   }
 }

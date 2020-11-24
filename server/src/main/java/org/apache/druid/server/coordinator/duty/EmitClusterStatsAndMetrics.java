@@ -46,6 +46,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   public static final String TOTAL_CAPACITY = "totalCapacity";
   public static final String TOTAL_HISTORICAL_COUNT = "totalHistoricalCount";
   public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
+  private static final String DUTY_ALIAS = "EmitClusterStatsAndMetrics";
 
   private final DruidCoordinator coordinator;
 
@@ -93,6 +94,35 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         statName,
         (final String tier, final long count) -> {
           emitTieredStat(emitter, metricName, tier, count);
+        }
+    );
+  }
+
+  private void emitDutyStat(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final String duty,
+      final long value
+  )
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY, duty)
+            .build(metricName, value)
+    );
+  }
+
+  private void emitDutyStats(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final CoordinatorStats stats,
+      final String statName
+  )
+  {
+    stats.forEachDutyStat(
+        statName,
+        (final String duty, final long count) -> {
+          emitDutyStat(emitter, metricName, duty, count);
         }
     );
   }
@@ -435,6 +465,15 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         }
     );
 
+    // Emit coordinator runtime stats
+    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
+
     return params;
+  }
+
+  @Override
+  public String getDutyAlias()
+  {
+    return DUTY_ALIAS;
   }
 }
