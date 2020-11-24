@@ -16,16 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  HTMLSelect,
-  IconName,
-  ITreeNode,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-  Tree,
-} from '@blueprintjs/core';
+import { HTMLSelect, ITreeNode, Menu, MenuItem, Popover, Position, Tree } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import {
   SqlAlias,
@@ -40,8 +31,8 @@ import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
-import { copyAndAlert, groupBy, prettyPrintSql } from '../../../utils';
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnMetadata, copyAndAlert, groupBy, oneOf, prettyPrintSql } from '../../../utils';
+import { dataTypeToIcon } from '../query-utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 
@@ -313,14 +304,14 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     />
                   }
                 >
-                  <div>{tableName}</div>
+                  {tableName}
                 </Popover>
               ),
               childNodes: metadata
                 .map(
                   (columnData): ITreeNode => ({
                     id: columnData.COLUMN_NAME,
-                    icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                    icon: dataTypeToIcon(columnData.DATA_TYPE),
                     label: (
                       <Popover
                         boundary={'window'}
@@ -348,8 +339,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     }}
                                   />
                                   {parsedQuery &&
-                                    (columnData.DATA_TYPE === 'BIGINT' ||
-                                      columnData.DATA_TYPE === 'FLOAT') && (
+                                    oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT') && (
                                       <NumberMenuItems
                                         table={tableName}
                                         schema={schemaName}
@@ -392,7 +382,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           />
                         }
                       >
-                        <div>{columnData.COLUMN_NAME}</div>
+                        {columnData.COLUMN_NAME}
                       </Popover>
                     ),
                   }),
@@ -445,20 +435,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return null;
   }
 
-  static dataTypeToIcon(dataType: string): IconName {
-    switch (dataType) {
-      case 'TIMESTAMP':
-        return IconNames.TIME;
-      case 'VARCHAR':
-        return IconNames.FONT;
-      case 'BIGINT':
-      case 'FLOAT':
-        return IconNames.NUMERICAL;
-      default:
-        return IconNames.HELP;
-    }
-  }
-
   constructor(props: ColumnTreeProps, context: any) {
     super(props, context);
     this.state = {
@@ -504,6 +480,24 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     });
   };
 
+  private handleNodeCollapse = (nodeData: ITreeNode) => {
+    nodeData.isExpanded = false;
+    this.bounceState();
+  };
+
+  private handleNodeExpand = (nodeData: ITreeNode) => {
+    nodeData.isExpanded = true;
+    this.bounceState();
+  };
+
+  bounceState() {
+    const { columnTree } = this.state;
+    if (!columnTree) return;
+    this.setState(prevState => ({
+      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
+    }));
+  }
+
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
     const { currentSchemaSubtree } = this.state;
@@ -511,7 +505,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
-          <Loader loading />
+          <Loader />
         </div>
       );
     }
@@ -530,23 +524,5 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         </div>
       </div>
     );
-  }
-
-  private handleNodeCollapse = (nodeData: ITreeNode) => {
-    nodeData.isExpanded = false;
-    this.bounceState();
-  };
-
-  private handleNodeExpand = (nodeData: ITreeNode) => {
-    nodeData.isExpanded = true;
-    this.bounceState();
-  };
-
-  bounceState() {
-    const { columnTree } = this.state;
-    if (!columnTree) return;
-    this.setState(prevState => ({
-      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
-    }));
   }
 }

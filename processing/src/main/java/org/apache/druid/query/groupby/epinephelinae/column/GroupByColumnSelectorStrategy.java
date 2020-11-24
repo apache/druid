@@ -143,7 +143,9 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   /**
    * Return BufferComparator for values written using this strategy when limit is pushed down to segment scan.
    * @param keyBufferPosition starting offset for this column's value within the grouping key
-   * @param stringComparator stringComparator from LimitSpec for this column
+   * @param stringComparator stringComparator from LimitSpec for this column. If this is null, implementations
+   *                         will use the {@link org.apache.druid.query.ordering.StringComparators#LEXICOGRAPHIC}
+   *                         comparator.
    * @return BufferComparator for comparing values written
    */
   Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator);

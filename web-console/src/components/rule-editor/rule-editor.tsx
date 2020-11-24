@@ -42,8 +42,8 @@ export interface RuleEditorProps {
   tiers: any[];
   onChange: (newRule: Rule) => void;
   onDelete: () => void;
-  moveUp: (() => void) | null;
-  moveDown: (() => void) | null;
+  moveUp: (() => void) | undefined;
+  moveDown: (() => void) | undefined;
 }
 
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
@@ -157,7 +157,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </div>
 
       <Collapse isOpen={isOpen}>
-        <Card>
+        <Card elevation={2}>
           <FormGroup>
             <ControlGroup>
               <HTMLSelect

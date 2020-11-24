@@ -62,7 +62,6 @@ import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.CompactionTask.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
@@ -104,6 +103,7 @@ import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -305,6 +305,7 @@ public class CompactionTaskTest
     return new ParallelIndexTuningConfig(
         null,
         null, // null to compute maxRowsPerSegment automatically
+        null,
         500000,
         1000000L,
         null,
@@ -438,6 +439,7 @@ public class CompactionTaskTest
         new IndexTuningConfig(
             null,
             null, // null to compute maxRowsPerSegment automatically
+            null,
             500000,
             1000000L,
             null,
@@ -583,6 +585,7 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         100000,
         null,
+        null,
         500000,
         1000000L,
         null,
@@ -650,6 +653,7 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         500000,
         1000000L,
         1000000L,
@@ -715,6 +719,7 @@ public class CompactionTaskTest
   public void testCreateIngestionSchemaWithNumShards() throws IOException, SegmentLoadingException
   {
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         500000,
@@ -1103,6 +1108,7 @@ public class CompactionTaskTest
         expectedMetricsSpec,
         expectedSegmentIntervals,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             500000,

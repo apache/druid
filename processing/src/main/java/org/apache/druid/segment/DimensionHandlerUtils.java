@@ -338,10 +338,12 @@ public final class DimensionHandlerUtils
     if (type == ValueType.STRING) {
       if (!forceSingleValue && effectiveCapabilites.hasMultipleValues().isMaybeTrue()) {
         return strategyFactory.makeMultiValueDimensionProcessor(
+            effectiveCapabilites,
             selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
         );
       } else {
         return strategyFactory.makeSingleValueDimensionProcessor(
+            effectiveCapabilites,
             selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
         );
       }
@@ -356,14 +358,17 @@ public final class DimensionHandlerUtils
 
       if (type == ValueType.LONG) {
         return strategyFactory.makeLongProcessor(
+            effectiveCapabilites,
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.FLOAT) {
         return strategyFactory.makeFloatProcessor(
+            effectiveCapabilites,
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.DOUBLE) {
         return strategyFactory.makeDoubleProcessor(
+            effectiveCapabilites,
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else {

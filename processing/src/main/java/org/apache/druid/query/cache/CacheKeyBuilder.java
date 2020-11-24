@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Cacheable;
@@ -65,6 +66,7 @@ public class CacheKeyBuilder
   static final byte CACHEABLE_KEY = 9;
   static final byte CACHEABLE_LIST_KEY = 10;
   static final byte DOUBLE_ARRAY_KEY = 11;
+  static final byte LONG_KEY = 12;
 
   static final byte[] STRING_SEPARATOR = new byte[]{(byte) 0xFF};
   static final byte[] EMPTY_BYTES = StringUtils.EMPTY_BYTES;
@@ -247,6 +249,12 @@ public class CacheKeyBuilder
   public CacheKeyBuilder appendInt(int input)
   {
     appendItem(INT_KEY, Ints.toByteArray(input));
+    return this;
+  }
+
+  public CacheKeyBuilder appendLong(long input)
+  {
+    appendItem(LONG_KEY, Longs.toByteArray(input));
     return this;
   }
 

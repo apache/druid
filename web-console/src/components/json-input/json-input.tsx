@@ -44,7 +44,9 @@ export function extractRowColumnFromHjsonError(
 
 function stringifyJson(item: any): string {
   if (item != null) {
-    return JSON.stringify(item, null, 2);
+    const str = JSON.stringify(item, null, 2);
+    if (str === '{}') return '{\n\n}'; // Very special case for an empty object to make it more beautiful
+    return str;
   } else {
     return '';
   }
@@ -68,10 +70,11 @@ interface JsonInputProps {
   focus?: boolean;
   width?: string;
   height?: string;
+  issueWithValue?: (value: any) => string | undefined;
 }
 
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
-  const { onChange, placeholder, focus, width, height, value } = props;
+  const { onChange, placeholder, focus, width, height, value, issueWithValue } = props;
   const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
     value,
     stringified: stringifyJson(value),
@@ -80,12 +83,11 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const aceEditor = useRef<Editor | undefined>();
 
   useEffect(() => {
-    if (!deepEqual(value, internalValue.value)) {
-      setInternalValue({
-        value,
-        stringified: stringifyJson(value),
-      });
-    }
+    if (deepEqual(value, internalValue.value)) return;
+    setInternalValue({
+      value,
+      stringified: stringifyJson(value),
+    });
   }, [value]);
 
   const internalValueError = internalValue.error;
@@ -101,6 +103,14 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
             value = parseHjson(inputJson);
           } catch (e) {
             error = e;
+          }
+
+          if (!error && issueWithValue) {
+            const issue = issueWithValue(value);
+            if (issue) {
+              value = undefined;
+              error = new Error(issue);
+            }
           }
 
           setInternalValue({
@@ -149,8 +159,8 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
             const rc = extractRowColumnFromHjsonError(internalValueError);
             if (!rc) return;
 
+            aceEditor.current.focus(); // Grab the focus
             aceEditor.current.getSelection().moveCursorTo(rc.row, rc.column);
-            aceEditor.current.focus(); // Grab the focus also
           }}
         >
           {internalValueError.message}

@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.20.0-SNAPSHOT</version>
+        <version>0.21.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -370,8 +370,8 @@
                 <start.hadoop.docker>false</start.hadoop.docker>
                 <docker.run.skip>false</docker.run.skip>
                 <docker.build.skip>false</docker.build.skip>
-                <override.config.path></override.config.path>
-                <resource.file.dir.path></resource.file.dir.path>
+                <override.config.path />
+                <resource.file.dir.path />
                 <extra.datasource.name.suffix>\ Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
             </properties>
             <build>

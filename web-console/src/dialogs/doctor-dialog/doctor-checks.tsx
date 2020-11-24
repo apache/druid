@@ -18,8 +18,7 @@
 
 import axios from 'axios';
 
-import { pluralIfNeeded, queryDruidSql } from '../../utils';
-import { deepGet } from '../../utils/object-change';
+import { deepGet, pluralIfNeeded, queryDruidSql } from '../../utils';
 import { postToSampler } from '../../utils/sampler';
 
 export interface CheckControls {

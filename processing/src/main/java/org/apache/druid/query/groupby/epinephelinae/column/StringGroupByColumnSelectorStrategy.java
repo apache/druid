@@ -157,8 +157,8 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
         capabilities != null &&
         capabilities.hasBitmapIndexes() &&
         capabilities.areDictionaryValuesSorted().and(capabilities.areDictionaryValuesUnique()).isTrue();
-
-    if (canCompareInts && (stringComparator == null || StringComparators.LEXICOGRAPHIC.equals(stringComparator))) {
+    final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
+    if (canCompareInts && StringComparators.LEXICOGRAPHIC.equals(comparator)) {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Integer.compare(
           lhsBuffer.getInt(lhsPosition + keyBufferPosition),
           rhsBuffer.getInt(rhsPosition + keyBufferPosition)
@@ -168,7 +168,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
         String lhsStr = dictionaryLookup.apply(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
         String rhsStr = dictionaryLookup.apply(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
-        return stringComparator.compare(lhsStr, rhsStr);
+        return comparator.compare(lhsStr, rhsStr);
       };
     }
   }

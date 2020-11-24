@@ -70,7 +70,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         this,
         dataSchema.getParser(),
         authorizerMapper,
-        savedParseExceptions,
         lockGranularityToUse
     );
   }

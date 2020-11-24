@@ -114,6 +114,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -141,6 +142,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -164,6 +166,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -306,6 +309,8 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
+partitionsSpec
 performant
 plaintext
 pluggable
@@ -360,6 +365,7 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
 servlet
 simple-client-sslcontext
@@ -379,6 +385,7 @@ subsecond
 substring
 subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -400,6 +407,7 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
@@ -410,6 +418,7 @@ vCPUs
 validator
 vectorizable
 vectorize
+vectorizeVirtualColumns
 versioning
 w.r.t.
 whitelist
@@ -538,6 +547,7 @@ MeanNoNulls
 P1D
 cycleSize
 doubleMax
+doubleAny
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -545,6 +555,7 @@ doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
+longAny
 longMean
 longMeanNoNulls
 longMin
@@ -596,6 +607,7 @@ url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
+fixedBucketsHistogram
 bucketNum
 lowerLimit
 numBuckets
@@ -606,6 +618,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository
@@ -968,7 +981,6 @@ overwriteFiles
 partitionDimension
 partitionDimensions
 partitionSpec
-partitionsSpec
 pathFormat
 segmentOutputPath
 segmentTable
@@ -1094,6 +1106,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint
@@ -1104,6 +1118,7 @@ signum
 str1
 str2
 string_to_array
+stringAny
 strlen
 strpos
 timestamp_ceil
@@ -1183,6 +1198,7 @@ RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
+TaskSlotCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1492,6 +1508,7 @@ is_overshadowed
 is_published
 is_realtime
 java.sql.Types
+last_compaction_state
 max_size
 num_replicas
 num_rows
@@ -1502,6 +1519,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys
@@ -1562,6 +1580,9 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+10KiB
+2GiB
+512KiB
 1GiB
 KiB
 GiB
@@ -1631,6 +1652,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+allowList
 ANDed
 array_mod
 autoscale
@@ -1644,6 +1666,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+denyList
 doubleMax
 doubleMin
 doubleSum
@@ -1669,6 +1692,7 @@ file.encoding
 fillCapacity
 first_location
 floatMax
+floatAny
 floatMin
 floatSum
 freeSpacePercent

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
@@ -90,6 +91,17 @@ public class MonitorScheduler
     synchronized (lock) {
       monitors.remove(monitor);
       monitor.stop();
+    }
+  }
+
+  /**
+   * Returns a {@link Monitor} instance of the given class if any. Note that this method searches for the monitor
+   * from the current snapshot of {@link #monitors}.
+   */
+  public <T extends Monitor> Optional<T> findMonitor(Class<T> monitorClass)
+  {
+    synchronized (lock) {
+      return (Optional<T>) monitors.stream().filter(m -> m.getClass() == monitorClass).findFirst();
     }
   }
 

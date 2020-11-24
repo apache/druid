@@ -20,9 +20,11 @@
 package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -34,6 +36,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collection;
 
 @Path("/druid/coordinator/v1/compaction")
 public class CompactionResource
@@ -75,5 +78,26 @@ public class CompactionResource
     } else {
       return Response.ok(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes)).build();
     }
+  }
+
+  @GET
+  @Path("/status")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getCompactionSnapshotForDataSource(
+      @QueryParam("dataSource") String dataSource
+  )
+  {
+    final Collection<AutoCompactionSnapshot> snapshots;
+    if (dataSource == null || dataSource.isEmpty()) {
+      snapshots = coordinator.getAutoCompactionSnapshot().values();
+    } else {
+      AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
+      if (autoCompactionSnapshot == null) {
+        return Response.status(Response.Status.BAD_REQUEST).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+      }
+      snapshots = ImmutableList.of(autoCompactionSnapshot);
+    }
+    return Response.ok(ImmutableMap.of("latestStatus", snapshots)).build();
   }
 }

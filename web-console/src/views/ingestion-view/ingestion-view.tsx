@@ -45,18 +45,20 @@ import {
   addFilter,
   addFilterRaw,
   booleanCustomTableFilter,
+  deepGet,
   formatDuration,
   getDruidErrorMessage,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
+  oneOf,
   queryDruidSql,
   QueryManager,
+  QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Capabilities } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './ingestion-view.scss';
 
@@ -107,15 +109,12 @@ export interface IngestionViewProps {
   openDialog: string | undefined;
   goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
-  goToMiddleManager: (middleManager: string) => void;
   goToLoadData: (supervisorId?: string, taskId?: string) => void;
   capabilities: Capabilities;
 }
 
 export interface IngestionViewState {
-  supervisorsLoading: boolean;
-  supervisors?: SupervisorQueryResultRow[];
-  supervisorsError?: string;
+  supervisorsState: QueryState<SupervisorQueryResultRow[]>;
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
@@ -126,9 +125,7 @@ export interface IngestionViewState {
   showSuspendAllSupervisors: boolean;
   showTerminateAllSupervisors: boolean;
 
-  tasksLoading: boolean;
-  tasks?: TaskQueryResultRow[];
-  tasksError?: string;
+  tasksState: QueryState<TaskQueryResultRow[]>;
 
   taskFilter: Filter[];
   supervisorFilter: Filter[];
@@ -223,14 +220,13 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
 
     this.state = {
-      supervisorsLoading: true,
-      supervisors: [],
+      supervisorsState: QueryState.INIT,
 
       showResumeAllSupervisors: false,
       showSuspendAllSupervisors: false,
       showTerminateAllSupervisors: false,
 
-      tasksLoading: true,
+      tasksState: QueryState.INIT,
       taskFilter: taskFilter,
       supervisorFilter: supervisorFilter,
 
@@ -274,11 +270,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           throw new Error(`must have SQL or overlord access`);
         }
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: supervisorsState => {
         this.setState({
-          supervisors: result,
-          supervisorsLoading: loading,
-          supervisorsError: error,
+          supervisorsState,
         });
       },
     });
@@ -296,11 +290,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           throw new Error(`must have SQL or overlord access`);
         }
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: tasksState => {
         this.setState({
-          tasks: result,
-          tasksLoading: loading,
-          tasksError: error,
+          tasksState,
         });
       },
     });
@@ -393,7 +385,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     const { goToDatasource, goToLoadData } = this.props;
 
     const actions: BasicAction[] = [];
-    if (type === 'kafka' || type === 'kinesis') {
+    if (oneOf(type, 'kafka', 'kinesis')) {
       actions.push(
         {
           icon: IconNames.MULTI_SELECT,
@@ -559,23 +551,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderSupervisorTable() {
-    const {
-      supervisors,
-      supervisorsLoading,
-      supervisorsError,
-      hiddenSupervisorColumns,
-      taskFilter,
-      supervisorFilter,
-    } = this.state;
+    const { supervisorsState, hiddenSupervisorColumns, taskFilter, supervisorFilter } = this.state;
+
     return (
       <>
         <ReactTable
-          data={supervisors || []}
-          loading={supervisorsLoading}
+          data={supervisorsState.data || []}
+          loading={supervisorsState.loading}
           noDataText={
-            !supervisorsLoading && supervisors && !supervisors.length
-              ? 'No supervisors'
-              : supervisorsError || ''
+            supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
           }
           filtered={supervisorFilter}
           onFilteredChange={filtered => {
@@ -675,14 +659,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         onAction: () => goToDatasource(datasource),
       });
     }
-    if (type === 'index' || type === 'index_parallel') {
+    if (oneOf(type, 'index', 'index_parallel')) {
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
         onAction: () => goToLoadData(undefined, id),
       });
     }
-    if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
+    if (oneOf(status, 'RUNNING', 'WAITING', 'PENDING')) {
       actions.push({
         icon: IconNames.CROSS,
         title: 'Kill',
@@ -720,11 +704,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderTaskTable() {
-    const { goToMiddleManager } = this.props;
     const {
-      tasks,
-      tasksLoading,
-      tasksError,
+      tasksState,
       taskFilter,
       groupTasksBy,
       hiddenTaskColumns,
@@ -733,9 +714,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <ReactTable
-          data={tasks || []}
-          loading={tasksLoading}
-          noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : tasksError || ''}
+          data={tasksState.data || []}
+          loading={tasksState.loading}
+          noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {
@@ -830,21 +811,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               }),
               Cell: row => {
                 if (row.aggregated) return '';
-                const { status, location } = row.original;
-                const locationHostname = location ? location.split(':')[0] : null;
+                const { status } = row.original;
                 const errorMsg = row.original.error_msg;
                 return (
                   <span>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {location && (
-                      <a
-                        onClick={() => goToMiddleManager(locationHostname)}
-                        title={`Go to: ${locationHostname}`}
-                      >
-                        &nbsp;&#x279A;
-                      </a>
-                    )}
                     {errorMsg && (
                       <a
                         onClick={() => this.setState({ alertErrorMsg: errorMsg })}

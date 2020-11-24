@@ -25,13 +25,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -52,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.TimeoutException;
 
 public class ScanQueryEngine
 {
@@ -65,7 +65,7 @@ public class ScanQueryEngine
   )
   {
     // "legacy" should be non-null due to toolChest.mergeResults
-    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "WTF?! Expected non-null legacy");
+    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
     final Object numScannedRows = responseContext.get(ResponseContext.Key.NUM_SCANNED_ROWS);
     if (numScannedRows != null) {
@@ -174,7 +174,7 @@ public class ScanQueryEngine
                               throw new NoSuchElementException();
                             }
                             if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
-                              throw new QueryInterruptedException(new TimeoutException());
+                              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
                             }
                             final long lastOffset = offset;
                             final Object events;

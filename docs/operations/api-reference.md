@@ -410,6 +410,32 @@ Returns total size and count for each datasource for each interval within given 
 Returns the total size of segments awaiting compaction for the given dataSource. 
 This is only valid for dataSource which has compaction enabled. 
 
+##### GET
+
+* `/druid/coordinator/v1/compaction/status`
+
+Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
+The `latestStatus` object has the following keys:
+* `dataSource`: name of the datasource for this status information
+* `scheduleStatus`: auto compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto compaction config submitted otherwise, `NOT_ENABLED`
+* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto compaction config.
+* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.
+* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.
+* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+
+##### GET
+
+* `/druid/coordinator/v1/compaction/status?dataSource={dataSource}`
+
+Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the {dataSource} given. 
+Note that {dataSource} given must have/had auto compaction enabled.
+
 #### Compaction Configuration
 
 ##### GET
@@ -667,6 +693,10 @@ Retrieves current overlord dynamic configuration.
 
 Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
 to filter by interval and limit the number of results respectively.
+
+* `/druid/indexer/v1/workers`
+
+Retrieves a list of all the worker nodes in the cluster along with its metadata.
 
 * `/druid/indexer/v1/scaling`
 

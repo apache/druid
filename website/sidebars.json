@@ -113,7 +113,28 @@
     "Operations": [
       "operations/druid-console",
       "operations/getting-started",
-      "operations/basic-cluster-tuning",
+      {
+        "type": "subcategory",
+        "label": "Security",
+        "ids": [
+          "operations/security-overview",
+          "operations/security-user-auth",
+          "operations/auth-ldap",
+          "operations/password-provider",
+          "design/auth",
+          "operations/tls-support"
+
+        ]
+      }, 
+      {
+        "type": "subcategory",
+        "label": "Performance tuning",
+        "ids": [
+          "operations/basic-cluster-tuning",
+          "operations/segment-optimization",
+          "operations/http-compression"
+        ]
+      },       
       "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
@@ -121,22 +142,18 @@
       "operations/metrics",
       "operations/alerts",
       "operations/other-hadoop",
-      "operations/http-compression",
-      "operations/tls-support",
-      "operations/password-provider",
-      "operations/dump-segment",
-      "operations/reset-cluster",
-      "operations/insert-segment-to-db",
-      "operations/pull-deps",
       {
         "type": "subcategory",
         "label": "Misc",
         "ids": [
           "operations/management-uis",
+          "operations/dump-segment",
+          "operations/reset-cluster",
+          "operations/insert-segment-to-db",
+          "operations/pull-deps",
           "operations/deep-storage-migration",
           "operations/export-metadata",
           "operations/metadata-migration",
-          "operations/segment-optimization",
           "operations/use_sbt_to_build_fat_jar"
         ]
       }

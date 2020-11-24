@@ -16,6 +16,7 @@
   "query/success/count" : { "dimensions" : [], "type" : "count" },
   "query/failed/count" : { "dimensions" : [], "type" : "count" },
   "query/interrupted/count" : { "dimensions" : [], "type" : "count" },
+  "query/timeout/count" : { "dimensions" : [], "type" : "count" },
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "count" },
@@ -61,6 +62,12 @@
   "task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "taskSlot/total/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/idle/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/busy/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/lazy/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/blacklisted/count" : { "dimensions" : [], "type" : "count" },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },

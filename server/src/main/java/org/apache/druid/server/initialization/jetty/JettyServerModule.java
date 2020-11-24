@@ -238,6 +238,7 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      httpConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
       if (node.isBindOnHost()) {
         connector.setHost(node.getHost());
@@ -323,6 +324,7 @@ public class JettyServerModule extends JerseyServletModule
       httpsConfiguration.setSecurePort(node.getTlsPort());
       httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      httpsConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(
           server,
           new SslConnectionFactory(sslContextFactory, HTTP_1_1_STRING),

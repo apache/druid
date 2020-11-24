@@ -1661,7 +1661,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.30.v20200611
+version: 9.4.34.v20201102
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3197,7 +3197,7 @@ name: Apache Hive
 license_category: binary
 module: extensions/druid-bloom-filter
 license_name: Apache License version 2.0
-version: 2.7.0
+version: 2.7.1
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
@@ -4040,7 +4040,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.5.6
+version: 1.5.10
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4058,6 +4058,20 @@ notices:
 
 ---
 
+name: ThreeTen
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: BSD-3-Clause License
+version: 1.5.0
+libraries:
+  - org.threeten: threeten-extra
+notices:
+  - threeten-extra: |
+      ThreeTen-Extra
+      Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos.
+
+---
+
 name: aircompressor
 license_category: binary
 module: extensions/druid-orc-extensions
@@ -4072,7 +4086,7 @@ name: Hive storage API
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.7.1
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
@@ -4086,7 +4100,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev158-1.25.0
+version: v1-rev20200927-1.30.10
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4096,7 +4110,7 @@ name: Google Compute Engine API
 license_category: binary
 module: extensions/gce-extensions
 license_name: Apache License version 2.0
-version: v1-rev214-1.25.0
+version: v1-rev20201005-1.30.10
 libraries:
   - com.google.apis: google-api-services-compute
 
@@ -4116,7 +4130,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.25.0
+version: 1.30.10
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4126,7 +4140,7 @@ name: Google HTTP Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.25.0
+version: 1.37.0
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
@@ -4137,7 +4151,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.0
+version: 1.31.0
 libraries:
   - com.google.oauth-client: google-oauth-client
 
@@ -4481,7 +4495,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.19.1
+version: 3.33.0
 
 ---
 
@@ -4490,7 +4504,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.14.0
+version: 3.19.2
 
 ---
 
@@ -4499,7 +4513,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.11.0
+version: 3.22.0
 
 ---
 
@@ -4673,6 +4687,26 @@ license_file_path: licenses/bin/debug.MIT
 
 ---
 
+name: "deep-equal"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: James Halliday
+version: 1.1.1
+license_file_path: licenses/bin/deep-equal.MIT
+
+---
+
+name: "define-properties"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.1.3
+license_file_path: licenses/bin/define-properties.MIT
+
+---
+
 name: "diff-match-patch"
 license_category: binary
 module: web-console
@@ -4707,7 +4741,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.8.4
+version: 0.9.15
 
 ---
 
@@ -4731,6 +4765,26 @@ license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
 
+name: "fontsource-open-sans"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Lotus
+version: 3.0.9
+license_file_path: licenses/bin/fontsource-open-sans.MIT
+
+---
+
+name: "function-bind"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Raynos
+version: 1.1.1
+license_file_path: licenses/bin/function-bind.MIT
+
+---
+
 name: "gud"
 license_category: binary
 module: web-console
@@ -4748,6 +4802,16 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 2.0.0
 license_file_path: licenses/bin/has-own-prop.MIT
+
+---
+
+name: "has"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Thiago de Arruda
+version: 1.0.3
+license_file_path: licenses/bin/has.MIT
 
 ---
 
@@ -4781,6 +4845,16 @@ license_file_path: licenses/bin/hoist-non-react-statics.BSD3
 
 ---
 
+name: "is-arguments"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.4
+license_file_path: licenses/bin/is-arguments.MIT
+
+---
+
 name: "is-buffer"
 license_category: binary
 module: web-console
@@ -4788,6 +4862,26 @@ license_name: MIT License
 copyright: Feross Aboukhadijeh
 version: 2.0.3
 license_file_path: licenses/bin/is-buffer.MIT
+
+---
+
+name: "is-date-object"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.1
+license_file_path: licenses/bin/is-date-object.MIT
+
+---
+
+name: "is-regex"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.4
+license_file_path: licenses/bin/is-regex.MIT
 
 ---
 
@@ -4921,6 +5015,35 @@ license_file_path: licenses/bin/object-assign.MIT
 
 ---
 
+name: "object-is"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.1
+license_file_path: licenses/bin/object-is.MIT
+
+---
+
+name: "object-keys"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.1.1
+license_file_path: licenses/bin/object-keys.MIT
+
+---
+
+name: "opensans"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Google
+version: 1.101.0
+
+---
+
 name: "path-to-regexp"
 license_category: binary
 module: web-console
@@ -4936,7 +5059,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Federico Zivolo
-version: 1.15.0
+version: 1.16.1
 license_file_path: licenses/bin/popper.js.MIT
 
 ---
@@ -4966,7 +5089,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Giampaolo Bellavite
-version: 7.4.0
+version: 7.4.8
 license_file_path: licenses/bin/react-day-picker.MIT
 
 ---
@@ -5006,7 +5129,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Travis Arnold
-version: 1.3.4
+version: 1.3.7
 license_file_path: licenses/bin/react-popper.MIT
 
 ---
@@ -5078,6 +5201,16 @@ license_name: MIT License
 copyright: Ben Newman
 version: 0.13.3
 license_file_path: licenses/bin/regenerator-runtime.MIT
+
+---
+
+name: "regexp.prototype.flags"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.2.0
+license_file_path: licenses/bin/regexp.prototype.flags.MIT
 
 ---
 
