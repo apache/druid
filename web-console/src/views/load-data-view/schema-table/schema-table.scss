@@ -16,44 +16,47 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
+
 .schema-table {
   .rt-th {
     &.dimension {
-      background: rgba(38, 170, 201, 0.5);
+      background: rgba($green3, 0.3);
 
       &.long {
-        background: rgba(19, 129, 201, 0.5);
+        background: rgba($blue3, 0.3);
       }
       &.float {
-        background: rgba(22, 129, 201, 0.5);
+        background: rgba($blue3, 0.3);
       }
       &.double {
-        background: rgba(25, 129, 201, 0.5);
+        background: rgba($blue3, 0.3);
       }
     }
 
     &.metric {
-      background: rgba(201, 191, 55, 0.5);
+      background: rgba($rose2, 0.16);
     }
   }
 
   .rt-td {
     &.dimension {
-      background: rgba(38, 170, 201, 0.1);
+      background: rgba($green3, 0.12);
 
       &.long {
-        background: rgba(19, 129, 201, 0.1);
+        background: rgba($blue3, 0.1);
       }
       &.float {
-        background: rgba(22, 129, 201, 0.1);
+        background: rgba($blue3, 0.1);
       }
       &.double {
-        background: rgba(25, 129, 201, 0.1);
+        background: rgba($blue3, 0.1);
       }
     }
 
     &.metric {
-      background: rgba(201, 191, 55, 0.1);
+      background: rgba($rose2, 0.07);
     }
   }
 }

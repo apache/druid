@@ -136,16 +136,15 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             flattener.flatten(intermediateRow)
         )
     );
   }
 
   @Override
-  protected Map<String, Object> toMap(Group intermediateRow)
+  protected List<Map<String, Object>> toMap(Group intermediateRow)
   {
-    return flattener.toMap(intermediateRow);
+    return Collections.singletonList(flattener.toMap(intermediateRow));
   }
 }

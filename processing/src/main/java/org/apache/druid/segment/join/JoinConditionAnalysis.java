@@ -131,9 +131,9 @@ public class JoinConditionAnalysis
 
   private static boolean isLeftExprAndRightColumn(final Expr a, final Expr b, final String rightPrefix)
   {
-    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> Joinables.isPrefixedBy(c, rightPrefix))
+    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> JoinPrefixUtils.isPrefixedBy(c, rightPrefix))
            && b.getBindingIfIdentifier() != null
-           && Joinables.isPrefixedBy(b.getBindingIfIdentifier(), rightPrefix);
+           && JoinPrefixUtils.isPrefixedBy(b.getBindingIfIdentifier(), rightPrefix);
   }
 
   /**

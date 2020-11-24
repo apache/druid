@@ -38,10 +38,14 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -897,6 +901,25 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       );
       results = compactedListToRow(results);
       verify(descendingExpectedResults, results);
+    }
+  }
+
+  @Test
+  public void testScanQueryTimeout()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+    ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    responseContext.add(ResponseContext.Key.TIMEOUT_AT, System.currentTimeMillis());
+    try {
+      runner.run(QueryPlus.wrap(query), responseContext).toList();
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
     }
   }
 

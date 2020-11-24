@@ -90,7 +90,7 @@ setupData()
     # below s3 credentials needed to access the pre-existing s3 bucket
     setKey $DRUID_SERVICE druid.s3.accessKey AKIAJI7DG7CDECGBQ6NA
     setKey $DRUID_SERVICE druid.s3.secretKey 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
-    if [[ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]]; then
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]; then
       setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\",\"druid-integration-tests\"]
     else
       setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\"]

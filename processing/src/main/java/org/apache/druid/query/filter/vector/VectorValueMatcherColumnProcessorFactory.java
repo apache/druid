@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.segment.VectorColumnProcessorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -40,6 +41,7 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
 
   @Override
   public VectorValueMatcherFactory makeSingleValueDimensionProcessor(
+      final ColumnCapabilities capabilities,
       final SingleValueDimensionVectorSelector selector
   )
   {
@@ -48,6 +50,7 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
 
   @Override
   public VectorValueMatcherFactory makeMultiValueDimensionProcessor(
+      final ColumnCapabilities capabilities,
       final MultiValueDimensionVectorSelector selector
   )
   {
@@ -55,19 +58,28 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   }
 
   @Override
-  public VectorValueMatcherFactory makeFloatProcessor(final VectorValueSelector selector)
+  public VectorValueMatcherFactory makeFloatProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorValueSelector selector
+  )
   {
     return new FloatVectorValueMatcher(selector);
   }
 
   @Override
-  public VectorValueMatcherFactory makeDoubleProcessor(final VectorValueSelector selector)
+  public VectorValueMatcherFactory makeDoubleProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorValueSelector selector
+  )
   {
     return new DoubleVectorValueMatcher(selector);
   }
 
   @Override
-  public VectorValueMatcherFactory makeLongProcessor(final VectorValueSelector selector)
+  public VectorValueMatcherFactory makeLongProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorValueSelector selector
+  )
   {
     return new LongVectorValueMatcher(selector);
   }

@@ -19,7 +19,13 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,5 +68,41 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
         5
     );
     Assert.assertEquals(ah.toHistogram(5), approximateHistogramPostAggregator.compute(metricValues));
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(new ApproximateHistogramAggregatorFactory("approxHisto", "col", null, null, null, null, false))
+              .postAggregators(
+                  new BucketsPostAggregator("bucket", "approxHisto", 100, 0),
+                  new EqualBucketsPostAggregator("equal", "approxHisto", 5),
+                  new CustomBucketsPostAggregator("custom", "approxHisto", new float[]{1.0f, 20.0f, 75.0f}),
+                  new MinPostAggregator("min", "approxHisto"),
+                  new MaxPostAggregator("max", "approxHisto"),
+                  new QuantilePostAggregator("quantile", "approxHisto", 0.5f),
+                  new QuantilesPostAggregator("quantiles", "approxHisto", new float[]{0.2f, 0.5f, 0.75f})
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("approxHisto", ValueType.COMPLEX)
+                    .add("bucket", ValueType.COMPLEX)
+                    .add("equal", ValueType.COMPLEX)
+                    .add("custom", ValueType.COMPLEX)
+                    .add("min", ValueType.DOUBLE)
+                    .add("max", ValueType.DOUBLE)
+                    .add("quantile", ValueType.FLOAT)
+                    .add("quantiles", ValueType.COMPLEX)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

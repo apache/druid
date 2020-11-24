@@ -21,13 +21,12 @@ DRUID_SERVICE=historical
 DRUID_LOG_PATH=/shared/logs/historical.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007
 
 # Druid configs
 druid_processing_buffer_sizeBytes=25000000
 druid_processing_numThreads=2
 druid_query_groupBy_maxOnDiskStorage=300000000
 druid_segmentCache_locations=[{"path":"/shared/druid/indexCache","maxSize":5000000000}]
-druid_server_maxSize=5000000000
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical
 druid_server_https_crlPath=/tls/revocations.crl

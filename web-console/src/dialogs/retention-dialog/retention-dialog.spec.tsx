@@ -19,15 +19,23 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { reorderArray, RetentionDialog } from './retention-dialog';
+import { RetentionDialog } from './retention-dialog';
 
 describe('retention dialog', () => {
   it('matches snapshot', () => {
     const retentionDialog = (
       <RetentionDialog
-        datasource={'test'}
-        rules={[null]}
-        tiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']}
+        datasource={'test-datasource'}
+        rules={[
+          {
+            period: 'P1000Y',
+            includeFuture: true,
+            tieredReplicants: { _default_tier: 2 },
+            type: 'loadByPeriod',
+          },
+        ]}
+        defaultRules={[{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }]}
+        tiers={['tier1', 'tier2']}
         onEditDefaults={() => {}}
         onCancel={() => {}}
         onSave={() => {}}
@@ -35,40 +43,5 @@ describe('retention dialog', () => {
     );
     render(retentionDialog);
     expect(document.body.lastChild).toMatchSnapshot();
-  });
-
-  describe('reorderArray', () => {
-    it('works when nothing changes', () => {
-      const array = ['a', 'b', 'c', 'd', 'e'];
-
-      const newArray = reorderArray(array, 0, 0);
-
-      expect(newArray).toEqual(['a', 'b', 'c', 'd', 'e']);
-      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
-    });
-
-    it('works upward', () => {
-      const array = ['a', 'b', 'c', 'd', 'e'];
-
-      let newArray = reorderArray(array, 2, 1);
-      expect(newArray).toEqual(['a', 'c', 'b', 'd', 'e']);
-      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
-
-      newArray = reorderArray(array, 2, 0);
-      expect(newArray).toEqual(['c', 'a', 'b', 'd', 'e']);
-      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
-    });
-
-    it('works downward', () => {
-      const array = ['a', 'b', 'c', 'd', 'e'];
-
-      let newArray = reorderArray(array, 2, 3);
-      expect(newArray).toEqual(['a', 'b', 'c', 'd', 'e']);
-      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
-
-      newArray = reorderArray(array, 2, 4);
-      expect(newArray).toEqual(['a', 'b', 'd', 'c', 'e']);
-      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
-    });
   });
 });

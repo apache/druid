@@ -73,16 +73,16 @@ public final class DimensionHandlerUtils
   )
   {
     if (capabilities == null) {
-      return new StringDimensionHandler(dimensionName, multiValueHandling, true);
+      return new StringDimensionHandler(dimensionName, multiValueHandling, true, false);
     }
 
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
 
     if (capabilities.getType() == ValueType.STRING) {
-      if (!capabilities.isDictionaryEncoded()) {
+      if (!capabilities.isDictionaryEncoded().isTrue()) {
         throw new IAE("String column must have dictionary encoding.");
       }
-      return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes());
+      return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes(), capabilities.hasSpatialIndexes());
     }
 
     if (capabilities.getType() == ValueType.LONG) {
@@ -98,7 +98,7 @@ public final class DimensionHandlerUtils
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
-    return new StringDimensionHandler(dimensionName, multiValueHandling, true);
+    return new StringDimensionHandler(dimensionName, multiValueHandling, true, false);
   }
 
   public static List<ValueType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)
@@ -226,11 +226,11 @@ public final class DimensionHandlerUtils
       capabilities = ColumnCapabilitiesImpl.copyOf(capabilities)
                                            .setType(ValueType.STRING)
                                            .setDictionaryValuesUnique(
-                                               capabilities.isDictionaryEncoded() &&
+                                               capabilities.isDictionaryEncoded().isTrue() &&
                                                fn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
                                            )
                                            .setDictionaryValuesSorted(
-                                               capabilities.isDictionaryEncoded() && fn.preservesOrdering()
+                                               capabilities.isDictionaryEncoded().isTrue() && fn.preservesOrdering()
                                            );
     }
 
@@ -307,10 +307,12 @@ public final class DimensionHandlerUtils
     if (type == ValueType.STRING) {
       if (!forceSingleValue && effectiveCapabilites.hasMultipleValues().isMaybeTrue()) {
         return strategyFactory.makeMultiValueDimensionProcessor(
+            effectiveCapabilites,
             selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
         );
       } else {
         return strategyFactory.makeSingleValueDimensionProcessor(
+            effectiveCapabilites,
             selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
         );
       }
@@ -325,14 +327,17 @@ public final class DimensionHandlerUtils
 
       if (type == ValueType.LONG) {
         return strategyFactory.makeLongProcessor(
+            effectiveCapabilites,
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.FLOAT) {
         return strategyFactory.makeFloatProcessor(
+            effectiveCapabilites,
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.DOUBLE) {
         return strategyFactory.makeDoubleProcessor(
+            effectiveCapabilites,
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else {

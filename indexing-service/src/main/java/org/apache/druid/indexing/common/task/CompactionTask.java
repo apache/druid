@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -33,7 +32,7 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -53,7 +52,6 @@ import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
@@ -84,9 +82,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -131,6 +127,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   private static final String TYPE = "compact";
 
+  private static final boolean STORE_COMPACTION_STATE = true;
+
   static {
     Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
   }
@@ -144,34 +142,16 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final Granularity segmentGranularity;
   @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
-  private final ObjectMapper jsonMapper;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
   @JsonIgnore
   private final PartitionConfigurationManager partitionConfigurationManager;
 
   @JsonIgnore
-  private final AuthorizerMapper authorizerMapper;
-
-  @JsonIgnore
-  private final ChatHandlerProvider chatHandlerProvider;
-
-  @JsonIgnore
-  private final RowIngestionMetersFactory rowIngestionMetersFactory;
-
-  @JsonIgnore
-  private final CoordinatorClient coordinatorClient;
-
-  private final IndexingServiceClient indexingServiceClient;
-
-  @JsonIgnore
   private final SegmentLoaderFactory segmentLoaderFactory;
 
   @JsonIgnore
   private final RetryPolicyFactory retryPolicyFactory;
-
-  @JsonIgnore
-  private final AppenderatorsManager appenderatorsManager;
 
   @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
@@ -183,8 +163,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonCreator
   public CompactionTask(
-      @JsonProperty("id") final String id,
-      @JsonProperty("resource") final TaskResource taskResource,
+      @JsonProperty("id") @Nullable final String id,
+      @JsonProperty("resource") @Nullable final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("interval") @Deprecated @Nullable final Interval interval,
       @JsonProperty("segments") @Deprecated @Nullable final List<DataSegment> segments,
@@ -195,15 +175,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
-      @JacksonInject ObjectMapper jsonMapper,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject CoordinatorClient coordinatorClient,
-      @JacksonInject @Nullable IndexingServiceClient indexingServiceClient,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
@@ -230,17 +203,10 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
-    this.jsonMapper = jsonMapper;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
-    this.authorizerMapper = authorizerMapper;
-    this.chatHandlerProvider = chatHandlerProvider;
-    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
-    this.indexingServiceClient = indexingServiceClient;
-    this.coordinatorClient = coordinatorClient;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
-    this.appenderatorsManager = appenderatorsManager;
   }
 
   @VisibleForTesting
@@ -253,6 +219,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return new ParallelIndexTuningConfig(
           null,
           indexTuningConfig.getMaxRowsPerSegment(),
+          indexTuningConfig.getAppendableIndexSpec(),
           indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getMaxBytesInMemory(),
           indexTuningConfig.getMaxTotalRows(),
@@ -380,8 +347,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         dimensionsSpec,
         metricsSpec,
         segmentGranularity,
-        jsonMapper,
-        coordinatorClient,
+        toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory
     );
@@ -397,10 +363,14 @@ public class CompactionTask extends AbstractBatchIndexTask
           // a new Appenderator on its own instead. As a result, they should use different sequence names to allocate
           // new segmentIds properly. See IndexerSQLMetadataStorageCoordinator.allocatePendingSegments() for details.
           // In this case, we use different fake IDs for each created index task.
-          final String subtaskId = tuningConfig == null || tuningConfig.getMaxNumConcurrentSubTasks() == 1
-                                   ? createIndexTaskSpecId(i)
-                                   : getId();
-          return newTask(subtaskId, ingestionSpecs.get(i));
+          ParallelIndexIngestionSpec ingestionSpec = ingestionSpecs.get(i);
+          InputSource inputSource = ingestionSpec.getIOConfig().getNonNullInputSource(
+              ingestionSpec.getDataSchema().getParser()
+          );
+          final String subtaskId = ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig)
+                                   ? getId()
+                                   : createIndexTaskSpecId(i);
+          return newTask(subtaskId, ingestionSpec);
         })
         .collect(Collectors.toList());
 
@@ -414,7 +384,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
       int failCnt = 0;
       for (ParallelIndexSupervisorTask eachSpec : indexTaskSpecs) {
-        final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
+        final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         if (!currentSubTaskHolder.setTask(eachSpec)) {
           log.info("Task is asked to stop. Finish as failed.");
           return TaskStatus.failure(getId());
@@ -451,12 +421,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         getGroupId(),
         getTaskResource(),
         ingestionSpec,
-        createContextForSubtask(),
-        indexingServiceClient,
-        chatHandlerProvider,
-        authorizerMapper,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        createContextForSubtask()
     );
   }
 
@@ -465,6 +430,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final Map<String, Object> newContext = new HashMap<>(getContext());
     newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, getPriority());
     return newContext;
@@ -489,7 +455,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final DimensionsSpec dimensionsSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final Granularity segmentGranularity,
-      final ObjectMapper jsonMapper,
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
       final RetryPolicyFactory retryPolicyFactory
@@ -911,15 +876,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   public static class Builder
   {
     private final String dataSource;
-    private final ObjectMapper jsonMapper;
-    private final AuthorizerMapper authorizerMapper;
-    private final ChatHandlerProvider chatHandlerProvider;
-    private final RowIngestionMetersFactory rowIngestionMetersFactory;
-    private final IndexingServiceClient indexingServiceClient;
-    private final CoordinatorClient coordinatorClient;
     private final SegmentLoaderFactory segmentLoaderFactory;
     private final RetryPolicyFactory retryPolicyFactory;
-    private final AppenderatorsManager appenderatorsManager;
 
     private CompactionIOConfig ioConfig;
     @Nullable
@@ -935,27 +893,13 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     public Builder(
         String dataSource,
-        ObjectMapper jsonMapper,
-        AuthorizerMapper authorizerMapper,
-        ChatHandlerProvider chatHandlerProvider,
-        RowIngestionMetersFactory rowIngestionMetersFactory,
-        IndexingServiceClient indexingServiceClient,
-        CoordinatorClient coordinatorClient,
         SegmentLoaderFactory segmentLoaderFactory,
-        RetryPolicyFactory retryPolicyFactory,
-        AppenderatorsManager appenderatorsManager
+        RetryPolicyFactory retryPolicyFactory
     )
     {
       this.dataSource = dataSource;
-      this.jsonMapper = jsonMapper;
-      this.authorizerMapper = authorizerMapper;
-      this.chatHandlerProvider = chatHandlerProvider;
-      this.rowIngestionMetersFactory = rowIngestionMetersFactory;
-      this.indexingServiceClient = indexingServiceClient;
-      this.coordinatorClient = coordinatorClient;
       this.segmentLoaderFactory = segmentLoaderFactory;
       this.retryPolicyFactory = retryPolicyFactory;
-      this.appenderatorsManager = appenderatorsManager;
     }
 
     public Builder interval(Interval interval)
@@ -1019,15 +963,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           segmentGranularity,
           tuningConfig,
           context,
-          jsonMapper,
-          authorizerMapper,
-          chatHandlerProvider,
-          rowIngestionMetersFactory,
-          coordinatorClient,
-          indexingServiceClient,
           segmentLoaderFactory,
-          retryPolicyFactory,
-          appenderatorsManager
+          retryPolicyFactory
       );
     }
   }

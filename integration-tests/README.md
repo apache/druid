@@ -370,6 +370,7 @@ This will tell the test framework that the test class needs to be constructed us
 Refer ITIndexerTest as an example on how to use dependency Injection
 
 ### Running test methods in parallel
+
 By default, test methods in a test class will be run in sequential order one at a time. Test methods for a given test 
 class can be set to run in parallel (multiple test methods of each class running at the same time) by excluding
 the given class/package from the "AllSerializedTests" test tag section and including it in the "AllParallelizedTests" 
@@ -385,3 +386,13 @@ Please be mindful when adding tests to the "AllParallelizedTests" test tag that 
 other tests from the same class at the same time. i.e. test does not modify/restart/stop the druid cluster or other dependency containers,
 test does not use excessive memory starving other concurent task, test does not modify and/or use other task, 
 supervisor, datasource it did not create. 
+
+### Limitation of Druid cluster in Travis environment
+
+By default, integration tests are run in Travis environment on commits made to open PR. These integration test jobs are
+required to pass for a PR to be elligible to be merged. Here are known issues and limitations to the Druid docker cluster
+running in Travis machine that may cause the tests to fail:
+- Number of concurrent running tasks. Although the default Druid cluster config sets the maximum number of tasks (druid.worker.capacity) to 10,
+the actual maximum can be lower depending on the type of the tasks. For example, running 2 range partitioning compaction tasks with 2 subtasks each 
+(for a total of 6 tasks) concurrently can cause the cluster to intermittently fail. This can cause the Travis job to become stuck until it timeouts (50 minutes) 
+and/or terminates after 10 mins of not receiving new output.

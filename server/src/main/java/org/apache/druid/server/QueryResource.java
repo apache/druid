@@ -44,6 +44,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.TruncatedResponseContextException;
@@ -107,6 +108,7 @@ public class QueryResource implements QueryCountStatsProvider
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
+  private final AtomicLong timedOutQueryCount = new AtomicLong();
 
   @Inject
   public QueryResource(
@@ -330,6 +332,11 @@ public class QueryResource implements QueryCountStatsProvider
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotError(e);
     }
+    catch (QueryTimeoutException timeout) {
+      timedOutQueryCount.incrementAndGet();
+      queryLifecycle.emitLogsAndMetrics(timeout, req.getRemoteAddr(), -1);
+      return ioReaderWriter.gotTimeout(timeout);
+    }
     catch (QueryCapacityExceededException cap) {
       failedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
@@ -465,6 +472,17 @@ public class QueryResource implements QueryCountStatsProvider
                      .build();
     }
 
+    Response gotTimeout(QueryTimeoutException e) throws IOException
+    {
+      return Response.status(QueryTimeoutException.STATUS_CODE)
+                     .type(contentType)
+                     .entity(
+                         newOutputWriter(null, null, false)
+                             .writeValueAsBytes(e)
+                     )
+                     .build();
+    }
+
     Response gotLimited(QueryCapacityExceededException e) throws IOException
     {
       return Response.status(QueryCapacityExceededException.STATUS_CODE)
@@ -496,5 +514,11 @@ public class QueryResource implements QueryCountStatsProvider
   public long getInterruptedQueryCount()
   {
     return interruptedQueryCount.get();
+  }
+
+  @Override
+  public long getTimedOutQueryCount()
+  {
+    return timedOutQueryCount.get();
   }
 }

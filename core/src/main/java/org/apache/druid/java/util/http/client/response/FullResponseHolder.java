@@ -49,12 +49,7 @@ public abstract class FullResponseHolder<T>
   }
 
   /**
-   * Append a new chunk of data.
-   */
-  public abstract FullResponseHolder addChunk(T chunk);
-
-  /**
-   * Get the accumulated data via {@link #addChunk}.
+   * Get the data.
    */
   public abstract T getContent();
 }

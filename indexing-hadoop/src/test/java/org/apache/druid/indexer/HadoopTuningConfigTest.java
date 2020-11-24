@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,6 +41,7 @@ public class HadoopTuningConfigTest
     HadoopTuningConfig expected = new HadoopTuningConfig(
         "/tmp/workingpath",
         "version",
+        null,
         null,
         null,
         null,
@@ -68,6 +70,7 @@ public class HadoopTuningConfigTest
 
     Assert.assertEquals("/tmp/workingpath", actual.getWorkingPath());
     Assert.assertEquals("version", actual.getVersion());
+    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), actual.getAppendableIndexSpec());
     Assert.assertNotNull(actual.getPartitionsSpec());
     Assert.assertEquals(ImmutableMap.<Long, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
     Assert.assertEquals(new IndexSpec(), actual.getIndexSpec());

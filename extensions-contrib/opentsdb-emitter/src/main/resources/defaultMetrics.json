@@ -19,6 +19,7 @@
   "query/success/count": [],
   "query/failed/count": [],
   "query/interrupted/count": [],
+  "query/timeout/count": [],
   "query/wait/time": [
     "segment"
   ],

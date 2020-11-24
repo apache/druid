@@ -23,6 +23,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
@@ -129,11 +130,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion, waitForSegmentsToLoad);
     if (runTestQueries) {
-      doTestQuery(dataSource, queryFilePath, 2);
+      doTestQuery(dataSource, queryFilePath);
     }
   }
 
-  protected void doTestQuery(String dataSource, String queryFilePath, int timesToRun)
+  protected void doTestQuery(String dataSource, String queryFilePath)
   {
     try {
       String queryResponseTemplate;
@@ -150,7 +151,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
           "%%DATASOURCE%%",
           dataSource + config.getExtraDatasourceNameSuffix()
       );
-      queryHelper.testQueriesFromString(queryResponseTemplate, timesToRun);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
 
     }
     catch (Exception e) {
@@ -211,7 +212,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
           fullReindexDatasourceName
       );
 
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
       // verify excluded dimension is not reIndexed
       final List<String> dimensions = clientInfoResourceTestClient.getDimensions(
           fullReindexDatasourceName,
@@ -240,7 +241,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     submitTaskAndWait(taskSpec, fullDatasourceName, false, true);
     try {
-      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
+      sqlQueryHelper.testQueriesFromFile(queryFilePath);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -321,6 +322,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialDimensionCardinalityTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);
                     }

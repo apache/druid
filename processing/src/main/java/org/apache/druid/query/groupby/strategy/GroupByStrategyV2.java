@@ -61,6 +61,7 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
@@ -221,7 +222,11 @@ public class GroupByStrategyV2 implements GroupByStrategy
         query.getPostAggregatorSpecs(),
         // Don't do "having" clause until the end of this method.
         null,
-        query.getLimitSpec(),
+        // Potentially pass limit down the stack (i.e. limit pushdown). Notes:
+        //   (1) Limit pushdown is only supported for DefaultLimitSpec.
+        //   (2) When pushing down a limit, it must be extended to include the offset (the offset will be applied
+        //       higher-up).
+        query.isApplyLimitPushDown() ? ((DefaultLimitSpec) query.getLimitSpec()).withOffsetToLimit() : null,
         query.getSubtotalsSpec(),
         query.getContext()
     ).withOverriddenContext(
@@ -386,7 +391,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
 
       List<String> queryDimNames = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
-                                                 .collect(Collectors.toList());
+                                                    .collect(Collectors.toList());
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;

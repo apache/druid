@@ -41,6 +41,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -94,8 +95,9 @@ public class TimeseriesQueryEngine
     final boolean descending = query.isDescending();
 
     final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
-        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
-        && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+        query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+        && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
+        && adapter.canVectorize(filter, query.getVirtualColumns(), descending)
     );
 
     final Sequence<Result<TimeseriesResultValue>> result;

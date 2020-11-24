@@ -147,16 +147,15 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             orcStructFlattener.flatten(intermediateRow)
         )
     );
   }
 
   @Override
-  protected Map<String, Object> toMap(OrcStruct intermediateRow)
+  protected List<Map<String, Object>> toMap(OrcStruct intermediateRow)
   {
-    return orcStructFlattener.toMap(intermediateRow);
+    return Collections.singletonList(orcStructFlattener.toMap(intermediateRow));
   }
 }

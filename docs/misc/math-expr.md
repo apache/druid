@@ -78,6 +78,8 @@ The following built-in functions are available.
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |regexp_like|regexp_like(expr, pattern) returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. |
+|contains_string|contains_string(expr, string) returns whether `expr` contains `string` as a substring. This method is case-sensitive.|
+|icontains_string|contains_string(expr, string) returns whether `expr` contains `string` as a substring. This method is case-insensitive.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
 |right|right(expr, length) returns the rightmost length characters from a string|
@@ -193,7 +195,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
 
-### Reduction functions
+## Reduction functions
 
 Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
 arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
@@ -218,3 +220,16 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+
+
+## Vectorization Support
+A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
+
+supported features:
+* constants and identifiers are supported for any column type
+* `cast` is supported for numeric and string types
+* math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
+* time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* other: `parse_long` is supported for numeric and string types

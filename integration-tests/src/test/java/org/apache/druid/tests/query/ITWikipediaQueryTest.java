@@ -47,7 +47,7 @@ import java.util.concurrent.Future;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITWikipediaQueryTest
 {
-  private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
+  public static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String WIKI_LOOKUP = "wiki-simple";
   private static final String WIKIPEDIA_QUERIES_RESOURCE = "/queries/wikipedia_editstream_queries.json";
   private static final String WIKIPEDIA_LOOKUP_RESOURCE = "/queries/wiki-lookup-config.json";
@@ -79,7 +79,7 @@ public class ITWikipediaQueryTest
   @Test
   public void testWikipediaQueriesFromFile() throws Exception
   {
-    queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE, 2);
+    queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
   }
 
   @Test

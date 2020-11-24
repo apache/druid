@@ -20,92 +20,68 @@ import { Tab, Tabs } from '@blueprintjs/core';
 import axios from 'axios';
 import React from 'react';
 
-import { QueryManager } from '../../utils';
+import { useQueryManager } from '../../hooks';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
 import './show-history.scss';
 
-export interface PastSupervisor {
+export interface VersionSpec {
   version: string;
   spec: any;
 }
+
 export interface ShowHistoryProps {
   endpoint: string;
   downloadFilename?: string;
 }
 
-export interface ShowHistoryState {
-  data?: PastSupervisor[];
-  loading: boolean;
-  error?: string;
-}
+export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryProps) {
+  const { downloadFilename, endpoint } = props;
 
-export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
-  private showHistoryQueryManager: QueryManager<string, PastSupervisor[]>;
-  constructor(props: ShowHistoryProps, context: any) {
-    super(props, context);
-    this.state = {
-      data: [],
-      loading: true,
-    };
+  const [historyState] = useQueryManager<string, VersionSpec[]>({
+    processQuery: async (endpoint: string) => {
+      const resp = await axios.get(endpoint);
+      return resp.data;
+    },
+    initQuery: endpoint,
+  });
 
-    this.showHistoryQueryManager = new QueryManager({
-      processQuery: async (endpoint: string) => {
-        const resp = await axios.get(endpoint);
-        return resp.data;
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          loading,
-          data: result,
-          error,
-        });
-      },
-    });
-  }
+  if (historyState.loading) return <Loader />;
+  if (!historyState.data) return null;
 
-  componentDidMount(): void {
-    this.showHistoryQueryManager.runQuery(this.props.endpoint);
-  }
+  const versions = historyState.data.map((pastSupervisor: VersionSpec, index: number) => (
+    <Tab
+      id={index}
+      key={index}
+      title={pastSupervisor.version}
+      panel={
+        <ShowValue
+          jsonValue={
+            pastSupervisor.spec
+              ? JSON.stringify(pastSupervisor.spec, undefined, 2)
+              : historyState.getErrorMessage()
+          }
+          downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
+          endpoint={endpoint}
+        />
+      }
+      panelClassName={'panel'}
+    />
+  ));
 
-  render(): JSX.Element | null {
-    const { downloadFilename, endpoint } = this.props;
-    const { data, loading, error } = this.state;
-    if (loading) return <Loader />;
-    if (!data) return null;
-
-    const versions = data.map((pastSupervisor: PastSupervisor, index: number) => (
-      <Tab
-        id={index}
-        key={index}
-        title={pastSupervisor.version}
-        panel={
-          <ShowValue
-            jsonValue={
-              pastSupervisor.spec ? JSON.stringify(pastSupervisor.spec, undefined, 2) : error
-            }
-            downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
-            endpoint={endpoint}
-          />
-        }
-        panelClassName={'panel'}
-      />
-    ));
-
-    return (
-      <div className="show-history">
-        <Tabs
-          animate
-          renderActiveTabPanelOnly
-          vertical
-          className={'tab-area'}
-          defaultSelectedTabId={0}
-        >
-          {versions}
-          <Tabs.Expander />
-        </Tabs>
-      </div>
-    );
-  }
-}
+  return (
+    <div className="show-history">
+      <Tabs
+        animate
+        renderActiveTabPanelOnly
+        vertical
+        className={'tab-area'}
+        defaultSelectedTabId={0}
+      >
+        {versions}
+        <Tabs.Expander />
+      </Tabs>
+    </div>
+  );
+});

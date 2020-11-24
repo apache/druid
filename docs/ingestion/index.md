@@ -90,7 +90,7 @@ This table compares the three available options:
 | **Input locations** | Any [`inputSource`](./native-batch.md#input-sources). | Any Hadoop FileSystem or Druid datasource. | Any [`inputSource`](./native-batch.md#input-sources). |
 | **File formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. | Any [`inputFormat`](./data-formats.md#input-format). |
 | **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). |
-| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. |
+| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec-1) for details. |
 
 <a name="data-model"></a>
 
@@ -464,8 +464,8 @@ A `dimensionsSpec` can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| dimensions | A list of [dimension names or objects](#dimension-objects). Cannot have the same column in both `dimensions` and `dimensionExclusions`.<br><br>If this is an empty array, Druid will treat all non-timestamp, non-metric columns that do not appear in `dimensionExclusions` as String-typed dimension columns (see [inclusions and exclusions](#inclusions-and-exclusions) below). | `[]` |
-| dimensionExclusions | The names of dimensions to exclude from ingestion. Only names are supported here, not objects. Cannot have the same column in both `dimensions` and `dimensionExclusions`.| `[]` |
+| dimensions | A list of [dimension names or objects](#dimension-objects). Cannot have the same column in both `dimensions` and `dimensionExclusions`.<br><br>If this and `spatialDimensions` are both null or empty arrays, Druid will treat all non-timestamp, non-metric columns that do not appear in `dimensionExclusions` as String-typed dimension columns. See [inclusions and exclusions](#inclusions-and-exclusions) below for details. | `[]` |
+| dimensionExclusions | The names of dimensions to exclude from ingestion. Only names are supported here, not objects.<br><br>This list is only used if the `dimensions` and `spatialDimensions` lists are both null or empty arrays; otherwise it is ignored. See [inclusions and exclusions](#inclusions-and-exclusions) below for details. | `[]` |
 | spatialDimensions | An array of [spatial dimensions](../development/geo.md). | `[]` |
 
 #### Dimension objects
@@ -485,7 +485,7 @@ Dimension objects can have the following components:
 
 Druid will interpret a `dimensionsSpec` in two possible ways: _normal_ or _schemaless_.
 
-Normal interpretation occurs when either `dimensions` or `spatialDimensions` is non-empty. In this case, the combination of the two lists will be taken as the set of dimensions to be ingested.
+Normal interpretation occurs when either `dimensions` or `spatialDimensions` is non-empty. In this case, the combination of the two lists will be taken as the set of dimensions to be ingested, and the list of `dimensionExclusions` will be ignored.
 
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 

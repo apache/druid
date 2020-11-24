@@ -54,6 +54,7 @@ FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
+[ OFFSET offset ]
 [ UNION ALL <another query> ]
 ```
 
@@ -118,20 +119,78 @@ can only order by the `__time` column. For aggregation queries, ORDER BY can ord
 
 ### LIMIT
 
-The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
-to Data processes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
-versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
-adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
-query.
+The LIMIT clause limits the number of rows returned. In some situations Druid will push down this limit to data servers,
+which boosts performance. Limits are always pushed down for queries that run with the native Scan or TopN query types.
+With the native GroupBy query type, it is pushed down when ordering on a column that you are grouping by. If you notice
+that adding a limit doesn't change performance very much, then it's possible that Druid wasn't able to push down the
+limit for your query.
+
+### OFFSET
+
+The OFFSET clause skips a certain number of rows when returning results.
+
+If both LIMIT and OFFSET are provided, then OFFSET will be applied first, followed by LIMIT. For example, using
+LIMIT 100 OFFSET 10 will return 100 rows, starting from row number 10.
+
+Together, LIMIT and OFFSET can be used to implement pagination. However, note that if the underlying datasource is
+modified between page fetches, then the different pages will not necessarily align with each other.
+
+There are two important factors that can affect the performance of queries that use OFFSET:
+
+- Skipped rows still need to be generated internally and then discarded, meaning that raising offsets to high values
+  can cause queries to use additional resources.
+- OFFSET is only supported by the Scan and GroupBy [native query types](#query-types). Therefore, a query with OFFSET
+  will use one of those two types, even if it might otherwise have run as a Timeseries or TopN. Switching query engines
+  in this way can affect performance.
 
 ### UNION ALL
 
-The "UNION ALL" operator can be used to fuse multiple queries together. Their results will be concatenated, and each
-query will run separately, back to back (not in parallel). Druid does not currently support "UNION" without "ALL".
-UNION ALL must appear at the very outer layer of a SQL query (it cannot appear in a subquery or in the FROM clause).
+The "UNION ALL" operator fuses multiple queries together. Druid SQL supports the UNION ALL operator in two situations:
+top-level and table-level. Queries that use UNION ALL in any other way will not be able to execute.
 
-Note that despite the similar name, UNION ALL is not the same thing as as [union datasource](datasource.md#union).
-UNION ALL allows unioning the results of queries, whereas union datasources allow unioning tables.
+#### Top-level
+
+UNION ALL can be used at the very top outer layer of a SQL query (not in a subquery, and not in the FROM clause). In
+this case, the underlying queries will be run separately, back to back, and their results will all be returned in
+one result set.
+
+For example:
+
+```
+SELECT COUNT(*) FROM tbl WHERE my_column = 'value1'
+UNION ALL
+SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
+```
+
+When UNION ALL occurs at the top level of a query like this, the results from the unioned queries are concatenated
+together and appear one after the other.
+
+#### Table-level
+
+UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in a subquery in the
+FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs
+(no expressions, column aliasing, etc). The query will run natively using a [union datasource](datasource.md#union).
+
+The same columns must be selected from each table in the same order, and those columns must either have the same types,
+or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally
+more robust to write your queries to select specific columns. If you use `SELECT *`, you will need to modify your
+queries if a new column is added to one of the tables but not to the others.
+
+For example:
+
+```
+SELECT col1, COUNT(*)
+FROM (
+  SELECT col1, col2, col3 FROM tbl1
+  UNION ALL
+  SELECT col1, col2, col3 FROM tbl2
+)
+GROUP BY col1
+```
+
+When UNION ALL occurs at the table level, the rows from the unioned tables are not guaranteed to be processed in
+any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
+use [ORDER BY](#order-by) on the outer query.
 
 ### EXPLAIN PLAN
 
@@ -207,6 +266,13 @@ Grouping by a multi-value expression will observe the native Druid multi-value a
 the `UNNEST` functionality available in some other SQL dialects. Refer to the documentation on
 [multi-value string dimensions](multi-value-dimensions.html) for additional details.
 
+> Because multi-value dimensions are treated by the SQL planner as `VARCHAR`, there are some inconsistencies between how
+> they are handled in Druid SQL and in native queries. For example, expressions involving multi-value dimensions may be
+> incorrectly optimized by the Druid SQL planner: `multi_val_dim = 'a' AND multi_val_dim = 'b'` will be optimized to
+> `false`, even though it is possible for a single row to have both "a" and "b" as values for `multi_val_dim`. The
+> SQL behavior of multi-value dimensions will change in a future release to more closely align with their behavior
+> in native queries.
+
 ### NULL values
 
 The `druid.generic.useDefaultValueForNull` [runtime property](../configuration/index.html#sql-compatible-null-handling)
@@ -231,6 +297,13 @@ Aggregation functions can appear in the SELECT clause of any query. Any aggregat
 possible for two aggregators in the same SQL query to have different filters.
 
 Only the COUNT aggregation can accept DISTINCT.
+
+> The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
+> functions can produce inconsistent results across the same query. 
+>
+> Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
+> results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
+> consider using the `ROUND` function to smooth out the inconsistencies between queries.  
 
 |Function|Notes|
 |--------|-----|
@@ -324,6 +397,8 @@ String functions accept strings, and return a type appropriate to the function.
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](#comparison-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
+|`CONTAINS_STRING(<expr>, str)`|Returns true if the `str` is a substring of `expr`.|
+|`ICONTAINS_STRING(<expr>, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
 |`STRPOS(haystack, needle)`|Returns the index of needle within haystack, with indexes starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
@@ -708,22 +783,25 @@ approximate, regardless of configuration.
 
 Druid does not support all SQL features. In particular, the following features are not supported.
 
-- JOIN between native datasources (table, lookup, subquery) and system tables.
+- JOIN between native datasources (table, lookup, subquery) and [system tables](#metadata-tables).
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
 - JOIN conditions containing a constant value inside the condition.
 - JOIN conditions on a column which contains a multi-value dimension.
 - OVER clauses, and analytic functions such as `LAG` and `LEAD`.
-- OFFSET clauses.
+- ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, which are supported.
+  This restriction only applies to non-aggregating queries; you can ORDER BY any column in an aggregating query.
 - DDL and DML.
-- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on [metadata tables](#metadata-tables).
+- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on [system tables](#metadata-tables).
 
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
 include:
 
-- [Union datasources](datasource.html#union)
-- [Inline datasources](datasource.html#inline)
+- [Inline datasources](datasource.html#inline).
 - [Spatial filters](../development/geo.html).
 - [Query cancellation](querying.html#query-cancellation).
+- [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
+inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
+the SQL planner.
 
 ## Client APIs
 
@@ -1005,9 +1083,10 @@ Segments table provides details on all Druid segments, whether they are publishe
 |is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime). See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
 |is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any historical process is serving this segment.|
 |is_overshadowed|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, is_overshadowed is always false for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
-|shardSpec|STRING|The toString of specific `ShardSpec`|
-|dimensions|STRING|The dimensions of the segment|
-|metrics|STRING|The metrics of the segment|
+|shard_spec|STRING|JSON-serialized form of the segment `ShardSpec`|
+|dimensions|STRING|JSON-serialized form of the segment dimensions|
+|metrics|STRING|JSON-serialized form of the segment metrics|
+|last_compaction_state|STRING|JSON-serialized form of the compaction task's config (compaction task which created this segment). May be null if segment was not created by compaction task.|
 
 For example to retrieve all segments for datasource "wikipedia", use the query:
 
@@ -1027,6 +1106,18 @@ SELECT
 FROM sys.segments
 GROUP BY 1
 ORDER BY 2 DESC
+```
+
+If you want to retrieve segment that was compacted (ANY compaction):
+
+```sql
+SELECT * FROM sys.segments WHERE last_compaction_state is not null
+```
+
+or if you want to retrieve segment that was compacted only by a particular compaction spec (such as that of the auto compaction):
+
+```sql
+SELECT * FROM sys.segments WHERE last_compaction_state == 'SELECT * FROM sys.segments where last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring, compressRunOnSerialization=true}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
 ```
 
 *Caveat:* Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for e.g.. Kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not guaranteed that the same task gets picked every time. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/druid/issues/5915) about this inconsistency with stream ingestion tasks.
@@ -1130,5 +1221,5 @@ Druid SQL planning occurs on the Broker and is configured by
 
 ## Security
 
-Please see [Defining SQL permissions](../development/extensions-core/druid-basic-security.html#sql-permissions) in the
+Please see [Defining SQL permissions](../operations/security-user-auth.md#sql-permissions) in the
 basic security documentation for information on what permissions are needed for making SQL queries.

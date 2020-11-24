@@ -77,7 +77,6 @@ export class ConsoleApplication extends React.PureComponent<
   private datasource?: string;
   private onlyUnavailable?: boolean;
   private initQuery?: string;
-  private middleManager?: string;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -92,9 +91,9 @@ export class ConsoleApplication extends React.PureComponent<
         if (!capabilities) ConsoleApplication.shownNotifications();
         return capabilities || Capabilities.FULL;
       },
-      onStateChange: ({ result, loading }) => {
+      onStateChange: ({ data, loading }) => {
         this.setState({
-          capabilities: result || Capabilities.FULL,
+          capabilities: data || Capabilities.FULL,
           capabilitiesLoading: loading,
         });
       },
@@ -118,7 +117,6 @@ export class ConsoleApplication extends React.PureComponent<
       this.datasource = undefined;
       this.onlyUnavailable = undefined;
       this.initQuery = undefined;
-      this.middleManager = undefined;
     }, 50);
   }
 
@@ -156,12 +154,6 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToMiddleManager = (middleManager: string) => {
-    this.middleManager = middleManager;
-    window.location.hash = 'services';
-    this.resetInitialsWithDelay();
-  };
-
   private goToQuery = (initQuery: string) => {
     this.initQuery = initQuery;
     window.location.hash = 'query';
@@ -171,7 +163,7 @@ export class ConsoleApplication extends React.PureComponent<
   private wrapInViewContainer = (
     active: HeaderActiveTab,
     el: JSX.Element,
-    classType: 'normal' | 'narrow-pad' = 'normal',
+    classType: 'normal' | 'narrow-pad' | 'thin' = 'normal',
   ) => {
     const { capabilities } = this.state;
 
@@ -213,6 +205,7 @@ export class ConsoleApplication extends React.PureComponent<
         defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
       />,
+      'thin',
     );
   };
 
@@ -253,7 +246,6 @@ export class ConsoleApplication extends React.PureComponent<
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
-        goToMiddleManager={this.goToMiddleManager}
         goToLoadData={this.goToLoadData}
         capabilities={capabilities}
       />,
@@ -265,7 +257,6 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'services',
       <ServicesView
-        middleManager={this.middleManager}
         goToQuery={this.goToQuery}
         goToTask={this.goToIngestionWithTaskGroupId}
         capabilities={capabilities}
@@ -283,7 +274,7 @@ export class ConsoleApplication extends React.PureComponent<
     if (capabilitiesLoading) {
       return (
         <div className="loading-capabilities">
-          <Loader loadingText="" loading />
+          <Loader />
         </div>
       );
     }

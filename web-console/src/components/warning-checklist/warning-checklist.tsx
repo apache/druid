@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Checkbox } from '@blueprintjs/core';
+import { Switch } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 export interface WarningChecklistProps {
@@ -38,9 +38,9 @@ export const WarningChecklist = React.memo(function WarningChecklist(props: Warn
 
   return (
     <div className="warning-checklist">
-      {checks.map((check, i) => {
-        return <Checkbox key={i} label={check} onChange={() => doCheck(check)} />;
-      })}
+      {checks.map((check, i) => (
+        <Switch key={i} label={check} onChange={() => doCheck(check)} />
+      ))}
     </div>
   );
 });

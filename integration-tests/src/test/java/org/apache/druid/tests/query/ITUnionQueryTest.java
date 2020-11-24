@@ -151,7 +151,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           fullDatasourceName
       );
 
-      this.queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      this.queryHelper.testQueriesFromString(queryResponseTemplate);
 
       // wait for the task to complete
       for (int i = 0; i < numTasks; i++) {
@@ -169,7 +169,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
         );
       }
       // run queries on historical nodes
-      this.queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      this.queryHelper.testQueriesFromString(queryResponseTemplate);
 
     }
     catch (Throwable e) {

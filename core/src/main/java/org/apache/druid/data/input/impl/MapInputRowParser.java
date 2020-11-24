@@ -21,15 +21,17 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +69,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return parse(inputRowSchema.getTimestampSpec(), inputRowSchema.getDimensionsSpec(), theMap);
   }
 
-  public static InputRow parse(
+  private static InputRow parse(
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
       Map<String, Object> theMap
@@ -76,7 +78,8 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return parse(timestampSpec, dimensionsSpec.getDimensionNames(), dimensionsSpec.getDimensionExclusions(), theMap);
   }
 
-  public static InputRow parse(
+  @VisibleForTesting
+  static InputRow parse(
       TimestampSpec timestampSpec,
       List<String> dimensions,
       Set<String> dimensionExclusions,
@@ -93,21 +96,40 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     final DateTime timestamp;
     try {
       timestamp = timestampSpec.extractTimestamp(theMap);
-      if (timestamp == null) {
-        final String input = theMap.toString();
-        throw new NullPointerException(
-            StringUtils.format(
-                "Null timestamp in input: %s",
-                input.length() < 100 ? input : input.substring(0, 100) + "..."
-            )
-        );
-      }
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unparseable timestamp found! Event: %s", theMap);
+      throw new ParseException(
+          e,
+          "Timestamp[%s] is unparseable! Event: %s",
+          timestampSpec.getRawTimestamp(theMap),
+          rawMapToPrint(theMap)
+      );
     }
-
+    if (timestamp == null) {
+      throw new ParseException(
+          "Timestamp[%s] is unparseable! Event: %s",
+          timestampSpec.getRawTimestamp(theMap),
+          rawMapToPrint(theMap)
+      );
+    }
+    if (!Intervals.ETERNITY.contains(timestamp)) {
+      throw new ParseException(
+          "Encountered row with timestamp[%s] that cannot be represented as a long: [%s]",
+          timestamp,
+          rawMapToPrint(theMap)
+      );
+    }
     return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
+  }
+
+  @Nullable
+  private static String rawMapToPrint(@Nullable Map<String, Object> rawMap)
+  {
+    if (rawMap == null) {
+      return null;
+    }
+    final String input = rawMap.toString();
+    return input.length() < 100 ? input : input.substring(0, 100) + "...";
   }
 
   @JsonProperty

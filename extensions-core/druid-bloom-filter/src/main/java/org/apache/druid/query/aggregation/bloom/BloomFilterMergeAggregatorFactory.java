@@ -76,7 +76,7 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
     final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     // null columns should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
     if (selector instanceof NilColumnValueSelector) {
-      throw new ISE("WTF?! Unexpected NilColumnValueSelector");
+      throw new ISE("Unexpected NilColumnValueSelector");
     }
     return new BloomFilterMergeAggregator((ColumnValueSelector<ByteBuffer>) selector, getMaxNumEntries(), true);
   }
