@@ -161,7 +161,7 @@ public class DruidCoordinator
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
 
-  private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalMangementDuties";
+  private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
