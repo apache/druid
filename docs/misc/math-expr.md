@@ -141,7 +141,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |hypot|hypot(x, y) would return sqrt(x^2+y^2) without intermediate overflow or underflow|
 |log|log(x) would return the natural logarithm of x|
 |log10|log10(x) would return the base 10 logarithm of x|
-|log1p|log1p(x) would the natural logarithm of x + 1| 
+|log1p|log1p(x) would the natural logarithm of x + 1|
 |max|max(x, y) would return the greater of two values|
 |min|min(x, y) would return the smaller of two values|
 |nextafter|nextafter(x, y) would return the floating-point number adjacent to the x in the direction of the y|
