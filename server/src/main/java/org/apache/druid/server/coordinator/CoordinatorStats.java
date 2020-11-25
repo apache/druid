@@ -203,6 +203,20 @@ public class CoordinatorStats
         }
     );
 
+    stats.perDutyStats.forEach(
+        (statName, urStat) -> {
+          final Object2LongOpenHashMap<String> myStat = perDutyStats.computeIfAbsent(
+              statName,
+              k -> new Object2LongOpenHashMap<>()
+          );
+
+          for (Entry<String> entry : urStat.object2LongEntrySet()) {
+            myStat.addTo(entry.getKey(), entry.getLongValue());
+          }
+        }
+
+    );
+
     for (final Object2LongMap.Entry<String> entry : stats.globalStats.object2LongEntrySet()) {
       globalStats.addTo(entry.getKey(), entry.getLongValue());
     }
