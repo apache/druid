@@ -1076,6 +1076,13 @@ array_to_string
 asin
 atan
 atan2
+bitwiseAnd
+bitwiseComplement
+bitwiseConvertDouble
+bitwiseOr
+bitwiseShiftLeft
+bitwiseShiftRight
+bitwiseXor
 bloom_filter_test
 cartesian_fold
 cartesian_map

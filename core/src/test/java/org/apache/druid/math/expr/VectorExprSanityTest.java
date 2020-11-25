@@ -137,7 +137,9 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "tanh",
         "toDegrees",
         "toRadians",
-        "ulp"
+        "ulp",
+        "bitwiseComplement",
+        "bitwiseConvertDouble"
     };
     final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())"};
     testFunctions(types, templates, functions);
@@ -156,7 +158,12 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "min",
         "nextAfter",
         "scalb",
-        "pow"
+        "pow",
+        "bitwiseAnd",
+        "bitwiseOr",
+        "bitwiseXor",
+        "bitwiseShiftLeft",
+        "bitwiseShiftRight"
     };
     final String[] templates = new String[]{
         "%s(d1, d2)",

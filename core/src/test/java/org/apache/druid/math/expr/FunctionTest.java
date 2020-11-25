@@ -519,6 +519,31 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least(1, null, 'A')", "1");
   }
 
+  @Test
+  public void testBitwise()
+  {
+    assertExpr("bitwiseAnd(3, 1)", 1L);
+    assertExpr("bitwiseAnd(2, 1)", 0L);
+    assertExpr("bitwiseOr(3, 1)", 3L);
+    assertExpr("bitwiseOr(2, 1)", 3L);
+    assertExpr("bitwiseXor(3, 1)", 2L);
+    assertExpr("bitwiseXor(2, 1)", 3L);
+    assertExpr("bitwiseShiftLeft(2, 1)", 4L);
+    assertExpr("bitwiseShiftRight(2, 1)", 1L);
+    assertExpr("bitwiseAnd(bitwiseComplement(1), 7)", 6L);
+    assertExpr("bitwiseAnd('2', '1')", null);
+    assertExpr("bitwiseAnd(2, '1')", 0L);
+
+    assertExpr("bitwiseOr(2.345, 1)", 4612462889363109315L);
+    assertExpr("bitwiseAnd(2.345, 2.0)", 4611686018427387904L);
+    assertExpr(
+        "bitwiseAnd(bitwiseConvertDouble(2.345), bitwiseConvertDouble(2.0))",
+        4611686018427387904L
+    );
+    assertExpr("bitwiseConvertDouble(bitwiseAnd(2.345, 2.0))", 2.0);
+    assertExpr("bitwiseConvertDouble(2.0)", 4611686018427387904L);
+  }
+
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
