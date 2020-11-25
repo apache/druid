@@ -44,7 +44,6 @@ import java.util.List;
 public class KillUnusedSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillUnusedSegments.class);
-  private static final String DUTY_ALIAS = "KillUnusedSegments";
 
   private final long period;
   private final long retainDuration;
@@ -125,12 +124,6 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
     return params;
-  }
-
-  @Override
-  public String getDutyAlias()
-  {
-    return DUTY_ALIAS;
   }
 
   @VisibleForTesting

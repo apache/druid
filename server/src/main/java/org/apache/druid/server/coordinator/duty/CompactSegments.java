@@ -83,8 +83,6 @@ public class CompactSegments implements CoordinatorDuty
   // read by HTTP threads processing Coordinator API calls.
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
-  private static final String DUTY_ALIAS = "CompactSegments";
-
   @Inject
   public CompactSegments(
       ObjectMapper objectMapper,
@@ -187,12 +185,6 @@ public class CompactSegments implements CoordinatorDuty
     return params.buildFromExisting()
                  .withCoordinatorStats(stats)
                  .build();
-  }
-
-  @Override
-  public String getDutyAlias()
-  {
-    return DUTY_ALIAS;
   }
 
   /**

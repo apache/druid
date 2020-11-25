@@ -37,7 +37,6 @@ import java.util.SortedSet;
 public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
 {
   private final DruidCoordinator coordinator;
-  private static final String DUTY_ALIAS = "MarkAsUnusedOvershadowedSegments";
 
   public MarkAsUnusedOvershadowedSegments(DruidCoordinator coordinator)
   {
@@ -81,12 +80,6 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     }
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
-  }
-
-  @Override
-  public String getDutyAlias()
-  {
-    return DUTY_ALIAS;
   }
 
   private void addSegmentsFromServer(

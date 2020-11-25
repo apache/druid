@@ -37,7 +37,6 @@ public class KillStalePendingSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillStalePendingSegments.class);
   private static final Period KEEP_PENDING_SEGMENTS_OFFSET = new Period("P1D");
-  private static final String DUTY_ALIAS = "KillStalePendingSegments";
 
   private final IndexingServiceClient indexingServiceClient;
 
@@ -84,11 +83,5 @@ public class KillStalePendingSegments implements CoordinatorDuty
       }
     }
     return params;
-  }
-
-  @Override
-  public String getDutyAlias()
-  {
-    return DUTY_ALIAS;
   }
 }

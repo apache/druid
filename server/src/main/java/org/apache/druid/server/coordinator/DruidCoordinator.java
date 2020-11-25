@@ -819,7 +819,7 @@ public class DruidCoordinator
               // This duty wanted to cancel the run. No log message, since the duty should have logged a reason.
               return;
             } else {
-              params.getCoordinatorStats().addToDutyStat("runtime", duty.getDutyAlias(), TimeUnit.NANOSECONDS.toMillis(end - start));
+              params.getCoordinatorStats().addToDutyStat("runtime", duty.getClass().getName(), TimeUnit.NANOSECONDS.toMillis(end - start));
             }
           }
         }
@@ -844,8 +844,6 @@ public class DruidCoordinator
    */
   private class UpdateCoordinatorStateAndPrepareCluster implements CoordinatorDuty
   {
-    private static final String DUTY_ALIAS = "UpdateCoordinatorStateAndPrepareCluster";
-
     @Nullable
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -864,12 +862,6 @@ public class DruidCoordinator
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
                    .build();
-    }
-
-    @Override
-    public String getDutyAlias()
-    {
-      return DUTY_ALIAS;
     }
 
     List<ImmutableDruidServer> prepareCurrentServers()

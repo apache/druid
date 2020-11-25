@@ -46,7 +46,6 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   public static final String TOTAL_CAPACITY = "totalCapacity";
   public static final String TOTAL_HISTORICAL_COUNT = "totalHistoricalCount";
   public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
-  private static final String DUTY_ALIAS = "EmitClusterStatsAndMetrics";
 
   private final DruidCoordinator coordinator;
 
@@ -469,11 +468,5 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitDutyStats(emitter, "coordinator/time", stats, "runtime");
 
     return params;
-  }
-
-  @Override
-  public String getDutyAlias()
-  {
-    return DUTY_ALIAS;
   }
 }
