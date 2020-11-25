@@ -36,7 +36,14 @@ import java.util.SortedSet;
  */
 public class SegmentReplicantLookup
 {
-  public static SegmentReplicantLookup make(DruidCluster cluster)
+  /**
+   * Create the SegmentReplicantLookup object from a provided {@link DruidCluster}. This method is synchronized because
+   * we don't want any issues with it being called by multiple UpdateCoordinatorStateAndPrepareCluster duties.
+   *
+   * @param cluster {@link DruidCluster} to base the lookup off of
+   * @return SegmentReplicantLookup
+   */
+  public synchronized static SegmentReplicantLookup make(DruidCluster cluster)
   {
     final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
     final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();

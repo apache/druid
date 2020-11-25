@@ -93,7 +93,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -145,7 +144,8 @@ public class DruidCoordinator
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
-  private final Map<String, LoadQueuePeon> loadManagementPeons;
+  // We explicitly use ConcurrentHashMap because we call computeIfAbsent on this object
+  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
@@ -227,7 +227,7 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
-      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
+      ConcurrentHashMap<String, LoadQueuePeon> loadQueuePeonMap,
       Set<CoordinatorDuty> indexingServiceDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
