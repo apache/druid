@@ -327,8 +327,8 @@ public interface Function
       if (type == ExprType.STRING) {
         return ExprEval.of(null);
       }
-      final long xlong = ExprType.DOUBLE.equals(x.type()) ? Double.doubleToLongBits(x.asDouble()) : x.asLong();
-      final long ylong = ExprType.DOUBLE.equals(y.type()) ? Double.doubleToLongBits(y.asDouble()) : y.asLong();
+      final long xlong = ExprType.DOUBLE.equals(x.type()) ? Evals.doubleToLongBits(x.asDouble()) : x.asLong();
+      final long ylong = ExprType.DOUBLE.equals(y.type()) ? Evals.doubleToLongBits(y.asDouble()) : y.asLong();
       return eval(xlong, ylong);
     }
 
@@ -784,7 +784,7 @@ public interface Function
     @Override
     protected ExprEval eval(double param)
     {
-      return ExprEval.of(~Double.doubleToLongBits(param));
+      return ExprEval.of(~Evals.doubleToLongBits(param));
     }
 
     @Override
@@ -819,13 +819,13 @@ public interface Function
     @Override
     protected ExprEval eval(long param)
     {
-      return ExprEval.of(Double.longBitsToDouble(param));
+      return ExprEval.of(Evals.longBitsToDouble(param));
     }
 
     @Override
     protected ExprEval eval(double param)
     {
-      return ExprEval.of(Double.doubleToLongBits(param));
+      return ExprEval.of(Evals.doubleToLongBits(param));
     }
 
     @Override

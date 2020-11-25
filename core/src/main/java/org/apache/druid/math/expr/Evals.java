@@ -71,4 +71,14 @@ public class Evals
   {
     return !NullHandling.isNullOrEquivalent(x) && Boolean.parseBoolean(x);
   }
+
+  public static long doubleToLongBits(double x)
+  {
+    return Double.doubleToLongBits(x);
+  }
+
+  public static double longBitsToDouble(long x)
+  {
+    return Double.longBitsToDouble(x);
+  }
 }
