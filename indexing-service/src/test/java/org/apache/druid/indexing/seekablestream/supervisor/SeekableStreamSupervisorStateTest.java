@@ -840,9 +840,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
     dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
     dynamicAllocationTasksProperties.put("scaleOutThreshold", 5000000);
-    dynamicAllocationTasksProperties.put("triggerSaleOutThresholdFrequency", 0.3);
+    dynamicAllocationTasksProperties.put("triggerScaleOutThresholdFrequency", 0.3);
     dynamicAllocationTasksProperties.put("scaleInThreshold", 1000000);
-    dynamicAllocationTasksProperties.put("triggerSaleInThresholdFrequency", 0.8);
+    dynamicAllocationTasksProperties.put("triggerScaleInThresholdFrequency", 0.8);
     dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
     dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
     dynamicAllocationTasksProperties.put("taskCountMax", 8);
