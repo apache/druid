@@ -150,20 +150,20 @@ A sample supervisor spec is shown below:
 
 | Property | Description | Default |
 | ------------- | ------------- | ------------- |
-| enableDynamicAllocationTasks | whether enable this feature or not | false |
-| metricsCollectionIntervalMillis | Define the frequency of lag points collection.  | 30000 |
-| metricsCollectionRangeMillis | The total time window of lag collection, Use with metricsCollectionIntervalMillis，it means that in the recent metricsCollectionRangeMill, collect lag metric points every metricsCollectionIntervalMillis. | 600000 |
-| scaleOutThreshold | The Threshold of scale out action | 6000000 |
-| triggerScaleOutThresholdFrequency | If 'triggerScaleOutThresholdFrequency' percent of lag points are higher than scaleOutThreshold, then do scale out action. | 0.3 |
-| scaleInThreshold | The Threshold of scale in action | 1000000 |
-| triggerScaleInThresholdFrequency | If 'triggerScaleInThresholdFrequency' percent of lag points are lower than scaleOutThreshold, then do scale in action. | 0.9 |
-| dynamicCheckStartDelayMillis | Number of milliseconds after supervisor starts when first check scale logic. | 300000 |
-| dynamicCheckPeriod | the frequency of checking wheather to do scale action | 60000 |
-| taskCountMax | Maximum value of task count | 4 |
-| taskCountMin | Minimum value of task count | 1 |
-| scaleInStep | How many tasks to reduce at once | 1 |
-| scaleOutStep | How many tasks to add at a time | 2 |
-| minTriggerDynamicFrequencyMillis | Minimum time interval between two scale actions | 600000 |
+| `enableDynamicAllocationTasks` | whether enable this feature or not | false |
+| `metricsCollectionIntervalMilli`s | Define the frequency of lag points collection.  | 30000 |
+| `metricsCollectionRangeMillis` | The total time window of lag collection, Use with `metricsCollectionIntervalMillis`，it means that in the recent `metricsCollectionRangeMill`, collect lag metric points every `metricsCollectionIntervalMillis`. | 600000 |
+| `scaleOutThreshold` | The Threshold of scale out action | 6000000 |
+| `triggerScaleOutThresholdFrequency` | If `triggerScaleOutThresholdFrequency` percent of lag points are higher than `scaleOutThreshold`, then do scale out action. | 0.3 |
+| `scaleInThreshold` | The Threshold of scale in action | 1000000 |
+| `triggerScaleInThresholdFrequency` | If `triggerScaleInThresholdFrequency` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | 0.9 |
+| `dynamicCheckStartDelayMillis` | Number of milliseconds after supervisor starts when first check scale logic. | 300000 |
+| `dynamicCheckPeriod` | the frequency of checking wheather to do scale action | 60000 |
+| `taskCountMax` | Maximum value of task count | 4 |
+| `taskCountMin` | Minimum value of task count | 1 |
+| `scaleInStep` | How many tasks to reduce at once | 1 |
+| `scaleOutStep` | How many tasks to add at a time | 2 |
+| `minTriggerDynamicFrequencyMillis` | Minimum time interval between two scale actions | 600000 |
 
 #### Specifying data format
 
