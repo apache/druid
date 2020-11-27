@@ -18,7 +18,7 @@
 
 import { sane } from 'druid-query-toolkit/build/test-utils';
 
-import { DruidError } from './druid-query';
+import { DruidError, getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -126,6 +126,20 @@ describe('DruidQuery', () => {
         `Encountered "channel" at line 1, column 35. Was expecting one of: <EOF> "EXCEPT" ...`,
       );
       expect(suggestion).toBeUndefined();
+    });
+  });
+
+  describe('misc', () => {
+    it('parseHtmlError', () => {
+      expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
+    });
+
+    it('parseHtmlError', () => {
+      expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
+    });
+
+    it('parseQueryPlan', () => {
+      expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
     });
   });
 });

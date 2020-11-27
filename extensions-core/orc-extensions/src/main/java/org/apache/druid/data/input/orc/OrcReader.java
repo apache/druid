@@ -154,8 +154,8 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
   }
 
   @Override
-  protected Map<String, Object> toMap(OrcStruct intermediateRow)
+  protected List<Map<String, Object>> toMap(OrcStruct intermediateRow)
   {
-    return orcStructFlattener.toMap(intermediateRow);
+    return Collections.singletonList(orcStructFlattener.toMap(intermediateRow));
   }
 }

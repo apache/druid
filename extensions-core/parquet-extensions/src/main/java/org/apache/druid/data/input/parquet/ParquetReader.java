@@ -143,8 +143,8 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   }
 
   @Override
-  protected Map<String, Object> toMap(Group intermediateRow)
+  protected List<Map<String, Object>> toMap(Group intermediateRow)
   {
-    return flattener.toMap(intermediateRow);
+    return Collections.singletonList(flattener.toMap(intermediateRow));
   }
 }

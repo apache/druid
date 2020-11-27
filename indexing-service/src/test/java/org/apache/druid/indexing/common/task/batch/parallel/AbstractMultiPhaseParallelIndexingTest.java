@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -71,6 +72,7 @@ import java.util.Set;
 abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
   protected static final String DATASOURCE = "dataSource";
+  protected static final Granularity SEGMENT_GRANULARITY = Granularities.DAY;
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
       new ScanQueryQueryToolChest(
@@ -176,7 +178,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   )
   {
     GranularitySpec granularitySpec = new UniformGranularitySpec(
-        Granularities.DAY,
+        SEGMENT_GRANULARITY,
         Granularities.MINUTE,
         interval == null ? null : Collections.singletonList(interval)
     );

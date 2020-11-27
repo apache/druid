@@ -21,7 +21,7 @@ import React from 'react';
 
 import { AutoForm } from './auto-form';
 
-describe('auto-form snapshot', () => {
+describe('AutoForm', () => {
   it('matches snapshot', () => {
     const autoForm = shallow(
       <AutoForm
@@ -34,6 +34,9 @@ describe('auto-form snapshot', () => {
           { name: 'testFive', type: 'string-array' },
           { name: 'testSix', type: 'json' },
           { name: 'testSeven', type: 'json' },
+
+          { name: 'testNotDefined', type: 'string', defined: false },
+          { name: 'testAdvanced', type: 'string', hideInMore: true },
         ]}
         model={String}
         onChange={() => {}}

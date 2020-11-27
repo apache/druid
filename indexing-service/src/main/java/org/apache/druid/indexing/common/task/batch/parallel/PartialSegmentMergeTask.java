@@ -101,6 +101,10 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         context
     );
 
+    Preconditions.checkArgument(
+        !dataSchema.getGranularitySpec().inputIntervals().isEmpty(),
+        "Missing intervals in granularitySpec"
+    );
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.supervisorTaskId = supervisorTaskId;

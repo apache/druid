@@ -16,15 +16,20 @@
  * limitations under the License.
  */
 
-import { timeFormatMatches } from './druid-time';
+import { Field } from '../components';
 
-describe('timeFormatMatches', () => {
-  it('works for auto', () => {
-    expect(timeFormatMatches('auto', '2019-05-22 22:42:51+0000')).toBeTruthy();
-  });
+export interface OverlordDynamicConfig {
+  selectStrategy?: Record<string, any>;
+  autoScaler?: Record<string, any>;
+}
 
-  it('works for iso', () => {
-    expect(timeFormatMatches('iso', '2019-05-22T22:42:51+0000')).toBeTruthy();
-    expect(timeFormatMatches('iso', '2019-05-22 22:42:51+0000')).toBeFalsy();
-  });
-});
+export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
+  {
+    name: 'selectStrategy',
+    type: 'json',
+  },
+  {
+    name: 'autoScaler',
+    type: 'json',
+  },
+];

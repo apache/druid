@@ -107,7 +107,7 @@ curl -X DELETE "http://host:port/druid/v2/abc123"
 
 ## Query errors
 
-If a query fails, you will get an HTTP 500 response containing a JSON object with the following structure:
+If a query fails, Druid returns a response with an HTTP response code and a JSON object with the following structure:
 
 ```json
 {
@@ -117,8 +117,13 @@ If a query fails, you will get an HTTP 500 response containing a JSON object wit
   "host" : "druid1.example.com:8083"
 }
 ```
+The HTTP response code returned depends on the type of query failure. For timed out queries, an HTTP 504 response code is returned.
+
+For [secured](../design/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
 
 If a query request fails due to being limited by the [query scheduler laning configuration](../configuration/index.md#broker), an HTTP 429 response with the same JSON object schema as an error response, but with `errorMessage` of the form: "Total query capacity exceeded" or "Query capacity exceeded for lane 'low'".
+
+For every other type of query failures, an HTTP 500 response code is returned.
 
 The fields in the response are:
 

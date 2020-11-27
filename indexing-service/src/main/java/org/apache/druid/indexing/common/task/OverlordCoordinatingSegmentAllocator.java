@@ -25,7 +25,8 @@ import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SurrogateAction;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskLockHelper.OverwritingRootGenerationPartitions;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.java.util.common.ISE;
@@ -58,8 +59,12 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
       final PartitionsSpec partitionsSpec
   )
   {
+    final TaskActionClient taskActionClient =
+        supervisorTaskAccess == null
+        ? toolbox.getTaskActionClient()
+        : new SurrogateTaskActionClient(supervisorTaskAccess.getSupervisorTaskId(), toolbox.getTaskActionClient());
     this.internalAllocator = new ActionBasedSegmentAllocator(
-        toolbox.getTaskActionClient(),
+        taskActionClient,
         dataSchema,
         (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
           final GranularitySpec granularitySpec = schema.getGranularitySpec();
@@ -72,34 +77,17 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
               taskLockHelper,
               interval
           );
-          if (supervisorTaskAccess != null) {
-            return new SurrogateAction<>(
-                supervisorTaskAccess.getSupervisorTaskId(),
-                new SegmentAllocateAction(
-                    schema.getDataSource(),
-                    row.getTimestamp(),
-                    schema.getGranularitySpec().getQueryGranularity(),
-                    schema.getGranularitySpec().getSegmentGranularity(),
-                    sequenceName,
-                    previousSegmentId,
-                    skipSegmentLineageCheck,
-                    partialShardSpec,
-                    taskLockHelper.getLockGranularityToUse()
-                )
-            );
-          } else {
-            return new SegmentAllocateAction(
-                schema.getDataSource(),
-                row.getTimestamp(),
-                schema.getGranularitySpec().getQueryGranularity(),
-                schema.getGranularitySpec().getSegmentGranularity(),
-                sequenceName,
-                previousSegmentId,
-                skipSegmentLineageCheck,
-                partialShardSpec,
-                taskLockHelper.getLockGranularityToUse()
-            );
-          }
+          return new SegmentAllocateAction(
+              schema.getDataSource(),
+              row.getTimestamp(),
+              schema.getGranularitySpec().getQueryGranularity(),
+              schema.getGranularitySpec().getSegmentGranularity(),
+              sequenceName,
+              previousSegmentId,
+              skipSegmentLineageCheck,
+              partialShardSpec,
+              taskLockHelper.getLockGranularityToUse()
+          );
         }
     );
     this.sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);

@@ -105,11 +105,11 @@ public class VectorProcessors
     };
   }
 
-  public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingTypes inputTypes, Expr arg, int radix)
+  public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingInspector inspector, Expr arg, int radix)
   {
     final ExprVectorProcessor<?> processor = new LongOutStringInFunctionVectorProcessor(
-        CastToTypeVectorProcessor.castToType(arg.buildVectorized(inputTypes), ExprType.STRING),
-        inputTypes.getMaxVectorSize()
+        CastToTypeVectorProcessor.cast(arg.buildVectorized(inspector), ExprType.STRING),
+        inspector.getMaxVectorSize()
     )
     {
       @Override

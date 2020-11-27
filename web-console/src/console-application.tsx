@@ -77,7 +77,6 @@ export class ConsoleApplication extends React.PureComponent<
   private datasource?: string;
   private onlyUnavailable?: boolean;
   private initQuery?: string;
-  private middleManager?: string;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -118,7 +117,6 @@ export class ConsoleApplication extends React.PureComponent<
       this.datasource = undefined;
       this.onlyUnavailable = undefined;
       this.initQuery = undefined;
-      this.middleManager = undefined;
     }, 50);
   }
 
@@ -153,12 +151,6 @@ export class ConsoleApplication extends React.PureComponent<
     this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'ingestion';
-    this.resetInitialsWithDelay();
-  };
-
-  private goToMiddleManager = (middleManager: string) => {
-    this.middleManager = middleManager;
-    window.location.hash = 'services';
     this.resetInitialsWithDelay();
   };
 
@@ -254,7 +246,6 @@ export class ConsoleApplication extends React.PureComponent<
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
-        goToMiddleManager={this.goToMiddleManager}
         goToLoadData={this.goToLoadData}
         capabilities={capabilities}
       />,
@@ -266,7 +257,6 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'services',
       <ServicesView
-        middleManager={this.middleManager}
         goToQuery={this.goToQuery}
         goToTask={this.goToIngestionWithTaskGroupId}
         capabilities={capabilities}

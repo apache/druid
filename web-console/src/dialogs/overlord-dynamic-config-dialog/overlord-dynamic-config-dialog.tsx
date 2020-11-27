@@ -23,6 +23,7 @@ import React, { useState } from 'react';
 
 import { SnitchDialog } from '..';
 import { AutoForm, ExternalLink } from '../../components';
+import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons/toaster';
@@ -38,7 +39,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   props: OverlordDynamicConfigDialogProps,
 ) {
   const { onClose } = props;
-  const [dynamicConfig, setDynamicConfig] = useState<Record<string, any>>({});
+  const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig>({});
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
@@ -52,7 +53,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
     processQuery: async () => {
       try {
         const configResp = await axios(`/druid/indexer/v1/worker`);
-        setDynamicConfig(configResp.data);
+        setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,
@@ -108,18 +109,9 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
         .
       </p>
       <AutoForm
-        fields={[
-          {
-            name: 'selectStrategy',
-            type: 'json',
-          },
-          {
-            name: 'autoScaler',
-            type: 'json',
-          },
-        ]}
+        fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
         model={dynamicConfig}
-        onChange={m => setDynamicConfig(m)}
+        onChange={setDynamicConfig}
       />
     </SnitchDialog>
   );

@@ -309,7 +309,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         fullDatasourceName
     );
 
-    queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+    queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception

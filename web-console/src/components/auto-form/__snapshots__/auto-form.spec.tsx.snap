@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`auto-form snapshot matches snapshot 1`] = `
+exports[`AutoForm matches snapshot 1`] = `
 <div
   className="auto-form"
 >
@@ -132,5 +132,16 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       placeholder=""
     />
   </Memo(FormGroupWithInfo)>
+  <Blueprint3.FormGroup
+    key="more-or-less"
+  >
+    <Blueprint3.Button
+      fill={true}
+      minimal={true}
+      onClick={[Function]}
+      rightIcon="chevron-down"
+      text="Show more"
+    />
+  </Blueprint3.FormGroup>
 </div>
 `;

@@ -32,7 +32,6 @@ describe('tasks view', () => {
         datasourceId={'datasource'}
         goToDatasource={() => {}}
         goToQuery={() => {}}
-        goToMiddleManager={() => {}}
         goToLoadData={() => {}}
         capabilities={Capabilities.FULL}
       />,

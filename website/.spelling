@@ -114,6 +114,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -141,6 +142,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -164,6 +166,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -404,6 +407,7 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
@@ -1576,6 +1580,9 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+10KiB
+2GiB
+512KiB
 1GiB
 KiB
 GiB
@@ -1645,6 +1652,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+allowList
 ANDed
 array_mod
 autoscale
@@ -1658,6 +1666,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+denyList
 doubleMax
 doubleMin
 doubleSum
