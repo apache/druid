@@ -158,7 +158,7 @@ A sample supervisor spec is shown below:
 | `scaleInThreshold` | The Threshold of scale in action | 1000000 |
 | `triggerScaleInThresholdFrequency` | If `triggerScaleInThresholdFrequency` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | 0.9 |
 | `dynamicCheckStartDelayMillis` | Number of milliseconds after supervisor starts when first check scale logic. | 300000 |
-| `dynamicCheckPeriod` | the frequency of checking wheather to do scale action | 60000 |
+| `dynamicCheckPeriod` | the frequency of checking weather to do scale action | 60000 |
 | `taskCountMax` | Maximum value of task count | 4 |
 | `taskCountMin` | Minimum value of task count | 1 |
 | `scaleInStep` | How many tasks to reduce at once | 1 |
