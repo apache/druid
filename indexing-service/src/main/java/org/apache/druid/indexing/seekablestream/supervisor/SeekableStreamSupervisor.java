@@ -322,46 +322,47 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  // same as submit supervisor logic
+  // change taskCount without resubmitting.
   private class DynamicAllocationTasksNotice implements Notice
   {
+    /**
+     * This method will do lags points collection and check dynamic scale action is necessary or not.
+     */
     @Override
     public void handle()
     {
       lock.lock();
       try {
         long nowTime = System.currentTimeMillis();
-        long minTriggerDynamicFrequency = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("minTriggerDynamicFrequencyMillis", 1200000)));
         // Only queue is full and over minTriggerDynamicFrequency can trigger scale out/in
-        // max(minTriggerDynamicFrequency, metricsCollectionRangeMillis)
         if (spec.isSuspended()) {
           log.info("[%s] supervisor is suspended, skip to check dynamic allocate task logic", dataSource);
           return;
         }
-        log.info("PendingCompletionTaskGroups is : " + pendingCompletionTaskGroups);
+        log.debug("PendingCompletionTaskGroups is [%s] for dataSource [%s].", pendingCompletionTaskGroups, dataSource);
         for (CopyOnWriteArrayList list : pendingCompletionTaskGroups.values()) {
           if (!list.isEmpty()) {
-            log.info("Still hand off tasks unfinished, skip to do scale action [" + pendingCompletionTaskGroups + "]");
+            log.info("Still hand off tasks unfinished, skip to do scale action [%s] for dataSource [%s].", pendingCompletionTaskGroups, dataSource);
             return;
           }
         }
         if (nowTime - dynamicTriggerLastRunTime < minTriggerDynamicFrequency) {
-          log.info("NowTime - dynamicTriggerLastRunTime is [" + (nowTime - dynamicTriggerLastRunTime) + "]. Defined minTriggerDynamicFrequency is [" + minTriggerDynamicFrequency + "] , CLAM DOWN NOW !");
+          log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CLAM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, minTriggerDynamicFrequency, dataSource);
           return;
         }
-        if (!queue.isAtFullCapacity()) {
-          log.info("Metrics collection is not at full capacity, skip to check dynamic allocate task : [" + queue.size() + " vs " + queue.maxSize() + "]");
+        if (!lagMetricsQueue.isAtFullCapacity()) {
+          log.info("Metrics collection is not at full capacity, may cause unnecessary scale. Skip to check dynamic allocate task : [%s] vs [%s]", lagMetricsQueue.size(), lagMetricsQueue.maxSize());
           return;
         }
         List<Long> lags = collectTotalLags();
         boolean allocationSuccess = dynamicAllocate(lags);
         if (allocationSuccess) {
           dynamicTriggerLastRunTime = nowTime;
-          queue.clear();
+          lagMetricsQueue.clear();
         }
       }
       catch (Exception e) {
-        log.error(e, "Error, when parse DynamicAllocationTasksNotice");
+        log.warn(e, "Error, when parse DynamicAllocationTasksNotice");
       }
       finally {
         lock.unlock();
@@ -369,19 +370,29 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * This method determines whether and how to do scale actions based on collected lag points.
+   * Current algorithm of scale is simple:
+   *    First of all, compute the proportion of lag points higher/lower than scaleOutThreshold/scaleInThreshold, getting scaleOutThreshold/scaleInThreshold.
+   *    Secondly, compare scaleOutThreshold/scaleInThreshold with triggerScaleOutThresholdFrequency/triggerScaleInThresholdFrequency. P.S. Scale out action has higher priority than scale in action.
+   *    Finaly, if scaleOutThreshold/scaleInThreshold is higher than triggerScaleOutThresholdFrequency/triggerScaleInThresholdFrequency, scale out/in action would be triggered.
+   * If scale action is triggered :
+   *    First of all, call gracefulShutdownInternal() which will change the state of  current datasource ingest tasks from reading to publishing.
+   *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled next 'RunNotice'.
+   *    Finally, change taskCount in SeekableStreamSupervisorIOConfig and sync it to MetaStorage.
+   * After changed taskCount in SeekableStreamSupervisorIOConfig, next RunNotice will ceate scaled number of ingest tasks without resubmitting supervisors.
+   * @param lags the lag metrics of Stream(Kafka/Kinesis)
+   * @return Boolean flag, do scale action successfully or not. If true , it will take at least 'minTriggerDynamicFrequency' before next 'dynamicAllocatie'.
+   *         If false, it will do 'dynamicAllocate' again after 'dynamicCheckPeriod'.
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
   private boolean dynamicAllocate(List<Long> lags) throws InterruptedException, ExecutionException, TimeoutException
   {
     // if supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
-    log.info("[%s] supervisor is running, start to check dynamic allocate task logic", dataSource);
-    long scaleOutThreshold = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleOutThreshold", 5000000)));
-    long scaleInThreshold = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleInThreshold", 1000000)));
-    double triggerSaleOutThresholdFrequency = Double.parseDouble(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("triggerSaleOutThresholdFrequency", 0.3)));
-    double triggerSaleInThresholdFrequency = Double.parseDouble(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("triggerSaleInThresholdFrequency", 0.8)));
-    int taskCountMax = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMax", 8)));
-    int taskCountMin = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMin", 1)));
-    int scaleInStep = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleInStep", 1)));
-    int scaleOutStep = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleOutStep", 2)));
+    log.info("[%s] supervisor is running, start to check dynamic allocate task logic. Current collected lags : [%s]", dataSource, lags);
     int beyond = 0;
     int within = 0;
     int metricsCount = lags.size();
@@ -395,53 +406,53 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     double beyondProportion = beyond * 1.0 / metricsCount;
     double withinProportion = within * 1.0 / metricsCount;
-    log.info("triggerSaleOutThresholdFrequency is [ " + triggerSaleOutThresholdFrequency + " ] and triggerSaleInThresholdFrequency is [ " + triggerSaleInThresholdFrequency + " ]");
-    log.info("beyondProportion is [ " + beyondProportion + " ] and withinProportion is [ " + withinProportion + " ]");
+    log.debug("triggerScaleOutThresholdFrequency is [%s] and triggerScaleInThresholdFrequency is [%s] for dataSource [%s].", triggerScaleOutThresholdFrequency, triggerScaleInThresholdFrequency, dataSource);
+    log.info("beyondProportion is [%s] and withinProportion is [%s] for dataSource [%s].", beyondProportion, withinProportion, dataSource);
 
     int currentActiveTaskCount;
     int desireActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
     currentActiveTaskCount = activeTaskGroups.size();
 
-    if (beyondProportion >= triggerSaleOutThresholdFrequency) {
+    if (beyondProportion >= triggerScaleOutThresholdFrequency) {
       // Do Scale out
       int taskCount = currentActiveTaskCount + scaleOutStep;
       if (currentActiveTaskCount == taskCountMax) {
-        log.info("CurrentActiveTaskCount reach task count Max limit, skip to scale out tasks");
+        log.info("CurrentActiveTaskCount reach task count Max limit, skip to scale out tasks for dataSource [%s].", dataSource);
         return false;
       } else {
         desireActiveTaskCount = Math.min(taskCount, taskCountMax);
       }
-      log.info("Start to scale out tasks , current active task number [ " + currentActiveTaskCount + " ] and desire task number is [ " + desireActiveTaskCount + " ] ");
+      log.debug("Start to scale out tasks, current active task number [%s] and desire task number is [%s] for dataSource [%s].", currentActiveTaskCount, desireActiveTaskCount, dataSource);
       gracefulShutdownInternal();
       // clear everything
       clearAllocationInfos();
-      log.info("Set Task Count : " + desireActiveTaskCount);
-      setTaskCount(desireActiveTaskCount);
+      log.info("Change taskCount to [%s] for dataSource [%s].", desireActiveTaskCount, dataSource);
+      changeTaskCountInIOConfig(desireActiveTaskCount);
       return true;
     }
 
-    if (withinProportion >= triggerSaleInThresholdFrequency) {
+    if (withinProportion >= triggerScaleInThresholdFrequency) {
       // Do Scale in
       int taskCount = currentActiveTaskCount - scaleInStep;
       if (currentActiveTaskCount == taskCountMin) {
-        log.info("CurrentActiveTaskCount reach task count Min limit, skip to scale in tasks");
+        log.info("CurrentActiveTaskCount reach task count Min limit, skip to scale in tasks for dataSource [%s].", dataSource);
         return false;
       } else {
         desireActiveTaskCount = Math.max(taskCount, taskCountMin);
       }
-      log.info("Start to scale in tasks , current active task number [ " + currentActiveTaskCount + " ] and desire task number is [ " + desireActiveTaskCount + " ] ");
+      log.debug("Start to scale in tasks, current active task number [%s] and desire task number is [%s] for dataSource [%s].", currentActiveTaskCount, desireActiveTaskCount, dataSource);
       gracefulShutdownInternal();
       // clear everything
       clearAllocationInfos();
-      log.info("Set Task Count : " + desireActiveTaskCount);
-      setTaskCount(desireActiveTaskCount);
+      log.info("Change taskCount to [%s] for dataSource [%s].", desireActiveTaskCount, dataSource);
+      changeTaskCountInIOConfig(desireActiveTaskCount);
       return true;
     }
     return false;
   }
 
-  private void setTaskCount(int desireActiveTaskCount)
+  private void changeTaskCountInIOConfig(int desireActiveTaskCount)
   {
     ioConfig.setTaskCount(desireActiveTaskCount);
     try {
@@ -450,11 +461,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
         metadataSupervisorManager.insert(dataSource, spec);
       } else {
-        log.error("supervisorManager is null in taskMaster, skip to do scale action");
+        log.warn("supervisorManager is null in taskMaster, skip to do scale action for dataSource [%s].", dataSource);
       }
     }
     catch (Exception e) {
-      log.error("Failed to sync taskCount to RDS");
+      log.warn("Failed to sync taskCount to MetaStorage for dataSource [%s].", dataSource);
     }
   }
 
@@ -470,7 +481,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private List<Long> collectTotalLags()
   {
-    return new ArrayList<>(queue);
+    return new ArrayList<>(lagMetricsQueue);
   }
 
   private class GracefulShutdownNotice extends ShutdownNotice
@@ -656,11 +667,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
   private final boolean enableDynamicAllocationTasks;
-  private volatile long metricsCollectionIntervalMillis;
-  private volatile long metricsCollectionRangeMillis;
-  private volatile long dynamicCheckStartDelayMillis;
-  private volatile long dynamicCheckPeriod;
-  private volatile CircularFifoQueue<Long> queue;
+  private long metricsCollectionIntervalMillis;
+  private long metricsCollectionRangeMillis;
+  private long scaleOutThreshold;
+  private double triggerScaleOutThresholdFrequency;
+  private long scaleInThreshold;
+  private double triggerScaleInThresholdFrequency;
+  private long dynamicCheckStartDelayMillis;
+  private long dynamicCheckPeriod;
+  private int taskCountMax;
+  private int taskCountMin;
+  private int scaleInStep;
+  private int scaleOutStep;
+  private long minTriggerDynamicFrequency;
+
+  private volatile CircularFifoQueue<Long> lagMetricsQueue;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -685,26 +706,32 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
     this.dynamicAllocationTasksProperties = ioConfig.getDynamicAllocationTasksProperties();
-    log.info("Get dynamicAllocationTasksProperties from IOConfig : " + dynamicAllocationTasksProperties);
-
+    log.debug("Get dynamicAllocationTasksProperties from IOConfig : [%s] in [%s]", dynamicAllocationTasksProperties, dataSource);
     if (dynamicAllocationTasksProperties != null && !dynamicAllocationTasksProperties.isEmpty() && Boolean.parseBoolean(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("enableDynamicAllocationTasks", false)))) {
-      log.info("EnableDynamicAllocationTasks for datasource " + dataSource);
+      log.info("EnableDynamicAllocationTasks for datasource [%s]", dataSource);
       this.enableDynamicAllocationTasks = true;
     } else {
-      log.info("Disable Dynamic Allocate Tasks");
+      log.info("Disable dynamic allocate tasks for [%s]", dataSource);
       this.enableDynamicAllocationTasks = false;
     }
-    int taskCountMax = 0;
     if (enableDynamicAllocationTasks) {
-      this.metricsCollectionIntervalMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionIntervalMillis", 10000)));
-      this.metricsCollectionRangeMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionRangeMillis", 6 * 10 * 1000)));
-      int slots = (int) (metricsCollectionRangeMillis / metricsCollectionIntervalMillis) + 1;
-      log.info(" The interval of metrics collection is " + metricsCollectionIntervalMillis + ", " + metricsCollectionRangeMillis + " timeRange will collect " + slots + " data points at most.");
-      this.queue = new CircularFifoQueue<>(slots);
-      taskCountMax = Integer.parseInt(String.valueOf(this.dynamicAllocationTasksProperties.getOrDefault("taskCountMax", 8)));
-      this.dynamicCheckStartDelayMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("dynamicCheckStartDelayMillis", 300000)));
-      this.dynamicCheckPeriod = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("dynamicCheckPeriod", 600000)));
+      this.metricsCollectionIntervalMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionIntervalMillis", 30000)));
       this.metricsCollectionRangeMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionRangeMillis", 600000)));
+      int slots = (int) (metricsCollectionRangeMillis / metricsCollectionIntervalMillis) + 1;
+      log.debug(" The interval of metrics collection is [%s], [%s] timeRange will collect [%s] data points for dataSource [%s].", metricsCollectionIntervalMillis, metricsCollectionRangeMillis, slots, dataSource);
+      this.lagMetricsQueue = new CircularFifoQueue<>(slots);
+      this.dynamicCheckStartDelayMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("dynamicCheckStartDelayMillis", 300000)));
+      this.dynamicCheckPeriod = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("dynamicCheckPeriod", 60000)));
+      this.metricsCollectionRangeMillis = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("metricsCollectionRangeMillis", 600000)));
+      this.scaleOutThreshold = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleOutThreshold", 6000000)));
+      this.scaleInThreshold = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleInThreshold", 1000000)));
+      this.triggerScaleOutThresholdFrequency = Double.parseDouble(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("triggerScaleOutThresholdFrequency", 0.3)));
+      this.triggerScaleInThresholdFrequency = Double.parseDouble(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("triggerScaleInThresholdFrequency", 0.9)));
+      this.taskCountMax = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMax", 4)));
+      this.taskCountMin = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMin", 1)));
+      this.scaleInStep = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleInStep", 1)));
+      this.scaleOutStep = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("scaleOutStep", 2)));
+      this.minTriggerDynamicFrequency = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("minTriggerDynamicFrequencyMillis", 600000)));
     }
 
     this.tuningConfig = spec.getTuningConfig();
@@ -857,9 +884,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
         reportingExec.shutdownNow();
-        log.info("Shut Down allocationExec now");
         allocationExec.shutdownNow();
-        log.info("Shut Down lagComputationExec now");
         lagComputationExec.shutdownNow();
 
 
@@ -979,14 +1004,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         scheduleReporting(reportingExec);
         if (enableDynamicAllocationTasks) {
-          log.info("Collect and compute lags at fixed rate of " + metricsCollectionIntervalMillis);
+          log.debug("Collect and compute lags at fixed rate of [%s] for dataSource[%s].", metricsCollectionIntervalMillis, dataSource);
           lagComputationExec.scheduleAtFixedRate(
-                  collectAndcollectLags(),
+                  collectAndComputeLags(),
                   dynamicCheckStartDelayMillis, // wait for tasks to start up
                   metricsCollectionIntervalMillis,
                   TimeUnit.MILLISECONDS
           );
-          log.info("allocate task at fixed rate of " + dynamicCheckPeriod);
+          log.debug("allocate task at fixed rate of [%s], dataSource [%s].", dynamicCheckPeriod, dataSource);
           allocationExec.scheduleAtFixedRate(
                   buildDynamicAllocationTask(),
                   dynamicCheckStartDelayMillis + metricsCollectionRangeMillis,
@@ -1016,7 +1041,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private Runnable collectAndcollectLags()
+  /**
+   * This method compute current consume lags. Get the total lags of all partition and fill in lagMetricsQueue
+   * @return a Runnbale object to do collect and compute action.
+   */
+  private Runnable collectAndComputeLags()
   {
     return new Runnable() {
       @Override
@@ -1028,14 +1057,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             ArrayList<Long> metricsInfo = new ArrayList<>(3);
             collectLag(metricsInfo);
             long totalLags = metricsInfo.size() < 3 ? 0 : metricsInfo.get(1);
-            queue.offer(totalLags > 0 ? totalLags : 0);
-            log.info("Current lag metric points : " + new ArrayList<>(queue));
+            lagMetricsQueue.offer(totalLags > 0 ? totalLags : 0);
+            log.debug("Current lag metric points [%s] for dataSource [%s].", new ArrayList<>(lagMetricsQueue), dataSource);
           } else {
-            log.info("[%s] supervisor is suspended, skip to collect kafka lags", dataSource);
+            log.debug("[%s] supervisor is suspended, skip to collect kafka lags", dataSource);
           }
         }
         catch (Exception e) {
-          log.error(e, "Error, When collect kafka lags");
+          log.warn(e, "Error, When collect kafka lags");
         }
         finally {
           lock.unlock();
@@ -1395,10 +1424,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
     // clear queue for kafka lags
-    if (enableDynamicAllocationTasks && queue != null) {
+    if (enableDynamicAllocationTasks && lagMetricsQueue != null) {
       try {
         lock.lock();
-        queue.clear();
+        lagMetricsQueue.clear();
       }
       catch (Exception e) {
         log.warn(e, "Error,when clear queue in rest action");
@@ -3758,11 +3787,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final String type = spec.getType();
 
       BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
-        ArrayList<Long> lags = new ArrayList<>(3);
-        computeLags(partitionLags, lags);
-        if (lags.size() < 3) {
+        if (partitionLags == null) {
           return;
         }
+        ArrayList<Long> lags = new ArrayList<>(3);
+        computeLags(partitionLags, lags);
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
@@ -3790,11 +3819,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
 
+  /**
+   * This method compute maxLag, totalLag and avgLag then fill in 'lags'
+   * @param partitionLags lags per partition
+   * @param lags a arraylist in order of maxLag, totalLag and avgLag
+   */
   protected void computeLags(Map<PartitionIdType, Long> partitionLags, ArrayList<Long> lags)
   {
-    if (partitionLags == null) {
-      return;
-    }
     long maxLag = 0, totalLag = 0, avgLag;
     for (long lag : partitionLags.values()) {
       if (lag > maxLag) {
@@ -3844,5 +3875,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   protected abstract boolean useExclusiveStartSequenceNumberForNonFirstSequence();
 
+  /**
+   * Collect maxLag, totalLag, avgLag into ArrayList<Long> lags
+   * Only support Kafka ingestion so far.
+   * @param lags , Notice : The order of values is maxLag, totalLag and avgLag.
+   */
   protected abstract void collectLag(ArrayList<Long> lags);
 }

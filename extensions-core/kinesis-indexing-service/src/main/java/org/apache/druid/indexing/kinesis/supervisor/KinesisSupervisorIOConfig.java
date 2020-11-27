@@ -90,7 +90,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         earlyMessageRejectionPeriod,
         dynamicAllocationTasksProperties,
         lateMessageRejectionStartDateTime
-
     );
     this.endpoint = endpoint != null
                     ? endpoint

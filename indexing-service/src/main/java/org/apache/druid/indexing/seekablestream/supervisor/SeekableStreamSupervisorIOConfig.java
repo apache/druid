@@ -48,7 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
-  private final Map<String, Object> dynamicAllocationTasksProperties;
+  @Nullable private final Map<String, Object> dynamicAllocationTasksProperties;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -62,7 +62,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
-      Map<String, Object> dynamicAllocationTasksProperties,
+      @Nullable Map<String, Object> dynamicAllocationTasksProperties,
       DateTime lateMessageRejectionStartDateTime
   )
   {
@@ -119,6 +119,7 @@ public abstract class SeekableStreamSupervisorIOConfig
     return replicas;
   }
 
+  @Nullable
   @JsonProperty
   public Map<String, Object> getDynamicAllocationTasksProperties()
   {

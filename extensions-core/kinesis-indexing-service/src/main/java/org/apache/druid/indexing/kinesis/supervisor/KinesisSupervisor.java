@@ -377,6 +377,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return true;
   }
 
+  // not yet supported, will be implemented in the future maybe? need to find a proper way to measure kinesis lag.
   @Override
   protected void collectLag(ArrayList<Long> lags)
   {
