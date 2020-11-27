@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -83,13 +84,8 @@ abstract class BinaryOpExprBase implements Expr
   @Override
   public ExprType getOutputType(InputBindingInspector inspector)
   {
-    if (left.isNullLiteral()) {
-      return right.getOutputType(inspector);
-    }
-    if (right.isNullLiteral()) {
-      return left.getOutputType(inspector);
-    }
-    return ExprTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
+    final Pair<ExprType, ExprType> types = ExprTypeConversion.coerceNull(inspector, left, right);
+    return ExprTypeConversion.operator(types.lhs, types.rhs);
   }
 
   @Override

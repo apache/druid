@@ -35,26 +35,41 @@ import java.util.Objects;
  * {@link Expr.ObjectBinding}. {@link ConstantExpr} are terminal nodes of an expression tree, and have no children
  * {@link Expr}.
  */
-abstract class ConstantExpr implements Expr
+abstract class ConstantExpr<T> implements Expr
 {
   final ExprType outputType;
+  @Nullable
+  final T value;
 
-  protected ConstantExpr(ExprType outputType)
+  protected ConstantExpr(ExprType outputType, @Nullable T value)
   {
     this.outputType = outputType;
+    this.value = value;
   }
 
   @Nullable
   @Override
   public ExprType getOutputType(InputBindingInspector inspector)
   {
-    return outputType;
+    return value != null ? outputType : null;
   }
 
   @Override
   public boolean isLiteral()
   {
     return true;
+  }
+
+  @Override
+  public boolean isNullLiteral()
+  {
+    return value == null;
+  }
+
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
   }
 
   @Override
@@ -70,56 +85,23 @@ abstract class ConstantExpr implements Expr
   }
 
   @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return true;
+  }
+
+  @Override
   public String stringify()
   {
     return toString();
   }
 }
 
-/**
- * Base class for typed 'null' value constants (or default value, depending on {@link NullHandling#sqlCompatible})
- */
-abstract class NullNumericConstantExpr extends ConstantExpr
+class LongExpr extends ConstantExpr<Long>
 {
-  protected NullNumericConstantExpr(ExprType outputType)
-  {
-    super(outputType);
-  }
-
-  @Override
-  public Object getLiteralValue()
-  {
-    return null;
-  }
-
-  @Override
-  public String toString()
-  {
-    return NULL_LITERAL;
-  }
-
-
-  @Override
-  public boolean isNullLiteral()
-  {
-    return true;
-  }
-}
-
-class LongExpr extends ConstantExpr
-{
-  private final Long value;
-
   LongExpr(Long value)
   {
-    super(ExprType.LONG);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
-
-  @Override
-  public Object getLiteralValue()
-  {
-    return value;
+    super(ExprType.LONG, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -132,12 +114,6 @@ class LongExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLong(value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return true;
   }
 
   @Override
@@ -166,23 +142,17 @@ class LongExpr extends ConstantExpr
   }
 }
 
-class NullLongExpr extends NullNumericConstantExpr
+class NullLongExpr extends ConstantExpr<Long>
 {
   NullLongExpr()
   {
-    super(ExprType.LONG);
+    super(ExprType.LONG, null);
   }
 
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLong(null);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return true;
   }
 
   @Override
@@ -202,22 +172,19 @@ class NullLongExpr extends NullNumericConstantExpr
   {
     return obj instanceof NullLongExpr;
   }
-}
-
-class LongArrayExpr extends ConstantExpr
-{
-  private final Long[] value;
-
-  LongArrayExpr(Long[] value)
-  {
-    super(ExprType.LONG_ARRAY);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
 
   @Override
-  public Object getLiteralValue()
+  public String toString()
   {
-    return value;
+    return NULL_LITERAL;
+  }
+}
+
+class LongArrayExpr extends ConstantExpr<Long[]>
+{
+  LongArrayExpr(Long[] value)
+  {
+    super(ExprType.LONG_ARRAY, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -230,6 +197,12 @@ class LongArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLongArray(value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return false;
   }
 
   @Override
@@ -261,20 +234,11 @@ class LongArrayExpr extends ConstantExpr
   }
 }
 
-class DoubleExpr extends ConstantExpr
+class DoubleExpr extends ConstantExpr<Double>
 {
-  private final Double value;
-
   DoubleExpr(Double value)
   {
-    super(ExprType.DOUBLE);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
-
-  @Override
-  public Object getLiteralValue()
-  {
-    return value;
+    super(ExprType.DOUBLE, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -290,16 +254,11 @@ class DoubleExpr extends ConstantExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return true;
-  }
-
-  @Override
   public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.constantDouble(value, inspector.getMaxVectorSize());
   }
+
   @Override
   public boolean equals(Object o)
   {
@@ -320,23 +279,17 @@ class DoubleExpr extends ConstantExpr
   }
 }
 
-class NullDoubleExpr extends NullNumericConstantExpr
+class NullDoubleExpr extends ConstantExpr<Double>
 {
   NullDoubleExpr()
   {
-    super(ExprType.DOUBLE);
+    super(ExprType.DOUBLE, null);
   }
 
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDouble(null);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return true;
   }
 
   @Override
@@ -356,22 +309,19 @@ class NullDoubleExpr extends NullNumericConstantExpr
   {
     return obj instanceof NullDoubleExpr;
   }
-}
-
-class DoubleArrayExpr extends ConstantExpr
-{
-  private final Double[] value;
-
-  DoubleArrayExpr(Double[] value)
-  {
-    super(ExprType.DOUBLE_ARRAY);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
 
   @Override
-  public Object getLiteralValue()
+  public String toString()
   {
-    return value;
+    return NULL_LITERAL;
+  }
+}
+
+class DoubleArrayExpr extends ConstantExpr<Double[]>
+{
+  DoubleArrayExpr(Double[] value)
+  {
+    super(ExprType.DOUBLE_ARRAY, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -384,6 +334,12 @@ class DoubleArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDoubleArray(value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return false;
   }
 
   @Override
@@ -415,28 +371,11 @@ class DoubleArrayExpr extends ConstantExpr
   }
 }
 
-class StringExpr extends ConstantExpr
+class StringExpr extends ConstantExpr<String>
 {
-  @Nullable
-  private final String value;
-
   StringExpr(@Nullable String value)
   {
-    super(ExprType.STRING);
-    this.value = NullHandling.emptyToNullIfNeeded(value);
-  }
-
-  @Nullable
-  @Override
-  public Object getLiteralValue()
-  {
-    return value;
-  }
-
-  @Override
-  public boolean isNullLiteral()
-  {
-    return value == null;
+    super(ExprType.STRING, NullHandling.emptyToNullIfNeeded(value));
   }
 
   @Override
@@ -449,12 +388,6 @@ class StringExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.of(value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return true;
   }
 
   @Override
@@ -490,20 +423,11 @@ class StringExpr extends ConstantExpr
   }
 }
 
-class StringArrayExpr extends ConstantExpr
+class StringArrayExpr extends ConstantExpr<String[]>
 {
-  private final String[] value;
-
   StringArrayExpr(String[] value)
   {
-    super(ExprType.STRING_ARRAY);
-    this.value = Preconditions.checkNotNull(value, "value");
-  }
-
-  @Override
-  public Object getLiteralValue()
-  {
-    return value;
+    super(ExprType.STRING_ARRAY, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -516,6 +440,12 @@ class StringArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofStringArray(value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return false;
   }
 
   @Override

@@ -27,6 +27,11 @@ public interface DruidPredicateFactory
 {
   Predicate<String> makeStringPredicate();
 
+  default Predicate<Object> makeObjectPredicate()
+  {
+    throw new IllegalStateException("Object predicate not implemented");
+  }
+
   DruidLongPredicate makeLongPredicate();
 
   DruidFloatPredicate makeFloatPredicate();

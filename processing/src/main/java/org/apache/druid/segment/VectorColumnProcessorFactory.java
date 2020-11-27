@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 /**
@@ -46,6 +47,8 @@ public interface VectorColumnProcessorFactory<T>
       ColumnCapabilities capabilities,
       MultiValueDimensionVectorSelector selector
   );
+
+  T makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector);
 
   T makeFloatProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
 

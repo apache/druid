@@ -57,6 +57,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -445,7 +446,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   private long selectCountUsingVectorizedFilteredAggregator(final DimFilter dimFilter)
   {
-    Preconditions.checkState(makeFilter(dimFilter).canVectorizeMatcher(), "Cannot vectorize filter: %s", dimFilter);
+    Preconditions.checkState(
+        makeFilter(dimFilter).canVectorizeMatcher(adapter),
+        "Cannot vectorize filter: %s",
+        dimFilter
+    );
 
     try (final VectorCursor cursor = makeVectorCursor(null)) {
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
@@ -597,9 +602,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean canVectorizeMatcher()
+      public boolean canVectorizeMatcher(ColumnInspector inspector)
       {
-        return theFilter.canVectorizeMatcher();
+        return theFilter.canVectorizeMatcher(inspector);
       }
 
       @Override

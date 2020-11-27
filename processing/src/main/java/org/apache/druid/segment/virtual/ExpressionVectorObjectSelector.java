@@ -21,6 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
@@ -38,7 +39,7 @@ public class ExpressionVectorObjectSelector implements VectorObjectSelector
   @Override
   public Object[] getObjectVector()
   {
-    return processor.evalVector(bindings).getObjectVector();
+    return processor.evalVector(bindings).asObjectVector(ExprType.STRING);
   }
 
   @Override

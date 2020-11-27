@@ -19,20 +19,29 @@
 
 package org.apache.druid.query.filter.vector;
 
+import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
-import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
-public interface VectorValueMatcherFactory
+public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
 {
-  VectorValueMatcher makeMatcher(@Nullable String value);
+  private final VectorObjectSelector selector;
 
-  VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory);
-
-  default VectorValueMatcher makeNullValueMatcher(VectorValueSelector selector)
+  public ObjectVectorValueMatcher(final VectorObjectSelector selector)
   {
+    this.selector = selector;
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(@Nullable String value)
+  {
+    if (value == null) {
+      return makeNullValueMatcher(selector);
+    }
+
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -40,19 +49,14 @@ public interface VectorValueMatcherFactory
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask)
       {
-        final boolean[] nullVector = selector.getNullVector();
-
-        if (nullVector == null) {
-          return VectorMatch.allFalse();
-        }
-
+        final Object[] vector = selector.getObjectVector();
         final int[] selection = match.getSelection();
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (nullVector[rowNum]) {
+          if (Objects.equals(value, vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }
@@ -64,8 +68,11 @@ public interface VectorValueMatcherFactory
     };
   }
 
-  default VectorValueMatcher makeNullValueMatcher(VectorObjectSelector selector)
+  @Override
+  public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
+    final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();
+
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -74,15 +81,13 @@ public interface VectorValueMatcherFactory
       public ReadableVectorMatch match(final ReadableVectorMatch mask)
       {
         final Object[] vector = selector.getObjectVector();
-
-
         final int[] selection = match.getSelection();
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (vector[rowNum] == null) {
+          if (predicate.apply(vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }

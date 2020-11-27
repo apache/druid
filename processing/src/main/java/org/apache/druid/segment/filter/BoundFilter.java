@@ -41,6 +41,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -137,7 +138,7 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return true;
   }
