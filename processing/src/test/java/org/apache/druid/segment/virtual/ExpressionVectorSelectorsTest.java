@@ -224,7 +224,7 @@ public class ExpressionVectorSelectorsTest
             break;
           case DOUBLE:
             // special case to test floats just to get coverage on getFloatVector
-            if (expression.equals("float2")) {
+            if ("float2".equals(expression)) {
               nulls = selector.getNullVector();
               float[] floats = selector.getFloatVector();
               for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
