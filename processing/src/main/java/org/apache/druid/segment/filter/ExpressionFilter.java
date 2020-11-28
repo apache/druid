@@ -78,7 +78,6 @@ public class ExpressionFilter implements Filter
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
     final Expr theExpr = expr.get();
-
     DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
     {
       @Override

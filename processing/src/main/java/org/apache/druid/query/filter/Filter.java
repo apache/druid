@@ -155,7 +155,7 @@ public interface Filter
 
   /**
    * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.
-   * @param inspector
+   * @param inspector Supplies type information for the selectors this filter will match against
    */
   default boolean canVectorizeMatcher(ColumnInspector inspector)
   {

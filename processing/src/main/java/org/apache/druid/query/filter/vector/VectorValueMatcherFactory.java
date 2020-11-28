@@ -20,7 +20,6 @@
 package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -53,36 +52,6 @@ public interface VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (nullVector[rowNum]) {
-            selection[numRows++] = rowNum;
-          }
-        }
-
-        match.setSelectionSize(numRows);
-        assert match.isValid(mask);
-        return match;
-      }
-    };
-  }
-
-  default VectorValueMatcher makeNullValueMatcher(VectorObjectSelector selector)
-  {
-    return new BaseVectorValueMatcher(selector)
-    {
-      final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
-
-      @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
-      {
-        final Object[] vector = selector.getObjectVector();
-
-
-        final int[] selection = match.getSelection();
-
-        int numRows = 0;
-
-        for (int i = 0; i < mask.getSelectionSize(); i++) {
-          final int rowNum = mask.getSelection()[i];
-          if (vector[rowNum] == null) {
             selection[numRows++] = rowNum;
           }
         }

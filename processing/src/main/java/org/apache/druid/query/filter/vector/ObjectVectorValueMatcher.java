@@ -38,10 +38,6 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(@Nullable String value)
   {
-    if (value == null) {
-      return makeNullValueMatcher(selector);
-    }
-
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
