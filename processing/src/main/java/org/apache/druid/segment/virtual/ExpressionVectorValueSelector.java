@@ -38,6 +38,7 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
   @MonotonicNonNull
   private ExprEvalVector<?> evalResult = null;
   private int currentOffsetId = ReadableVectorOffset.NULL_ID;
+  private int currentFloatsId = ReadableVectorOffset.NULL_ID;
 
   public ExpressionVectorValueSelector(ExprVectorProcessor<?> processor, Expr.VectorInputBinding bindings)
   {
@@ -56,8 +57,9 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
   @Override
   public float[] getFloatVector()
   {
-    if (currentOffsetId != bindings.getCurrentVectorId()) {
+    if (currentFloatsId != bindings.getCurrentVectorId()) {
       eval();
+      currentFloatsId = currentOffsetId;
       final double[] doubles = evalResult.getDoubleVector();
       for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
         floats[i] = (float) doubles[i];
