@@ -25,12 +25,14 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class ExpressionVectorObjectSelector implements VectorObjectSelector
 {
   private final Expr.VectorInputBinding bindings;
   private final ExprVectorProcessor<?> processor;
 
+  @Nullable
   @MonotonicNonNull
   private Object[] cached = null;
   private int currentId = ReadableVectorOffset.NULL_ID;
