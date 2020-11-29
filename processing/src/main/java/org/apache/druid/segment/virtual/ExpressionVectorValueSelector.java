@@ -35,9 +35,8 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
   private final ExprVectorProcessor<?> processor;
   private final float[] floats;
 
-  @Nullable
   @MonotonicNonNull
-  private ExprEvalVector<?> evalResult = null;
+  private ExprEvalVector<?> evalResult;
   private int currentOffsetId = ReadableVectorOffset.NULL_ID;
   private int currentFloatsId = ReadableVectorOffset.NULL_ID;
 
