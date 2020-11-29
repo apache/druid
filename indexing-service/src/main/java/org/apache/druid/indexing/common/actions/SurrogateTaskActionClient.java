@@ -17,55 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.indexing.common.actions;
 
-
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-
-import java.util.concurrent.Future;
-
+import java.io.IOException;
 
 /**
+ * A {@link TaskActionClient} that wraps a given {@link TaskAction} with {@link SurrogateAction}.
+ * All subtasks of {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask} must
+ * use this client or wrap taskActions manually.
  */
-public abstract class AbstractMonitor implements Monitor
+public class SurrogateTaskActionClient implements TaskActionClient
 {
-  private volatile boolean started = false;
-  
-  private volatile Future<?> scheduledFuture;
+  private final String supervisorTaskId;
+  private final TaskActionClient delegate;
 
-  @Override
-  public void start()
+  public SurrogateTaskActionClient(String supervisorTaskId, TaskActionClient delegate)
   {
-    started = true;
+    this.supervisorTaskId = supervisorTaskId;
+    this.delegate = delegate;
   }
 
   @Override
-  public void stop()
+  public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
   {
-    started = false;
-  }
-
-  @Override
-  public boolean monitor(ServiceEmitter emitter)
-  {
-    if (started) {
-      return doMonitor(emitter);
-    }
-
-    return false;
-  }
-
-  public abstract boolean doMonitor(ServiceEmitter emitter);
-
-  @Override
-  public Future<?> getScheduledFuture()
-  {
-    return scheduledFuture;
-  }
-
-  @Override
-  public void setScheduledFuture(Future<?> scheduledFuture)
-  {
-    this.scheduledFuture = scheduledFuture;
+    return delegate.submit(new SurrogateAction<>(supervisorTaskId, taskAction));
   }
 }

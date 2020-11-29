@@ -109,34 +109,74 @@ public class DimensionCardinalityReportTest
     reports.add(report3);
 
     // first interval in test has cardinality 4
-    int numShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+    Map<Interval, Integer> intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
         reports,
         1
     );
-    Assert.assertEquals(4L, numShards);
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            4,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
 
-    numShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
         reports,
         2
     );
-    Assert.assertEquals(2L, numShards);
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            2,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
 
-    numShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
         reports,
         3
     );
-    Assert.assertEquals(2L, numShards);
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            1,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
 
-    numShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
         reports,
         4
     );
-    Assert.assertEquals(1L, numShards);
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            1,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
 
-    numShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
+    intervalToNumShards = ParallelIndexSupervisorTask.determineNumShardsFromCardinalityReport(
         reports,
         5
     );
-    Assert.assertEquals(1L, numShards);
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("1970-01-01/P1D"),
+            1,
+            Intervals.of("1970-01-02/P1D"),
+            1
+        ),
+        intervalToNumShards
+    );
   }
 }

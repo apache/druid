@@ -1255,6 +1255,11 @@
                 <version>1.19.0</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>io.timeandspace</groupId>
+                <artifactId>cron-scheduler</artifactId>
+                <version>0.1</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
