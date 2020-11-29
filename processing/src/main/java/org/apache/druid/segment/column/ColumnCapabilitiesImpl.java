@@ -71,7 +71,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
       capabilities.type = other.getType();
-      capabilities.typeName = other.getTypeName();
+      capabilities.complexTypeName = other.getComplexTypeName();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
@@ -130,12 +130,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
     }
 
-    if (merged.type == ValueType.COMPLEX && merged.typeName == null) {
-      merged.typeName = other.getTypeName();
+    if (merged.type == ValueType.COMPLEX && merged.complexTypeName == null) {
+      merged.complexTypeName = other.getComplexTypeName();
     }
 
-    if (merged.type == ValueType.COMPLEX && merged.typeName != null && !merged.typeName.equals(other.getTypeName())) {
-      throw new ISE("Cannot merge columns of typeName[%s] and [%s]", merged.typeName, other.getTypeName());
+    if (merged.type == ValueType.COMPLEX && merged.complexTypeName != null && !merged.complexTypeName.equals(other.getComplexTypeName())) {
+      throw new ISE("Cannot merge columns of typeName[%s] and [%s]", merged.complexTypeName, other.getComplexTypeName());
     }
 
     merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
@@ -197,7 +197,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private ValueType type = null;
 
   @Nullable
-  private String typeName = null;
+  private String complexTypeName = null;
 
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
@@ -223,9 +223,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   @Override
   @JsonProperty
-  public String getTypeName()
+  public String getComplexTypeName()
   {
-    return typeName;
+    return complexTypeName;
   }
 
   public ColumnCapabilitiesImpl setType(ValueType type)
@@ -234,9 +234,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return this;
   }
 
-  public ColumnCapabilitiesImpl setTypeName(String typeName)
+  public ColumnCapabilitiesImpl setComplexTypeName(String typeName)
   {
-    this.typeName = typeName;
+    this.complexTypeName = typeName;
     return this;
   }
 

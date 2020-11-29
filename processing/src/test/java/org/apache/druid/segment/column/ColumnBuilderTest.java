@@ -25,14 +25,14 @@ import org.junit.Test;
 public class ColumnBuilderTest
 {
   @Test
-  public void testSetTypeName()
+  public void testSetComplexTypeName()
   {
     ColumnHolder holder = new ColumnBuilder()
         .setType(ValueType.COMPLEX)
         .setTypeName("testType")
         .build();
 
-    Assert.assertEquals("testType", holder.getCapabilities().getTypeName());
+    Assert.assertEquals("testType", holder.getCapabilities().getComplexTypeName());
 
   }
 }

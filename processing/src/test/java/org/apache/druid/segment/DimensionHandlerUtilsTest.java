@@ -36,7 +36,7 @@ public class DimensionHandlerUtilsTest
 
     DimensionHandler dimensionHandler = DimensionHandlerUtils.getHandlerFromCapabilities(
         "dim",
-        new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX).setTypeName("testType"),
+        new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX).setComplexTypeName("testType"),
         null
     );
 

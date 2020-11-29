@@ -41,7 +41,7 @@ public interface ColumnCapabilities
    *
    * If ValueType is COMPLEX, then the typeName associated with it.
    */
-  String getTypeName();
+  String getComplexTypeName();
 
   /**
    * Is the column dictionary encoded? If so, a DimensionDictionarySelector may be used instead of using a value

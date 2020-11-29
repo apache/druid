@@ -855,7 +855,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                                            .setDictionaryValuesUnique(true)
                                            .setDictionaryValuesSorted(false);
       case COMPLEX:
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true).setTypeName(typeName);
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true).setComplexTypeName(typeName);
       default:
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }

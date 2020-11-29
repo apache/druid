@@ -120,10 +120,10 @@ public final class DimensionHandlerUtils
       return new DoubleDimensionHandler(dimensionName);
     }
 
-    if (capabilities.getType() == ValueType.COMPLEX && capabilities.getTypeName() != null) {
-      DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(capabilities.getTypeName());
+    if (capabilities.getType() == ValueType.COMPLEX && capabilities.getComplexTypeName() != null) {
+      DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(capabilities.getComplexTypeName());
       if (provider == null) {
-        throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", capabilities.getTypeName());
+        throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", capabilities.getComplexTypeName());
       }
       return provider.get(dimensionName);
     }

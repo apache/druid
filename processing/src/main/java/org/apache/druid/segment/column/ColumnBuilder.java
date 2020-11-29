@@ -60,7 +60,7 @@ public class ColumnBuilder
 
   public ColumnBuilder setTypeName(String typeName)
   {
-    this.capabilitiesBuilder.setTypeName(typeName);
+    this.capabilitiesBuilder.setComplexTypeName(typeName);
     return this;
   }
 
