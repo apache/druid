@@ -51,7 +51,7 @@ abstract class ConstantExpr<T> implements Expr
   @Override
   public ExprType getOutputType(InputBindingInspector inspector)
   {
-    return value != null ? outputType : null;
+    return outputType;
   }
 
   @Override

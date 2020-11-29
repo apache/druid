@@ -70,7 +70,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testBinaryOperators()
+  public void testBinaryMathOperators()
   {
     final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent"};
     final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
@@ -79,7 +79,22 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         Arrays.stream(templateInputs)
               .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
               .toArray(String[]::new);
-    final String[] args = new String[]{"+", "-", "*", "/", "^", "%", ">", ">=", "<", "<=", "==", "!="};
+    final String[] args = new String[]{"+", "-", "*", "/", "^", "%"};
+
+    testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testBinaryComparisonOperators()
+  {
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "nonexistent"};
+    final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2"};
+    final String[][] templateInputs = makeTemplateArgs(columns, columns2);
+    final String[] templates =
+        Arrays.stream(templateInputs)
+              .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
+              .toArray(String[]::new);
+    final String[] args = new String[]{">", ">=", "<", "<=", "==", "!="};
 
     testFunctions(types, templates, args);
   }
