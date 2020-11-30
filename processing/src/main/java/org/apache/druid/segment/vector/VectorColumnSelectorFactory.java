@@ -58,6 +58,15 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
   MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec);
 
   /**
+   * Returns an object selector for string columns, useful for non-dictionary encoded strings, or when
+   * using the dictionary isn't useful
+   */
+  default VectorObjectSelector makeStringObjectSelector(DimensionSpec dimensionSpec)
+  {
+    return makeObjectSelector(dimensionSpec.getDimension());
+  }
+
+  /**
    * Returns a primitive column selector.
    */
   VectorValueSelector makeValueSelector(String column);
@@ -66,6 +75,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    * Returns an object selector, useful for complex columns.
    */
   VectorObjectSelector makeObjectSelector(String column);
+
 
   /**
    * Returns capabilities of a particular column, or null if the column doesn't exist. Unlike ColumnSelectorFactory,

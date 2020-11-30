@@ -189,6 +189,43 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
+  public VectorObjectSelector makeStringObjectSelector(DimensionSpec dimensionSpec)
+  {
+    if (!dimensionSpec.canVectorize()) {
+      throw new ISE("DimensionSpec[%s] cannot be vectorized", dimensionSpec);
+    }
+    Function<String, VectorObjectSelector> mappingFunction = name -> {
+      VectorObjectSelector objectSelector;
+      if (virtualColumns.exists(dimensionSpec.getDimension())) {
+        VectorObjectSelector selector = virtualColumns.makeVectorObjectSelector(dimensionSpec.getDimension(), index, offset);
+        if (selector == null) {
+          objectSelector = dimensionSpec.decorate(virtualColumns.makeVectorObjectSelector(dimensionSpec.getDimension(), this));
+        } else {
+          objectSelector = dimensionSpec.decorate(selector);
+        }
+      } else {
+        final BaseColumn column = getCachedColumn(name);
+        if (column == null) {
+          objectSelector = NilVectorSelector.create(offset);
+        } else {
+          objectSelector = column.makeVectorObjectSelector(offset);
+        }
+      }
+
+      return dimensionSpec.decorate(objectSelector);
+    };
+    // We cannot use computeIfAbsent() here since the function being applied may modify the cache itself through
+    // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
+    VectorObjectSelector columnValueSelector = objectSelectorCache.get(dimensionSpec.getDimension());
+    if (columnValueSelector == null) {
+      columnValueSelector = mappingFunction.apply(dimensionSpec.getDimension());
+      objectSelectorCache.put(dimensionSpec.getDimension(), columnValueSelector);
+    }
+
+    return columnValueSelector;
+  }
+
+  @Override
   public VectorValueSelector makeValueSelector(final String columnName)
   {
     Function<String, VectorValueSelector> mappingFunction = name -> {

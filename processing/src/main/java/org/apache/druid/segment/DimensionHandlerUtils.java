@@ -305,17 +305,29 @@ public final class DimensionHandlerUtils
         originalCapabilities == null || ValueType.COMPLEX.equals(originalCapabilities.getType());
 
     if (type == ValueType.STRING) {
-      if (!forceSingleValue && effectiveCapabilites.hasMultipleValues().isMaybeTrue()) {
-        return strategyFactory.makeMultiValueDimensionProcessor(
-            effectiveCapabilites,
-            selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
-        );
-      } else {
-        return strategyFactory.makeSingleValueDimensionProcessor(
-            effectiveCapabilites,
-            selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
-        );
+      if (!forceSingleValue) {
+        // if column is not dictionary encoded (and not non-existent or complex), use object selector
+        if (effectiveCapabilites.isDictionaryEncoded().isFalse() ||
+            effectiveCapabilites.areDictionaryValuesUnique().isFalse()
+        ) {
+          return strategyFactory.makeObjectProcessor(
+              effectiveCapabilites,
+              selectorFactory.makeStringObjectSelector(dimensionSpec)
+          );
+        }
+        // multi-value dictionary encoded string?
+        if (effectiveCapabilites.hasMultipleValues().isMaybeTrue()) {
+          return strategyFactory.makeMultiValueDimensionProcessor(
+              effectiveCapabilites,
+              selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
+          );
+        }
       }
+      // single-value dictionary encoded
+      return strategyFactory.makeSingleValueDimensionProcessor(
+          effectiveCapabilites,
+          selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
+      );
     } else {
       Preconditions.checkState(
           dimensionSpec.getExtractionFn() == null && !dimensionSpec.mustDecorate(),

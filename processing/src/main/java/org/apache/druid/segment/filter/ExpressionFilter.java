@@ -38,6 +38,7 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.FalseVectorMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -78,18 +79,13 @@ public class ExpressionFilter implements Filter
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
     final Expr theExpr = expr.get();
+
     DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
     {
       @Override
       public Predicate<String> makeStringPredicate()
       {
         return Evals::asBoolean;
-      }
-
-      @Override
-      public Predicate<Object> makeObjectPredicate()
-      {
-        return (o) -> Evals.asBoolean((String) o);
       }
 
       @Override
@@ -130,26 +126,37 @@ public class ExpressionFilter implements Filter
       }
     };
 
+
     final ExprType outputType = theExpr.getOutputType(factory);
-    if (outputType == null || theExpr.isNullLiteral()) {
+
+    if (outputType == null) {
+      // if an expression is vectorizable, but the output type is null, the result will be null (or the default
+      // value in default mode) because expression is either all null constants or missing columns
+
+      // in sql compatible mode, this means no matches ever, so just use the false matcher:
+      if (NullHandling.sqlCompatible()) {
+        return new FalseVectorMatcher(factory.getVectorSizeInspector());
+      }
+      // in default mode, just fallback to using a long matcher since nearly all boolean-ish expressions
+      // output a long value so it is probably a safe bet? idk, ending up here by using all null-ish things
+      // in default mode is dancing on the edge of insanity anyway...
       return VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(
           ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG),
           ExpressionVectorSelectors.makeVectorValueSelector(factory, theExpr)
       ).makeMatcher(predicateFactory);
     }
+
     switch (outputType) {
       case LONG:
         return VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(
             ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG),
             ExpressionVectorSelectors.makeVectorValueSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
-
       case DOUBLE:
         return VectorValueMatcherColumnProcessorFactory.instance().makeDoubleProcessor(
             ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE),
             ExpressionVectorSelectors.makeVectorValueSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
-
       case STRING:
         return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
             // using 'numeric' capabilities creator so we are configured to NOT be dictionary encoded, etc

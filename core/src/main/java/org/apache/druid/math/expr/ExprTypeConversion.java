@@ -43,9 +43,6 @@ public class ExprTypeConversion
   {
     ExprType type = null;
     for (Expr arg : args) {
-      if (arg.isNullLiteral()) {
-        continue;
-      }
       if (type == null) {
         type = arg.getOutputType(inspector);
       } else {

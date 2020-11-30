@@ -29,7 +29,9 @@ public interface DruidPredicateFactory
 
   default Predicate<Object> makeObjectPredicate()
   {
-    throw new IllegalStateException("Object predicate not implemented");
+    // default to try to use string predicate;
+    final Predicate<String> stringPredicate = makeStringPredicate();
+    return o -> stringPredicate.apply((String) o);
   }
 
   DruidLongPredicate makeLongPredicate();

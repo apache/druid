@@ -27,6 +27,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -106,6 +107,12 @@ public class DefaultDimensionSpec implements DimensionSpec
 
   @Override
   public MultiValueDimensionVectorSelector decorate(final MultiValueDimensionVectorSelector selector)
+  {
+    return selector;
+  }
+
+  @Override
+  public VectorObjectSelector decorate(VectorObjectSelector selector)
   {
     return selector;
   }

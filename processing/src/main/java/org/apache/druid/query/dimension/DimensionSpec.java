@@ -29,6 +29,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 
@@ -66,6 +67,11 @@ public interface DimensionSpec extends Cacheable
   }
 
   default MultiValueDimensionVectorSelector decorate(MultiValueDimensionVectorSelector selector)
+  {
+    throw new UOE("DimensionSpec[%s] cannot vectorize", getClass().getName());
+  }
+
+  default VectorObjectSelector decorate(VectorObjectSelector selector)
   {
     throw new UOE("DimensionSpec[%s] cannot vectorize", getClass().getName());
   }
