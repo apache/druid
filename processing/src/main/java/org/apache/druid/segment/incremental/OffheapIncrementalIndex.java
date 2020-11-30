@@ -286,46 +286,46 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  public float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getFloat(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
+  public long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getLong(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  public Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public double getMetricDoubleValue(int rowOffset, int aggOffset)
+  public double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public boolean isNull(int rowOffset, int aggOffset)
+  public boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.isNull(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }

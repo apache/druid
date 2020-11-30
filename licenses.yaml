@@ -4853,6 +4853,16 @@ notices:
 
 ---
 
+name: oak
+license_category: binary
+version: 0.2.3
+module: druid-processing
+license_name: Apache License version 2.0
+libraries:
+  - com.yahoo.oak: oak
+
+---
+
 # Web console modules start
 name: "@babel/runtime"
 license_category: binary
