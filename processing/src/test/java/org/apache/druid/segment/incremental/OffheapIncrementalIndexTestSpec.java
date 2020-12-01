@@ -27,7 +27,6 @@ import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -96,7 +95,7 @@ public class OffheapIncrementalIndexTestSpec implements AppendableIndexSpec, Sup
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     bufferPool.close();
   }

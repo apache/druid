@@ -89,7 +89,6 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -534,7 +533,7 @@ public class GroupByBenchmark
     IncrementalIndex<?> incIndex;
 
     @Setup(Level.Trial)
-    public void setup(GroupByBenchmark global) throws IndexSizeExceededException, JsonProcessingException
+    public void setup(GroupByBenchmark global) throws JsonProcessingException
     {
       global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
       incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
