@@ -37,7 +37,8 @@ This service is provided in the `druid-kafka-indexing-service` core Apache Druid
 > Kafka consumer that Druid uses incompatible with older brokers. Ensure that your Kafka brokers are version 0.11.x or
 > better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade)
 > if you are using older version of Kafka brokers.
-> In addition, users could set `isolation.level` false in `consumerProperties`, if don't need Druid to consume transactional topics or need Druid to consume older versions of Kafka (Make sure offsets are sequential, since there is no offset gap check in Druid anymore).
+> In addition, users could set `isolation.level` false in `consumerProperties`, if don't need Druid to consume transactional topics or need Druid to consume older versions of Kafka.
+> Make sure offsets are sequential, since there is no offset gap check in Druid anymore.
 
 ## Tutorial
 
