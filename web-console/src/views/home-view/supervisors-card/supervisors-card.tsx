@@ -17,12 +17,12 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils/capabilities';
+import { Capabilities } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SupervisorCounts {
@@ -45,7 +45,7 @@ export const SupervisorsCard = React.memo(function SupervisorsCard(props: Superv
 FROM sys.supervisors`,
         }))[0];
       } else if (capabilities.hasOverlordAccess()) {
-        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+        const resp = await Api.instance.get('/druid/indexer/v1/supervisor?full');
         const data = resp.data;
         return {
           running: data.filter((d: any) => d.spec.suspended === false).length,

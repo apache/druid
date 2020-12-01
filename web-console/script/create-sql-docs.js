@@ -61,7 +61,7 @@ const readDoc = async () => {
     );
   }
 
-  // Make sure there are at least 5 data types for sanity
+  // Make sure there are at least 10 data types for sanity
   if (dataTypeDocs.length < 10) {
     throw new Error(
       `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length})`,

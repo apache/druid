@@ -94,7 +94,7 @@ function handleColumnClick(options: HandleColumnClickOptions): void {
 
   let newSelectExpressions = query.selectExpressions;
   for (const aggregate of aggregates) {
-    newSelectExpressions = newSelectExpressions.addLast(aggregate);
+    newSelectExpressions = newSelectExpressions.append(aggregate);
   }
 
   onQueryChange(
@@ -339,7 +339,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     }}
                                   />
                                   {parsedQuery &&
-                                    oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT') && (
+                                    oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
                                       <NumberMenuItems
                                         table={tableName}
                                         schema={schemaName}

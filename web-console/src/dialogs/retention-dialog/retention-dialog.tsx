@@ -18,13 +18,13 @@
 
 import { Button, Divider, FormGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React, { useState } from 'react';
 
 import { SnitchDialog } from '..';
 import { ExternalLink, RuleEditor } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
+import { Api } from '../../singletons';
 import { swapElements } from '../../utils';
 import { Rule, RuleUtil } from '../../utils/load-rule';
 
@@ -46,7 +46,9 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
 
   const [historyQueryState] = useQueryManager<string, any[]>({
     processQuery: async datasource => {
-      const historyResp = await axios(`/druid/coordinator/v1/rules/${datasource}/history`);
+      const historyResp = await Api.instance.get(
+        `/druid/coordinator/v1/rules/${datasource}/history`,
+      );
       return historyResp.data;
     },
     initQuery: props.datasource,
