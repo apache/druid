@@ -80,7 +80,6 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
     Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
-    Assert.assertEquals(true, config.getConsumeTransactionally());
   }
 
   @Test

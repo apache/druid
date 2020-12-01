@@ -57,11 +57,10 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
   public KafkaRecordSupplier(
       Map<String, Object> consumerProperties,
-      ObjectMapper sortingMapper,
-      Boolean consumeTransactionally
+      ObjectMapper sortingMapper
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, consumeTransactionally));
+    this(getKafkaConsumer(sortingMapper, consumerProperties));
   }
 
   @VisibleForTesting
@@ -233,9 +232,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     return deserializerObject;
   }
 
-  private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties, Boolean consumeTransactionally)
+  private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
-    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(consumeTransactionally);
+    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(consumerProperties);
     final Properties props = new Properties();
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
     props.putAll(consumerConfigs);

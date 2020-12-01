@@ -17,22 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.java.util.common.concurrent;
 
-import org.junit.Assert;
+import org.joda.time.Duration;
 import org.junit.Test;
 
-import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 
-public class KafkaConsumerConfigsTest
+public class ScheduledExecutorsTest
 {
   @Test
-  public void testGetConsumerProperties()
+  public void testscheduleWithFixedDelay() throws InterruptedException
   {
-    Map<String, Object> consumerPropertiesWithCommitted = KafkaConsumerConfigs.getConsumerProperties(true);
-    Assert.assertTrue(String.valueOf(consumerPropertiesWithCommitted.get("isolation.level")).equalsIgnoreCase("read_committed"));
-
-    Map<String, Object> consumerPropertiesWithUnCommitted = KafkaConsumerConfigs.getConsumerProperties(false);
-    Assert.assertNull(consumerPropertiesWithUnCommitted.get("isolation.level"));
+    Duration initialDelay = new Duration(1000);
+    Duration delay = new Duration(1000);
+    ScheduledExecutorService exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
+    ScheduledExecutors.scheduleWithFixedDelay(
+            exec,
+            initialDelay,
+            delay,
+        () -> {
+            System.out.println("TEST!");
+        }
+    );
+    Thread.sleep(5 * 1000);
+    exec.shutdown();
   }
 }

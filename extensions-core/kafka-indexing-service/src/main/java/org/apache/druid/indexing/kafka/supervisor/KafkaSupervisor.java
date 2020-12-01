@@ -123,8 +123,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected RecordSupplier<Integer, Long> setupRecordSupplier()
   {
-    KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
-    return new KafkaRecordSupplier(ioConfig.getConsumerProperties(), sortingMapper, ioConfig.getConsumeTransactionally());
+    return new KafkaRecordSupplier(spec.getIoConfig().getConsumerProperties(), sortingMapper);
   }
 
   @Override
@@ -191,7 +190,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getTopic(), startPartitions, Collections.emptySet()),
         new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getTopic(), endPartitions),
         kafkaIoConfig.getConsumerProperties(),
-        kafkaIoConfig.getConsumeTransactionally(),
         kafkaIoConfig.getPollTimeout(),
         true,
         minimumMessageTime,

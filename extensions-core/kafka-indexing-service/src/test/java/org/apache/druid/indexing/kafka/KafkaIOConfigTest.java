@@ -313,7 +313,6 @@ public class KafkaIOConfigTest
         new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(1, 10L, 2, 5L), null),
         new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(1, 20L, 2, 30L)),
         ImmutableMap.of("consumer", "properties"),
-        null,
         100L,
         true,
         DateTimes.nowUtc(),
@@ -326,7 +325,6 @@ public class KafkaIOConfigTest
     oldMapper.registerSubtypes(new NamedType(OldKafkaIndexTaskIoConfig.class, "kafka"));
     final OldKafkaIndexTaskIoConfig oldConfig = (OldKafkaIndexTaskIoConfig) oldMapper.readValue(json, IOConfig.class);
 
-    Assert.assertEquals(true, currentConfig.getConsumeTransactionally());
     Assert.assertEquals(currentConfig.getTaskGroupId().intValue(), oldConfig.taskGroupId);
     Assert.assertEquals(currentConfig.getBaseSequenceName(), oldConfig.baseSequenceName);
     Assert.assertEquals(currentConfig.getStartSequenceNumbers(), oldConfig.startPartitions.asStartPartitions(true));

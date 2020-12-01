@@ -30,14 +30,12 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-
 import java.util.Map;
 
 public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long>
 {
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
-  private final boolean consumeTransactionally;
 
   @JsonCreator
   public KafkaIndexTaskIOConfig(
@@ -54,7 +52,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("endSequenceNumbers")
       @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
-      @JsonProperty("consumeTransactionally") Boolean consumeTransactionally,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
@@ -77,7 +74,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
-    this.consumeTransactionally = consumeTransactionally != null ? consumeTransactionally : KafkaSupervisorIOConfig.DEFAULT_CONSUME_TRANSACTIONALLY;
 
     final SeekableStreamEndSequenceNumbers<Integer, Long> myEndSequenceNumbers = getEndSequenceNumbers();
     for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
@@ -97,7 +93,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
       SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
       Map<String, Object> consumerProperties,
-      Boolean consumeTransactionally,
       Long pollTimeout,
       Boolean useTransaction,
       DateTime minimumMessageTime,
@@ -113,7 +108,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         startSequenceNumbers,
         endSequenceNumbers,
         consumerProperties,
-        consumeTransactionally,
         pollTimeout,
         useTransaction,
         minimumMessageTime,
@@ -162,12 +156,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     return pollTimeout;
   }
 
-  @JsonProperty
-  public Boolean getConsumeTransactionally()
-  {
-    return consumeTransactionally;
-  }
-
   @Override
   public String toString()
   {
@@ -177,7 +165,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
            ", startSequenceNumbers=" + getStartSequenceNumbers() +
            ", endSequenceNumbers=" + getEndSequenceNumbers() +
            ", consumerProperties=" + consumerProperties +
-           ", consumeTransactionally=" + consumeTransactionally +
            ", pollTimeout=" + pollTimeout +
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
