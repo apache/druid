@@ -12073,17 +12073,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", timestamp("2000-01-01"), 2L, 3L},
-            new Object[]{"", timestamp("2001-01-01"), 1L, 3L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L, 3L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L, 3L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L, 3L},
-            new Object[]{"", null, 3L, 2L},
-            new Object[]{"a", null, 2L, 2L},
-            new Object[]{"abc", null, 1L, 2L},
-            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L, 1L},
-            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L, 1L},
-            new Object[]{NULL_STRING, null, 6L, 0L}
+            new Object[]{"", timestamp("2000-01-01"), 2L, 0L},
+            new Object[]{"", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"", null, 3L, 1L},
+            new Object[]{"a", null, 2L, 1L},
+            new Object[]{"abc", null, 1L, 1L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L, 2L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L, 2L},
+            new Object[]{NULL_STRING, null, 6L, 3L}
         )
     );
   }
@@ -12137,17 +12137,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", timestamp("2000-01-01"), 2L, 3L},
-            new Object[]{"", timestamp("2001-01-01"), 1L, 3L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L, 3L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L, 3L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L, 3L},
-            new Object[]{"", null, 3L, 1L},
-            new Object[]{"a", null, 2L, 1L},
-            new Object[]{"abc", null, 1L, 1L},
-            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L, 2L},
-            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L, 2L},
-            new Object[]{NULL_STRING, null, 6L, 0L}
+            new Object[]{"", timestamp("2000-01-01"), 2L, 0L},
+            new Object[]{"", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"", null, 3L, 2L},
+            new Object[]{"a", null, 2L, 2L},
+            new Object[]{"abc", null, 1L, 2L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L, 1L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L, 1L},
+            new Object[]{NULL_STRING, null, 6L, 3L}
         )
     );
   }
@@ -12158,23 +12158,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     List<Object[]> resultList;
     if (NullHandling.sqlCompatible()) {
       resultList = ImmutableList.of(
-          new Object[]{NULL_STRING, 2L, 1L, "INDIVIDUAL"},
-          new Object[]{"", 1L, 1L, "INDIVIDUAL"},
-          new Object[]{"a", 2L, 1L, "INDIVIDUAL"},
-          new Object[]{"abc", 1L, 1L, "INDIVIDUAL"},
-          new Object[]{NULL_STRING, 6L, 0L, "ALL"}
+          new Object[]{NULL_STRING, 2L, 0L, "INDIVIDUAL"},
+          new Object[]{"", 1L, 0L, "INDIVIDUAL"},
+          new Object[]{"a", 2L, 0L, "INDIVIDUAL"},
+          new Object[]{"abc", 1L, 0L, "INDIVIDUAL"},
+          new Object[]{NULL_STRING, 6L, 1L, "ALL"}
       );
     } else {
       resultList = ImmutableList.of(
-          new Object[]{"", 3L, 1L, "INDIVIDUAL"},
-          new Object[]{"a", 2L, 1L, "INDIVIDUAL"},
-          new Object[]{"abc", 1L, 1L, "INDIVIDUAL"},
-          new Object[]{NULL_STRING, 6L, 0L, "ALL"}
+          new Object[]{"", 3L, 0L, "INDIVIDUAL"},
+          new Object[]{"a", 2L, 0L, "INDIVIDUAL"},
+          new Object[]{"abc", 1L, 0L, "INDIVIDUAL"},
+          new Object[]{NULL_STRING, 6L, 1L, "ALL"}
       );
     }
     testQuery(
         "SELECT dim2, SUM(cnt), GROUPING(dim2), \n"
-        + "CASE WHEN GROUPING(dim2) = 0 THEN 'ALL' ELSE 'INDIVIDUAL' END\n"
+        + "CASE WHEN GROUPING(dim2) = 1 THEN 'ALL' ELSE 'INDIVIDUAL' END\n"
         + "FROM druid.foo\n"
         + "GROUP BY GROUPING SETS ( (dim2), () )",
         ImmutableList.of(
@@ -12199,7 +12199,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setPostAggregatorSpecs(Collections.singletonList(new ExpressionPostAggregator(
                             "p0",
-                            "case_searched((\"a1\" == 0),'ALL','INDIVIDUAL')",
+                            "case_searched((\"a1\" == 1),'ALL','INDIVIDUAL')",
                             null,
                             ExprMacroTable.nil()
                         )))

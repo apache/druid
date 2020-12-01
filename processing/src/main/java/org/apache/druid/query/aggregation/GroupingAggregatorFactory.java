@@ -204,19 +204,19 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   /**
    * Given the list of grouping dimensions, returns a long value where each bit at position X in the returned value
    * corresponds to the dimension in groupings at same position X. X is the position relative to the right end. if
-   * keyDimensions contain the grouping dimension at position X, the bit is set to 1 at position X, otherwise it is
-   * set to 0. An example adapted from Microsoft SQL documentation
+   * keyDimensions contain the grouping dimension at position X, the bit is set to 0 at position X, otherwise it is
+   * set to 1. An example adapted from Microsoft SQL documentation
    *
    *  groupings           keyDimensions           value (3 least significant bits)         value (long)
-   *    a,b,c                    [a]                       100                                       4
-   *    a,b,c                    [b]                       010                                       2
-   *    a,b,c                    [c]                       001                                       1
-   *    a,b,c                  [a,b]                       110                                       6
-   *    a,b,c                  [a,c]                       101                                       5
-   *    a,b,c                  [b,c]                       011                                       3
-   *    a,b,c                [a,b,c]                       111                                       7
-   *    a,b,c                     []                       000                                       0    // None included
-   *    a,b,c                 <null>                       111                                       7    // All included
+   *    a,b,c                    [a]                       011                                       3
+   *    a,b,c                    [b]                       101                                       5
+   *    a,b,c                    [c]                       110                                       6
+   *    a,b,c                  [a,b]                       001                                       1
+   *    a,b,c                  [a,c]                       010                                       2
+   *    a,b,c                  [b,c]                       100                                       4
+   *    a,b,c                [a,b,c]                       000                                       0
+   *    a,b,c                     []                       111                                       7    // None included
+   *    a,b,c                 <null>                       000                                       0    // All included
    */
   private long groupingId(List<String> groupings, @Nullable Set<String> keyDimensions)
   {
@@ -232,7 +232,7 @@ public class GroupingAggregatorFactory extends AggregatorFactory
     long temp = 0L;
     for (String groupingDimension : groupings) {
       temp = temp << 1;
-      if (isDimensionIncluded(groupingDimension, keyDimensions)) {
+      if (!isDimensionIncluded(groupingDimension, keyDimensions)) {
         temp = temp | 1L;
       }
     }

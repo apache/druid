@@ -46,7 +46,7 @@ public class GroupingAggregatorFactoryTest
   {
     GroupingAggregatorFactory factory = new GroupingAggregatorFactory("name", Arrays.asList(groupings));
     if (null != keyDims) {
-      factory = (GroupingAggregatorFactory) factory.withKeyDimensions(Sets.newHashSet(keyDims));
+      factory = factory.withKeyDimensions(Sets.newHashSet(keyDims));
     }
     return factory;
   }
@@ -67,7 +67,7 @@ public class GroupingAggregatorFactoryTest
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       Aggregator aggregator = factory.factorize(metricFactory);
       Assert.assertEquals(LongConstantAggregator.class, aggregator.getClass());
-      Assert.assertEquals(2, aggregator.getLong());
+      Assert.assertEquals(1, aggregator.getLong());
     }
 
     @Test
@@ -76,7 +76,7 @@ public class GroupingAggregatorFactoryTest
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       BufferAggregator aggregator = factory.factorizeBuffered(metricFactory);
       Assert.assertEquals(LongConstantBufferAggregator.class, aggregator.getClass());
-      Assert.assertEquals(2, aggregator.getLong(null, 0));
+      Assert.assertEquals(1, aggregator.getLong(null, 0));
     }
 
     @Test
@@ -86,7 +86,7 @@ public class GroupingAggregatorFactoryTest
       Assert.assertTrue(factory.canVectorize(metricFactory));
       VectorAggregator aggregator = factory.factorizeVector(null);
       Assert.assertEquals(LongConstantVectorAggregator.class, aggregator.getClass());
-      Assert.assertEquals(2L, aggregator.get(null, 0));
+      Assert.assertEquals(1L, aggregator.get(null, 0));
     }
 
     @Test
@@ -94,10 +94,10 @@ public class GroupingAggregatorFactoryTest
     {
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       Aggregator aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(2, aggregator.getLong());
-      factory = (GroupingAggregatorFactory) factory.withKeyDimensions(Sets.newHashSet("b"));
-      aggregator = factory.factorize(metricFactory);
       Assert.assertEquals(1, aggregator.getLong());
+      factory = factory.withKeyDimensions(Sets.newHashSet("b"));
+      aggregator = factory.factorize(metricFactory);
+      Assert.assertEquals(2, aggregator.getLong());
     }
   }
 
@@ -155,13 +155,14 @@ public class GroupingAggregatorFactoryTest
         maxGroupingList[i] = String.valueOf(i);
       }
       return Arrays.asList(new Object[][]{
-          {new String[]{"a", "b"}, new String[0], 0},
-          {new String[]{"a", "b"}, null, 3},
-          {new String[]{"a", "b"}, new String[]{"a"}, 2},
-          {new String[]{"a", "b"}, new String[]{"b"}, 1},
-          {new String[]{"a", "b"}, new String[]{"a", "b"}, 3},
-          {new String[]{"b", "a"}, new String[]{"a"}, 1},
-          {maxGroupingList, null, Long.MAX_VALUE}
+          {new String[]{"a", "b"}, new String[0], 3},
+          {new String[]{"a", "b"}, null, 0},
+          {new String[]{"a", "b"}, new String[]{"a"}, 1},
+          {new String[]{"a", "b"}, new String[]{"b"}, 2},
+          {new String[]{"a", "b"}, new String[]{"a", "b"}, 0},
+          {new String[]{"b", "a"}, new String[]{"a"}, 2},
+          {maxGroupingList, null, 0},
+          {maxGroupingList, new String[0], Long.MAX_VALUE}
       });
     }
 
