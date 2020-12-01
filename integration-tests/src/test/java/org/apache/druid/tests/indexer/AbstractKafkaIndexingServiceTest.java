@@ -29,6 +29,7 @@ import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
@@ -56,7 +57,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
       IntegrationTestingConfig config
   )
   {
-    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(new HashMap<>());
     final Properties consumerProperties = new Properties();
     consumerProperties.putAll(consumerConfigs);
     consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
