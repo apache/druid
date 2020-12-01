@@ -30,8 +30,11 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 
 /**
- * Since the off-heap incremental index is not yet supported in production ingestion, we define its spec here only
- * for testing purposes.
+ * OffheapIncrementalIndexTestSpec describes the off-heap indexing method for data ingestion.
+ * It also acts as a ByteBuffer supplier for the created off-heap incremental index.
+ *
+ * Note: since the off-heap incremental index is not yet supported in production ingestion, we define its spec here
+ * only for testing purposes.
  */
 public class OffheapIncrementalIndexTestSpec implements AppendableIndexSpec, Supplier<ByteBuffer>, Closeable
 {
@@ -73,12 +76,6 @@ public class OffheapIncrementalIndexTestSpec implements AppendableIndexSpec, Sup
   }
 
   @Override
-  public ByteBuffer get()
-  {
-    return ByteBuffer.allocateDirect(bufferSize);
-  }
-
-  @Override
   public AppendableIndexBuilder builder()
   {
     return new OffheapIncrementalIndex.Builder().setBufferPool(bufferPool);
@@ -92,6 +89,14 @@ public class OffheapIncrementalIndexTestSpec implements AppendableIndexSpec, Sup
     // persist buffer.
     // To account for that, we set default to 1/2 of the max JVM's direct memory.
     return JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes() / 2;
+  }
+
+  // Supplier<ByteBuffer> and Closeable interface implementation
+
+  @Override
+  public ByteBuffer get()
+  {
+    return ByteBuffer.allocateDirect(bufferSize);
   }
 
   @Override
