@@ -150,6 +150,9 @@ public class FilteredAggregatorBenchmark
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
+  /**
+   * Setup everything common for benchmarking both the incremental-index and the queriable-index.
+   */
   @Setup
   public void setup()
   {
@@ -195,6 +198,9 @@ public class FilteredAggregatorBenchmark
                   .build();
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the incremental-index.
+   */
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
@@ -206,6 +212,8 @@ public class FilteredAggregatorBenchmark
     @Setup
     public void setup(FilteredAggregatorBenchmark global) throws JsonProcessingException
     {
+      // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+      // It is used in {@code global.makeIncIndex()} to instanciate an incremental-index of the specified type.
       global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
       incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
       global.generator.addToIndex(incIndex, global.rowsPerSegment);
@@ -214,10 +222,15 @@ public class FilteredAggregatorBenchmark
     @TearDown
     public void tearDown()
     {
-      incIndex.close();
+      if (incIndex != null) {
+        incIndex.close();
+      }
     }
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the ingestion of the incremental-index.
+   */
   @State(Scope.Benchmark)
   public static class IncrementalIndexIngestState
   {
@@ -230,6 +243,8 @@ public class FilteredAggregatorBenchmark
     @Setup(Level.Invocation)
     public void setup(FilteredAggregatorBenchmark global) throws JsonProcessingException
     {
+      // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+      // It is used in {@code global.makeIncIndex()} to instanciate an incremental-index of the specified type.
       global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
       inputRows = global.generator.toList(global.rowsPerSegment);
       incIndex = global.makeIncIndex(new AggregatorFactory[]{global.filteredMetric});
@@ -238,10 +253,15 @@ public class FilteredAggregatorBenchmark
     @TearDown(Level.Invocation)
     public void tearDown()
     {
-      incIndex.close();
+      if (incIndex != null) {
+        incIndex.close();
+      }
     }
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the queriable-index.
+   */
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
@@ -273,8 +293,12 @@ public class FilteredAggregatorBenchmark
     @TearDown
     public void tearDown()
     {
-      qIndex.close();
-      qIndexesDir.delete();
+      if (qIndex != null) {
+        qIndex.close();
+      }
+      if (qIndexesDir != null) {
+        qIndexesDir.delete();
+      }
     }
   }
 

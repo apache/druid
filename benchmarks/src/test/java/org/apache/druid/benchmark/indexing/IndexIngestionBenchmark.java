@@ -90,6 +90,8 @@ public class IndexIngestionBenchmark
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
+    // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+    // It is used in {@code makeIncIndex()} to instanciate an incremental-index of the specified type.
     appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
 
     DataGenerator gen = new DataGenerator(
@@ -112,7 +114,9 @@ public class IndexIngestionBenchmark
   @TearDown(Level.Invocation)
   public void tearDown()
   {
-    incIndex.close();
+    if (incIndex != null) {
+      incIndex.close();
+    }
   }
 
   private IncrementalIndex<?> makeIncIndex()

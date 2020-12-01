@@ -237,6 +237,9 @@ public class TimeseriesBenchmark
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
 
+  /**
+   * Setup everything common for benchmarking both the incremental-index and the queriable-index.
+   */
   @Setup
   public void setup()
   {
@@ -267,6 +270,9 @@ public class TimeseriesBenchmark
     );
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the incremental-index.
+   */
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
@@ -278,6 +284,8 @@ public class TimeseriesBenchmark
     @Setup
     public void setup(TimeseriesBenchmark global) throws JsonProcessingException
     {
+      // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+      // It is used in {@code global.makeIncIndex()} to instanciate an incremental-index of the specified type.
       global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
       incIndex = global.makeIncIndex();
       global.generator.addToIndex(incIndex, global.rowsPerSegment);
@@ -286,10 +294,15 @@ public class TimeseriesBenchmark
     @TearDown
     public void tearDown()
     {
-      incIndex.close();
+      if (incIndex != null) {
+        incIndex.close();
+      }
     }
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the queriable-index.
+   */
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
@@ -332,9 +345,13 @@ public class TimeseriesBenchmark
     public void tearDown()
     {
       for (QueryableIndex index : qIndexes) {
-        index.close();
+        if (index != null) {
+          index.close();
+        }
       }
-      qIndexesDir.delete();
+      if (qIndexesDir != null) {
+        qIndexesDir.delete();
+      }
     }
   }
 

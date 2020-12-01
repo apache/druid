@@ -208,7 +208,9 @@ public class TopNBenchmark
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
 
-
+  /**
+   * Setup everything common for benchmarking both the incremental-index and the queriable-index.
+   */
   @Setup
   public void setup()
   {
@@ -246,6 +248,9 @@ public class TopNBenchmark
     );
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the incremental-index.
+   */
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
@@ -257,6 +262,8 @@ public class TopNBenchmark
     @Setup
     public void setup(TopNBenchmark global) throws JsonProcessingException
     {
+      // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+      // It is used in {@code global.makeIncIndex()} to instanciate an incremental-index of the specified type.
       global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
       incIndex = global.makeIncIndex();
       global.generator.addToIndex(incIndex, global.rowsPerSegment);
@@ -269,6 +276,9 @@ public class TopNBenchmark
     }
   }
 
+  /**
+   * Setup/teardown everything specific for benchmarking the queriable-index.
+   */
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
@@ -311,9 +321,13 @@ public class TopNBenchmark
     public void tearDown()
     {
       for (QueryableIndex index : qIndexes) {
-        index.close();
+        if (index != null) {
+          index.close();
+        }
       }
-      qIndexesDir.delete();
+      if (qIndexesDir != null) {
+        qIndexesDir.delete();
+      }
     }
   }
 
