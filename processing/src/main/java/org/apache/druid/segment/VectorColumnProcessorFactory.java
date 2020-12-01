@@ -48,7 +48,10 @@ public interface VectorColumnProcessorFactory<T>
       MultiValueDimensionVectorSelector selector
   );
 
-  T makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector);
+  T makeObjectProcessor(
+      @SuppressWarnings("unused") ColumnCapabilities capabilities,
+      VectorObjectSelector selector
+  );
 
   T makeFloatProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
 
