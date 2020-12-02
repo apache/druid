@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, Overshadowable<ServerSelector>
+public class ServerSelector implements Overshadowable<ServerSelector>
 {
 
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
@@ -160,17 +160,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, 
     return servers;
   }
 
-  @Nullable
-  @Override
-  public QueryableDruidServer pick()
-  {
-    if (!historicalServers.isEmpty()) {
-      return strategy.pick(historicalServers, segment.get());
-    }
-    return strategy.pick(realtimeServers, segment.get());
-  }
-
-  public <T> QueryableDruidServer pick(Query<T> query)
+  public <T> QueryableDruidServer pick(@Nullable Query<T> query)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {

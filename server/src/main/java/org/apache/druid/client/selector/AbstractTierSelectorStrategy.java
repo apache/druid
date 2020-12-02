@@ -42,23 +42,6 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
   
   @Nullable
   @Override
-  public QueryableDruidServer pick(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment)
-  {
-    return pick(null, prioritizedServers, segment);
-  }
-
-  @Override
-  public List<QueryableDruidServer> pick(
-      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
-      DataSegment segment,
-      int numServersToPick
-  )
-  {
-    return pick(null, prioritizedServers, segment, numServersToPick);
-  }
-
-  @Nullable
-  @Override
   public <T> QueryableDruidServer pick(
       Query<T> query,
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,

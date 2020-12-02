@@ -236,7 +236,7 @@ public class TierSelectorStrategyTest
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick());
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null));
     Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class)));
     Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1));
     Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2));

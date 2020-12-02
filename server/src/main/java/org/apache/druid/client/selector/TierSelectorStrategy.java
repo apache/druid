@@ -43,16 +43,24 @@ public interface TierSelectorStrategy
 {
   Comparator<Integer> getComparator();
 
+  @Deprecated
   @Nullable
-  QueryableDruidServer pick(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
+  default QueryableDruidServer pick(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment)
+  {
+    return pick(null, prioritizedServers, segment);
+  }
 
-  List<QueryableDruidServer> pick(
+  @Deprecated
+  default List<QueryableDruidServer> pick(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment,
-      int numServersToPick);
+      int numServersToPick)
+  {
+    return pick(null, prioritizedServers, segment, numServersToPick);
+  }
 
   @Nullable
-  default <T> QueryableDruidServer pick(Query<T> query,
+  default <T> QueryableDruidServer pick(@Nullable Query<T> query,
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment)
   {
@@ -60,7 +68,7 @@ public interface TierSelectorStrategy
   }
 
   default <T> List<QueryableDruidServer> pick(
-      Query<T> query,
+      @Nullable Query<T> query,
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment,
       int numServersToPick)
