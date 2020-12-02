@@ -315,6 +315,33 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
+  public void testSegmentLoading3() throws Exception
+  {
+    segmentLoadDropHandler.start();
+    String dataSource = "test";
+    String version = "1";
+    String interval = "P1d/2011-04-01";
+
+    final DataSegment segment = makeSegment(dataSource, version, Intervals.of(interval));
+
+    // manually create a local segment under localStorageFolder
+    final File localSegmentFile = new File(
+            infoDir,
+            dataSource + interval + version + "/0"
+    );
+    localSegmentFile.mkdirs();
+    final File indexZip = new File(localSegmentFile, "index.zip");
+    indexZip.createNewFile();
+    final File downloadStartMarker = new File(localSegmentFile, "downloadStartMarker");
+    downloadStartMarker.createNewFile();
+
+    segmentLoadDropHandler.addSegment(segment, DataSegmentChangeCallback.NOOP);
+    Assert.assertFalse(downloadStartMarker.exists());
+
+    segmentLoadDropHandler.stop();
+  }
+
+  @Test
   public void testLoadCache() throws Exception
   {
     Set<DataSegment> segments = new HashSet<>();

@@ -119,6 +119,22 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return null;
   }
 
+  /**
+   * check data intact.
+   * @param dir segments cache dir
+   * @return true means segment files may be damaged.
+   */
+  private boolean checkSegmentFilesIntact(File dir)
+  {
+    return checkSegmentFilesIntactWithStartMarker(dir);
+  }
+
+  private boolean checkSegmentFilesIntactWithStartMarker(File localStorageDir)
+  {
+    final File downloadStartMarker = new File(localStorageDir.getPath(), "downloadStartMarker");
+    return downloadStartMarker.exists();
+  }
+
   @Override
   public Segment getSegment(DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
@@ -157,7 +173,15 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       try {
         StorageLocation loc = findStorageLocationIfLoaded(segment);
         String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
-
+        if (loc != null) {
+          File localStorageDir = new File(loc.getPath(), storageDir);
+          if (checkSegmentFilesIntact(localStorageDir)) {
+            log.warn("[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.", localStorageDir.getAbsolutePath());
+            cleanupCacheFiles(loc.getPath(), localStorageDir);
+            loc.removeSegmentDir(localStorageDir, segment);
+            loc = null;
+          }
+        }
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
