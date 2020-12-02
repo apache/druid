@@ -129,6 +129,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return checkSegmentFilesIntactWithStartMarker(dir);
   }
 
+  /**
+   * If there is 'downloadStartMarker' existed in localStorageDir, then the segments files may be damaged.
+   * Because each time, Druid will delete the 'downloadStartMarker' file after pulling and unzip the segments from DeepStorage.
+   * downloadStartMarker existed here may mean something error during download segments and the segment files may be damaged.
+   */
   private boolean checkSegmentFilesIntactWithStartMarker(File localStorageDir)
   {
     final File downloadStartMarker = new File(localStorageDir.getPath(), "downloadStartMarker");
