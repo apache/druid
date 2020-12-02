@@ -95,6 +95,7 @@ public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

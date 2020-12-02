@@ -75,7 +75,9 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        null
+        null,
+        DEFAULT_MAX_SEGMENT_INTERVALS_PERMITTED,
+        DEFAULT_MAX_AGGREGATE_SEGMENT_INTERVAL_SHARDS_PERMITTED
     );
   }
   @Nullable
@@ -102,6 +104,8 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
+  private final int maxSegmentIntervalsPermitted;
+  private final int maxAggregateSegmentIntervalShardsPermitted;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -131,7 +135,9 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("allowedHadoopPrefix") @Nullable List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
+      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
+      final @JsonProperty("maxSegmentIntervalsPermitted") @Nullable Integer maxSegmentIntervalsPermitted,
+      final @JsonProperty("maxAggregateSegmentIntervalShardsPermitted") @Nullable Integer maxAggregateSegmentIntervalShardsPermitted
   )
   {
     this.workingPath = workingPath;
@@ -177,6 +183,18 @@ public class HadoopTuningConfig implements TuningConfig
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
 
     this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
+
+    if (maxSegmentIntervalsPermitted == null) {
+      this.maxSegmentIntervalsPermitted = DEFAULT_MAX_SEGMENT_INTERVALS_PERMITTED;
+    } else {
+      this.maxSegmentIntervalsPermitted = maxSegmentIntervalsPermitted;
+    }
+
+    if (maxAggregateSegmentIntervalShardsPermitted == null) {
+      this.maxAggregateSegmentIntervalShardsPermitted = DEFAULT_MAX_AGGREGATE_SEGMENT_INTERVAL_SHARDS_PERMITTED;
+    } else {
+      this.maxAggregateSegmentIntervalShardsPermitted = maxAggregateSegmentIntervalShardsPermitted;
+    }
   }
 
   @Nullable
@@ -331,6 +349,18 @@ public class HadoopTuningConfig implements TuningConfig
     return useYarnRMJobStatusFallback;
   }
 
+  @JsonProperty
+  public int getMaxSegmentIntervalsPermitted()
+  {
+    return maxSegmentIntervalsPermitted;
+  }
+
+  @JsonProperty
+  public int getMaxAggregateSegmentIntervalShardsPermitted()
+  {
+    return maxAggregateSegmentIntervalShardsPermitted;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -358,7 +388,9 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        maxSegmentIntervalsPermitted,
+        maxAggregateSegmentIntervalShardsPermitted
     );
   }
 
@@ -389,7 +421,9 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        maxSegmentIntervalsPermitted,
+        maxAggregateSegmentIntervalShardsPermitted
     );
   }
 
@@ -420,7 +454,9 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        maxSegmentIntervalsPermitted,
+        maxAggregateSegmentIntervalShardsPermitted
     );
   }
 }

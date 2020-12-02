@@ -155,7 +155,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null,
+        null
     );
 
     if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {

@@ -125,6 +125,7 @@ public abstract class AbstractOssInputSourceParallelIndexTest extends AbstractIT
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

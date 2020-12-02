@@ -115,6 +115,7 @@ public abstract class AbstractHdfsInputSourceParallelIndexTest extends AbstractI
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

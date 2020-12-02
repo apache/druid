@@ -70,6 +70,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
       doReindexTest(
@@ -103,6 +104,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_WITH_TIMESTAMP_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
       doReindexTest(
@@ -135,6 +137,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           MERGE_INDEX_TASK,
           MERGE_INDEX_QUERIES_RESOURCE,
           false,
+          true,
           true,
           true
       );

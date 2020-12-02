@@ -95,7 +95,9 @@
         "mapreduce.map.memory.mb" : 1024,
         "mapreduce.reduce.memory.mb" : 1024
       },
-      "rowFlushBoundary": 10000
+      "rowFlushBoundary": 10000,
+      "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
+      "maxAggregateSegmentIntervalShardsPermitted": %%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%
     }
   }
 }

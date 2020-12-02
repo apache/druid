@@ -72,6 +72,7 @@ public abstract class AbstractGcsInputHadoopIndexTest extends AbstractITBatchInd
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

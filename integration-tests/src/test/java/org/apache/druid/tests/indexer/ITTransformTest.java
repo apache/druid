@@ -56,6 +56,7 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
       doReindexTest(
@@ -83,6 +84,7 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
       doReindexTest(
@@ -107,6 +109,7 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           INDEX_TASK_WITH_FIREHOSE,
           INDEX_QUERIES_RESOURCE,
           false,
+          true,
           true,
           true
       );

@@ -125,6 +125,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

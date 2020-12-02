@@ -125,6 +125,7 @@ public abstract class AbstractGcsInputSourceParallelIndexTest extends AbstractIT
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

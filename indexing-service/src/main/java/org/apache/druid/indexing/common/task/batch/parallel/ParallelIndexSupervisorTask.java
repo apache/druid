@@ -947,7 +947,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getSegmentWriteOutMediumFactory(),
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        null,
+        null
     );
   }
 

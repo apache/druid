@@ -95,6 +95,7 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
 

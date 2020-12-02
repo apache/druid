@@ -59,7 +59,8 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           false,
-          false
+          false,
+          true
       );
       TimeUnit.MINUTES.sleep(3);
       if (coordinatorClient.areSegmentsLoaded(INDEX_DATASOURCE)) {

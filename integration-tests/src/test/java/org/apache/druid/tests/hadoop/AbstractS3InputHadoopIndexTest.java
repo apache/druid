@@ -89,6 +89,7 @@ public abstract class AbstractS3InputHadoopIndexTest extends AbstractITBatchInde
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

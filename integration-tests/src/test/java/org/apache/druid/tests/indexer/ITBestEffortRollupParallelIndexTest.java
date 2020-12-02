@@ -93,6 +93,7 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
 
@@ -103,6 +104,7 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           REINDEX_TASK,
           rollupTransform,
           REINDEX_QUERIES_RESOURCE,
+          true,
           true,
           true,
           true

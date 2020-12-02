@@ -103,6 +103,7 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
       doIndexTest(
@@ -111,6 +112,7 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
           combiningInputSourceSpecTransform,
           COMBINING_QUERIES_RESOURCE,
           false,
+          true,
           true,
           true
       );

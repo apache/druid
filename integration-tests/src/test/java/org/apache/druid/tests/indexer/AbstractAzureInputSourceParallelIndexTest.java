@@ -125,6 +125,7 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

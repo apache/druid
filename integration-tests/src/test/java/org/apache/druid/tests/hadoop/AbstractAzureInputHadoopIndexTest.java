@@ -76,6 +76,7 @@ public abstract class AbstractAzureInputHadoopIndexTest extends AbstractITBatchI
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
     }

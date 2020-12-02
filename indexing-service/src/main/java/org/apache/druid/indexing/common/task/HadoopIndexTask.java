@@ -34,12 +34,15 @@ import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopDruidIndexerJob;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.HadoopyShardSpec;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.TaskMetricsGetter;
 import org.apache.druid.indexer.TaskMetricsUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
@@ -363,6 +366,51 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             getId(),
             errorMsg
         );
+      }
+
+      // Only enforce maxSegmentIntervalsPermitted if we dynamically discover populated intervals via mapreduce
+      // Abort task if number of intervals is greater than limit specified in TuningConfig.
+      if (determineIntervals
+          && indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get().size()
+             > indexerSchema.getTuningConfig().getMaxSegmentIntervalsPermitted()) {
+
+        errorMsg = "HadoopIndexTask Failed! The number of segment intervals ["
+                   + indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get().size()
+                   + "] is greater than the number allowed ["
+                   + indexerSchema.getTuningConfig().getMaxSegmentIntervalsPermitted()
+                   + "], as specified in TuningConfig.";
+        log.error(errorMsg);
+        return TaskStatus.failure(
+            getId(),
+            errorMsg
+        );
+      }
+
+      // Only enforce maxAggregateSegmentIntervalShardsPermitted if we are going to dynamically determine partition
+      // counts via MapReduce.
+      if (indexerSchema.getTuningConfig().getPartitionsSpec() instanceof SingleDimensionPartitionsSpec
+          || (indexerSchema.getTuningConfig().getPartitionsSpec() instanceof HashedPartitionsSpec
+              && ((HashedPartitionsSpec) indexerSchema.getTuningConfig().getPartitionsSpec()).getNumShards() == null)) {
+        // Gather the aggregate number of shards in the intervals being indexed
+        int aggregateBuckets = 0;
+        for (List<HadoopyShardSpec> specList : indexerSchema.getTuningConfig().getShardSpecs().values()) {
+          for (HadoopyShardSpec shardSpec : specList) {
+            aggregateBuckets += shardSpec.getShardNum();
+          }
+        }
+        // Abort task if aggregate number of segments is greater than limit specified in TuningConfig.
+        if (aggregateBuckets > indexerSchema.getTuningConfig().getMaxAggregateSegmentIntervalShardsPermitted()) {
+          errorMsg = "HadoopIndexTask Failed! The aggregate number of segments that will be created ["
+                     + aggregateBuckets
+                     + "] is greater than the number allowed ["
+                     + indexerSchema.getTuningConfig().getMaxAggregateSegmentIntervalShardsPermitted()
+                     + "], as specified in the tuning config";
+          log.error(errorMsg);
+          return TaskStatus.failure(
+              getId(),
+              errorMsg
+          );
+        }
       }
     }
     catch (Exception e) {

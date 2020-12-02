@@ -82,7 +82,9 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        500,
+        1000
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -116,7 +118,9 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null,
+        null
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -150,7 +154,9 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        500,
+        1000
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -184,7 +190,9 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        500,
+        1000
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -220,7 +228,9 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null,
+        null
     );
   }
 
@@ -255,7 +265,9 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null,
+        null
     );
   }
 

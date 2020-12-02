@@ -65,6 +65,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           INDEX_QUERIES_RESOURCE,
           false,
           true,
+          true,
           true
       );
       doIndexTest(
@@ -73,6 +74,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           combiningFirehoseSpecTransform,
           COMBINING_QUERIES_RESOURCE,
           false,
+          true,
           true,
           true
       );
