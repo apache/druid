@@ -37,7 +37,7 @@ public class ExpressionVectorObjectSelectorTest
   private ExpressionVectorObjectSelector expressionVectorValueSelector;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     binding = EasyMock.createMock(Expr.VectorInputBinding.class);
     vectorProcessor = EasyMock.createMock(ExprVectorProcessor.class);
@@ -48,7 +48,7 @@ public class ExpressionVectorObjectSelectorTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     EasyMock.verify(binding, vectorProcessor);
   }
