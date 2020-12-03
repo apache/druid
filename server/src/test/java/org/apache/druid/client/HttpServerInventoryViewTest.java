@@ -33,7 +33,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.AbstractHttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.segment.TestHelper;
@@ -291,7 +291,7 @@ public class HttpServerInventoryViewTest
     }
   }
 
-  private static class TestHttpClient implements HttpClient
+  private static class TestHttpClient extends AbstractHttpClient
   {
     BlockingQueue<ListenableFuture> results;
     AtomicInteger requestNum = new AtomicInteger(0);

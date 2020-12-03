@@ -44,6 +44,7 @@ import org.apache.druid.java.util.http.client.response.SequenceInputStreamRespon
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -186,7 +187,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
         EasyMock.anyObject(),
         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-        EasyMock.anyObject()
+        EasyMock.anyObject(Duration.class)
     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -225,7 +226,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
                         EasyMock.anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.anyObject()
+                        EasyMock.anyObject(Duration.class)
                     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -268,7 +269,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
                         EasyMock.anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.anyObject()
+                        EasyMock.anyObject(Duration.class)
                     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -310,7 +311,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
                         EasyMock.anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.anyObject()
+                        EasyMock.anyObject(Duration.class)
                     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -367,7 +368,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
                         EasyMock.anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.anyObject()
+                        EasyMock.anyObject(Duration.class)
                     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -406,7 +407,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
                         EasyMock.anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.anyObject()
+                        EasyMock.anyObject(Duration.class)
                     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -448,7 +449,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(client.go(
                         EasyMock.anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.anyObject()
+                        EasyMock.anyObject(Duration.class)
                     )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
@@ -490,7 +491,7 @@ public class LookupCoordinatorManagerTest
         client.go(
             EasyMock.anyObject(),
             EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-            EasyMock.anyObject()
+            EasyMock.anyObject(Duration.class)
         )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);

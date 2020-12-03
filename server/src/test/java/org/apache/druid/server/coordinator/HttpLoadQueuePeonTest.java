@@ -26,7 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.AbstractHttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.server.ServerTestHelper;
@@ -164,7 +164,7 @@ public class HttpLoadQueuePeonTest
 
   }
 
-  private static class TestHttpClient implements HttpClient
+  private static class TestHttpClient extends AbstractHttpClient
   {
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(

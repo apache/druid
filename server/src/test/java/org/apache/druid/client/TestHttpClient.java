@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.AbstractHttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -59,7 +59,7 @@ import java.util.Map;
 /**
  * An HTTP client for testing which emulates querying data nodes (historicals or realtime tasks).
  */
-public class TestHttpClient implements HttpClient
+public class TestHttpClient extends AbstractHttpClient
 {
   private static final TrafficCop NOOP_TRAFFIC_COP = checkNum -> 0L;
   private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
