@@ -140,7 +140,7 @@ public class TestBroker implements Closeable
 
   public Map<String, Object> consumerProperties()
   {
-    final Map<String, Object> props = KafkaConsumerConfigs.getConsumerProperties(new HashMap<>());
+    final Map<String, Object> props = KafkaConsumerConfigs.getConsumerProperties();
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     return props;
   }

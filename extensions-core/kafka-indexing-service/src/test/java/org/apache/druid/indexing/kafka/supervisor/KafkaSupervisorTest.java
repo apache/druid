@@ -3365,7 +3365,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       String kafkaHost
   )
   {
-    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties(new HashMap<>());
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
@@ -3824,7 +3824,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     protected RecordSupplier<Integer, Long> setupRecordSupplier()
     {
-      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(new HashMap<>());
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       consumerConfigs.put("metadata.max.age.ms", "1");
       final Properties props = new Properties();
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);

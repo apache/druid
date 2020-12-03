@@ -234,7 +234,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
   private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
-    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties(consumerProperties);
+    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
     props.putAll(consumerConfigs);
