@@ -58,11 +58,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.joda.time.Duration;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -182,8 +182,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          new Duration(commonCacheConfig.getPollingPeriod()),
-          new Duration(commonCacheConfig.getPollingPeriod()),
+          Duration.ofMillis(commonCacheConfig.getPollingPeriod()),
           () -> {
             if (stopped) {
               return ScheduledExecutors.Signal.STOP;

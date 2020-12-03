@@ -48,11 +48,11 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorU
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -109,8 +109,8 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          new Duration(commonCacheConfig.getPollingPeriod()),
-          new Duration(commonCacheConfig.getPollingPeriod()),
+          Duration.ofMillis(commonCacheConfig.getPollingPeriod()),
+          Duration.ofMillis(commonCacheConfig.getPollingPeriod()),
           () -> {
             try {
               long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());

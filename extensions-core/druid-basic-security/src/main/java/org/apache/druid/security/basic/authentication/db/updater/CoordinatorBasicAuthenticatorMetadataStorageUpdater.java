@@ -48,8 +48,8 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorU
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUserMapBundle;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -162,8 +162,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          new Duration(commonCacheConfig.getPollingPeriod()),
-          new Duration(commonCacheConfig.getPollingPeriod()),
+          Duration.ofMillis(commonCacheConfig.getPollingPeriod()),
           new Callable<ScheduledExecutors.Signal>()
           {
             @Override

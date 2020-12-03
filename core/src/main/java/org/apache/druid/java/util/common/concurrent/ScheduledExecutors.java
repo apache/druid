@@ -38,6 +38,20 @@ public class ScheduledExecutors
    */
   public static void scheduleWithFixedDelay(
       final ScheduledExecutorService exec,
+      final java.time.Duration initialDelay,
+      final java.time.Duration delay,
+      final Runnable runnable
+  )
+  {
+    scheduleWithFixedDelay(exec, Duration.millis(initialDelay.toMillis()), Duration.millis(delay.toMillis()), runnable);
+  }
+
+  /**
+   * Run runnable repeatedly with the given delay between calls, after the given
+   * initial delay. Exceptions are caught and logged as errors.
+   */
+  public static void scheduleWithFixedDelay(
+      final ScheduledExecutorService exec,
       final Duration initialDelay,
       final Duration delay,
       final Runnable runnable
@@ -62,6 +76,16 @@ public class ScheduledExecutors
           }
         }
     );
+  }
+
+  /**
+   * Run callable repeatedly with the given delay between calls, after the given
+   * initial delay, until it returns Signal.STOP. Exceptions are caught and
+   * logged as errors.
+   */
+  public static void scheduleWithFixedDelay(ScheduledExecutorService exec, java.time.Duration delay, Callable<Signal> callable)
+  {
+    scheduleWithFixedDelay(exec, new Duration(delay.toMillis()), new Duration(delay.toMillis()), callable);
   }
 
   /**
