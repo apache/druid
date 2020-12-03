@@ -18,7 +18,6 @@
 
 import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
@@ -40,7 +39,7 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
-import { AppToaster } from '../../singletons/toaster';
+import { Api, AppToaster } from '../../singletons';
 import {
   addFilter,
   addFilterRaw,
@@ -56,8 +55,8 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
+import { Capabilities } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './ingestion-view.scss';
@@ -251,7 +250,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: IngestionView.SUPERVISOR_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const supervisors = (await axios.get('/druid/indexer/v1/supervisor?full')).data;
+          const supervisors = (await Api.instance.get('/druid/indexer/v1/supervisor?full')).data;
           if (!Array.isArray(supervisors)) throw new Error(`Unexpected results`);
           return supervisors.map((sup: any) => {
             return {
@@ -284,7 +283,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: IngestionView.TASK_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await axios.get(`/druid/indexer/v1/tasks`);
+          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
           return IngestionView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);
@@ -343,7 +342,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   private submitSupervisor = async (spec: JSON) => {
     try {
-      await axios.post('/druid/indexer/v1/supervisor', spec);
+      await Api.instance.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
       AppToaster.show({
         message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
@@ -361,7 +360,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   private submitTask = async (spec: JSON) => {
     try {
-      await axios.post('/druid/indexer/v1/task', spec);
+      await Api.instance.post('/druid/indexer/v1/task', spec);
     } catch (e) {
       AppToaster.show({
         message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
@@ -431,7 +430,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.instance.post(
             `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
             {},
           );
@@ -460,7 +459,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.instance.post(
             `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
             {},
           );
@@ -489,7 +488,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.instance.post(
             `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
             {},
           );
@@ -527,7 +526,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
+          const resp = await Api.instance.post(
             `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
             {},
           );
@@ -684,7 +683,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
           return resp.data;
         }}
         confirmButtonText="Kill task"
@@ -945,7 +944,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
           return resp.data;
         }}
         confirmButtonText="Resume all supervisors"
@@ -971,7 +970,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
           return resp.data;
         }}
         confirmButtonText="Suspend all supervisors"
@@ -997,7 +996,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
           return resp.data;
         }}
         confirmButtonText="Terminate all supervisors"

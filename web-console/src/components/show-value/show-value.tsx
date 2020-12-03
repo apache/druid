@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
-import { UrlBaser } from '../../singletons/url-baser';
+import { UrlBaser } from '../../singletons';
 import { downloadFile } from '../../utils';
 
 import './show-value.scss';

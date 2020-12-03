@@ -26,7 +26,7 @@ import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
-import { AppToaster } from '../singletons/toaster';
+import { AppToaster } from '../singletons';
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};

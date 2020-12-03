@@ -16,26 +16,12 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
-import React from 'react';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-import { Capabilities } from '../../utils';
+export class Api {
+  static instance: AxiosInstance;
 
-import { IngestionView } from './ingestion-view';
-
-describe('tasks view', () => {
-  it('matches snapshot', () => {
-    const taskView = shallow(
-      <IngestionView
-        openDialog={'test'}
-        taskGroupId={'test'}
-        datasourceId={'datasource'}
-        goToDatasource={() => {}}
-        goToQuery={() => {}}
-        goToLoadData={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(taskView).toMatchSnapshot();
-  });
-});
+  static initialize(config?: AxiosRequestConfig): void {
+    Api.instance = axios.create(config);
+  }
+}

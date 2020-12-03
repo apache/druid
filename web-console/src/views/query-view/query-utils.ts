@@ -27,6 +27,7 @@ export function dataTypeToIcon(dataType: string): IconName {
       return IconNames.FONT;
     case 'BIGINT':
     case 'FLOAT':
+    case 'DOUBLE':
       return IconNames.NUMERICAL;
     default:
       return IconNames.HELP;

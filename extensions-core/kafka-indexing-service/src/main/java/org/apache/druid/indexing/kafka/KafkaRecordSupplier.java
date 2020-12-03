@@ -28,6 +28,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -192,16 +193,30 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     // Extract passwords before SSL connection to Kafka
     for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
       String propertyKey = entry.getKey();
-      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-        PasswordProvider configPasswordProvider = configMapper.convertValue(
-            entry.getValue(),
-            PasswordProvider.class
-        );
-        properties.setProperty(propertyKey, configPasswordProvider.getPassword());
-      } else {
-        properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+
+      if (!KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(propertyKey)) {
+        if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+          PasswordProvider configPasswordProvider = configMapper.convertValue(
+              entry.getValue(),
+              PasswordProvider.class
+          );
+          properties.setProperty(propertyKey, configPasswordProvider.getPassword());
+        } else {
+          properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+        }
+      }
+    }
+
+    // Additional DynamicConfigProvider based extensible support for all consumer properties
+    Object dynamicConfigProviderJson = consumerProperties.get(KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
+    if (dynamicConfigProviderJson != null) {
+      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
+      Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
+
+      for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
+        properties.setProperty(e.getKey(), e.getValue());
       }
     }
   }
