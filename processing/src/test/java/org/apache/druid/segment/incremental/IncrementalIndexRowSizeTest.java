@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -109,11 +110,11 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
         "billy",
-        "" // 48 Bytes
+        "" // NullHandling.sqlCompatible() ? 48 Bytes : 4 Bytes
     ));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
-    // 28 (timestamp + dims array + dimensionDescList) + 48 ("")
-    Assert.assertEquals(76, td1.estimateBytesInMemory());
+    // 28 (timestamp + dims array + dimensionDescList) + 4 OR 48 depending on NullHandling.sqlCompatible()
+    Assert.assertEquals(NullHandling.sqlCompatible() ? 76 : 32, td1.estimateBytesInMemory());
   }
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)
