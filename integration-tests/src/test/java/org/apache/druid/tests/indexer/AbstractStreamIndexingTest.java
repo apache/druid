@@ -213,7 +213,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   void doTestIndexDataWithLosingOverlord(@Nullable Boolean transactionEnabled) throws Exception
   {
     testIndexWithLosingNodeHelper(
-        () -> druidClusterAdminClient.restartIndexerContainer(),
+        () -> druidClusterAdminClient.restartOverlordContainer(),
         () -> druidClusterAdminClient.waitUntilIndexerReady(),
         transactionEnabled
     );

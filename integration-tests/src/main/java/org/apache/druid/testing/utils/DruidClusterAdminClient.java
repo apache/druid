@@ -48,8 +48,8 @@ public class DruidClusterAdminClient
   private static final Logger LOG = new Logger(DruidClusterAdminClient.class);
   private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
   private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
-  private static final String INDEXER_DOCKER_CONTAINER_NAME = "/druid-overlord";
-  private static final String BROKERR_DOCKER_CONTAINER_NAME = "/druid-broker";
+  private static final String OVERLORD_DOCKER_CONTAINER_NAME = "/druid-overlord";
+  private static final String BROKER_DOCKER_CONTAINER_NAME = "/druid-broker";
   private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
   private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
 
@@ -79,14 +79,14 @@ public class DruidClusterAdminClient
     restartDockerContainer(HISTORICAL_DOCKER_CONTAINER_NAME);
   }
 
-  public void restartIndexerContainer()
+  public void restartOverlordContainer()
   {
-    restartDockerContainer(INDEXER_DOCKER_CONTAINER_NAME);
+    restartDockerContainer(OVERLORD_DOCKER_CONTAINER_NAME);
   }
 
   public void restartBrokerContainer()
   {
-    restartDockerContainer(BROKERR_DOCKER_CONTAINER_NAME);
+    restartDockerContainer(BROKER_DOCKER_CONTAINER_NAME);
   }
 
   public void restartRouterContainer()
