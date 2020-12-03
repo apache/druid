@@ -46,6 +46,7 @@ echo "$(date -Is) startup service $SERVICE"
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
 mkdir -p /tmp/conf/
+test -d /tmp/conf/druid && rm -r /tmp/conf/druid
 cp -r /opt/druid/conf/druid /tmp/conf/druid
 
 getConfPath() {
