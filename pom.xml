@@ -171,6 +171,7 @@
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/druid-map-string-string-col</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
