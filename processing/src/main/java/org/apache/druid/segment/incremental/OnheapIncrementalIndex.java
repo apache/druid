@@ -463,12 +463,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     @Override
-    public long getDefaultMaxBytesInMemory()
+    public long getMaxJvmMemory()
     {
-      // We initially estimated this to be 1/3(max jvm memory), but bytesCurrentlyInMemory only
-      // tracks active index and not the index being flushed to disk, to account for that
-      // we halved default to 1/6(max jvm memory)
-      return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
+      return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
     }
 
     @Override

@@ -30,6 +30,6 @@ public interface AppendableIndexSpec
   // Returns a builder of the appendable index.
   AppendableIndexBuilder builder();
 
-  // Returns the default max bytes in memory for this index.
-  long getDefaultMaxBytesInMemory();
+  // Returns the jvm max memory (in bytes) for this index.
+  long getMaxJvmMemory();
 }
