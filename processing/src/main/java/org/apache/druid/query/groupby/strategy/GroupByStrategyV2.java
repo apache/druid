@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -372,6 +373,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           .withAggregatorSpecs(
               query.getAggregatorSpecs()
                    .stream()
+                   .filter(spec -> !(spec instanceof GroupingAggregatorFactory))
                    .map(AggregatorFactory::getCombiningFactory)
                    .collect(Collectors.toList())
           )
@@ -396,7 +398,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;
       if (!(baseSubtotalQuery.getLimitSpec() instanceof NoopLimitSpec)) {
-        aggsAndPostAggs = getAggregatorAndPostAggregatorNames(baseSubtotalQuery);
+        aggsAndPostAggs = getAggregatorAndPostAggregatorNames(query);
       }
 
       List<List<String>> subtotals = query.getSubtotalsSpec();
@@ -450,7 +452,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, query, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -471,7 +473,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, query, subtotalQuery, true)
           );
         }
       }
@@ -490,6 +492,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
       List<DimensionSpec> dimsToInclude,
+      GroupByQuery originalQuery,
       GroupByQuery subtotalQuery,
       boolean closeOnSequenceRead
   )
@@ -502,11 +505,11 @@ public class GroupByStrategyV2 implements GroupByStrategy
           (queryPlus, responseContext) ->
               new LazySequence<>(
                   () -> Sequences.withBaggage(
-                      memoizedSupplier.get().results(dimsToInclude),
+                      memoizedSupplier.get().results(originalQuery.getAggregatorSpecs(), dimsToInclude),
                       closeOnSequenceRead ? () -> CloseQuietly.close(memoizedSupplier.get()) : () -> {}
                   )
               ),
-          subtotalQuery,
+          subtotalQuery.withAggregatorSpecs(originalQuery.getAggregatorSpecs()),  // merge should happen on the final output row signature
           null
       );
     }
@@ -521,7 +524,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     Set<String> aggsAndPostAggs = new HashSet();
     if (query.getAggregatorSpecs() != null) {
       for (AggregatorFactory af : query.getAggregatorSpecs()) {
-        aggsAndPostAggs.add(af.getName());
+        aggsAndPostAggs.add(af.getCombiningFactory().getName());
       }
     }
 

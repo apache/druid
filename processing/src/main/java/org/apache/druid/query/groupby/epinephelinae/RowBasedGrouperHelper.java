@@ -530,12 +530,13 @@ public class RowBasedGrouperHelper
       final Closeable closeable
   )
   {
-    return makeGrouperIterator(grouper, query, null, closeable);
+    return makeGrouperIterator(grouper, query, query.getAggregatorSpecs(), null, closeable);
   }
 
   public static CloseableGrouperIterator<RowBasedKey, ResultRow> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
+      final List<AggregatorFactory> aggregatorFactories,
       @Nullable final List<DimensionSpec> dimsToInclude,
       final Closeable closeable
   )
@@ -543,8 +544,8 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = query.getResultRowHasTimestamp();
     final BitSet dimsToIncludeBitSet = new BitSet(query.getDimensions().size());
     final int resultRowDimensionStart = query.getResultRowDimensionStart();
-    final BitSet groupingAggregatorsBitSet = new BitSet(query.getAggregatorSpecs().size());
-    final Object[] groupingAggregatorValues = new Long[query.getAggregatorSpecs().size()];
+    final BitSet groupingAggregatorsBitSet = new BitSet(aggregatorFactories.size());
+    final Object[] groupingAggregatorValues = new Long[aggregatorFactories.size()];
 
     if (dimsToInclude != null) {
       for (DimensionSpec dimensionSpec : dimsToInclude) {
@@ -558,8 +559,8 @@ public class RowBasedGrouperHelper
       // KeyDimensionNames are the column names of dimensions. Its required since aggregators are not aware of
       // output column names
       Set<String> keyDimensionNames = dimsToInclude.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
-      for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
-        AggregatorFactory aggregatorFactory = query.getAggregatorSpecs().get(i);
+      for (int i = 0; i < aggregatorFactories.size(); i++) {
+        AggregatorFactory aggregatorFactory = aggregatorFactories.get(i);
         if (aggregatorFactory instanceof GroupingAggregatorFactory) {
           groupingAggregatorsBitSet.set(i);
           groupingAggregatorValues[i] = ((GroupingAggregatorFactory) aggregatorFactory)
@@ -569,10 +570,18 @@ public class RowBasedGrouperHelper
       }
     }
 
+    final int groupingAggCount = groupingAggregatorsBitSet.cardinality();
+    Preconditions.checkArgument(query.getAggregatorSpecs().size() + groupingAggCount == aggregatorFactories.size(),
+                                "Inconsistent aggregator size - query (%s), grouping (%s), argument (%s)",
+                                query.getAggregatorSpecs().size(),
+                                groupingAggCount,
+                                aggregatorFactories.size()
+    );
+
     return new CloseableGrouperIterator<>(
         grouper.iterator(true),
         entry -> {
-          final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
+          final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators() + groupingAggCount);
 
           // Add timestamp, maybe.
           if (includeTimestamp) {
@@ -593,12 +602,12 @@ public class RowBasedGrouperHelper
 
           // Add aggregations.
           final int resultRowAggregatorStart = query.getResultRowAggregatorStart();
-          for (int i = 0; i < entry.getValues().length; i++) {
+          for (int i = 0, j = 0; i < aggregatorFactories.size(); i++) {
             if (dimsToInclude != null && groupingAggregatorsBitSet.get(i)) {
               resultRow.set(resultRowAggregatorStart + i, groupingAggregatorValues[i]);
             } else {
-              resultRow.set(resultRowAggregatorStart + i, entry.getValues()[i]);
-
+              resultRow.set(resultRowAggregatorStart + i, entry.getValues()[j]);
+              j++;
             }
           }
 

@@ -22,13 +22,7 @@ package org.apache.druid.query.aggregation;
 import com.google.common.collect.Sets;
 import junitparams.converters.Nullable;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
-import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
-import org.apache.druid.query.aggregation.constant.LongConstantVectorAggregator;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.easymock.EasyMock;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -49,56 +43,6 @@ public class GroupingAggregatorFactoryTest
       factory = factory.withKeyDimensions(Sets.newHashSet(keyDims));
     }
     return factory;
-  }
-
-  public static class NewAggregatorTests
-  {
-    private ColumnSelectorFactory metricFactory;
-
-    @Before
-    public void setup()
-    {
-      metricFactory = EasyMock.mock(ColumnSelectorFactory.class);
-    }
-
-    @Test
-    public void testNewAggregator()
-    {
-      GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
-      Aggregator aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(LongConstantAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1, aggregator.getLong());
-    }
-
-    @Test
-    public void testNewBufferAggregator()
-    {
-      GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
-      BufferAggregator aggregator = factory.factorizeBuffered(metricFactory);
-      Assert.assertEquals(LongConstantBufferAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1, aggregator.getLong(null, 0));
-    }
-
-    @Test
-    public void testNewVectorAggregator()
-    {
-      GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
-      Assert.assertTrue(factory.canVectorize(metricFactory));
-      VectorAggregator aggregator = factory.factorizeVector(null);
-      Assert.assertEquals(LongConstantVectorAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1L, aggregator.get(null, 0));
-    }
-
-    @Test
-    public void testWithKeyDimensions()
-    {
-      GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
-      Aggregator aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(1, aggregator.getLong());
-      factory = factory.withKeyDimensions(Sets.newHashSet("b"));
-      aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(2, aggregator.getLong());
-    }
   }
 
   public static class GroupingDimensionsTest
@@ -169,7 +113,7 @@ public class GroupingAggregatorFactoryTest
     @Test
     public void testValue()
     {
-      Assert.assertEquals(value, factory.factorize(null).getLong());
+      Assert.assertEquals(value, factory.getValue());
     }
   }
 }

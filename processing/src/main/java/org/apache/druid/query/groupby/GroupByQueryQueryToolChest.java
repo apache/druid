@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SubqueryQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -74,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -233,7 +235,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         return groupByStrategy.processSubtotalsSpec(
             query,
             resource,
-            groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults, false)
+            groupByStrategy.processSubqueryResult(subquery, withoutSubtotals(query), resource, finalizingResults, false)
         );
       } else {
         return groupByStrategy.applyPostProcessing(groupByStrategy.processSubqueryResult(
@@ -250,12 +252,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         return groupByStrategy.processSubtotalsSpec(
             query,
             resource,
-            groupByStrategy.mergeResults(runner, query.withSubtotalsSpec(null), context)
+            groupByStrategy.mergeResults(runner, withoutSubtotals(query), context)
         );
       } else {
         return groupByStrategy.applyPostProcessing(groupByStrategy.mergeResults(runner, query, context), query);
       }
     }
+  }
+
+  private GroupByQuery withoutSubtotals(GroupByQuery query)
+  {
+    List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs()
+                                                   .stream()
+                                                   .filter(spec -> !(spec instanceof GroupingAggregatorFactory))
+                                                   .collect(
+                                                       Collectors.toList());
+    return query.withAggregatorSpecs(aggregatorSpecs).withSubtotalsSpec(null);
   }
 
   private Sequence<ResultRow> mergeResultsWithNestedQueryPushDown(

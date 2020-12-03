@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -37,7 +38,6 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBas
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -68,6 +68,15 @@ public class GroupByRowProcessor
      *                            of subtotals. If specified, the results will not necessarily be fully grouped.
      */
     Sequence<ResultRow> results(@Nullable List<DimensionSpec> dimensionsToInclude);
+
+    /**
+     * Variant of {@link #results(List)} which allows passing custom list of aggregator specs while constructing
+     * returned result set
+     * @param aggregatorFactories
+     * @param dimensionsToInclude
+     * @return
+     */
+    Sequence<ResultRow> results(List<AggregatorFactory> aggregatorFactories, List<DimensionSpec> dimensionsToInclude);
   }
 
   private GroupByRowProcessor()
@@ -143,7 +152,16 @@ public class GroupByRowProcessor
       @Override
       public Sequence<ResultRow> results(@Nullable List<DimensionSpec> dimensionsToInclude)
       {
-        return getRowsFromGrouper(query, grouper, dimensionsToInclude);
+        return getRowsFromGrouper(query, grouper, query.getAggregatorSpecs(), dimensionsToInclude);
+      }
+
+      @Override
+      public Sequence<ResultRow> results(
+          List<AggregatorFactory> aggregatorFactories,
+          List<DimensionSpec> dimensionsToInclude
+      )
+      {
+        return getRowsFromGrouper(query, grouper, aggregatorFactories, dimensionsToInclude);
       }
 
       @Override
@@ -157,6 +175,7 @@ public class GroupByRowProcessor
   private static Sequence<ResultRow> getRowsFromGrouper(
       final GroupByQuery query,
       final Grouper<RowBasedKey> grouper,
+      List<AggregatorFactory> aggregatorFactories,
       @Nullable List<DimensionSpec> dimensionsToInclude
   )
   {
@@ -169,6 +188,7 @@ public class GroupByRowProcessor
             return RowBasedGrouperHelper.makeGrouperIterator(
                 grouper,
                 query,
+                aggregatorFactories,
                 dimensionsToInclude,
                 () -> {}
             );

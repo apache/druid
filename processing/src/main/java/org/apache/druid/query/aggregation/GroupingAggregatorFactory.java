@@ -24,9 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.annotations.EverythingIsNonnullByDefault;
-import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
-import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
-import org.apache.druid.query.aggregation.constant.LongConstantVectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -77,19 +74,19 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongConstantAggregator(value);
+    throw new UnsupportedOperationException("This shouldn't be called");
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongConstantBufferAggregator(value);
+    throw new UnsupportedOperationException("This shouldn't be called");
   }
 
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    return new LongConstantVectorAggregator(value);
+    throw new UnsupportedOperationException("This shouldn't be called");
   }
 
   @Override
