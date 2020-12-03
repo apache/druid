@@ -29,7 +29,7 @@ public class ColumnBuilderTest
   {
     ColumnHolder holder = new ColumnBuilder()
         .setType(ValueType.COMPLEX)
-        .setTypeName("testType")
+        .setComplexTypeName("testType")
         .build();
 
     Assert.assertEquals("testType", holder.getCapabilities().getComplexTypeName());

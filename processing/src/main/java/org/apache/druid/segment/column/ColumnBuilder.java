@@ -58,7 +58,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setTypeName(String typeName)
+  public ColumnBuilder setComplexTypeName(String typeName)
   {
     this.capabilitiesBuilder.setComplexTypeName(typeName);
     return this;
