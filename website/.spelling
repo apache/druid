@@ -993,7 +993,7 @@ useExplicitVersion
 useNewAggs
 useYarnRMJobStatusFallback
 maxSegmentIntervalsPermitted
-maxAggregateSegmentIntervalsPermitted
+maxAggregateSegmentIntervalShardsPermitted
 workingPath
 z.example.com
  - ../docs/ingestion/native-batch.md
