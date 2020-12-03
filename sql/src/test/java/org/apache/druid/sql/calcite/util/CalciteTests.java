@@ -55,7 +55,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.AbstractHttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -1135,9 +1135,9 @@ public class CalciteTests
   }
 
   /**
-   * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
+   * A fake HttpClient for {@link #createMockSystemSchema}.
    */
-  private static class FakeHttpClient implements HttpClient
+  private static class FakeHttpClient extends AbstractHttpClient
   {
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(

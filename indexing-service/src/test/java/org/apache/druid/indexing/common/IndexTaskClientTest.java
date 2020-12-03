@@ -76,10 +76,10 @@ public class IndexTaskClientTest
   public void retryOnChannelException() throws IOException
   {
     final HttpClient httpClient = EasyMock.createNiceMock(HttpClient.class);
-    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject(Duration.class)))
             .andReturn(Futures.immediateFailedFuture(new ChannelException("IndexTaskClientTest")))
             .times(2);
-    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject(Duration.class)))
             .andReturn(
                 Futures.immediateFuture(
                     new StringFullResponseHolder(
