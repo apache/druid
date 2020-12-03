@@ -39,7 +39,6 @@ import {
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import classNames from 'classnames';
 import memoize from 'memoize-one';
 import React from 'react';
@@ -121,8 +120,7 @@ import {
   upgradeSpec,
 } from '../../druid-models';
 import { getLink } from '../../links';
-import { AppToaster } from '../../singletons/toaster';
-import { UrlBaser } from '../../singletons/url-baser';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
   deepDelete,
   deepGet,
@@ -3220,7 +3218,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { initSupervisorId } = this.props;
 
     try {
-      const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
+      const resp = await Api.instance.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
       this.updateSpec(cleanSpec(resp.data));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
@@ -3236,7 +3234,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { initTaskId } = this.props;
 
     try {
-      const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
+      const resp = await Api.instance.get(`/druid/indexer/v1/task/${initTaskId}`);
       this.updateSpec(cleanSpec(resp.data.payload));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
@@ -3302,7 +3300,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (isTask(spec)) {
       let taskResp: any;
       try {
-        taskResp = await axios.post('/druid/indexer/v1/task', spec);
+        taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
       } catch (e) {
         AppToaster.show({
           message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
@@ -3322,7 +3320,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       }, 1000);
     } else {
       try {
-        await axios.post('/druid/indexer/v1/supervisor', spec);
+        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
       } catch (e) {
         AppToaster.show({
           message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,

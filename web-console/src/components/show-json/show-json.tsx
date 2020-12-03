@@ -17,13 +17,11 @@
  */
 
 import { Button, ButtonGroup, Intent, TextArea } from '@blueprintjs/core';
-import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
-import { AppToaster } from '../../singletons/toaster';
-import { UrlBaser } from '../../singletons/url-baser';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { downloadFile } from '../../utils';
 import { Loader } from '../loader/loader';
 
@@ -40,7 +38,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
 
   const [jsonState] = useQueryManager<null, string>({
     processQuery: async () => {
-      const resp = await axios.get(endpoint);
+      const resp = await Api.instance.get(endpoint);
       let data = resp.data;
       if (transform) data = transform(data);
       return typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);

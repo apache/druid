@@ -17,11 +17,11 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React, { useState } from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
@@ -36,7 +36,7 @@ export const StatusCard = React.memo(function StatusCard(_props: StatusCardProps
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusSummaryState] = useQueryManager<null, StatusSummary>({
     processQuery: async () => {
-      const statusResp = await axios.get('/status');
+      const statusResp = await Api.instance.get('/status');
       return {
         version: statusResp.data.version,
         extensionCount: statusResp.data.modules.length,
