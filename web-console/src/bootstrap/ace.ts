@@ -16,26 +16,9 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
-import React from 'react';
+import 'brace'; // Import Ace editor and all the sub components used in the app
+import 'brace/ext/language_tools';
+import 'brace/theme/solarized_dark';
 
-import { Capabilities } from '../../utils';
-
-import { IngestionView } from './ingestion-view';
-
-describe('tasks view', () => {
-  it('matches snapshot', () => {
-    const taskView = shallow(
-      <IngestionView
-        openDialog={'test'}
-        taskGroupId={'test'}
-        datasourceId={'datasource'}
-        goToDatasource={() => {}}
-        goToQuery={() => {}}
-        goToLoadData={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(taskView).toMatchSnapshot();
-  });
-});
+import '../ace-modes/dsql';
+import '../ace-modes/hjson';

@@ -108,7 +108,7 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   @Override
   public void context(SearchQuery query)
   {
-    delegateQueryMetrics.context(query);
+    throw new ISE("Unsupported method in default query metrics implementation.");
   }
 
   @Override

@@ -23,24 +23,17 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import java.util.Map;
 
 /**
- * Implement this for different ways to (optionally securely) access secrets.
- *
- * Any further use case of extensible configuration/secrets must use {@link DynamicConfigProvider} interface. Users
- * may still implement this interface for existing use cases till https://github.com/apache/druid/issues/9351 is
- * resolved.
- *
+ * This is used to get [secure] configuration in various places in an extensible way.
  */
-@Deprecated
 @ExtensionPoint
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultPasswordProvider.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MapStringDynamicConfigProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultPasswordProvider.class),
-    @JsonSubTypes.Type(name = "environment", value = EnvironmentVariablePasswordProvider.class),
-
+    @JsonSubTypes.Type(name = "mapString", value = MapStringDynamicConfigProvider.class),
 })
-public interface PasswordProvider
+public interface DynamicConfigProvider<T>
 {
-  String getPassword();
+  Map<String, T> getConfig();
 }
