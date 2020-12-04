@@ -33,7 +33,7 @@ public abstract class AbstractHttpClient implements HttpClient
   {
     return go(request, handler, (Duration) null);
   }
-  
+
   @Override
   public <Intermediate, Final> ListenableFuture<Final> go(Request request,
       HttpResponseHandler<Intermediate, Final> handler, java.time.Duration readTimeout)
