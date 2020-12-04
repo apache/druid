@@ -16,16 +16,11 @@
  * limitations under the License.
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { Api } from './api';
 
-export class Api {
-  static instance: AxiosInstance;
-
-  static initialize(config?: AxiosRequestConfig): void {
-    Api.instance = axios.create(config);
-  }
-
-  static encodePath(path: string): string {
-    return path.replace(/\?/g, '%3F');
-  }
-}
+describe('Api', () => {
+  it('escapes ?', () => {
+    expect(Api.encodePath('wikipedia')).toEqual('wikipedia');
+    expect(Api.encodePath('wiki?pedia')).toEqual('wiki%3Fpedia');
+  });
+});

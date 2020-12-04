@@ -592,7 +592,7 @@ ORDER BY "rank" DESC, "service" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
+            `/druid/indexer/v1/worker/${Api.encodePath(middleManagerDisableWorkerHost)}/disable`,
             {},
           );
           return resp.data;
@@ -621,7 +621,7 @@ ORDER BY "rank" DESC, "service" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
+            `/druid/indexer/v1/worker/${Api.encodePath(middleManagerEnableWorkerHost)}/enable`,
             {},
           );
           return resp.data;

@@ -3216,9 +3216,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
   private getSupervisorJson = async (): Promise<void> => {
     const { initSupervisorId } = this.props;
+    if (!initSupervisorId) return;
 
     try {
-      const resp = await Api.instance.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
+      const resp = await Api.instance.get(
+        `/druid/indexer/v1/supervisor/${Api.encodePath(initSupervisorId)}`,
+      );
       this.updateSpec(cleanSpec(resp.data));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
@@ -3232,9 +3235,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private getTaskJson = async (): Promise<void> => {
     const { initTaskId } = this.props;
+    if (!initTaskId) return;
 
     try {
-      const resp = await Api.instance.get(`/druid/indexer/v1/task/${initTaskId}`);
+      const resp = await Api.instance.get(`/druid/indexer/v1/task/${Api.encodePath(initTaskId)}`);
       this.updateSpec(cleanSpec(resp.data.payload));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
