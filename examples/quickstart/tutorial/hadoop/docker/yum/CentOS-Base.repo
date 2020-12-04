@@ -1,0 +1,52 @@
+# CentOS-Base.repo
+#
+# The mirror system uses the connecting IP address of the client and the
+# update status of each mirror to pick mirrors that are updated to and
+# geographically close to the client.  You should use this for CentOS updates
+# unless you are manually picking other mirrors.
+#
+# If the #mirrorlist= does not work for you, as a fall back you can try the
+# remarked out baseurl= line instead.
+#
+#
+
+[base]
+name=CentOS-6.6 - Base
+#mirrorlist=http://#mirrorlist.centos.org/?release=6.6&arch=$basearch&repo=os&infra=$infra
+baseurl=http://vault.centos.org/6.6/os/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#released updates
+[updates]
+name=CentOS-6.6 - Updates
+#mirrorlist=http://#mirrorlist.centos.org/?release=6.6&arch=$basearch&repo=updates&infra=$infra
+baseurl=http://vault.centos.org/6.6/updates/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#additional packages that may be useful
+[extras]
+name=CentOS-6.6 - Extras
+#mirrorlist=http://#mirrorlist.centos.org/?release=6.6&arch=$basearch&repo=extras&infra=$infra
+baseurl=http://vault.centos.org/6.6/extras/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#additional packages that extend functionality of existing packages
+[centosplus]
+name=CentOS-6.6 - Plus
+#mirrorlist=http://#mirrorlist.centos.org/?release=6.6&arch=$basearch&repo=centosplus&infra=$infra
+baseurl=http://vault.centos.org/6.6/centosplus/$basearch/
+gpgcheck=1
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#contrib - packages by Centos Users
+[contrib]
+name=CentOS-6.6 - Contrib
+#mirrorlist=http://#mirrorlist.centos.org/?release=6.6&arch=$basearch&repo=contrib&infra=$infra
+baseurl=http://vault.centos.org/6.6/contrib/$basearch/
+gpgcheck=1
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
