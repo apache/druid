@@ -180,15 +180,15 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138 + 1 byte when null handling is enabled
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
-          138 + nullHandlingOverhead,
+          182 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          138 + nullHandlingOverhead,
+          182 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       appenderator.close();
@@ -223,12 +223,12 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
-      Assert.assertEquals(138 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(182 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          276 + 2 * nullHandlingOverhead,
+          364 + 2 * nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
@@ -268,13 +268,13 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       //we still calculate the size even when ignoring it to make persist decision
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
-          138 + nullHandlingOverhead,
+          182 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          276 + 2 * nullHandlingOverhead,
+          364 + 2 * nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
       );
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
