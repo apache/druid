@@ -51,7 +51,7 @@ fi
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
     # Sanity check: DRUID_INTEGRATION_TEST_INDEXER must be "indexer" or "middleManager"
-    if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ] || [ "$DRUID_INTEGRATION_TEST_INDEXER" = "middleManager" ]
+    if [ "$DRUID_INTEGRATION_TEST_INDEXER" != "indexer" ] && [ "$DRUID_INTEGRATION_TEST_INDEXER" != "middleManager" ]
     then
       echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')"
       exit 1
