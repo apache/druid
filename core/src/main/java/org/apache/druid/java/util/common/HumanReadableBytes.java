@@ -225,7 +225,7 @@ public class HumanReadableBytes
 
     /**
      * simplified SI format without 'B' indicator
-     * eg: B, K, M, G ...
+     * eg: K, M, G ...
      */
     DECIMAL
   }
@@ -277,6 +277,7 @@ public class HumanReadableBytes
        * [1KiB, 1MiB) = [2^10, 2^20),
        * [1MiB, 1GiB) = [2^20, 2^30),
        * [1GiB, 1PiB) = [2^30, 2^40),
+       * ...
        *
        * So, expression (63 - Long.numberOfLeadingZeros(absValue))) helps us to get the right number of bits of the given input
        *
