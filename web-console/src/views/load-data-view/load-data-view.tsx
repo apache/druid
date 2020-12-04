@@ -2214,7 +2214,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               },
             ]}
             model={spec}
-            onChange={s => this.updateSpec(s)}
+            onChange={this.updateSpec}
           />
           <FormGroup label="Extra filter">
             <JsonInput
@@ -2415,7 +2415,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     },
                   ]}
                   model={spec}
-                  onChange={s => this.updateSpec(s)}
+                  onChange={this.updateSpec}
                 />
               )}
               <FormGroupWithInfo
@@ -2922,7 +2922,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const tuningConfig: TuningConfig = deepGet(spec, 'spec.tuningConfig') || EMPTY_OBJECT;
     const granularitySpec: GranularitySpec =
       deepGet(spec, 'spec.dataSchema.granularitySpec') || EMPTY_OBJECT;
-    const isStreaming = oneOf(spec.type, 'kafka', 'kinesis');
     const dimensions: (string | DimensionSpec)[] | undefined = deepGet(
       spec,
       'spec.dataSchema.dimensionsSpec.dimensions',
@@ -3011,36 +3010,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={granularitySpec}
             onChange={g => this.updateSpec(deepSet(spec, 'spec.dataSchema.granularitySpec', g))}
           />
-          {!isStreaming && (
-            <AutoForm
-              fields={[
-                {
-                  name: 'spec.dataSchema.granularitySpec.intervals',
-                  label: 'Time intervals',
-                  type: 'string-array',
-                  placeholder: 'ex: 2018-01-01/2018-06-01',
-                  required: spec =>
-                    ['hashed', 'single_dim'].includes(
-                      deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'),
-                    ),
-                  info: <>A comma separated list of intervals for the raw data being ingested.</>,
-                },
-              ]}
-              model={spec}
-              onChange={s => this.updateSpec(s)}
-            />
-          )}
         </div>
         <div className="other">
           <H5>Secondary partitioning</H5>
           <AutoForm
-            fields={getPartitionRelatedTuningSpecFormFields(
-              getSpecType(spec) || 'index_parallel',
-              dimensionNames,
-            )}
-            model={tuningConfig}
+            fields={getPartitionRelatedTuningSpecFormFields(spec, dimensionNames)}
+            model={spec}
             globalAdjustment={adjustTuningConfig}
-            onChange={t => this.updateSpec(deepSet(spec, 'spec.tuningConfig', t))}
+            onChange={this.updateSpec}
           />
         </div>
         <div className="control">
@@ -3048,9 +3025,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {nonsensicalSingleDimPartitioningMessage}
         </div>
         {this.renderNextBar({
-          disabled:
-            !granularitySpec.segmentGranularity ||
-            invalidTuningConfig(tuningConfig, granularitySpec.intervals),
+          disabled: !granularitySpec.segmentGranularity || invalidTuningConfig(tuningConfig),
         })}
       </>
     );
@@ -3148,7 +3123,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               },
             ]}
             model={spec}
-            onChange={s => this.updateSpec(s)}
+            onChange={this.updateSpec}
           />
         </div>
         <div className="other">
@@ -3202,7 +3177,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               },
             ]}
             model={spec}
-            onChange={s => this.updateSpec(s)}
+            onChange={this.updateSpec}
           />
         </div>
         <div className="control">

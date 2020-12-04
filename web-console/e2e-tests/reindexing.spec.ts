@@ -67,7 +67,6 @@ describe('Reindexing from Druid', () => {
     const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
     const partitionConfig = new PartitionConfig({
       segmentGranularity: SegmentGranularity.DAY,
-      timeIntervals: interval,
       partitionsSpec: new SingleDimPartitionsSpec({
         partitionDimension: 'channel',
         targetRowsPerSegment: 10_000,

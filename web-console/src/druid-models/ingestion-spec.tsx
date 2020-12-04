@@ -1340,33 +1340,31 @@ export interface PartitionsSpec {
   assumeGrouped?: boolean;
 }
 
-export function adjustTuningConfig(tuningConfig: TuningConfig) {
-  const tuningConfigType = deepGet(tuningConfig, 'type');
-  if (tuningConfigType !== 'index_parallel') return tuningConfig;
+export function adjustTuningConfig(spec: IngestionSpec) {
+  const tuningConfigType = deepGet(spec, 'spec.tuningConfig.type');
+  if (tuningConfigType !== 'index_parallel') return spec;
 
-  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type') || 'dynamic';
+  const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
-    tuningConfig = deepDelete(tuningConfig, 'forceGuaranteedRollup');
+    spec = deepDelete(spec, 'spec.tuningConfig.forceGuaranteedRollup');
   } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
-    tuningConfig = deepSet(tuningConfig, 'forceGuaranteedRollup', true);
+    spec = deepSet(spec, 'spec.tuningConfig.forceGuaranteedRollup', true);
   }
 
-  return tuningConfig;
+  return spec;
 }
 
-export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
+export function invalidTuningConfig(tuningConfig: TuningConfig): boolean {
   if (tuningConfig.type !== 'index_parallel') return false;
 
   switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
     case 'hashed':
-      if (!intervals) return true;
       return (
         Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
         Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
       );
 
     case 'single_dim':
-      if (!intervals) return true;
       if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
       const hasTargetRowsPerSegment = Boolean(
         deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
@@ -1383,14 +1381,15 @@ export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any):
 }
 
 export function getPartitionRelatedTuningSpecFormFields(
-  specType: IngestionType,
+  spec: IngestionSpec,
   dimensionSuggestions: string[] | undefined,
-): Field<TuningConfig>[] {
+): Field<IngestionSpec>[] {
+  const specType = getSpecType(spec) || 'index_parallel';
   switch (specType) {
     case 'index_parallel':
-      return [
+      const parallelFields: Field<IngestionSpec>[] = [
         {
-          name: 'partitionsSpec.type',
+          name: 'spec.tuningConfig.partitionsSpec.type',
           label: 'Partitioning type',
           type: 'string',
           required: true,
@@ -1402,38 +1401,42 @@ export function getPartitionRelatedTuningSpecFormFields(
               single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
-          adjustment: (t: TuningConfig) => {
-            if (!Array.isArray(dimensionSuggestions) || !dimensionSuggestions.length) return t;
-            return deepSet(t, 'partitionsSpec.partitionDimension', dimensionSuggestions[0]);
+          adjustment: s => {
+            if (!Array.isArray(dimensionSuggestions) || !dimensionSuggestions.length) return s;
+            return deepSet(
+              s,
+              'spec.tuningConfig.partitionsSpec.partitionDimension',
+              dimensionSuggestions[0],
+            );
           },
         },
         // partitionsSpec type: dynamic
         {
-          name: 'partitionsSpec.maxRowsPerSegment',
+          name: 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment',
           label: 'Max rows per segment',
           type: 'number',
           defaultValue: 5000000,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
           info: <>Determines how many rows are in each segment.</>,
         },
         {
-          name: 'partitionsSpec.maxTotalRows',
+          name: 'spec.tuningConfig.partitionsSpec.maxTotalRows',
           label: 'Max total rows',
           type: 'number',
           defaultValue: 20000000,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
           info: <>Total number of rows in segments waiting for being pushed.</>,
         },
         // partitionsSpec type: hashed
         {
-          name: 'partitionsSpec.targetRowsPerSegment',
+          name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           label: 'Target rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
           defaultValue: 5000000,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
-            !deepGet(t, 'partitionsSpec.numShards'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.numShards'),
           info: (
             <>
               <p>
@@ -1449,14 +1452,14 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.numShards',
+          name: 'spec.tuningConfig.partitionsSpec.numShards',
           label: 'Num shards',
           type: 'number',
           zeroMeansUndefined: true,
           hideInMore: true,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
           info: (
             <>
               <p>
@@ -1472,19 +1475,19 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.partitionDimensions',
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimensions',
           label: 'Partition dimensions',
           type: 'string-array',
           placeholder: '(all dimensions)',
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed',
           info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
         },
         // partitionsSpec type: single_dim
         {
-          name: 'partitionsSpec.partitionDimension',
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimension',
           label: 'Partition dimension',
           type: 'string',
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
           required: true,
           suggestions: dimensionSuggestions,
           info: (
@@ -1501,16 +1504,16 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.targetRowsPerSegment',
+          name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           label: 'Target rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
-            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
-          required: (t: TuningConfig) =>
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
-            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
+          required: s =>
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           info: (
             <p>
               Target number of rows to include in a partition, should be a number that targets
@@ -1519,24 +1522,25 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.maxRowsPerSegment',
+          name: 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment',
           label: 'Max rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
-          required: (t: TuningConfig) =>
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
-            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
+          required: s =>
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           info: <p>Maximum number of rows to include in a partition.</p>,
         },
         {
-          name: 'partitionsSpec.assumeGrouped',
+          name: 'spec.tuningConfig.partitionsSpec.assumeGrouped',
           label: 'Assume grouped',
           type: 'boolean',
           defaultValue: false,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          hideInMore: true,
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
           info: (
             <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will
@@ -1546,17 +1550,41 @@ export function getPartitionRelatedTuningSpecFormFields(
         },
       ];
 
+      if (oneOf(deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim')) {
+        parallelFields.push({
+          name: 'spec.dataSchema.granularitySpec.intervals',
+          label: 'Time intervals',
+          type: 'string-array',
+          placeholder: 'ex: 2018-01-01/2018-06-01',
+          hideInMore: true,
+          info: (
+            <>
+              <p>A comma separated list of intervals for the raw data being ingested.</p>
+              <p>
+                This list is used to determine the shards that will be created. If it is not
+                specified then then an additional job will run to automatically determine the data
+                intervals used.
+              </p>
+            </>
+          ),
+        });
+      }
+
+      return parallelFields;
+
     case 'kafka':
     case 'kinesis':
       return [
         {
-          name: 'maxRowsPerSegment',
+          name: 'spec.tuningConfig.maxRowsPerSegment',
+          label: 'Max rows per segment',
           type: 'number',
           defaultValue: 5000000,
           info: <>Determines how many rows are in each segment.</>,
         },
         {
-          name: 'maxTotalRows',
+          name: 'spec.tuningConfig.maxTotalRows',
+          label: 'Max total rows',
           type: 'number',
           defaultValue: 20000000,
           info: <>Total number of rows in segments waiting for being pushed.</>,
