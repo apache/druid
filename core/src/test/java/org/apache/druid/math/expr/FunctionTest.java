@@ -583,6 +583,15 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("binary_byte_format(1024, 4)", "1KiB");
   }
 
+  @Test
+  public void testSizeFormatInvalidArgumentSize()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[binary_byte_format] needs 1 or 2 arguments");
+    final Expr expr = Parser.parse("binary_byte_format(1024, 2, 3)", ExprMacroTable.nil());
+    expr.eval(bindings).value();
+  }
+
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());

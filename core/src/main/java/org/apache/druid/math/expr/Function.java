@@ -3291,25 +3291,20 @@ public interface Function
         precision = args.get(1).eval(bindings).asInt();
       }
 
-      boolean hasSpace = false;
-      if (args.size() > 2) {
-        hasSpace = args.get(2).eval(bindings).asBoolean();
-      }
-
-      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem(), hasSpace));
+      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem(), true));
     }
 
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (args.size() < 1 || args.size() > 3) {
-        throw new IAE("Function[%s] needs 1 or 2 or 3 arguments", name());
+      if (args.size() < 1 || args.size() > 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
     }
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
       return ExprType.STRING;
     }
