@@ -326,6 +326,27 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testTimestampsInResponseWithNulls() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT MAX(__time)",
+            ResultFormat.OBJECT,
+            false,
+            null,
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("__time", "2000-01-03T00:00:00.000Z")
+        ),
+        rows
+    );
+  }
+
+  @Test
   public void testFieldAliasingSelect() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(

@@ -407,6 +407,11 @@ public class CalciteTests
           .put("m1", "6.0")
           .put("m2", "6.0")
           .put("dim1", "abc")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("m1", "6.0")
+          .put("m2", "6.0")
+          .put("dim1", "abc")
           .build()
   );
 
