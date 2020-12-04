@@ -97,7 +97,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(
-        ImmutableSet.of("time", "col1", "col2", "metric1", "metric2"),
+        ImmutableSet.of("__time", "time", "col1", "col2", "metric1", "metric2"),
         schema.getDimensionsSpec().getDimensionExclusions()
     );
   }
@@ -135,7 +135,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(
-        ImmutableSet.of("dimC", "col1", "metric1", "metric2"),
+        ImmutableSet.of("__time", "dimC", "col1", "metric1", "metric2"),
         schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
     );
   }
@@ -405,7 +405,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         actual.getParser().getParseSpec(),
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
-            new DimensionsSpec(null, Arrays.asList("metric1", "xXx", "col1"), null),
+            new DimensionsSpec(null, Arrays.asList("__time", "metric1", "xXx", "col1"), null),
             null,
             null,
             null
