@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -61,7 +62,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
