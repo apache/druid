@@ -97,6 +97,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
           configMapper,
           ioConfig.getConsumerProperties()
       );
+      props.putIfAbsent("isolation.level", "read_committed");
       props.putAll(consumerConfigs);
 
       return new KafkaConsumer<>(props);

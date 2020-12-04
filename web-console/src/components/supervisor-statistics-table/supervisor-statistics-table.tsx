@@ -17,13 +17,12 @@
  */
 
 import { Button, ButtonGroup } from '@blueprintjs/core';
-import axios from 'axios';
 import React from 'react';
 import ReactTable, { CellInfo, Column } from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import { UrlBaser } from '../../singletons/url-baser';
-import { deepGet } from '../../utils/object-change';
+import { Api, UrlBaser } from '../../singletons';
+import { deepGet } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './supervisor-statistics-table.scss';
@@ -65,7 +64,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
 
   const [supervisorStatisticsState] = useQueryManager<null, SupervisorStatisticsTableRow[]>({
     processQuery: async () => {
-      const resp = await axios.get(endpoint);
+      const resp = await Api.instance.get(endpoint);
       return normalizeSupervisorStatisticsResults(resp.data);
     },
     initQuery: null,

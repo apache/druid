@@ -25,7 +25,6 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -71,18 +70,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
 {
   private static final Logger log = new Logger(SqlVectorizedExpressionSanityTest.class);
 
-  // cannot vectorize grouping on numeric expressions in group by v2 in sql compatible null handling mode
-  private static final List<String> QUERIES = NullHandling.sqlCompatible() ? ImmutableList.of(
-      "SELECT SUM(long1 * long2) FROM foo",
-      "SELECT SUM((long1 * long2) / double1) FROM foo",
-      "SELECT SUM(float3 + ((long1 * long4)/double1)) FROM foo",
-      "SELECT SUM(long5 - (float3 + ((long1 * long4)/double1))) FROM foo",
-      "SELECT cos(double2) FROM foo",
-      "SELECT SUM(-long4) FROM foo",
-      "SELECT SUM(PARSE_LONG(string1)) FROM foo",
-      "SELECT SUM(PARSE_LONG(string3)) FROM foo",
-      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
-  ) : ImmutableList.of(
+  private static final List<String> QUERIES = ImmutableList.of(
       "SELECT SUM(long1 * long2) FROM foo",
       "SELECT SUM((long1 * long2) / double1) FROM foo",
       "SELECT SUM(float3 + ((long1 * long4)/double1)) FROM foo",

@@ -21,7 +21,7 @@ import React from 'react';
 
 import { SchemaTable } from './schema-table';
 
-describe('schema table', () => {
+describe('SchemaTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],
@@ -37,13 +37,16 @@ describe('schema table', () => {
       <SchemaTable
         sampleBundle={{
           headerAndRows: sampleData,
-          dimensionsSpec: {},
+          dimensions: [],
           metricsSpec: [],
         }}
         columnFilter=""
+        selectedAutoDimension={undefined}
         selectedDimensionSpecIndex={-1}
         selectedMetricSpecIndex={-1}
-        onDimensionOrMetricSelect={() => {}}
+        onAutoDimensionSelect={() => {}}
+        onDimensionSelect={() => {}}
+        onMetricSelect={() => {}}
       />
     );
 

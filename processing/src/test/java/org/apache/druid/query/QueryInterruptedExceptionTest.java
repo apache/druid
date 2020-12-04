@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.TimeoutException;
 
 public class QueryInterruptedExceptionTest
 {
@@ -42,7 +41,6 @@ public class QueryInterruptedExceptionTest
     );
     Assert.assertEquals("Query cancelled", new QueryInterruptedException(new CancellationException()).getErrorCode());
     Assert.assertEquals("Query interrupted", new QueryInterruptedException(new InterruptedException()).getErrorCode());
-    Assert.assertEquals("Query timeout", new QueryInterruptedException(new TimeoutException()).getErrorCode());
     Assert.assertEquals("Unsupported operation", new QueryInterruptedException(new UOE("Unsupported")).getErrorCode());
     Assert.assertEquals("Unknown exception", new QueryInterruptedException(null).getErrorCode());
     Assert.assertEquals("Unknown exception", new QueryInterruptedException(new ISE("Something bad!")).getErrorCode());
@@ -70,10 +68,6 @@ public class QueryInterruptedExceptionTest
     Assert.assertEquals(
         null,
         new QueryInterruptedException(new InterruptedException()).getMessage()
-    );
-    Assert.assertEquals(
-        null,
-        new QueryInterruptedException(new TimeoutException()).getMessage()
     );
     Assert.assertEquals(
         null,
@@ -107,10 +101,6 @@ public class QueryInterruptedExceptionTest
     Assert.assertEquals(
         "java.lang.InterruptedException",
         new QueryInterruptedException(new InterruptedException()).getErrorClass()
-    );
-    Assert.assertEquals(
-        "java.util.concurrent.TimeoutException",
-        new QueryInterruptedException(new TimeoutException()).getErrorClass()
     );
     Assert.assertEquals(
         "org.apache.druid.query.ResourceLimitExceededException",
@@ -161,10 +151,6 @@ public class QueryInterruptedExceptionTest
     Assert.assertEquals(
         "java.lang.InterruptedException",
         roundTrip(new QueryInterruptedException(new InterruptedException())).getErrorClass()
-    );
-    Assert.assertEquals(
-        "java.util.concurrent.TimeoutException",
-        roundTrip(new QueryInterruptedException(new TimeoutException())).getErrorClass()
     );
     Assert.assertEquals(
         null,

@@ -33,6 +33,11 @@ env:
       MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
     - MAVEN_SKIP_TESTS="-Pskip-tests"
 
+addons:
+  apt:
+    packages:
+      - maven
+    
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
@@ -132,6 +137,11 @@ jobs:
     - <<: *package
       name: "(openjdk11) packaging check"
       jdk: openjdk11
+    
+    - <<: *package
+      name: "Build and test on ARM64 CPU architecture"
+      arch: arm64
+      jdk: openjdk11
 
     - &test_processing_module
       name: "(openjdk8) processing module test"
@@ -178,7 +188,7 @@ jobs:
           | node_modules/.bin/diff-test-coverage
           --coverage "**/target/site/jacoco/jacoco.xml"
           --type jacoco
-          --line-coverage 50 
+          --line-coverage 50
           --branch-coverage 50
           --function-coverage 0
           --log-template "coverage-lines-complete"

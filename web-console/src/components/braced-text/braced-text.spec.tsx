@@ -27,4 +27,12 @@ describe('BracedText', () => {
 
     expect(bracedText).toMatchSnapshot();
   });
+
+  it('matches snapshot with padFractionalPart', () => {
+    const bracedText = shallow(
+      <BracedText text="23.3" braces={['34', '23,423.437']} padFractionalPart />,
+    );
+
+    expect(bracedText).toMatchSnapshot();
+  });
 });

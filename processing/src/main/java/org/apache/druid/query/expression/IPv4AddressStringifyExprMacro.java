@@ -96,7 +96,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingTypes inputTypes)
+      public ExprType getOutputType(InputBindingInspector inspector)
       {
         return ExprType.STRING;
       }

@@ -21,8 +21,8 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { DruidFilter } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { DruidFilter } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './filter-table.scss';

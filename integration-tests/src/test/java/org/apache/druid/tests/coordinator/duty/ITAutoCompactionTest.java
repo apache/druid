@@ -77,7 +77,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @BeforeMethod
   public void setup() throws Exception
   {
-    // Set comapction slot to 10
+    // Set comapction slot to 5
     updateCompactionTaskSlot(0.5, 10);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
@@ -175,7 +175,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 2);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -309,7 +309,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         fullDatasourceName
     );
 
-    queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+    queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
