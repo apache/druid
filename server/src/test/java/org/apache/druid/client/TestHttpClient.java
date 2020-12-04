@@ -108,6 +108,7 @@ public class TestHttpClient extends AbstractHttpClient
   }
 
   @Override
+  @SuppressWarnings("ParameterPackage")
   public <Intermediate, Final> ListenableFuture<Final> go(
       Request request,
       HttpResponseHandler<Intermediate, Final> handler,
