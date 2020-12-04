@@ -15,6 +15,8 @@
 # limitations under the License.
 
 # Build Druid Cluster Image
+set -e
+
 if [ -z "$DRUID_INTEGRATION_TEST_JVM_RUNTIME" ]
 then
   echo "\$DRUID_INTEGRATION_TEST_JVM_RUNTIME is not set. Build druid-cluster with Java 8"
