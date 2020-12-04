@@ -23,6 +23,9 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 
 import java.nio.ByteBuffer;
 
+/**
+ * {@link BufferAggregator} variant of {@link LongConstantAggregator}
+ */
 public class LongConstantBufferAggregator implements BufferAggregator
 {
   private final long value;

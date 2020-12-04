@@ -555,12 +555,20 @@ public class RowBasedGrouperHelper
         }
       }
 
-      // KeyDimensionNames are the column names of dimensions. Its required since aggregators are not aware of
-      // output column names
-      Set<String> keyDimensionNames = dimsToInclude.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
+      /**
+       *  KeyDimensionNames are the input column names of dimensions. Its required since aggregators are not aware of the
+       *  output column names.
+       *  As we exclude certain dimensions from the result row, the value for any grouping_id aggregators have to change
+       *  to reflect the new grouping dimensions, that aggregation is being done upon. We will mark the indices which have
+       *  grouping aggregators and update the value for each row at those indices.
+       */
+      Set<String> keyDimensionNames = dimsToInclude.stream()
+                                                   .map(DimensionSpec::getDimension)
+                                                   .collect(Collectors.toSet());
       for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
         AggregatorFactory aggregatorFactory = query.getAggregatorSpecs().get(i);
         if (aggregatorFactory instanceof GroupingAggregatorFactory) {
+
           groupingAggregatorsBitSet.set(i);
           groupingAggregatorValues[i] = ((GroupingAggregatorFactory) aggregatorFactory)
               .withKeyDimensions(keyDimensionNames)
@@ -595,6 +603,7 @@ public class RowBasedGrouperHelper
           final int resultRowAggregatorStart = query.getResultRowAggregatorStart();
           for (int i = 0; i < entry.getValues().length; i++) {
             if (dimsToInclude != null && groupingAggregatorsBitSet.get(i)) {
+              // Override with a new value, reflecting the new set of grouping dimensions
               resultRow.set(resultRowAggregatorStart + i, groupingAggregatorValues[i]);
             } else {
               resultRow.set(resultRowAggregatorStart + i, entry.getValues()[i]);

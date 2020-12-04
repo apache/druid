@@ -24,6 +24,9 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * {@link VectorAggregator} variant of {@link LongConstantAggregator}
+ */
 public class LongConstantVectorAggregator implements VectorAggregator
 {
   private final long value;

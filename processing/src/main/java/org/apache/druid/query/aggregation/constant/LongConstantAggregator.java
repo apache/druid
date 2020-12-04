@@ -21,6 +21,10 @@ package org.apache.druid.query.aggregation.constant;
 
 import org.apache.druid.query.aggregation.Aggregator;
 
+/**
+ * This aggregator is a no-op aggregator with a fixed non-null output value. It can be used in scenarios where
+ * result is constant such as {@link org.apache.druid.query.aggregation.GroupingAggregatorFactory}
+ */
 public class LongConstantAggregator implements Aggregator
 {
   private final long value;

@@ -41,6 +41,40 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * This class implements {@code grouping_id} function to determine the grouping that a row is part of. Different rows
+ * in same result could have different grouping columns when subtotals are used.
+ *
+ * It takes following arguments
+ *  - {@code name} - Name of aggregators
+ *  - {code groupings} - List of dimensions that user is interested in tracking
+ *  - {@code keyDimensions} - The list of grouping dimensions being included in the result row. This list is a subset of
+ *                             {@code groupings0}. This argument cannot be passed by the user. It is set by druid engine
+ *                             when a particular subtotal spec is being processed. Whenever druid engine processes a new
+ *                             subtotal spec, engine sets that subtotal spec as new {@code keyDimensions}.
+ *
+ *  When key dimensions are updated, {@code value} is updated as well. How the value is determined is captured
+ *  at {@link #groupingId(List, Set)}.
+ *
+ *  since grouping_id has to be calculated only once, it could have been implemented as a virtual function or
+ *  post-aggregator etc. We modelled it as an aggregation operator so that its output can be used in a post-aggregator.
+ *  Calcite too models grouping_id as an aggregation operator.
+ *  Since it is a non-trivial special aggregation, implementing it required changes in core druid engine to work. There
+ *  were few approaches. We chose the approach that required least changes in core druid.
+ *  Refer to https://github.com/apache/druid/pull/10518#discussion_r532941216 for more details.
+ *
+ *  Currently, it works in following way
+ *    - On data servers (no change),
+ *      - this factory generates {@link LongConstantAggregator} / {@link LongConstantBufferAggregator} / {@link LongConstantVectorAggregator}
+ *         with keyDimensions as null
+ *      - The aggregators don't actually aggregate anything and their result is not actually used. We could have remove
+ *      these aggregators on data servers but that will result in a signature mismatch on broker and data nodes. That would
+ *      have required extra handling and would have been error-prone.
+ *    - On brokers
+ *      - Results from data node is already re-processed for each subtotal spec. In this path, we also update the
+ *      grouping id for each row.
+ *
+ */
 @EverythingIsNonnullByDefault
 public class GroupingAggregatorFactory extends AggregatorFactory
 {
@@ -205,7 +239,7 @@ public class GroupingAggregatorFactory extends AggregatorFactory
    * Given the list of grouping dimensions, returns a long value where each bit at position X in the returned value
    * corresponds to the dimension in groupings at same position X. X is the position relative to the right end. if
    * keyDimensions contain the grouping dimension at position X, the bit is set to 0 at position X, otherwise it is
-   * set to 1. An example adapted from Microsoft SQL documentation
+   * set to 1.
    *
    *  groupings           keyDimensions           value (3 least significant bits)         value (long)
    *    a,b,c                    [a]                       011                                       3
