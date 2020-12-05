@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -134,7 +135,7 @@ public class SqlResource
                       for (int i = 0; i < fieldList.size(); i++) {
                         final Object value;
 
-                        if (row[i] == null){
+                        if (row[i] == null) {
                           value = null;
                         } else if (timeColumns[i]) {
                           value = ISODateTimeFormat.dateTime().print(

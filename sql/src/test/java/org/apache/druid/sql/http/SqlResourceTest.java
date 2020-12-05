@@ -330,7 +330,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
-            "SELECT MAX(__time)",
+            "SELECT MAX(__time) as t1, MAX(__time) FILTER(WHERE dim1 = 'non_existing') as t2 FROM druid.foo",
             ResultFormat.OBJECT,
             false,
             null,
@@ -339,10 +339,14 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            ImmutableMap.of("__time", "2000-01-03T00:00:00.000Z")
-        ),
-        rows
+            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z") // t2 represents Long.MIN converted to a timestamp
+        ):
+        ImmutableList.of(
+            Maps.transformValues(ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""), (val) -> val.equals("") ? null : val)
+        )
+        ,rows
     );
   }
 
