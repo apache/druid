@@ -17,6 +17,7 @@
  */
 
 import {
+  adjustId,
   cleanSpec,
   downgradeSpec,
   getColumnTypeFromHeaderAndRows,
@@ -254,5 +255,12 @@ describe('spec utils', () => {
         "type": "index_parallel",
       }
     `);
+  });
+
+  it('adjustId', () => {
+    expect(adjustId('')).toEqual('');
+    expect(adjustId('lol')).toEqual('lol');
+    expect(adjustId('.l/o/l')).toEqual('lol');
+    expect(adjustId('l\t \nl')).toEqual('l l');
   });
 });

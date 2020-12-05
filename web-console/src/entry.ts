@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { AxiosRequestConfig } from 'axios';
 import 'core-js/stable';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -67,9 +66,7 @@ if (typeof consoleConfig.title === 'string') {
   window.document.title = consoleConfig.title;
 }
 
-const apiConfig: AxiosRequestConfig = {
-  headers: {},
-};
+const apiConfig = Api.getDefaultConfig();
 
 if (consoleConfig.baseURL) {
   apiConfig.baseURL = consoleConfig.baseURL;

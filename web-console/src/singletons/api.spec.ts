@@ -19,8 +19,8 @@
 import { Api } from './api';
 
 describe('Api', () => {
-  it('escapes ?', () => {
+  it('escapes stuff', () => {
     expect(Api.encodePath('wikipedia')).toEqual('wikipedia');
-    expect(Api.encodePath('wiki?pedia')).toEqual('wiki%3Fpedia');
+    expect(Api.encodePath('wi%ki?pe#dia')).toEqual('wi%25ki%3Fpe%23dia');
   });
 });
