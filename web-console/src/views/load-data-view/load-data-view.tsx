@@ -3136,7 +3136,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <>
                     <p>This is the name of the datasource (table) in Druid.</p>
                     <p>
-                      The datasource name can not start with a dot <Code>.</Code>, include slashes <Code>/</Code>, or have whitespace other than space.
+                      The datasource name can not start with a dot <Code>.</Code>, include slashes{' '}
+                      <Code>/</Code>, or have whitespace other than space.
                     </p>
                   </>
                 ),
