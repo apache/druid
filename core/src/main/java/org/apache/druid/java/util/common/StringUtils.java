@@ -194,7 +194,11 @@ public class StringUtils
    */
   public static String encodeForFormat(final String s)
   {
-    return Preconditions.checkNotNull(s, "null string").replace("%", "%%");
+    return StringUtils.replaceChar(
+        Preconditions.checkNotNull(s, "null string"),
+        '%',
+        "%%"
+    );
   }
 
   public static String toLowerCase(String s)
