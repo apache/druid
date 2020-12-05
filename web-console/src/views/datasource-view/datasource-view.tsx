@@ -267,7 +267,8 @@ export class DatasourcesView extends React.PureComponent<
     ELSE 0
   END AS avg_row_size
 FROM sys.segments
-GROUP BY 1`;
+GROUP BY 1
+ORDER BY 1`;
 
   static formatRules(rules: Rule[]): string {
     if (rules.length === 0) {
