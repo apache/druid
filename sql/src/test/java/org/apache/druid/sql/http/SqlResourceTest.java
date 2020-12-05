@@ -342,11 +342,11 @@ public class SqlResourceTest extends CalciteTestBase
         NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z") // t2 represents Long.MIN converted to a timestamp
-        ):
+        ) :
         ImmutableList.of(
-            Maps.transformValues(ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""), (val) -> val.equals("") ? null : val)
-        )
-        ,rows
+            Maps.transformValues(ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""), (val) -> "".equals(val) ? null : val)
+        ),
+        rows
     );
   }
 
