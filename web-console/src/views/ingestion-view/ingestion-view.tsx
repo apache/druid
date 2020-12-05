@@ -193,8 +193,10 @@ export class IngestionView extends React.PureComponent<IngestionViewProps, Inges
     FAILED: 1,
   };
 
-  static SUPERVISOR_SQL = `SELECT "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
-FROM sys.supervisors`;
+  static SUPERVISOR_SQL = `SELECT
+  "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
+FROM sys.supervisors
+ORDER BY "supervisor_id"`;
 
   static TASK_SQL = `SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
