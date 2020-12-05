@@ -756,18 +756,21 @@ GROUP BY 1`;
   ): BasicAction[] {
     const { goToQuery, goToTask, capabilities } = this.props;
 
-    const goToActions: BasicAction[] = [
-      {
+    const goToActions: BasicAction[] = [];
+
+    if (capabilities.hasSql()) {
+      goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
         onAction: () => goToQuery(SqlQuery.create(SqlRef.table(datasource)).toString()),
-      },
-      {
-        icon: IconNames.GANTT_CHART,
-        title: 'Go to tasks',
-        onAction: () => goToTask(datasource),
-      },
-    ];
+      });
+    }
+
+    goToActions.push({
+      icon: IconNames.GANTT_CHART,
+      title: 'Go to tasks',
+      onAction: () => goToTask(datasource),
+    });
 
     if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;
