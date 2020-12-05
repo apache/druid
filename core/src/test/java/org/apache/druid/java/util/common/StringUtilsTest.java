@@ -174,6 +174,17 @@ public class StringUtilsTest
   }
 
   @Test
+  public void testEncodeForFormat()
+  {
+    Assert.assertEquals("x %% a %%s", StringUtils.encodeForFormat("x % a %s"));
+    Assert.assertEquals("", StringUtils.encodeForFormat(""));
+
+    expectedException.expect(NullPointerException.class);
+    expectedException.expectMessage("null string");
+    StringUtils.encodeForFormat(null);
+  }
+
+  @Test
   public void testURLEncodeSpace()
   {
     String s1 = StringUtils.urlEncode("aaa bbb");

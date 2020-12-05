@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 import javax.annotation.Nonnull;
@@ -186,6 +187,14 @@ public class StringUtils
       }
       return bob.toString();
     }
+  }
+
+  /**
+   * Encodes a string "s" for insertion into a format string.
+   */
+  public static String encodeForFormat(final String s)
+  {
+    return Preconditions.checkNotNull(s, "null string").replace("%", "%%");
   }
 
   public static String toLowerCase(String s)

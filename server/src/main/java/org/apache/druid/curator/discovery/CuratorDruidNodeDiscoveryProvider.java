@@ -204,7 +204,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       this.jsonMapper = jsonMapper;
 
       // This is required to be single threaded from docs in PathChildrenCache.
-      this.cacheExecutor = Execs.singleThreaded(StringUtils.format("NodeRoleWatcher[%s]", nodeRole));
+      this.cacheExecutor = Execs.singleThreaded(
+          StringUtils.format("NodeRoleWatcher[%s]", StringUtils.encodeForFormat(nodeRole.toString()))
+      );
       cache = new PathChildrenCacheFactory.Builder()
           //NOTE: cacheData is temporarily set to false and we get data directly from ZK on each event.
           //this is a workaround to solve curator's out-of-order events problem
