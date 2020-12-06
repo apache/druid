@@ -372,7 +372,7 @@
                 <docker.build.skip>false</docker.build.skip>
                 <override.config.path />
                 <resource.file.dir.path />
-                <extra.datasource.name.suffix>\ &lt;&gt;|!@#$%^&amp;~`'&quot;.,:;\\*()[]{} 💯🔥 Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
+                <extra.datasource.name.suffix>\ &lt;&gt;|!@#$%^&amp;~`'&quot;.,:;\\*()[]{} \ud83d\udcaf\ud83d\udd25 Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
             </properties>
             <build>
                 <plugins>
