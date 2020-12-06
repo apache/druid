@@ -160,6 +160,7 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     return servers;
   }
 
+  @Nullable
   public <T> QueryableDruidServer pick(@Nullable Query<T> query)
   {
     synchronized (this) {
