@@ -36,6 +36,7 @@ import java.util.Set;
 })
 public interface ServerSelectorStrategy
 {
+  @Nullable
   default <T> QueryableDruidServer pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment)
   {
     return Iterables.getOnlyElement(pick(query, servers, segment, 1), null);
@@ -48,6 +49,7 @@ public interface ServerSelectorStrategy
   }
 
   @Deprecated
+  @Nullable
   default QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
     return pick(null, servers, segment);
