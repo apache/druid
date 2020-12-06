@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -72,7 +72,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -90,7 +89,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   /**
    * Timestamp formats that the standard __time column can be parsed with.
    */
-  private static final Set<String> STANDARD_TIME_COLUMN_FORMATS = ImmutableSortedSet.of("auto", "millis");
+  private static final List<String> STANDARD_TIME_COLUMN_FORMATS = ImmutableList.of("millis", "auto");
 
   private final String dataSource;
   // Exactly one of interval and segmentIds should be non-null. Typically 'interval' is specified directly
