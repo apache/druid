@@ -19,13 +19,14 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, Field } from '../components';
+import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import {
   deepDelete,
   deepGet,
   deepMove,
   deepSet,
+  deepSetIfUnset,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -290,11 +291,9 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
     deepGet(spec, 'spec.tuningConfig.type');
 
   if (!specType) return spec as IngestionSpec;
-  if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
-  if (!deepGet(spec, 'spec.ioConfig.type')) spec = deepSet(spec, 'spec.ioConfig.type', specType);
-  if (!deepGet(spec, 'spec.tuningConfig.type')) {
-    spec = deepSet(spec, 'spec.tuningConfig.type', specType);
-  }
+  spec = deepSetIfUnset(spec, 'type', specType);
+  spec = deepSetIfUnset(spec, 'spec.ioConfig.type', specType);
+  spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
   return spec as IngestionSpec;
 }
 
@@ -1340,9 +1339,8 @@ export interface PartitionsSpec {
   assumeGrouped?: boolean;
 }
 
-export function adjustTuningConfig(spec: IngestionSpec) {
-  const tuningConfigType = deepGet(spec, 'spec.tuningConfig.type');
-  if (tuningConfigType !== 'index_parallel') return spec;
+export function adjustForceGuaranteedRollup(spec: IngestionSpec) {
+  if (getSpecType(spec) !== 'index_parallel') return spec;
 
   const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
@@ -1354,37 +1352,38 @@ export function adjustTuningConfig(spec: IngestionSpec) {
   return spec;
 }
 
-export function invalidTuningConfig(tuningConfig: TuningConfig): boolean {
-  if (tuningConfig.type !== 'index_parallel') return false;
-
-  switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
-    case 'hashed':
-      return (
-        Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
-        Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
-      );
-
-    case 'single_dim':
-      if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
-      const hasTargetRowsPerSegment = Boolean(
-        deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
-      );
-      const hasMaxRowsPerSegment = Boolean(
-        deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment'),
-      );
-      if (hasTargetRowsPerSegment === hasMaxRowsPerSegment) {
-        return true;
-      }
-  }
-
-  return false;
+export function invalidPartitionConfig(spec: IngestionSpec): boolean {
+  return (
+    // Bad primary partitioning, or...
+    !deepGet(spec, 'spec.dataSchema.granularitySpec.segmentGranularity') ||
+    // Bad secondary partitioning
+    Boolean(AutoForm.issueWithModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined)))
+  );
 }
 
-export function getPartitionRelatedTuningSpecFormFields(
+export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
+  {
+    name: 'spec.dataSchema.granularitySpec.segmentGranularity',
+    type: 'string',
+    suggestions: ['hour', 'day', 'week', 'month', 'year'],
+    defined: s => deepGet(s, 'spec.dataSchema.granularitySpec.type') === 'uniform',
+    required: true,
+    info: (
+      <>
+        The granularity to create time chunks at. Multiple segments can be created per time chunk.
+        For example, with 'DAY' segmentGranularity, the events of the same day fall into the same
+        time chunk which can be optionally further partitioned into multiple segments based on other
+        configurations and input size.
+      </>
+    ),
+  },
+];
+
+export function getSecondaryPartitionRelatedFormFields(
   spec: IngestionSpec,
   dimensionSuggestions: string[] | undefined,
 ): Field<IngestionSpec>[] {
-  const specType = getSpecType(spec) || 'index_parallel';
+  const specType = getSpecType(spec);
   switch (specType) {
     case 'index_parallel':
       const parallelFields: Field<IngestionSpec>[] = [
@@ -1402,7 +1401,14 @@ export function getPartitionRelatedTuningSpecFormFields(
             </p>
           ),
           adjustment: s => {
-            if (!Array.isArray(dimensionSuggestions) || !dimensionSuggestions.length) return s;
+            if (
+              deepGet(s, 'spec.tuningConfig.partitionsSpec.type') !== 'single_dim' ||
+              !Array.isArray(dimensionSuggestions) ||
+              !dimensionSuggestions.length
+            ) {
+              return s;
+            }
+
             return deepSet(
               s,
               'spec.tuningConfig.partitionsSpec.partitionDimension',
@@ -2170,6 +2176,16 @@ export function updateSchemaWithSample(
   } else {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'none');
     newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
+  }
+
+  if (getSpecType(newSpec) === 'index_parallel') {
+    newSpec = adjustForceGuaranteedRollup(
+      deepSet(
+        newSpec,
+        'spec.tuningConfig.partitionsSpec',
+        rollup ? { type: 'hashed' } : { type: 'dynamic' },
+      ),
+    );
   }
 
   newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);

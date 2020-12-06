@@ -68,6 +68,7 @@ import {
   INPUT_FORMAT_FIELDS,
   issueWithSampleData,
   METRIC_SPEC_FIELDS,
+  PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
   TIMESTAMP_SPEC_FIELDS,
   TimestampSpec,
@@ -76,7 +77,7 @@ import {
   updateSchemaWithSample,
 } from '../../druid-models';
 import {
-  adjustTuningConfig,
+  adjustForceGuaranteedRollup,
   cleanSpec,
   computeFlattenPathsForData,
   DimensionMode,
@@ -91,18 +92,17 @@ import {
   getIngestionTitle,
   getIoConfigFormFields,
   getIoConfigTuningFormFields,
-  getPartitionRelatedTuningSpecFormFields,
   getRequiredModule,
   getRollup,
+  getSecondaryPartitionRelatedFormFields,
   getSpecType,
   getTuningSpecFormFields,
-  GranularitySpec,
   IngestionComboTypeWithExtra,
   IngestionSpec,
   InputFormat,
   inputFormatCanFlatten,
   invalidIoConfig,
-  invalidTuningConfig,
+  invalidPartitionConfig,
   IoConfig,
   isDruidSource,
   isEmptyIngestionSpec,
@@ -125,6 +125,7 @@ import {
   deepDelete,
   deepGet,
   deepSet,
+  deepSetIfUnset,
   deepSetMulti,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
@@ -509,9 +510,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   private applyPreviewSpec = () => {
-    this.setState(({ specPreview }) => {
+    this.setState(({ spec, specPreview }) => {
       localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(specPreview));
-      return { spec: specPreview };
+      return { spec: spec === specPreview ? Object.assign({}, specPreview) : specPreview }; // If applying again, make a shallow copy to force a refresh
     });
   };
 
@@ -1886,17 +1887,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
             let newSpec = spec;
             if (!deepGet(newSpec, 'spec.dataSchema.dimensionsSpec')) {
+              const currentRollup = deepGet(newSpec, 'spec.dataSchema.granularitySpec.rollup');
               newSpec = updateSchemaWithSample(
                 newSpec,
                 transformQueryState.data,
                 'specific',
-                DEFAULT_ROLLUP_SETTING,
+                typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
               );
             }
 
-            if (!deepGet(newSpec, 'spec.dataSchema.granularitySpec.type')) {
-              newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.type', 'uniform');
-            }
+            newSpec = deepSetIfUnset(newSpec, 'spec.dataSchema.granularitySpec.type', 'uniform');
 
             this.updateSpec(newSpec);
             return true;
@@ -2522,19 +2522,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         {this.renderNextBar({
           disabled: !schemaQueryState.data,
-          onNextStep: () => {
-            let newSpec = spec;
-            if (rollup) {
-              newSpec = deepSet(newSpec, 'spec.tuningConfig.partitionsSpec', { type: 'hashed' });
-              newSpec = deepSet(newSpec, 'spec.tuningConfig.forceGuaranteedRollup', true);
-            } else {
-              newSpec = deepSet(newSpec, 'spec.tuningConfig.partitionsSpec', { type: 'dynamic' });
-              newSpec = deepDelete(newSpec, 'spec.tuningConfig.forceGuaranteedRollup');
-            }
-
-            this.updateSpec(newSpec);
-            return true;
-          },
         })}
       </>
     );
@@ -2920,8 +2907,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderPartitionStep() {
     const { spec } = this.state;
     const tuningConfig: TuningConfig = deepGet(spec, 'spec.tuningConfig') || EMPTY_OBJECT;
-    const granularitySpec: GranularitySpec =
-      deepGet(spec, 'spec.dataSchema.granularitySpec') || EMPTY_OBJECT;
     const dimensions: (string | DimensionSpec)[] | undefined = deepGet(
       spec,
       'spec.dataSchema.dimensionsSpec.dimensions',
@@ -2990,33 +2975,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main">
           <H5>Primary partitioning (by time)</H5>
           <AutoForm
-            fields={[
-              {
-                name: 'segmentGranularity',
-                type: 'string',
-                suggestions: ['hour', 'day', 'week', 'month', 'year'],
-                defined: (g: GranularitySpec) => g.type === 'uniform',
-                required: true,
-                info: (
-                  <>
-                    The granularity to create time chunks at. Multiple segments can be created per
-                    time chunk. For example, with 'DAY' segmentGranularity, the events of the same
-                    day fall into the same time chunk which can be optionally further partitioned
-                    into multiple segments based on other configurations and input size.
-                  </>
-                ),
-              },
-            ]}
-            model={granularitySpec}
-            onChange={g => this.updateSpec(deepSet(spec, 'spec.dataSchema.granularitySpec', g))}
+            fields={PRIMARY_PARTITION_RELATED_FORM_FIELDS}
+            model={spec}
+            onChange={this.updateSpec}
           />
         </div>
         <div className="other">
           <H5>Secondary partitioning</H5>
           <AutoForm
-            fields={getPartitionRelatedTuningSpecFormFields(spec, dimensionNames)}
+            fields={getSecondaryPartitionRelatedFormFields(spec, dimensionNames)}
             model={spec}
-            globalAdjustment={adjustTuningConfig}
+            globalAdjustment={adjustForceGuaranteedRollup}
             onChange={this.updateSpec}
           />
         </div>
@@ -3025,7 +2994,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {nonsensicalSingleDimPartitioningMessage}
         </div>
         {this.renderNextBar({
-          disabled: !granularitySpec.segmentGranularity || invalidTuningConfig(tuningConfig),
+          disabled: invalidPartitionConfig(spec),
         })}
       </>
     );
