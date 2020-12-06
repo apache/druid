@@ -42,14 +42,14 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * This class implements {@code grouping_id} function to determine the grouping that a row is part of. Different rows
- * in same result could have different grouping columns when subtotals are used.
+ * This class implements {@code grouping_id} function to determine the grouping that a row is part of. Different result rows
+ * for a query could have different grouping columns when subtotals are used.
  *
- * It takes following arguments
+ * This aggregator factory takes following arguments
  *  - {@code name} - Name of aggregators
- *  - {code groupings} - List of dimensions that user is interested in tracking
+ *  - {@code groupings} - List of dimensions that the user is interested in tracking
  *  - {@code keyDimensions} - The list of grouping dimensions being included in the result row. This list is a subset of
- *                             {@code groupings0}. This argument cannot be passed by the user. It is set by druid engine
+ *                             {@code groupings}. This argument cannot be passed by the user. It is set by druid engine
  *                             when a particular subtotal spec is being processed. Whenever druid engine processes a new
  *                             subtotal spec, engine sets that subtotal spec as new {@code keyDimensions}.
  *
@@ -67,11 +67,11 @@ import java.util.Set;
  *    - On data servers (no change),
  *      - this factory generates {@link LongConstantAggregator} / {@link LongConstantBufferAggregator} / {@link LongConstantVectorAggregator}
  *         with keyDimensions as null
- *      - The aggregators don't actually aggregate anything and their result is not actually used. We could have remove
- *      these aggregators on data servers but that will result in a signature mismatch on broker and data nodes. That would
- *      have required extra handling and would have been error-prone.
+ *      - The aggregators don't actually aggregate anything and their result is not actually used. We could have removed
+ *      these aggregators on data servers but that would result in a signature mismatch on broker and data nodes. That requires
+ *      extra handling and is error-prone.
  *    - On brokers
- *      - Results from data node is already re-processed for each subtotal spec. In this path, we also update the
+ *      - Results from data node is already being re-processed for each subtotal spec. We made modifications in this path to update the
  *      grouping id for each row.
  *
  */

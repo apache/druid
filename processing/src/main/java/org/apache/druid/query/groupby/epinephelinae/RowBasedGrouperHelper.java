@@ -555,13 +555,11 @@ public class RowBasedGrouperHelper
         }
       }
 
-      /**
-       *  KeyDimensionNames are the input column names of dimensions. Its required since aggregators are not aware of the
-       *  output column names.
-       *  As we exclude certain dimensions from the result row, the value for any grouping_id aggregators have to change
-       *  to reflect the new grouping dimensions, that aggregation is being done upon. We will mark the indices which have
-       *  grouping aggregators and update the value for each row at those indices.
-       */
+      // KeyDimensionNames are the input column names of dimensions. Its required since aggregators are not aware of the
+      //  output column names.
+      //  As we exclude certain dimensions from the result row, the value for any grouping_id aggregators have to change
+      //  to reflect the new grouping dimensions, that aggregation is being done upon. We will mark the indices which have
+      //  grouping aggregators and update the value for each row at those indices.
       Set<String> keyDimensionNames = dimsToInclude.stream()
                                                    .map(DimensionSpec::getDimension)
                                                    .collect(Collectors.toSet());
