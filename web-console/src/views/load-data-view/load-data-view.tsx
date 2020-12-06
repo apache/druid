@@ -2577,6 +2577,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               headerAndRowsFromSampleResponse({ sampleResponse }),
               getDimensionMode(spec),
               newRollup,
+              true,
             ),
           );
         }}

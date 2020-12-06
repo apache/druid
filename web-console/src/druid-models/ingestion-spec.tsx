@@ -1364,6 +1364,7 @@ export function invalidPartitionConfig(spec: IngestionSpec): boolean {
 export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
+    label: 'Segment granularity',
     type: 'string',
     suggestions: ['hour', 'day', 'week', 'month', 'year'],
     defined: s => deepGet(s, 'spec.dataSchema.granularitySpec.type') === 'uniform',
@@ -2149,6 +2150,7 @@ export function updateSchemaWithSample(
   headerAndRows: HeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
+  forcePartitionInitialization = false,
 ): IngestionSpec {
   const typeHints = getTypeHintsFromSpec(spec);
 
@@ -2178,7 +2180,10 @@ export function updateSchemaWithSample(
     newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
   }
 
-  if (getSpecType(newSpec) === 'index_parallel') {
+  if (
+    getSpecType(newSpec) === 'index_parallel' &&
+    (!deepGet(newSpec, 'spec.tuningConfig.partitionsSpec') || forcePartitionInitialization)
+  ) {
     newSpec = adjustForceGuaranteedRollup(
       deepSet(
         newSpec,
