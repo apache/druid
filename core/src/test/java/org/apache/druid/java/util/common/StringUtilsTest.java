@@ -178,10 +178,7 @@ public class StringUtilsTest
   {
     Assert.assertEquals("x %% a %%s", StringUtils.encodeForFormat("x % a %s"));
     Assert.assertEquals("", StringUtils.encodeForFormat(""));
-
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("null string");
-    StringUtils.encodeForFormat(null);
+    Assert.assertNull(StringUtils.encodeForFormat(null));
   }
 
   @Test
