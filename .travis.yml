@@ -328,8 +328,8 @@ jobs:
           done
 
     - <<: *integration_batch_index
-      name: "(Compile=openjdk8, Run=openjdk8) batch index, input format, input source, perfect rollup parallel batch index, append ingestion integration test with Indexer"
-      env: TESTNG_GROUPS='-Dgroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,append' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_input_format
       name: "(Compile=openjdk8, Run=openjdk8) input format integration test"
@@ -339,6 +339,10 @@ jobs:
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - <<: *integration_input_format
+      name: "(Compile=openjdk8, Run=openjdk8) input format integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+
     - &integration_input_source
       name: "(Compile=openjdk8, Run=openjdk8) input source integration test"
       jdk: openjdk8
@@ -347,6 +351,10 @@ jobs:
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - <<: *integration_input_source
+      name: "(Compile=openjdk8, Run=openjdk8) input source integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+
     - &integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test"
       jdk: openjdk8
@@ -354,6 +362,10 @@ jobs:
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_perfect_rollup_parallel_batch_index
+      name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
@@ -450,6 +462,10 @@ jobs:
       env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_append_ingestion
+      name: "(Compile=openjdk8, Run=openjdk8) append ingestion integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk8) compaction integration test"
