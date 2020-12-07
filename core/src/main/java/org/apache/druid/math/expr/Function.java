@@ -3281,6 +3281,10 @@ public interface Function
   {
     protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
 
+    /**
+     * Evaluate given expression
+     * By default, 'precision' is 2 and 'hasSpace' is false
+     */
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
@@ -3291,7 +3295,7 @@ public interface Function
         precision = args.get(1).eval(bindings).asInt();
       }
 
-      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem(), true));
+      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem(), false));
     }
 
     @Override

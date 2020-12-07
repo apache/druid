@@ -49,7 +49,7 @@ public class SizeFormatOperatorConversion implements SqlOperatorConversion
   {
     this.sqlFunction = OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(name))
-        .operandTypeChecker(new StringFormatOperandTypeChecker())
+        .operandTypeChecker(new SizeFormatOperandTypeChecker())
         .functionCategory(SqlFunctionCategory.STRING)
         .returnTypeNonNull(SqlTypeName.VARCHAR)
         .build();
@@ -73,20 +73,26 @@ public class SizeFormatOperatorConversion implements SqlOperatorConversion
     return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, name);
   }
 
-  private static class StringFormatOperandTypeChecker implements SqlOperandTypeChecker
+  private static class SizeFormatOperandTypeChecker implements SqlOperandTypeChecker
   {
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
     {
+      boolean isSigatureError = false;
       final RelDataType firstArgType = callBinding.getOperandType(0);
-      if (SqlTypeName.NUMERIC_TYPES.contains(firstArgType.getSqlTypeName())) {
-        return true;
-      } else {
-        if (throwOnFailure) {
-          throw callBinding.newValidationSignatureError();
-        } else {
-          return false;
+      if (!SqlTypeName.NUMERIC_TYPES.contains(firstArgType.getSqlTypeName())) {
+        isSigatureError = true;
+      }
+      if (callBinding.getOperandCount() > 1) {
+        final RelDataType secondArgType = callBinding.getOperandType(1);
+        if (!SqlTypeName.NUMERIC_TYPES.contains(secondArgType.getSqlTypeName())) {
+          isSigatureError = true;
         }
+      }
+      if (isSigatureError && throwOnFailure) {
+        throw callBinding.newValidationSignatureError();
+      } else {
+        return isSigatureError;
       }
     }
 

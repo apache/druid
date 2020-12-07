@@ -455,12 +455,16 @@ public class HumanReadableBytesTest
   @Test
   public void testFormatInDecimal()
   {
-    Assert.assertEquals("1.00 ", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("1.00", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("999.00", HumanReadableBytes.format(999, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("-999.00", HumanReadableBytes.format(-999, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("-1.00 K", HumanReadableBytes.format(-1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
     Assert.assertEquals("1.00 K", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
     Assert.assertEquals("1.00 M", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
     Assert.assertEquals("1.00 G", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
     Assert.assertEquals("1.00 T", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
     Assert.assertEquals("1.00 P", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
+    Assert.assertEquals("-9.22 E", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
     Assert.assertEquals("9.22 E", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL, true));
   }
 

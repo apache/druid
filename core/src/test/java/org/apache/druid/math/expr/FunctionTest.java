@@ -571,7 +571,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatInvalidArgumentLowerBound()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("precision [-1] must be in the range of [0,4]");
+    expectedException.expectMessage("precision [-1] must be in the range of [0,3]");
     assertExpr("binary_byte_format(1024, -1)", "1KiB");
   }
 

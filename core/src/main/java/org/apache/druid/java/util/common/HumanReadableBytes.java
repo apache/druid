@@ -243,14 +243,25 @@ public class HumanReadableBytes
     if (precision < 0 || precision > 3) {
       throw new IAE("precision [%d] must be in the range of [0,3]", precision);
     }
-    String pattern = "%." + precision + (hasSpace ? "f %s%s" : "f%s%s");
+
     switch (unitSystem) {
-      case BINARY_BYTE:
+      case BINARY_BYTE: {
+        String pattern = "%." + precision + (hasSpace ? "f %s%s" : "f%s%s");
         return BinaryFormatter.format(bytes, pattern, "B");
-      case DECIMAL_BYTE:
+      }
+      case DECIMAL_BYTE: {
+        String pattern = "%." + precision + (hasSpace ? "f %s%s" : "f%s%s");
         return DecimalFormatter.format(bytes, pattern, "B");
-      case DECIMAL:
-        return DecimalFormatter.format(bytes, pattern, "");
+      }
+      case DECIMAL: {
+        /**
+         * For the case of a number lower than 1000 and format of UnitSystem.DECIMAL
+         * there's no unit suffix at the end of result,
+         * so we have to handle the extra space introduced by 'hasSpace' argument
+         */
+        String pattern = "%." + precision + (hasSpace && (bytes >= 1000 || bytes <= -1000) ? "f %s%s" : "f%s%s");
+        return DecimalFormatter.format(bytes, pattern, "").trim();
+      }
       default:
         throw new IAE("Unkonwn unit system[%s]", unitSystem);
     }
@@ -298,7 +309,7 @@ public class HumanReadableBytes
        * handle number between (-1000, 1000) first to simply further processing
        */
       if (bytes > -1000 && bytes < 1000) {
-        return StringUtils.format(pattern, (double) bytes, "", suffix);
+        return StringUtils.format(pattern, (double) bytes, "", suffix).trim();
       }
 
       /**

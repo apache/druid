@@ -16289,6 +16289,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
   public void testSizeFormatFunction() throws Exception
   {
     testQuery(
@@ -16303,6 +16304,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
+                //
+                // NOTE: the first expression BINARY_BYTE_FORMAT(45678) in SQL is calculated during SQL parse phase,
+                // so the converted Druid native query is its result intead of the raw function call
+                //
                 .virtualColumns(expressionVirtualColumn("v0", "'44.61KiB'", ValueType.STRING),
                                 expressionVirtualColumn("v1", "binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
                                 expressionVirtualColumn("v2", "binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
@@ -16324,6 +16329,54 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          "24.69K" // decimal format, m1(2.0) * 12345 / 1000,
             }
         )
+    );
+  }
+
+  @Test
+  public void testSizeFormatFunctionExceptionWithWrongNumberType() throws Exception
+  {
+    this.expectedException.expect(ValidationException.class);
+    this.expectedException.expectMessage("Supported form(s): BINARY_BYTE_FORMAT(Number, [Precision])");
+    testQuery(
+        "SELECT "
+        + "BINARY_BYTE_FORMAT('45678')",
+        Collections.emptyList(),
+        Collections.emptyList()
+    );
+  }
+
+  @Test
+  public void testSizeFormatFunctionWithWrongPrecisionType() throws Exception
+  {
+    this.expectedException.expect(ValidationException.class);
+    this.expectedException.expectMessage("Supported form(s): BINARY_BYTE_FORMAT(Number, [Precision])");
+    testQuery(
+        "SELECT "
+        + "BINARY_BYTE_FORMAT(45678, '2')",
+        Collections.emptyList(),
+        Collections.emptyList()
+    );
+  }
+
+  @Test
+  public void testSizeFormatFunctionWithInvalidNumberOfArguments() throws Exception
+  {
+    this.expectedException.expect(ValidationException.class);
+
+    /**
+     * frankly speaking, the exception message thrown here is a little bit confusion
+     * it says it's expecting 1 arguments but acturally BINARY_BYTE_FORMAT supports 1 or 2 arguments
+     *
+     * The message is return from {@link org.apache.calcite.sql.validate.SqlValidatorImpl#handleUnresolvedFunction},
+     * and we can see from its implementation that it gets the min number arguments to format the exception message.
+     *
+     */
+    this.expectedException.expectMessage("Invalid number of arguments to function 'BINARY_BYTE_FORMAT'. Was expecting 1 arguments");
+    testQuery(
+        "SELECT "
+        + "BINARY_BYTE_FORMAT(45678, 2, 1)",
+        Collections.emptyList(),
+        Collections.emptyList()
     );
   }
 
