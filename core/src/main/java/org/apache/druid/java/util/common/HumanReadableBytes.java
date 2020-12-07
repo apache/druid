@@ -236,32 +236,21 @@ public class HumanReadableBytes
    * @param bytes      input value. Negative value is also allowed
    * @param precision  [0,3]
    * @param unitSystem which unit system is adopted to format the input value, see {@link UnitSystem}
-   * @param hasSpace   if it's true, there's an extra space between the number and the unit suffix
    */
-  public static String format(long bytes, int precision, UnitSystem unitSystem, boolean hasSpace)
+  public static String format(long bytes, int precision, UnitSystem unitSystem)
   {
     if (precision < 0 || precision > 3) {
       throw new IAE("precision [%d] must be in the range of [0,3]", precision);
     }
 
+    String pattern = "%." + precision + "f%s%s";
     switch (unitSystem) {
-      case BINARY_BYTE: {
-        String pattern = "%." + precision + (hasSpace ? "f %s%s" : "f%s%s");
+      case BINARY_BYTE:
         return BinaryFormatter.format(bytes, pattern, "B");
-      }
-      case DECIMAL_BYTE: {
-        String pattern = "%." + precision + (hasSpace ? "f %s%s" : "f%s%s");
+      case DECIMAL_BYTE:
         return DecimalFormatter.format(bytes, pattern, "B");
-      }
-      case DECIMAL: {
-        /**
-         * For the case of a number lower than 1000 and format of UnitSystem.DECIMAL
-         * there's no unit suffix at the end of result,
-         * so we have to handle the extra space introduced by 'hasSpace' argument
-         */
-        String pattern = "%." + precision + (hasSpace && (bytes >= 1000 || bytes <= -1000) ? "f %s%s" : "f%s%s");
+      case DECIMAL:
         return DecimalFormatter.format(bytes, pattern, "").trim();
-      }
       default:
         throw new IAE("Unkonwn unit system[%s]", unitSystem);
     }

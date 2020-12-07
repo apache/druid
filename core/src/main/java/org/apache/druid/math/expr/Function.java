@@ -3295,7 +3295,7 @@ public interface Function
         precision = args.get(1).eval(bindings).asInt();
       }
 
-      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem(), false));
+      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem()));
     }
 
     @Override
