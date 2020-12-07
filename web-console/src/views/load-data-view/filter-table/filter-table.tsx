@@ -42,19 +42,11 @@ export interface FilterTableProps {
   columnFilter: string;
   dimensionFilters: DruidFilter[];
   selectedFilterName: string | undefined;
-  onShowGlobalFilter: () => void;
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
 
 export const FilterTable = React.memo(function FilterTable(props: FilterTableProps) {
-  const {
-    sampleData,
-    columnFilter,
-    dimensionFilters,
-    selectedFilterName,
-    onShowGlobalFilter,
-    onFilterSelect,
-  } = props;
+  const { sampleData, columnFilter, dimensionFilters, selectedFilterName, onFilterSelect } = props;
 
   return (
     <ReactTable
@@ -73,11 +65,11 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
         return {
           Header: (
             <div
-              className={classNames('clickable')}
+              className={classNames({ clickable: !timestamp })}
               onClick={() => {
-                if (timestamp) {
-                  onShowGlobalFilter();
-                } else if (filter) {
+                if (timestamp) return;
+
+                if (filter) {
                   onFilterSelect(filter, filterIndex);
                 } else {
                   onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);

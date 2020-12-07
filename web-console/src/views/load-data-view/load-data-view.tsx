@@ -60,6 +60,7 @@ import {
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
   FILTER_FIELDS,
+  FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
   getDimensionSpecName,
   getMetricSpecName,
@@ -341,7 +342,6 @@ export interface LoadDataViewState {
   filterQueryState: QueryState<HeaderAndRows>;
   selectedFilterIndex: number;
   selectedFilter?: DruidFilter;
-  showGlobalFilter: boolean;
   newFilterValue?: Record<string, any>;
 
   // for schema
@@ -399,7 +399,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       // for filter
       filterQueryState: QueryState.INIT,
       selectedFilterIndex: -1,
-      showGlobalFilter: false,
 
       // for dimensions
       schemaQueryState: QueryState.INIT,
@@ -2063,7 +2062,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   });
 
   renderFilterStep() {
-    const { spec, columnFilter, filterQueryState, selectedFilter, showGlobalFilter } = this.state;
+    const { spec, columnFilter, filterQueryState, selectedFilter } = this.state;
     const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
 
     let mainFill: JSX.Element | string = '';
@@ -2086,7 +2085,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               columnFilter={columnFilter}
               dimensionFilters={dimensionFilters}
               selectedFilterName={filterTableSelectedColumnName(data, selectedFilter)}
-              onShowGlobalFilter={this.onShowGlobalFilter}
               onFilterSelect={this.onFilterSelect}
             />
           )}
@@ -2103,17 +2101,29 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main">{mainFill}</div>
         <div className="control">
           <FilterMessage />
-          {!showGlobalFilter && this.renderColumnFilterControls()}
-          {!selectedFilter && this.renderGlobalFilterControls()}
+          {!selectedFilter && (
+            <>
+              <AutoForm fields={FILTERS_FIELDS} model={spec} onChange={this.updateSpecPreview} />
+              {this.renderApplyButtonBar(filterQueryState, undefined)}
+              <FormGroup>
+                <Button
+                  text="Add column filter"
+                  onClick={() => {
+                    this.setState({
+                      selectedFilter: { type: 'selector', dimension: '', value: '' },
+                      selectedFilterIndex: -1,
+                    });
+                  }}
+                />
+              </FormGroup>
+            </>
+          )}
+          {this.renderColumnFilterControls()}
         </div>
         {this.renderNextBar({})}
       </>
     );
   }
-
-  private onShowGlobalFilter = () => {
-    this.setState({ showGlobalFilter: true });
-  };
 
   private onFilterSelect = (filter: DruidFilter, index: number) => {
     this.setState({
@@ -2124,6 +2134,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderColumnFilterControls() {
     const { spec, selectedFilter, selectedFilterIndex } = this.state;
+    if (!selectedFilter) return;
 
     const close = () => {
       this.setState({
@@ -2132,129 +2143,48 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
     };
 
-    if (selectedFilter) {
-      return (
-        <div className="edit-controls">
-          <AutoForm
-            fields={FILTER_FIELDS}
-            model={selectedFilter}
-            onChange={f => this.setState({ selectedFilter: f })}
-            showCustom={f => !oneOf(f.type, 'selector', 'in', 'regex', 'like', 'not')}
+    return (
+      <div className="edit-controls">
+        <AutoForm
+          fields={FILTER_FIELDS}
+          model={selectedFilter}
+          onChange={f => this.setState({ selectedFilter: f })}
+          showCustom={f => !oneOf(f.type, 'selector', 'in', 'regex', 'like', 'not')}
+        />
+        <div className="control-buttons">
+          <Button
+            text="Apply"
+            intent={Intent.PRIMARY}
+            onClick={() => {
+              const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
+              const newFilter = joinFilter(
+                deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter),
+              );
+              this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
+              close();
+            }}
           />
-          <div className="control-buttons">
+          <Button text="Cancel" onClick={close} />
+          {selectedFilterIndex !== -1 && (
             <Button
-              text="Apply"
-              intent={Intent.PRIMARY}
+              className="right"
+              icon={IconNames.TRASH}
+              intent={Intent.DANGER}
               onClick={() => {
                 const curFilter = splitFilter(
                   deepGet(spec, 'spec.dataSchema.transformSpec.filter'),
                 );
                 const newFilter = joinFilter(
-                  deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter),
+                  deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
                 );
                 this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
                 close();
               }}
             />
-            <Button text="Cancel" onClick={close} />
-            {selectedFilterIndex !== -1 && (
-              <Button
-                className="right"
-                icon={IconNames.TRASH}
-                intent={Intent.DANGER}
-                onClick={() => {
-                  const curFilter = splitFilter(
-                    deepGet(spec, 'spec.dataSchema.transformSpec.filter'),
-                  );
-                  const newFilter = joinFilter(
-                    deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
-                  );
-                  this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-                  close();
-                }}
-              />
-            )}
-          </div>
+          )}
         </div>
-      );
-    } else {
-      return (
-        <FormGroup>
-          <Button
-            text="Add column filter"
-            onClick={() => {
-              this.setState({
-                selectedFilter: { type: 'selector', dimension: '', value: '' },
-                selectedFilterIndex: -1,
-              });
-            }}
-          />
-        </FormGroup>
-      );
-    }
-  }
-
-  renderGlobalFilterControls() {
-    const { spec, showGlobalFilter, newFilterValue } = this.state;
-    const intervals: string[] = deepGet(spec, 'spec.dataSchema.granularitySpec.intervals');
-    const { restFilter } = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
-    const hasGlobalFilter = Boolean(intervals || restFilter);
-
-    if (showGlobalFilter) {
-      return (
-        <div className="edit-controls">
-          <AutoForm
-            fields={[
-              {
-                name: 'spec.dataSchema.granularitySpec.intervals',
-                label: 'Time intervals',
-                type: 'string-array',
-                placeholder: 'ex: 2018-01-01/2018-06-01',
-                info: <>A comma separated list of intervals for the raw data being ingested.</>,
-              },
-            ]}
-            model={spec}
-            onChange={this.updateSpec}
-          />
-          <FormGroup label="Extra filter">
-            <JsonInput
-              value={newFilterValue}
-              onChange={f => this.setState({ newFilterValue: f })}
-              height="200px"
-            />
-          </FormGroup>
-          <div className="control-buttons">
-            <Button
-              text="Apply"
-              intent={Intent.PRIMARY}
-              onClick={() => {
-                const curFilter = splitFilter(
-                  deepGet(spec, 'spec.dataSchema.transformSpec.filter'),
-                );
-                const newFilter = joinFilter(deepSet(curFilter, `restFilter`, newFilterValue));
-                this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-                this.setState({ showGlobalFilter: false, newFilterValue: undefined });
-              }}
-            />
-            <Button text="Cancel" onClick={() => this.setState({ showGlobalFilter: false })} />
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <FormGroup>
-          <Button
-            text={`${hasGlobalFilter ? 'Edit' : 'Add'} global filter`}
-            onClick={() =>
-              this.setState({
-                showGlobalFilter: true,
-                newFilterValue: restFilter,
-              })
-            }
-          />
-        </FormGroup>
-      );
-    }
+      </div>
+    );
   }
 
   // ==================================================================
@@ -2479,7 +2409,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   },
                 ]}
                 model={spec}
-                onChange={s => this.updateSpecPreview(s)}
+                onChange={this.updateSpecPreview}
                 onFinalize={this.applyPreviewSpec}
               />
               <FormGroup>

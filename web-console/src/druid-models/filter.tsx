@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
-import { Field } from '../components';
+import React from 'react';
+
+import { ExternalLink, Field } from '../components';
+import { getLink } from '../links';
 import { deepGet, EMPTY_ARRAY, oneOf } from '../utils';
+
+import { IngestionSpec } from './ingestion-spec';
 
 export type DruidFilter = Record<string, any>;
 
@@ -30,7 +35,9 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
   const inputAndFilters: DruidFilter[] = filter
     ? filter.type === 'and' && Array.isArray(filter.fields)
       ? filter.fields
-      : [filter]
+      : filter.type !== 'true'
+      ? [filter]
+      : EMPTY_ARRAY
     : EMPTY_ARRAY;
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(
     f => typeof f.dimension === 'string',
@@ -117,5 +124,45 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
     type: 'string',
     defined: (df: DruidFilter) =>
       df.type === 'not' && oneOf(deepGet(df, 'field.type'), 'regex', 'like'),
+  },
+];
+
+export const FILTERS_FIELDS: Field<IngestionSpec>[] = [
+  {
+    name: 'spec.dataSchema.granularitySpec.intervals',
+    label: 'Time intervals',
+    type: 'string-array',
+    placeholder: 'ex: 2020-01-01/2020-06-01',
+    info: (
+      <>
+        <p>A comma separated list of intervals for the raw data being ingested.</p>
+        <p>
+          Explicitly specifying the list of intervals contained in the data will make some ingestion
+          jobs run faster.
+        </p>
+      </>
+    ),
+  },
+  {
+    name: 'spec.dataSchema.transformSpec.filter',
+    label: 'Filter',
+    type: 'json',
+    height: '350px',
+    placeholder: '{ "type": "true" }',
+    info: (
+      <>
+        <p>
+          A Druid{' '}
+          <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>
+            JSON filter expression
+          </ExternalLink>{' '}
+          to apply to the data.
+        </p>
+        <p>
+          Note that only the value that match the filter will be included. If you want to remove
+          some data values you must negate the filter.
+        </p>
+      </>
+    ),
   },
 ];
