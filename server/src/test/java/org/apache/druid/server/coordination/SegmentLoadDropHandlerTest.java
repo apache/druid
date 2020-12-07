@@ -31,9 +31,7 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.loading.CacheTestSegmentLoader;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.loading.*;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -310,33 +308,6 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
     Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
-
-    segmentLoadDropHandler.stop();
-  }
-
-  @Test
-  public void testSegmentLoading3() throws Exception
-  {
-    segmentLoadDropHandler.start();
-    String dataSource = "test";
-    String version = "1";
-    String interval = "P1d/2011-04-01";
-
-    final DataSegment segment = makeSegment(dataSource, version, Intervals.of(interval));
-
-    // manually create a local segment under localStorageFolder
-    final File localSegmentFile = new File(
-            infoDir,
-            dataSource + interval + version + "/0"
-    );
-    localSegmentFile.mkdirs();
-    final File indexZip = new File(localSegmentFile, "index.zip");
-    indexZip.createNewFile();
-    final File downloadStartMarker = new File(localSegmentFile, "downloadStartMarker");
-    downloadStartMarker.createNewFile();
-
-    segmentLoadDropHandler.addSegment(segment, DataSegmentChangeCallback.NOOP);
-    Assert.assertFalse(downloadStartMarker.exists());
 
     segmentLoadDropHandler.stop();
   }
