@@ -27,13 +27,16 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
+import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
 {
@@ -135,17 +138,13 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   }
 
   @SuppressWarnings("unchecked")
-  public int countRows(String dataSource, String interval)
+  public int countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .aggregators(
-                                      ImmutableList.of(
-                                          new LongSumAggregatorFactory("rows", "count")
-                                      )
-                                  )
+                                  .aggregators(ImmutableList.of(countAggregator.apply("rows")))
                                   .granularity(Granularities.ALL)
-                                  .intervals(interval)
+                                  .intervals(Collections.singletonList(interval))
                                   .build();
 
     List<Map<String, Object>> results = queryClient.query(getQueryURL(broker), query);
