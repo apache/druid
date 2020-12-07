@@ -259,6 +259,7 @@ public class TierSelectorStrategyTest
     Assert.assertEquals(strategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
     Assert.assertEquals(strategy.pick(EasyMock.createMock(Query.class), servers, EasyMock.createMock(DataSegment.class)), p0);
     ServerSelectorStrategy defaultDeprecatedServerSelectorStrategy = new ServerSelectorStrategy() {
+      @Override
       public <T> List<QueryableDruidServer> pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
           int numServersToPick)
       {
