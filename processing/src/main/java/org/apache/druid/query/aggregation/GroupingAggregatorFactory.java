@@ -42,7 +42,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * This class implements {@code grouping_id} function to determine the grouping that a row is part of. Different result rows
+ * This class implements {@code grouping} function to determine the grouping that a row is part of. Different result rows
  * for a query could have different grouping columns when subtotals are used.
  *
  * This aggregator factory takes following arguments
@@ -56,9 +56,9 @@ import java.util.Set;
  *  When key dimensions are updated, {@code value} is updated as well. How the value is determined is captured
  *  at {@link #groupingId(List, Set)}.
  *
- *  since grouping_id has to be calculated only once, it could have been implemented as a virtual function or
+ *  since grouping has to be calculated only once, it could have been implemented as a virtual function or
  *  post-aggregator etc. We modelled it as an aggregation operator so that its output can be used in a post-aggregator.
- *  Calcite too models grouping_id as an aggregation operator.
+ *  Calcite too models grouping function as an aggregation operator.
  *  Since it is a non-trivial special aggregation, implementing it required changes in core druid engine to work. There
  *  were few approaches. We chose the approach that required least changes in core druid.
  *  Refer to https://github.com/apache/druid/pull/10518#discussion_r532941216 for more details.
