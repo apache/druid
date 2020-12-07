@@ -21,7 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { DruidFilter } from '../../../druid-models';
+import { DruidFilter, getFilterDimension } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
@@ -55,7 +55,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const timestamp = columnName === '__time';
-        const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
+        const filterIndex = dimensionFilters.findIndex(f => getFilterDimension(f) === columnName);
         const filter = dimensionFilters[filterIndex];
 
         const columnClassName = classNames({

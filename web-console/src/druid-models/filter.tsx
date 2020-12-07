@@ -39,10 +39,13 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
       ? [filter]
       : EMPTY_ARRAY
     : EMPTY_ARRAY;
+
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(
-    f => typeof f.dimension === 'string',
+    f => typeof getFilterDimension(f) === 'string',
   );
-  const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
+  const restFilters: DruidFilter[] = inputAndFilters.filter(
+    f => typeof getFilterDimension(f) !== 'string',
+  );
 
   return {
     dimensionFilters,
@@ -64,6 +67,12 @@ export function joinFilter(
   if (!newFields.length) return;
   if (newFields.length === 1) return newFields[0];
   return { type: 'and', fields: newFields };
+}
+
+export function getFilterDimension(filter: DruidFilter): string | undefined {
+  if (typeof filter.dimension === 'string') return filter.dimension;
+  if (filter.type === 'not' && filter.field) return getFilterDimension(filter.field);
+  return;
 }
 
 export const FILTER_FIELDS: Field<DruidFilter>[] = [
