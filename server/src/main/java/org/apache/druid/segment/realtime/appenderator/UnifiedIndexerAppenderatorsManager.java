@@ -261,8 +261,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Iterable<Interval> intervals
   )
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    return getBundle(analysis).getWalker().getQueryRunnerForIntervals(query, intervals);
+    return getBundle(query).getWalker().getQueryRunnerForIntervals(query, intervals);
   }
 
   @Override
@@ -271,12 +270,14 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Iterable<SegmentDescriptor> specs
   )
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    return getBundle(analysis).getWalker().getQueryRunnerForSegments(query, specs);
+    return getBundle(query).getWalker().getQueryRunnerForSegments(query, specs);
   }
 
-  private DatasourceBundle getBundle(final DataSourceAnalysis analysis)
+  @VisibleForTesting
+  <T> DatasourceBundle getBundle(final Query<T> query)
   {
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
     final TableDataSource table =
         analysis.getBaseTableDataSource()
                 .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
