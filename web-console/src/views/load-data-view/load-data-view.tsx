@@ -71,6 +71,7 @@ import {
   METRIC_SPEC_FIELDS,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
+  settingIntervalsWouldSpeedUpIngestion,
   TIMESTAMP_SPEC_FIELDS,
   TimestampSpec,
   Transform,
@@ -761,7 +762,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </div>
         </div>
         <div className="control">
-          {welcomeMessage && <Callout className="intro">{welcomeMessage}</Callout>}
+          {welcomeMessage && (
+            <FormGroup>
+              <Callout>{welcomeMessage}</Callout>
+            </FormGroup>
+          )}
           {this.renderWelcomeStepControls()}
           {!isEmptyIngestionSpec(spec) && (
             <Button icon={IconNames.RESET} text="Reset spec" onClick={this.handleResetConfirm} />
@@ -2856,48 +2861,50 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     ) {
       const firstDimensionName = dimensionNames[0];
       nonsensicalSingleDimPartitioningMessage = (
-        <Callout intent={Intent.WARNING}>
-          <p>Your partitioning and sorting configuration does not make sense.</p>
-          <p>
-            For best performance the first dimension in your schema (
-            <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted on,
-            should match the partitioning dimension (<Code>{partitionDimension}</Code>).
-          </p>
-          <p>
-            <Button
-              intent={Intent.WARNING}
-              text={`Put '${partitionDimension}' first in the dimensions list`}
-              onClick={() => {
-                this.updateSpec(
-                  deepSet(
-                    spec,
-                    'spec.dataSchema.dimensionsSpec.dimensions',
-                    moveElement(
-                      dimensions,
-                      dimensions.findIndex(d => getDimensionSpecName(d) === partitionDimension),
-                      0,
+        <FormGroup>
+          <Callout intent={Intent.WARNING}>
+            <p>Your partitioning and sorting configuration does not make sense.</p>
+            <p>
+              For best performance the first dimension in your schema (
+              <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted
+              on, should match the partitioning dimension (<Code>{partitionDimension}</Code>).
+            </p>
+            <p>
+              <Button
+                intent={Intent.WARNING}
+                text={`Put '${partitionDimension}' first in the dimensions list`}
+                onClick={() => {
+                  this.updateSpec(
+                    deepSet(
+                      spec,
+                      'spec.dataSchema.dimensionsSpec.dimensions',
+                      moveElement(
+                        dimensions,
+                        dimensions.findIndex(d => getDimensionSpecName(d) === partitionDimension),
+                        0,
+                      ),
                     ),
-                  ),
-                );
-              }}
-            />
-          </p>
-          <p>
-            <Button
-              intent={Intent.WARNING}
-              text={`Partition on '${firstDimensionName}' instead`}
-              onClick={() => {
-                this.updateSpec(
-                  deepSet(
-                    spec,
-                    'spec.tuningConfig.partitionsSpec.partitionDimension',
-                    firstDimensionName,
-                  ),
-                );
-              }}
-            />
-          </p>
-        </Callout>
+                  );
+                }}
+              />
+            </p>
+            <p>
+              <Button
+                intent={Intent.WARNING}
+                text={`Partition on '${firstDimensionName}' instead`}
+                onClick={() => {
+                  this.updateSpec(
+                    deepSet(
+                      spec,
+                      'spec.tuningConfig.partitionsSpec.partitionDimension',
+                      firstDimensionName,
+                    ),
+                  );
+                }}
+              />
+            </p>
+          </Callout>
+        </FormGroup>
       );
     }
 
@@ -2923,6 +2930,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="control">
           <PartitionMessage />
           {nonsensicalSingleDimPartitioningMessage}
+          {settingIntervalsWouldSpeedUpIngestion(spec) && (
+            <FormGroup>
+              <Callout icon={IconNames.LIGHTBULB}>
+                You can make this ingestion run slightly faster by explicitly specifying the time
+                intervals for this dataset from the{' '}
+                <a onClick={() => this.updateStep('filter')}>Filter step</a>.
+              </Callout>
+            </FormGroup>
+          )}
         </div>
         {this.renderNextBar({
           disabled: invalidPartitionConfig(spec),

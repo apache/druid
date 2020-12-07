@@ -1387,7 +1387,7 @@ export function getSecondaryPartitionRelatedFormFields(
   const specType = getSpecType(spec);
   switch (specType) {
     case 'index_parallel':
-      const parallelFields: Field<IngestionSpec>[] = [
+      return [
         {
           name: 'spec.tuningConfig.partitionsSpec.type',
           label: 'Partitioning type',
@@ -1557,28 +1557,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
       ];
 
-      if (oneOf(deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim')) {
-        parallelFields.push({
-          name: 'spec.dataSchema.granularitySpec.intervals',
-          label: 'Time intervals',
-          type: 'string-array',
-          placeholder: 'ex: 2018-01-01/2018-06-01',
-          hideInMore: true,
-          info: (
-            <>
-              <p>A comma separated list of intervals for the raw data being ingested.</p>
-              <p>
-                This list is used to determine the shards that will be created. If it is not
-                specified then then an additional job will run to automatically determine the data
-                intervals used.
-              </p>
-            </>
-          ),
-        });
-      }
-
-      return parallelFields;
-
     case 'kafka':
     case 'kinesis':
       return [
@@ -1600,6 +1578,13 @@ export function getSecondaryPartitionRelatedFormFields(
   }
 
   throw new Error(`unknown spec type ${specType}`);
+}
+
+export function settingIntervalsWouldSpeedUpIngestion(spec: IngestionSpec): boolean {
+  return (
+    oneOf(deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim') &&
+    !deepGet(spec, 'spec.dataSchema.granularitySpec.intervals')
+  );
 }
 
 const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
