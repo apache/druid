@@ -69,7 +69,6 @@ public class DruidMetrics
     } else {
       queryMetrics = queryMetricsFactory.makeMetrics(query);
     }
-    queryMetrics.context(query);
     queryMetrics.remoteAddress(remoteAddr);
     return queryMetrics;
   }

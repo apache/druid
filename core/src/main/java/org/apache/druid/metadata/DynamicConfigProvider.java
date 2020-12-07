@@ -17,28 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.metadata;
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Common place to keep all kafka consumer configs
+ * This is used to get [secure] configuration in various places in an extensible way.
  */
-public class KafkaConsumerConfigs
+@ExtensionPoint
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MapStringDynamicConfigProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "mapString", value = MapStringDynamicConfigProvider.class),
+})
+public interface DynamicConfigProvider<T>
 {
-
-  public static Map<String, Object> getConsumerProperties()
-  {
-    final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
-    return props;
-  }
-
+  Map<String, T> getConfig();
 }

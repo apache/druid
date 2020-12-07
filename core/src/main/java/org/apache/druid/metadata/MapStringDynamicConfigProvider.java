@@ -17,28 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.metadata;
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
-import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Common place to keep all kafka consumer configs
- */
-public class KafkaConsumerConfigs
+public class MapStringDynamicConfigProvider implements DynamicConfigProvider<String>
 {
+  private final ImmutableMap<String, String> config;
 
-  public static Map<String, Object> getConsumerProperties()
+  @JsonCreator
+  public MapStringDynamicConfigProvider(
+      @JsonProperty("config") Map<String, String> config
+  )
   {
-    final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
-    return props;
+    this.config = ImmutableMap.copyOf(config);
   }
 
+
+  @Override
+  @JsonProperty
+  public Map<String, String> getConfig()
+  {
+    return config;
+  }
 }

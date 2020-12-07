@@ -17,28 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.segment;
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
-
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * Common place to keep all kafka consumer configs
- */
-public class KafkaConsumerConfigs
+public interface DimensionHandlerProvider
+    <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
 {
-
-  public static Map<String, Object> getConsumerProperties()
-  {
-    final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
-    return props;
-  }
-
+  DimensionHandler<EncodedType, EncodedKeyComponentType, ActualType> get(String dimensionName);
 }

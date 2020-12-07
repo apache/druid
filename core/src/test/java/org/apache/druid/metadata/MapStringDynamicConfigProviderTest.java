@@ -17,28 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.metadata;
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * Common place to keep all kafka consumer configs
- */
-public class KafkaConsumerConfigs
+public class MapStringDynamicConfigProviderTest
 {
-
-  public static Map<String, Object> getConsumerProperties()
+  @Test
+  public void testSerde() throws Exception
   {
-    final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
-    return props;
-  }
+    DynamicConfigProvider<String> original = new MapStringDynamicConfigProvider(ImmutableMap.of("k", "v"));
 
+    ObjectMapper jsonMapper = new ObjectMapper();
+
+    MapStringDynamicConfigProvider recreated = (MapStringDynamicConfigProvider) jsonMapper.readValue(
+        jsonMapper.writeValueAsString(original),
+        DynamicConfigProvider.class
+    );
+
+    Assert.assertEquals(1, recreated.getConfig().size());
+    Assert.assertEquals("v", recreated.getConfig().get("k"));
+  }
 }

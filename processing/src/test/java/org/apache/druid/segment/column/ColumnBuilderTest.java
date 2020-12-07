@@ -17,28 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.segment.column;
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * Common place to keep all kafka consumer configs
- */
-public class KafkaConsumerConfigs
+public class ColumnBuilderTest
 {
-
-  public static Map<String, Object> getConsumerProperties()
+  @Test
+  public void testSetComplexTypeName()
   {
-    final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
-    return props;
-  }
+    ColumnHolder holder = new ColumnBuilder()
+        .setType(ValueType.COMPLEX)
+        .setComplexTypeName("testType")
+        .build();
 
+    Assert.assertEquals("testType", holder.getCapabilities().getComplexTypeName());
+
+  }
 }
