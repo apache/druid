@@ -116,24 +116,24 @@ function validateConnectLocalData(preview: string) {
     'Druid row: {' +
       '"__time":1442018818771' +
       ',"channel":"#en.wikipedia"' +
-      ',"cityName":null' +
       ',"comment":"added project"' +
-      ',"countryIsoCode":null' +
-      ',"countryName":null' +
       ',"isAnonymous":"false"' +
       ',"isMinor":"false"' +
       ',"isNew":"false"' +
       ',"isRobot":"false"' +
       ',"isUnpatrolled":"false"' +
-      ',"metroCode":null' +
       ',"namespace":"Talk"' +
       ',"page":"Talk:Oswald Tilghman"' +
-      ',"regionIsoCode":null' +
-      ',"regionName":null' +
       ',"user":"GELongstreet"' +
       ',"added":"36"' +
       ',"deleted":"0"' +
       ',"delta":"36"' +
+      ',"cityName":null' +
+      ',"countryIsoCode":null' +
+      ',"countryName":null' +
+      ',"regionIsoCode":null' +
+      ',"regionName":null' +
+      ',"metroCode":null' +
       '}',
   );
   const lastLine = lines[lines.length - 1];
@@ -141,24 +141,24 @@ function validateConnectLocalData(preview: string) {
     'Druid row: {' +
       '"__time":1442020314823' +
       ',"channel":"#en.wikipedia"' +
-      ',"cityName":null' +
       ',"comment":"/* History */[[WP:AWB/T|Typo fixing]], [[WP:AWB/T|typo(s) fixed]]: nothern → northern using [[Project:AWB|AWB]]"' +
-      ',"countryIsoCode":null' +
-      ',"countryName":null' +
       ',"isAnonymous":"false"' +
       ',"isMinor":"true"' +
       ',"isNew":"false"' +
       ',"isRobot":"false"' +
       ',"isUnpatrolled":"false"' +
-      ',"metroCode":null' +
       ',"namespace":"Main"' +
       ',"page":"Hapoel Katamon Jerusalem F.C."' +
-      ',"regionIsoCode":null' +
-      ',"regionName":null' +
       ',"user":"The Quixotic Potato"' +
       ',"added":"1"' +
       ',"deleted":"0"' +
       ',"delta":"1"' +
+      ',"cityName":null' +
+      ',"countryIsoCode":null' +
+      ',"countryName":null' +
+      ',"regionIsoCode":null' +
+      ',"regionName":null' +
+      ',"metroCode":null' +
       '}',
   );
 }
