@@ -1144,6 +1144,10 @@ unix_timestamp
 value1
 value2
 valueOf
+IEC
+binary_byte_format
+decimal_byte_format
+decimal_format
  - ../docs/misc/papers-and-talks.md
 RADStack
  - ../docs/operations/api-reference.md
@@ -1542,6 +1546,7 @@ total_size
 useApproximateCountDistinct
 useApproximateTopN
 wikipedia
+IEC
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2
