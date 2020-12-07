@@ -130,7 +130,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   /**
-   * If there is 'downloadStartMarker' existed in localStorageDir, then the segments files may be damaged.
+   * If there is 'downloadStartMarker' existed in localStorageDir, the segments files might be damaged.
    * Because each time, Druid will delete the 'downloadStartMarker' file after pulling and unzip the segments from DeepStorage.
    * downloadStartMarker existed here may mean something error during download segments and the segment files may be damaged.
    */
@@ -170,6 +170,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return factory.factorize(segment, segmentFiles, lazy);
   }
 
+  /**
+   * Make sure segments files in loc is intact, otherwise function like loadSegments will failed because of segment files is damaged.
+   * @param segment
+   * @return
+   * @throws SegmentLoadingException
+   */
   @Override
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
