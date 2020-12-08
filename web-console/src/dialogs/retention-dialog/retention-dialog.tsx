@@ -47,7 +47,7 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
   const [historyQueryState] = useQueryManager<string, any[]>({
     processQuery: async datasource => {
       const historyResp = await Api.instance.get(
-        `/druid/coordinator/v1/rules/${datasource}/history`,
+        `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history`,
       );
       return historyResp.data;
     },

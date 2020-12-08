@@ -56,6 +56,7 @@ import { FormGroupWithInfo } from '../../components/form-group-with-info/form-gr
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addTimestampTransform,
+  adjustId,
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
@@ -3130,7 +3131,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'spec.dataSchema.dataSource',
                 label: 'Datasource name',
                 type: 'string',
-                info: <>This is the name of the datasource (table) in Druid.</>,
+                valueAdjustment: d => (typeof d === 'string' ? adjustId(d) : d),
+                info: (
+                  <>
+                    <p>This is the name of the datasource (table) in Druid.</p>
+                    <p>
+                      The datasource name can not start with a dot <Code>.</Code>, include slashes{' '}
+                      <Code>/</Code>, or have whitespace other than space.
+                    </p>
+                  </>
+                ),
               },
               {
                 name: 'spec.ioConfig.appendToExisting',
@@ -3216,9 +3226,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
   private getSupervisorJson = async (): Promise<void> => {
     const { initSupervisorId } = this.props;
+    if (!initSupervisorId) return;
 
     try {
-      const resp = await Api.instance.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
+      const resp = await Api.instance.get(
+        `/druid/indexer/v1/supervisor/${Api.encodePath(initSupervisorId)}`,
+      );
       this.updateSpec(cleanSpec(resp.data));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
@@ -3232,9 +3245,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private getTaskJson = async (): Promise<void> => {
     const { initTaskId } = this.props;
+    if (!initTaskId) return;
 
     try {
-      const resp = await Api.instance.get(`/druid/indexer/v1/task/${initTaskId}`);
+      const resp = await Api.instance.get(`/druid/indexer/v1/task/${Api.encodePath(initTaskId)}`);
       this.updateSpec(cleanSpec(resp.data.payload));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
@@ -3252,7 +3266,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const fullSpec = Boolean(
       deepGet(spec, 'spec.dataSchema.timestampSpec') &&
         deepGet(spec, 'spec.dataSchema.dimensionsSpec') &&
-        deepGet(spec, 'spec.dataSchema.granularitySpec.type'),
+        deepGet(spec, 'spec.dataSchema.granularitySpec.type') &&
+        deepGet(spec, 'spec.dataSchema.dataSource'),
     );
 
     return (

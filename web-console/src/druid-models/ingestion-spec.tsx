@@ -2211,3 +2211,10 @@ export function downgradeSpec(spec: any): any {
   }
   return spec;
 }
+
+export function adjustId(id: string): string {
+  return id
+    .replace(/\//g, '') // Can not have /
+    .replace(/^\./, '') // Can not have leading .
+    .replace(/\s+/gm, ' '); // Can not have whitespaces other than space
+}
