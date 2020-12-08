@@ -276,6 +276,7 @@ export async function sampleForConnect(
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
       pattern: '(.*)',
+      listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
   }
@@ -528,6 +529,9 @@ export async function sampleForFilter(
         dataSource: 'sample',
         timestampSpec,
         dimensionsSpec: specialDimensionSpec, // Hack Hack Hack
+        granularitySpec: {
+          intervals: deepGet(spec, 'spec.dataSchema.granularitySpec.intervals'),
+        },
         transformSpec: {
           transforms,
           filter,
@@ -562,6 +566,7 @@ export async function sampleForSchema(
         timestampSpec,
         transformSpec,
         granularitySpec: {
+          intervals: deepGet(spec, 'spec.dataSchema.granularitySpec.intervals'),
           queryGranularity,
         },
         dimensionsSpec,

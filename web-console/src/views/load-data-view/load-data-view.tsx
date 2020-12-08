@@ -2069,7 +2069,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   });
 
   renderFilterStep() {
-    const { spec, columnFilter, filterQueryState, selectedFilter } = this.state;
+    const { spec, specPreview, columnFilter, filterQueryState, selectedFilter } = this.state;
     const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
 
     let mainFill: JSX.Element | string = '';
@@ -2110,7 +2110,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <FilterMessage />
           {!selectedFilter && (
             <>
-              <AutoForm fields={FILTERS_FIELDS} model={spec} onChange={this.updateSpecPreview} />
+              <AutoForm
+                fields={FILTERS_FIELDS}
+                model={specPreview}
+                onChange={this.updateSpecPreview}
+              />
               {this.renderApplyButtonBar(filterQueryState, undefined)}
               <FormGroup>
                 <Button
