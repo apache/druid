@@ -157,7 +157,7 @@ For such consumer properties, user can implement a [DynamicConfigProvider](../..
 `druid.dynamic.config.provider`=`{"type": "<registered_dynamic_config_provider_name>", ...}`
 in consumerProperties map.
 
-Note: In older Druid versions, for SSL connections, the `keystore`, `truststore` and `key` passwords can also be provided as a [Password Provider](../../operations/password-provider.md). This is deprecated.
+Note: In 0.20.0 or older Druid versions, for SSL connections, the `keystore`, `truststore` and `key` passwords can also be provided as a [Password Provider](../../operations/password-provider.md). This is deprecated.
 
 #### Specifying data format
 
