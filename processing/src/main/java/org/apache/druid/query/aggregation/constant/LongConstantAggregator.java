@@ -17,19 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.query.aggregation.constant;
 
-import org.joda.time.DateTime;
+import org.apache.druid.query.aggregation.Aggregator;
 
-public interface StreamGenerator
+/**
+ * This aggregator is a no-op aggregator with a fixed non-null output value. It can be used in scenarios where
+ * result is constant such as {@link org.apache.druid.query.aggregation.GroupingAggregatorFactory}
+ */
+public class LongConstantAggregator implements Aggregator
 {
-  /**
-   * Runs and returns the number of messages written.
-   */
-  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
+  private final long value;
 
-  /**
-   * Runs and returns the number of messages written.
-   */
-  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
+  public LongConstantAggregator(long value)
+  {
+    this.value = value;
+  }
+
+  @Override
+  public void aggregate()
+  {
+    // No-op
+  }
+
+  @Override
+  public Object get()
+  {
+    return value;
+  }
+
+  @Override
+  public float getFloat()
+  {
+    return (float) value;
+  }
+
+  @Override
+  public long getLong()
+  {
+    return value;
+  }
+
+  @Override
+  public void close()
+  {
+
+  }
 }

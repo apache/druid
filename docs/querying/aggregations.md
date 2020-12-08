@@ -426,3 +426,26 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
   "aggregator" : <aggregation>
 }
 ```
+
+### Grouping Aggregator
+
+A grouping aggregator can only be used as part of GroupBy queries which have a subtotal spec. It returns a number for
+each output row that lets you infer whether a particular dimension is included in the sub-grouping used for that row. You can pass
+a *non-empty* list of dimensions to this aggregator which *must* be a subset of dimensions that you are grouping on. 
+E.g if the aggregator has `["dim1", "dim2"]` as input dimensions and `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, 
+following can be the possible output of the aggregator
+
+| subtotal used in query | Output | (bits representation) |
+|------------------------|--------|-----------------------|
+| `["dim1", "dim2"]`       | 0      | (00)                  |
+| `["dim1"]`               | 1      | (01)                  |
+| `["dim2"]`               | 2      | (10)                  |
+| `[]`                     | 3      | (11)                  |  
+
+As illustrated in above example, output number can be thought of as an unsigned n bit number where n is the number of dimensions passed to the aggregator. 
+The bit at position X is set in this number to 0 if a dimension at position X in input to aggregators is included in the sub-grouping. Otherwise, this bit 
+is set to 1.
+
+```json
+{ "type" : "grouping", "name" : <output_name>, "groupings" : [<dimension>] }
+```
