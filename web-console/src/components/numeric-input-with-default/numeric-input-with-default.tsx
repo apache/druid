@@ -29,7 +29,7 @@ export const NumericInputWithDefault = React.memo(function NumericInputWithDefau
 
   let effectiveValue = value;
   if (effectiveValue == null) {
-    effectiveValue = hasChanged ? '' : defaultValue || '';
+    effectiveValue = hasChanged ? '' : typeof defaultValue !== 'undefined' ? defaultValue : '';
   }
 
   return (
