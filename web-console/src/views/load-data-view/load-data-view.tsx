@@ -64,6 +64,7 @@ import {
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
   getDimensionSpecName,
+  getIssueWithSpec,
   getMetricSpecName,
   getTimestampExpressionFields,
   getTimestampSchema,
@@ -3148,13 +3149,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderSpecStep() {
     const { spec, submitting } = this.state;
-
-    const fullSpec = Boolean(
-      deepGet(spec, 'spec.dataSchema.timestampSpec') &&
-        deepGet(spec, 'spec.dataSchema.dimensionsSpec') &&
-        deepGet(spec, 'spec.dataSchema.granularitySpec.type') &&
-        deepGet(spec, 'spec.dataSchema.dataSource'),
-    );
+    const issueWithSpec = getIssueWithSpec(spec);
 
     return (
       <>
@@ -3170,6 +3165,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         <div className="control">
           <SpecMessage />
+          {issueWithSpec && (
+            <FormGroup>
+              <Callout
+                intent={Intent.WARNING}
+              >{`There is an issue with the spec: ${issueWithSpec}`}</Callout>
+            </FormGroup>
+          )}
         </div>
         <div className="next-bar">
           {!isEmptyIngestionSpec(spec) && (
@@ -3184,7 +3186,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             text="Submit"
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
-            disabled={submitting || !fullSpec}
+            disabled={submitting || Boolean(issueWithSpec)}
             onClick={this.handleSubmit}
           />
         </div>

@@ -226,6 +226,26 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
   }
 }
 
+export function getIssueWithSpec(spec: IngestionSpec): string | undefined {
+  if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
+    return 'missing spec.dataSchema.dataSource';
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.timestampSpec')) {
+    return 'missing spec.dataSchema.timestampSpec';
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.dimensionsSpec')) {
+    return 'missing spec.dataSchema.dimensionsSpec';
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.granularitySpec.type')) {
+    return 'spec.dataSchema.granularitySpec.type';
+  }
+
+  return;
+}
+
 // --------------
 
 export interface DataSchema {
