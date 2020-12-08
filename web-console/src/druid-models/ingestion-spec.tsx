@@ -239,10 +239,6 @@ export function getIssueWithSpec(spec: IngestionSpec): string | undefined {
     return 'missing spec.dataSchema.dimensionsSpec';
   }
 
-  if (!deepGet(spec, 'spec.dataSchema.granularitySpec.type')) {
-    return 'spec.dataSchema.granularitySpec.type';
-  }
-
   return;
 }
 
@@ -1254,7 +1250,7 @@ function basenameFromFilename(filename: string): string | undefined {
 export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
   const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
-  return deepSet(spec, 'spec.dataSchema.dataSource', possibleName);
+  return deepSetIfUnset(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
 export function guessDataSourceName(spec: IngestionSpec): string | undefined {
@@ -1387,7 +1383,6 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     label: 'Segment granularity',
     type: 'string',
     suggestions: ['hour', 'day', 'week', 'month', 'year'],
-    defined: s => deepGet(s, 'spec.dataSchema.granularitySpec.type') === 'uniform',
     required: true,
     info: (
       <>
@@ -1395,6 +1390,31 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
         For example, with 'DAY' segmentGranularity, the events of the same day fall into the same
         time chunk which can be optionally further partitioned into multiple segments based on other
         configurations and input size.
+      </>
+    ),
+  },
+  {
+    name: 'spec.dataSchema.granularitySpec.intervals',
+    label: 'Time intervals',
+    type: 'string-array',
+    placeholder: '(auto determine)',
+    defined: s => getSpecType(s) === 'index_parallel',
+    info: (
+      <>
+        <p>
+          A list of intervals describing what time chunks of segments should be created. This list
+          will be broken up and rounded-off based on the segmentGranularity.
+        </p>
+        <p>
+          If not provided, batch ingestion tasks will generally determine which time chunks to
+          output based on what timestamps are found in the input data.
+        </p>
+        <p>
+          If specified, batch ingestion tasks may be able to skip a determining-partitions phase,
+          which can result in faster ingestion. Batch ingestion tasks may also be able to request
+          all their locks up-front instead of one by one. Batch ingestion tasks will throw away any
+          records with timestamps outside of the specified intervals.
+        </p>
       </>
     ),
   },
@@ -1587,13 +1607,6 @@ export function getSecondaryPartitionRelatedFormFields(
   }
 
   throw new Error(`unknown spec type ${specType}`);
-}
-
-export function settingIntervalsWouldSpeedUpIngestion(spec: IngestionSpec): boolean {
-  return (
-    oneOf(deepGet(spec, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim') &&
-    !deepGet(spec, 'spec.dataSchema.granularitySpec.intervals')
-  );
 }
 
 const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
@@ -2071,7 +2084,8 @@ export function issueWithSampleData(sampleData: string[]): JSX.Element | undefin
   return;
 }
 
-export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+export function fillInputFormatIfNeeded(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+  if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 

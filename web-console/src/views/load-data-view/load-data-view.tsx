@@ -70,10 +70,10 @@ import {
   getTimestampSchema,
   INPUT_FORMAT_FIELDS,
   issueWithSampleData,
+  KNOWN_FILTER_TYPES,
   METRIC_SPEC_FIELDS,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
-  settingIntervalsWouldSpeedUpIngestion,
   TIMESTAMP_SPEC_FIELDS,
   TimestampSpec,
   Transform,
@@ -88,7 +88,7 @@ import {
   DimensionSpec,
   DruidFilter,
   fillDataSourceNameIfNeeded,
-  fillInputFormat,
+  fillInputFormatIfNeeded,
   FlattenField,
   getDimensionMode,
   getIngestionComboType,
@@ -129,7 +129,6 @@ import {
   deepDelete,
   deepGet,
   deepSet,
-  deepSetIfUnset,
   deepSetMulti,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
@@ -1287,7 +1286,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 return false;
               }
 
-              this.updateSpec(fillDataSourceNameIfNeeded(fillInputFormat(spec, sampleLines)));
+              this.updateSpec(
+                fillDataSourceNameIfNeeded(fillInputFormatIfNeeded(spec, sampleLines)),
+              );
             }
             return true;
           },
@@ -1902,8 +1903,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               );
             }
 
-            newSpec = deepSetIfUnset(newSpec, 'spec.dataSchema.granularitySpec.type', 'uniform');
-
             this.updateSpec(newSpec);
             return true;
           },
@@ -2160,7 +2159,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           fields={FILTER_FIELDS}
           model={selectedFilter}
           onChange={f => this.setState({ selectedFilter: f })}
-          showCustom={f => !oneOf(f.type, 'selector', 'in', 'regex', 'like', 'not')}
+          showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type)}
         />
         <div className="control-buttons">
           <Button
@@ -2936,15 +2935,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="control">
           <PartitionMessage />
           {nonsensicalSingleDimPartitioningMessage}
-          {settingIntervalsWouldSpeedUpIngestion(spec) && (
-            <FormGroup>
-              <Callout icon={IconNames.LIGHTBULB}>
-                You can make this ingestion run slightly faster by explicitly specifying the time
-                intervals for this dataset from the{' '}
-                <a onClick={() => this.updateStep('filter')}>Filter</a> step.
-              </Callout>
-            </FormGroup>
-          )}
         </div>
         {this.renderNextBar({
           disabled: invalidPartitionConfig(spec),

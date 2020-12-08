@@ -75,16 +75,18 @@ export function getFilterDimension(filter: DruidFilter): string | undefined {
   return;
 }
 
+export const KNOWN_FILTER_TYPES = ['selector', 'in', 'interval', 'regex', 'like', 'not'];
+
 export const FILTER_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['selector', 'in', 'regex', 'like', 'not'],
+    suggestions: KNOWN_FILTER_TYPES,
   },
   {
     name: 'dimension',
     type: 'string',
-    defined: (df: DruidFilter) => oneOf(df.type, 'selector', 'in', 'regex', 'like'),
+    defined: (df: DruidFilter) => oneOf(df.type, 'selector', 'in', 'interval', 'regex', 'like'),
   },
   {
     name: 'value',
@@ -97,6 +99,12 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
     defined: (df: DruidFilter) => df.type === 'in',
   },
   {
+    name: 'intervals',
+    type: 'string-array',
+    defined: (df: DruidFilter) => df.type === 'interval',
+    placeholder: 'ex: 2020-01-01/2020-06-01',
+  },
+  {
     name: 'pattern',
     type: 'string',
     defined: (df: DruidFilter) => oneOf(df.type, 'regex', 'like'),
@@ -106,7 +114,7 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
     name: 'field.type',
     label: 'Sub-filter type',
     type: 'string',
-    suggestions: ['selector', 'in', 'regex', 'like'],
+    suggestions: ['selector', 'in', 'interval', 'regex', 'like'],
     defined: (df: DruidFilter) => df.type === 'not',
   },
   {
@@ -128,6 +136,13 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
     defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'in',
   },
   {
+    name: 'field.intervals',
+    label: 'Sub-filter intervals',
+    type: 'string-array',
+    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'interval',
+    placeholder: 'ex: 2020-01-01/2020-06-01',
+  },
+  {
     name: 'field.pattern',
     label: 'Sub-filter pattern',
     type: 'string',
@@ -137,21 +152,6 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
 ];
 
 export const FILTERS_FIELDS: Field<IngestionSpec>[] = [
-  {
-    name: 'spec.dataSchema.granularitySpec.intervals',
-    label: 'Time intervals',
-    type: 'string-array',
-    placeholder: 'ex: 2020-01-01/2020-06-01',
-    info: (
-      <>
-        <p>A comma separated list of intervals for the raw data being ingested.</p>
-        <p>
-          Explicitly specifying the list of intervals contained in the data will make some ingestion
-          jobs run faster.
-        </p>
-      </>
-    ),
-  },
   {
     name: 'spec.dataSchema.transformSpec.filter',
     type: 'json',

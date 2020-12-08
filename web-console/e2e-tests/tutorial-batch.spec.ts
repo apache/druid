@@ -64,6 +64,7 @@ describe('Tutorial: Loading a file', () => {
     const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
     const partitionConfig = new PartitionConfig({
       segmentGranularity: SegmentGranularity.DAY,
+      timeIntervals: null,
       partitionsSpec: null,
     });
     const publishConfig = new PublishConfig({ datasourceName: datasourceName });

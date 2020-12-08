@@ -65,14 +65,17 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
         return {
           Header: (
             <div
-              className={classNames({ clickable: !timestamp })}
+              className="clickable"
               onClick={() => {
-                if (timestamp) return;
-
                 if (filter) {
                   onFilterSelect(filter, filterIndex);
                 } else {
-                  onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);
+                  onFilterSelect(
+                    timestamp
+                      ? { type: 'interval', dimension: columnName, intervals: [] }
+                      : { type: 'selector', dimension: columnName, value: '' },
+                    -1,
+                  );
                 }
               }}
             >

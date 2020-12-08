@@ -529,9 +529,6 @@ export async function sampleForFilter(
         dataSource: 'sample',
         timestampSpec,
         dimensionsSpec: specialDimensionSpec, // Hack Hack Hack
-        granularitySpec: {
-          intervals: deepGet(spec, 'spec.dataSchema.granularitySpec.intervals'),
-        },
         transformSpec: {
           transforms,
           filter,
@@ -566,7 +563,6 @@ export async function sampleForSchema(
         timestampSpec,
         transformSpec,
         granularitySpec: {
-          intervals: deepGet(spec, 'spec.dataSchema.granularitySpec.intervals'),
           queryGranularity,
         },
         dimensionsSpec,

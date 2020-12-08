@@ -164,6 +164,7 @@ export class PartitionConfig {
 
 interface PartitionConfigProps {
   readonly segmentGranularity: SegmentGranularity;
+  readonly timeIntervals: string | null;
   readonly partitionsSpec: PartitionsSpec | null;
 }
 
