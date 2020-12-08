@@ -82,7 +82,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   static REQUIRED_INTENT = Intent.PRIMARY;
 
   static makeLabelName(label: string): string {
-    let newLabel = label
+    const parts = label.split('.');
+    let newLabel = parts[parts.length - 1]
       .split(/(?=[A-Z])/)
       .join(' ')
       .toLowerCase()

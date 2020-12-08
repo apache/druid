@@ -154,7 +154,6 @@ export const FILTERS_FIELDS: Field<IngestionSpec>[] = [
   },
   {
     name: 'spec.dataSchema.transformSpec.filter',
-    label: 'Filter',
     type: 'json',
     height: '350px',
     placeholder: '{ "type": "true" }',

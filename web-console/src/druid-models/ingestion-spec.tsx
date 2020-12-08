@@ -1420,7 +1420,6 @@ export function getSecondaryPartitionRelatedFormFields(
         // partitionsSpec type: dynamic
         {
           name: 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment',
-          label: 'Max rows per segment',
           type: 'number',
           defaultValue: 5000000,
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
@@ -1428,7 +1427,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
         {
           name: 'spec.tuningConfig.partitionsSpec.maxTotalRows',
-          label: 'Max total rows',
           type: 'number',
           defaultValue: 20000000,
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
@@ -1437,7 +1435,6 @@ export function getSecondaryPartitionRelatedFormFields(
         // partitionsSpec type: hashed
         {
           name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
-          label: 'Target rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
           defaultValue: 5000000,
@@ -1460,7 +1457,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
         {
           name: 'spec.tuningConfig.partitionsSpec.numShards',
-          label: 'Num shards',
           type: 'number',
           zeroMeansUndefined: true,
           hideInMore: true,
@@ -1483,7 +1479,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
         {
           name: 'spec.tuningConfig.partitionsSpec.partitionDimensions',
-          label: 'Partition dimensions',
           type: 'string-array',
           placeholder: '(all dimensions)',
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed',
@@ -1492,7 +1487,6 @@ export function getSecondaryPartitionRelatedFormFields(
         // partitionsSpec type: single_dim
         {
           name: 'spec.tuningConfig.partitionsSpec.partitionDimension',
-          label: 'Partition dimension',
           type: 'string',
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
           required: true,
@@ -1512,7 +1506,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
         {
           name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
-          label: 'Target rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
@@ -1530,7 +1523,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
         {
           name: 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment',
-          label: 'Max rows per segment',
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
@@ -1543,7 +1535,6 @@ export function getSecondaryPartitionRelatedFormFields(
         },
         {
           name: 'spec.tuningConfig.partitionsSpec.assumeGrouped',
-          label: 'Assume grouped',
           type: 'boolean',
           defaultValue: false,
           hideInMore: true,
@@ -1562,14 +1553,12 @@ export function getSecondaryPartitionRelatedFormFields(
       return [
         {
           name: 'spec.tuningConfig.maxRowsPerSegment',
-          label: 'Max rows per segment',
           type: 'number',
           defaultValue: 5000000,
           info: <>Determines how many rows are in each segment.</>,
         },
         {
           name: 'spec.tuningConfig.maxTotalRows',
-          label: 'Max total rows',
           type: 'number',
           defaultValue: 20000000,
           info: <>Total number of rows in segments waiting for being pushed.</>,
@@ -1587,13 +1576,13 @@ export function settingIntervalsWouldSpeedUpIngestion(spec: IngestionSpec): bool
   );
 }
 
-const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
+const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
-    name: 'maxNumConcurrentSubTasks',
+    name: 'spec.tuningConfig.maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,
     min: 1,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -1605,41 +1594,41 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxRetry',
+    name: 'spec.tuningConfig.maxRetry',
     type: 'number',
     defaultValue: 3,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
   {
-    name: 'taskStatusCheckPeriodMs',
+    name: 'spec.tuningConfig.taskStatusCheckPeriodMs',
     type: 'number',
     defaultValue: 1000,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
   {
-    name: 'totalNumMergeTasks',
+    name: 'spec.tuningConfig.totalNumMergeTasks',
     type: 'number',
     defaultValue: 10,
     min: 1,
-    defined: (t: TuningConfig) =>
+    defined: s =>
       Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+        s.type === 'index_parallel' &&
+          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
-    name: 'maxNumSegmentsToMerge',
+    name: 'spec.tuningConfig.maxNumSegmentsToMerge',
     type: 'number',
     defaultValue: 100,
-    defined: (t: TuningConfig) =>
+    defined: s =>
       Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+        s.type === 'index_parallel' &&
+          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: (
       <>
@@ -1648,22 +1637,22 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxRowsInMemory',
+    name: 'spec.tuningConfig.maxRowsInMemory',
     type: 'number',
     defaultValue: 1000000,
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'maxBytesInMemory',
+    name: 'spec.tuningConfig.maxBytesInMemory',
     type: 'number',
     placeholder: 'Default: 1/6 of max JVM memory',
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'resetOffsetAutomatically',
+    name: 'spec.tuningConfig.resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1672,10 +1661,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'skipSequenceNumberAvailabilityCheck',
+    name: 'spec.tuningConfig.skipSequenceNumberAvailabilityCheck',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     info: (
       <>
         Whether to enable checking if the current sequence number is still available in a particular
@@ -1685,17 +1674,17 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'intermediatePersistPeriod',
+    name: 'spec.tuningConfig.intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
-    name: 'intermediateHandoffPeriod',
+    name: 'spec.tuningConfig.intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1705,7 +1694,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxPendingPersists',
+    name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
     hideInMore: true,
     info: (
@@ -1717,7 +1706,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'pushTimeout',
+    name: 'spec.tuningConfig.pushTimeout',
     type: 'number',
     defaultValue: 0,
     hideInMore: true,
@@ -1728,15 +1717,15 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'handoffConditionTimeout',
+    name: 'spec.tuningConfig.handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
-    name: 'indexSpec.bitmap.type',
+    name: 'spec.tuningConfig.indexSpec.bitmap.type',
     label: 'Index bitmap type',
     type: 'string',
     defaultValue: 'roaring',
@@ -1745,7 +1734,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Compression format for bitmap indexes.</>,
   },
   {
-    name: 'indexSpec.dimensionCompression',
+    name: 'spec.tuningConfig.indexSpec.dimensionCompression',
     label: 'Index dimension compression',
     type: 'string',
     defaultValue: 'lz4',
@@ -1754,7 +1743,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Compression format for dimension columns.</>,
   },
   {
-    name: 'indexSpec.metricCompression',
+    name: 'spec.tuningConfig.indexSpec.metricCompression',
     label: 'Index metric compression',
     type: 'string',
     defaultValue: 'lz4',
@@ -1763,7 +1752,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Compression format for primitive type metric columns.</>,
   },
   {
-    name: 'indexSpec.longEncoding',
+    name: 'spec.tuningConfig.indexSpec.longEncoding',
     label: 'Index long encoding',
     type: 'string',
     defaultValue: 'longs',
@@ -1779,43 +1768,79 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'chatHandlerTimeout',
+    name: 'spec.tuningConfig.splitHintSpec.maxSplitSize',
+    type: 'number',
+    defaultValue: 1073741824,
+    min: 1000000,
+    defined: s =>
+      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputFormat.type') !== 'http',
+    hideInMore: true,
+    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    info: (
+      <>
+        Maximum number of bytes of input files to process in a single subtask. If a single file is
+        larger than this number, it will be processed by itself in a single subtask (Files are never
+        split across tasks yet).
+      </>
+    ),
+  },
+  {
+    name: 'spec.tuningConfig.splitHintSpec.maxNumFiles',
+    type: 'number',
+    defaultValue: 1000,
+    min: 1,
+    defined: s => s.type === 'index_parallel',
+    hideInMore: true,
+    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    info: (
+      <>
+        Maximum number of input files to process in a single subtask. This limit is to avoid task
+        failures when the ingestion spec is too long. There are two known limits on the max size of
+        serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+        <Code>jute.maxbuffer</Code>) and the max packet size in MySQL (
+        <Code>max_allowed_packet</Code>). These can make ingestion tasks fail if the serialized
+        ingestion spec size hits one of them.
+      </>
+    ),
+  },
+  {
+    name: 'spec.tuningConfig.chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
-    name: 'chatHandlerNumRetries',
+    name: 'spec.tuningConfig.chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
-    name: 'workerThreads',
+    name: 'spec.tuningConfig.workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
   },
   {
-    name: 'chatThreads',
+    name: 'spec.tuningConfig.chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
-    name: 'chatRetries',
+    name: 'spec.tuningConfig.chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1825,17 +1850,17 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'httpTimeout',
+    name: 'spec.tuningConfig.httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
-    name: 'shutdownTimeout',
+    name: 'spec.tuningConfig.shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1844,10 +1869,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'offsetFetchPeriod',
+    name: 'spec.tuningConfig.offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    defined: (t: TuningConfig) => t.type === 'kafka',
+    defined: s => s.type === 'kafka',
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -1856,10 +1881,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'recordBufferSize',
+    name: 'spec.tuningConfig.recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -1868,10 +1893,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'recordBufferOfferTimeout',
+    name: 'spec.tuningConfig.recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1881,11 +1906,11 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'recordBufferFullWait',
+    name: 'spec.tuningConfig.recordBufferFullWait',
     hideInMore: true,
     type: 'number',
     defaultValue: 5000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -1894,10 +1919,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'fetchSequenceNumberTimeout',
+    name: 'spec.tuningConfig.fetchSequenceNumberTimeout',
     type: 'number',
     defaultValue: 60000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1909,10 +1934,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'fetchThreads',
+    name: 'spec.tuningConfig.fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1922,10 +1947,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxRecordsPerPoll',
+    name: 'spec.tuningConfig.maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1935,10 +1960,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'repartitionTransitionDuration',
+    name: 'spec.tuningConfig.repartitionTransitionDuration',
     type: 'duration',
     defaultValue: 'PT2M',
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1959,8 +1984,8 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   },
 ];
 
-export function getTuningSpecFormFields() {
-  return TUNING_CONFIG_FORM_FIELDS;
+export function getTuningFormFields() {
+  return TUNING_FORM_FIELDS;
 }
 
 export interface IndexSpec {

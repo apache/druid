@@ -98,7 +98,7 @@ import {
   getRollup,
   getSecondaryPartitionRelatedFormFields,
   getSpecType,
-  getTuningSpecFormFields,
+  getTuningFormFields,
   IngestionComboTypeWithExtra,
   IngestionSpec,
   InputFormat,
@@ -2935,7 +2935,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Callout icon={IconNames.LIGHTBULB}>
                 You can make this ingestion run slightly faster by explicitly specifying the time
                 intervals for this dataset from the{' '}
-                <a onClick={() => this.updateStep('filter')}>Filter step</a>.
+                <a onClick={() => this.updateStep('filter')}>Filter</a> step.
               </Callout>
             </FormGroup>
           )}
@@ -2952,7 +2952,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderTuningStep() {
     const { spec } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
-    const tuningConfig: TuningConfig = deepGet(spec, 'spec.tuningConfig') || EMPTY_OBJECT;
 
     const ingestionComboType = getIngestionComboType(spec);
     const inputTuningFields = ingestionComboType
@@ -2989,11 +2988,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         <div className="other">
           <H5>General tuning</H5>
-          <AutoForm
-            fields={getTuningSpecFormFields()}
-            model={tuningConfig}
-            onChange={t => this.updateSpec(deepSet(spec, 'spec.tuningConfig', t))}
-          />
+          <AutoForm fields={getTuningFormFields()} model={spec} onChange={this.updateSpec} />
         </div>
         <div className="control">
           <TuningMessage />
