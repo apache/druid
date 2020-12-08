@@ -25,6 +25,7 @@ import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -118,7 +120,12 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       ITRetryUtil.retryUntil(
           () -> {
             for (int i = 0; i < numTasks; i++) {
-              final int countRows = queryHelper.countRows(fullDatasourceName + i, "2013-08-31/2013-09-01");
+              final int countRows = queryHelper.countRows(
+                  fullDatasourceName + i,
+                  Intervals.of("2013-08-31/2013-09-01"),
+                  name -> new LongSumAggregatorFactory(name, "count")
+              );
+
               // there are 10 rows, but query only covers the first 5
               if (countRows < 5) {
                 LOG.warn("%d events have been ingested to %s so far", countRows, fullDatasourceName + i);

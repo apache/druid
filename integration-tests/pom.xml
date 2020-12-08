@@ -372,7 +372,9 @@
                 <docker.build.skip>false</docker.build.skip>
                 <override.config.path />
                 <resource.file.dir.path />
-                <extra.datasource.name.suffix>\ Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
+
+                <!-- Would like to put emojis in here too, but they throw "Input buffer too short" errors due to https://issues.apache.org/jira/browse/SUREFIRE-1865 -->
+                <extra.datasource.name.suffix>\ %Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
             </properties>
             <build>
                 <plugins>

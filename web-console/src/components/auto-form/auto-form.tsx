@@ -57,6 +57,7 @@ export interface Field<M> {
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
+  valueAdjustment?: (value: any) => any;
   adjustment?: (model: M) => M;
   issueWithValue?: (value: any) => string | undefined;
 }
@@ -157,6 +158,10 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private fieldChange = (field: Field<T>, newValue: any) => {
     const { model } = this.props;
     if (!model) return;
+
+    if (field.valueAdjustment) {
+      newValue = field.valueAdjustment(newValue);
+    }
 
     let newModel: T;
     if (typeof newValue === 'undefined') {

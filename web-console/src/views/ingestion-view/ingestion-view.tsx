@@ -193,8 +193,10 @@ export class IngestionView extends React.PureComponent<IngestionViewProps, Inges
     FAILED: 1,
   };
 
-  static SUPERVISOR_SQL = `SELECT "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
-FROM sys.supervisors`;
+  static SUPERVISOR_SQL = `SELECT
+  "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
+FROM sys.supervisors
+ORDER BY "supervisor_id"`;
 
   static TASK_SQL = `SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
@@ -431,7 +433,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
+            `/druid/indexer/v1/supervisor/${Api.encodePath(resumeSupervisorId)}/resume`,
             {},
           );
           return resp.data;
@@ -460,7 +462,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
+            `/druid/indexer/v1/supervisor/${Api.encodePath(suspendSupervisorId)}/suspend`,
             {},
           );
           return resp.data;
@@ -489,7 +491,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
+            `/druid/indexer/v1/supervisor/${Api.encodePath(resetSupervisorId)}/reset`,
             {},
           );
           return resp.data;
@@ -527,7 +529,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
+            `/druid/indexer/v1/supervisor/${Api.encodePath(terminateSupervisorId)}/terminate`,
             {},
           );
           return resp.data;
@@ -683,7 +685,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await Api.instance.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/task/${Api.encodePath(killTaskId)}/shutdown`,
+            {},
+          );
           return resp.data;
         }}
         confirmButtonText="Kill task"

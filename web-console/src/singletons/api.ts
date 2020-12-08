@@ -17,11 +17,35 @@
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import * as JSONBig from 'json-bigint-native';
 
 export class Api {
   static instance: AxiosInstance;
 
   static initialize(config?: AxiosRequestConfig): void {
     Api.instance = axios.create(config);
+  }
+
+  static getDefaultConfig(): AxiosRequestConfig {
+    return {
+      headers: {},
+
+      transformResponse: [
+        data => {
+          if (typeof data === 'string') {
+            try {
+              data = JSONBig.parse(data);
+            } catch (e) {
+              /* Ignore */
+            }
+          }
+          return data;
+        },
+      ],
+    };
+  }
+
+  static encodePath(path: string): string {
+    return path.replace(/[?#%]/g, encodeURIComponent);
   }
 }
