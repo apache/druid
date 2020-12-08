@@ -426,7 +426,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
         GroupByQuery subtotalQuery = baseSubtotalQuery
             .withLimitSpec(subtotalQueryLimitSpec);
-            //.withDimensionSpecs(newDimensions);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
