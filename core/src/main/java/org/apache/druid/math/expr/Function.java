@@ -3281,21 +3281,38 @@ public interface Function
   {
     protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
 
-    /**
-     * Evaluate given expression
-     * By default, 'precision' is 2 and 'hasSpace' is false
-     */
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final long bytes = args.get(0).eval(bindings).asLong();
-
-      int precision = 2;
-      if (args.size() > 1) {
-        precision = args.get(1).eval(bindings).asInt();
+      final ExprEval valueParam = args.get(0).eval(bindings);
+      if (NullHandling.sqlCompatible() && valueParam.isNumericNull()) {
+        return ExprEval.of(null);
       }
 
-      return ExprEval.of(HumanReadableBytes.format(bytes, precision, this.getUnitSystem()));
+      /**
+       * only LONG and DOUBLE are allowed
+       * For a DOUBLE, it will be cast to LONG before format
+       */
+      if (valueParam.value() != null && valueParam.type() != ExprType.LONG && valueParam.type() != ExprType.DOUBLE) {
+        throw new IAE("Function[%s] needs a number as its first argument", name());
+      }
+
+      /**
+       * By default, precision is 2
+       */
+      long precision = 2;
+      if (args.size() > 1) {
+        ExprEval precisionParam = args.get(1).eval(bindings);
+        if (precisionParam.type() != ExprType.LONG) {
+          throw new IAE("Function[%s] needs an integer as its second argument", name());
+        }
+        precision = precisionParam.asLong();
+        if (precision < 0 || precision > 3) {
+          throw new IAE("Given precision[%d] of Function[%s] must be in the range of [0,3]", precision, name());
+        }
+      }
+
+      return ExprEval.of(HumanReadableBytes.format(valueParam.asLong(), precision, this.getUnitSystem()));
     }
 
     @Override

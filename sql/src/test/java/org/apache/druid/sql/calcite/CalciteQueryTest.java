@@ -16365,9 +16365,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     /**
      * frankly speaking, the exception message thrown here is a little bit confusion
-     * it says it's expecting 1 arguments but acturally BINARY_BYTE_FORMAT supports 1 or 2 arguments
+     * it says it's 'expecting 1 arguments' but acturally BINARY_BYTE_FORMAT supports 1 or 2 arguments
      *
-     * The message is return from {@link org.apache.calcite.sql.validate.SqlValidatorImpl#handleUnresolvedFunction},
+     * The message is returned from {@link org.apache.calcite.sql.validate.SqlValidatorImpl#handleUnresolvedFunction},
      * and we can see from its implementation that it gets the min number arguments to format the exception message.
      *
      */

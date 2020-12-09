@@ -568,19 +568,123 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSizeFormatInvalidArgumentLowerBound()
+  public void testSizeFormatWithEdgeCases()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("precision [-1] must be in the range of [0,3]");
-    assertExpr("binary_byte_format(1024, -1)", "1KiB");
+    //a nonexist value is null which is treated as 0
+    assertExpr("binary_byte_format(nonexist)", "0.00B");
+
+    //f = 12.34
+    assertExpr("binary_byte_format(f)", "12.00B");
+
+    //nan is Double.NaN
+    assertExpr("binary_byte_format(nan)", "0.00B");
+
+    //inf = Double.POSITIVE_INFINITY
+    assertExpr("binary_byte_format(inf)", "8.00EiB");
+
+    //inf = Double.NEGATIVE_INFINITY
+    assertExpr("binary_byte_format(-inf)", "-8.00EiB");
+
+    // o = 0
+    assertExpr("binary_byte_format(o)", "0.00B");
+
+    // od = 0D
+    assertExpr("binary_byte_format(od)", "0.00B");
+
+    // of = 0F
+    assertExpr("binary_byte_format(of)", "0.00B");
   }
 
   @Test
-  public void testSizeFormatInvalidArgumentUpperBound()
+  public void testSizeForatInvalidArgumentType()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("precision [4] must be in the range of [0,3]");
-    assertExpr("binary_byte_format(1024, 4)", "1KiB");
+    try {
+      //x = "foo"
+      Parser.parse("binary_byte_format(x)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[binary_byte_format] needs a number as its first argument", e.getMessage());
+    }
+
+    try {
+      //x = "foo"
+      Parser.parse("binary_byte_format(1024, x)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[binary_byte_format] needs an integer as its second argument", e.getMessage());
+    }
+
+    try {
+      //of = 0F
+      Parser.parse("binary_byte_format(1024, of)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[binary_byte_format] needs an integer as its second argument", e.getMessage());
+    }
+
+    try {
+      //of = 0F
+      Parser.parse("binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[binary_byte_format] needs an integer as its second argument", e.getMessage());
+    }
+  }
+
+  @Test
+  public void testSizeFormatInvalidPrecision()
+  {
+    try {
+      Parser.parse("binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[9223372036854775807] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+
+    try {
+      Parser.parse("binary_byte_format(1024, minLong)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[-9223372036854775808] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+
+    try {
+      Parser.parse("binary_byte_format(1024, -1)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[-1] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+
+    try {
+      Parser.parse("binary_byte_format(1024, 4)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[4] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
   }
 
   @Test
@@ -588,9 +692,35 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Function[binary_byte_format] needs 1 or 2 arguments");
-    final Expr expr = Parser.parse("binary_byte_format(1024, 2, 3)", ExprMacroTable.nil());
-    expr.eval(bindings).value();
+    Parser.parse("binary_byte_format(1024, 2, 3)", ExprMacroTable.nil())
+          .eval(bindings);
   }
+
+  @Test
+  public void testSizeFormatWithNoDefaultValueForNull()
+  {
+    NullHandling.updateForTests(false);
+    {
+      //
+      // normal cases
+      // y is not null, the function returns correctly
+      //
+      assertExpr("binary_byte_format(y)", "2.00B");
+      assertExpr("decimal_byte_format(y)", "2.00B");
+      assertExpr("decimal_format(y)", "2.00");
+
+      //
+      // since 'druid.generic.useDefaultValueForNull' has been disabled above,
+      // the 'nonexist' below returns null, and the function calls also return null
+      //
+      assertExpr("binary_byte_format(nonexist)", null);
+      assertExpr("decimal_byte_format(nonexist)", null);
+      assertExpr("decimal_format(nonexist)", null);
+
+    }
+    NullHandling.updateForTests(true);
+  }
+
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {

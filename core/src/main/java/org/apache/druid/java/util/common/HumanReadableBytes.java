@@ -237,7 +237,7 @@ public class HumanReadableBytes
    * @param precision  [0,3]
    * @param unitSystem which unit system is adopted to format the input value, see {@link UnitSystem}
    */
-  public static String format(long bytes, int precision, UnitSystem unitSystem)
+  public static String format(long bytes, long precision, UnitSystem unitSystem)
   {
     if (precision < 0 || precision > 3) {
       throw new IAE("precision [%d] must be in the range of [0,3]", precision);
@@ -298,7 +298,7 @@ public class HumanReadableBytes
        * handle number between (-1000, 1000) first to simply further processing
        */
       if (bytes > -1000 && bytes < 1000) {
-        return StringUtils.format(pattern, (double) bytes, "", suffix).trim();
+        return StringUtils.format(pattern, (double) bytes, "", suffix);
       }
 
       /**
