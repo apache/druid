@@ -270,8 +270,17 @@ public class DruidSchema extends AbstractSchema
                   // Add missing segments back to the refresh list.
                   segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
+                  // remove any tables which have been completely dropped before refresh
+                  Set<String> filteredDatasourcesNeedingRebuild =
+                      dataSourcesNeedingRebuild.stream()
+                                               .filter(
+                                                   table ->
+                                                       segmentMetadataInfo.containsKey(table)
+                                                       && !segmentMetadataInfo.get(table).isEmpty()
+                                               )
+                                               .collect(Collectors.toSet());
                   // Compute the list of dataSources to rebuild tables for.
-                  dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
+                  dataSourcesToRebuild.addAll(filteredDatasourcesNeedingRebuild);
                   refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
                   dataSourcesNeedingRebuild.clear();
 
