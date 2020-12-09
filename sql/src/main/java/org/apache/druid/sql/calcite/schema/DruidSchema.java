@@ -270,15 +270,8 @@ public class DruidSchema extends AbstractSchema
                   // Add missing segments back to the refresh list.
                   segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
-                  // remove any tables which have been completely dropped before refresh
-                  final ImmutableSet.Builder<String> filteredDatasourcesNeedingRebuildBuilder = ImmutableSet.builder();
-                  for (String dataSource : dataSourcesNeedingRebuild) {
-                    if (segmentMetadataInfo.containsKey(dataSource) && !segmentMetadataInfo.get(dataSource).isEmpty()) {
-                      filteredDatasourcesNeedingRebuildBuilder.add(dataSource);
-                    }
-                  }
                   // Compute the list of dataSources to rebuild tables for.
-                  dataSourcesToRebuild.addAll(filteredDatasourcesNeedingRebuildBuilder.build());
+                  dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
                   refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
                   dataSourcesNeedingRebuild.clear();
 
@@ -430,7 +423,6 @@ public class DruidSchema extends AbstractSchema
     synchronized (lock) {
       log.debug("Segment[%s] is gone.", segment.getId());
 
-      dataSourcesNeedingRebuild.add(segment.getDataSource());
       segmentsNeedingRefresh.remove(segment.getId());
       mutableSegments.remove(segment.getId());
 
@@ -444,6 +436,8 @@ public class DruidSchema extends AbstractSchema
         segmentMetadataInfo.remove(segment.getDataSource());
         tables.remove(segment.getDataSource());
         log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
+      } else {
+        dataSourcesNeedingRebuild.add(segment.getDataSource());
       }
 
       lock.notifyAll();
