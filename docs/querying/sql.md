@@ -97,10 +97,11 @@ example `GROUP BY ROLLUP (country, city)` is equivalent to `GROUP BY GROUPING SE
 and will produce grouped rows for each country / city pair, along with subtotals for each country, along with a grand
 total. Finally, GROUP BY CUBE computes a grouping set for each combination of grouping expressions. For example,
 `GROUP BY CUBE (country, city)` is equivalent to `GROUP BY GROUPING SETS ( (country, city), (country), (city), () )`.
+
 Grouping columns that do not apply to a particular row will contain `NULL`. For example, when computing
 `GROUP BY GROUPING SETS ( (country, city), () )`, the grand total row corresponding to `()` will have `NULL` for the
-"country" and "city" columns. Column may also be `NULL` if it was `NULL` in the data itself. To differentiate such rows
-, you can use `GROUPING` aggregation. 
+"country" and "city" columns. Column may also be `NULL` if it was `NULL` in the data itself. To differentiate such rows, 
+you can use `GROUPING` aggregation. 
 
 When using GROUP BY GROUPING SETS, GROUP BY ROLLUP, or GROUP BY CUBE, be aware that results may not be generated in the
 order that you specify your grouping sets in the query. If you need results to be generated in a particular order, use
@@ -338,7 +339,7 @@ Only the COUNT aggregation can accept DISTINCT.
 |`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
 |`ANY_VALUE(expr)`|Returns any value of `expr` including null. `expr` must be numeric. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)|
 |`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
-|`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#Grouping Aggregator) on how to infer this number.|
+|`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
 
