@@ -403,10 +403,12 @@ public class HumanReadableBytesTest
 
     Assert.assertEquals("-2.00GiB", HumanReadableBytes.format(Integer.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
     Assert.assertEquals("-32.00KiB", HumanReadableBytes.format(Short.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("-128.00B", HumanReadableBytes.format(Byte.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("-1.00B", HumanReadableBytes.format(-1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("0.00B", HumanReadableBytes.format(0, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.00B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+
+    Assert.assertEquals("-128B", HumanReadableBytes.format(Byte.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assert.assertEquals("-1B", HumanReadableBytes.format(-1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assert.assertEquals("0B", HumanReadableBytes.format(0, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assert.assertEquals("1B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+
     Assert.assertEquals("1.00KiB", HumanReadableBytes.format(1024L, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
     Assert.assertEquals("1.00MiB", HumanReadableBytes.format(1024L * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
     Assert.assertEquals("1.00GiB", HumanReadableBytes.format(1024L * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
@@ -436,7 +438,7 @@ public class HumanReadableBytesTest
   @Test
   public void testFormatInDecimalByte()
   {
-    Assert.assertEquals("1.00B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assert.assertEquals("1B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
     Assert.assertEquals("1.00KB", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
     Assert.assertEquals("1.00MB", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
     Assert.assertEquals("1.00GB", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
@@ -455,9 +457,9 @@ public class HumanReadableBytesTest
   @Test
   public void testFormatInDecimal()
   {
-    Assert.assertEquals("1.00", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("999.00", HumanReadableBytes.format(999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("-999.00", HumanReadableBytes.format(-999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assert.assertEquals("1", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assert.assertEquals("999", HumanReadableBytes.format(999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assert.assertEquals("-999", HumanReadableBytes.format(-999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
     Assert.assertEquals("-1.00K", HumanReadableBytes.format(-1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
     Assert.assertEquals("1.00K", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL));
     Assert.assertEquals("1.00M", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
@@ -481,8 +483,8 @@ public class HumanReadableBytesTest
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("precision [4] must be in the range of [0,3]");
-    Assert.assertEquals("1.000", HumanReadableBytes.format(1, 3, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1.00", HumanReadableBytes.format(1, 4, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assert.assertEquals("1", HumanReadableBytes.format(1, 3, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assert.assertEquals("1", HumanReadableBytes.format(1, 4, HumanReadableBytes.UnitSystem.DECIMAL));
   }
 
   private static <T> String validate(T obj)

@@ -571,13 +571,13 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatWithEdgeCases()
   {
     //a nonexist value is null which is treated as 0
-    assertExpr("binary_byte_format(nonexist)", "0.00B");
+    assertExpr("binary_byte_format(nonexist)", "0B");
 
     //f = 12.34
-    assertExpr("binary_byte_format(f)", "12.00B");
+    assertExpr("binary_byte_format(f)", "12B");
 
     //nan is Double.NaN
-    assertExpr("binary_byte_format(nan)", "0.00B");
+    assertExpr("binary_byte_format(nan)", "0B");
 
     //inf = Double.POSITIVE_INFINITY
     assertExpr("binary_byte_format(inf)", "8.00EiB");
@@ -586,13 +586,13 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("binary_byte_format(-inf)", "-8.00EiB");
 
     // o = 0
-    assertExpr("binary_byte_format(o)", "0.00B");
+    assertExpr("binary_byte_format(o)", "0B");
 
     // od = 0D
-    assertExpr("binary_byte_format(od)", "0.00B");
+    assertExpr("binary_byte_format(od)", "0B");
 
     // of = 0F
-    assertExpr("binary_byte_format(of)", "0.00B");
+    assertExpr("binary_byte_format(of)", "0B");
   }
 
   @Test
@@ -705,9 +705,9 @@ public class FunctionTest extends InitializedNullHandlingTest
       // normal cases
       // y is not null, the function returns correctly
       //
-      assertExpr("binary_byte_format(y)", "2.00B");
-      assertExpr("decimal_byte_format(y)", "2.00B");
-      assertExpr("decimal_format(y)", "2.00");
+      assertExpr("binary_byte_format(y)", "2B");
+      assertExpr("decimal_byte_format(y)", "2B");
+      assertExpr("decimal_format(y)", "2");
 
       //
       // since 'druid.generic.useDefaultValueForNull' has been disabled above,

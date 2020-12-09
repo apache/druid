@@ -262,6 +262,10 @@ public class HumanReadableBytes
 
     static String format(long bytes, String pattern, String suffix)
     {
+      if (bytes > -1024 && bytes < 1024) {
+        return bytes + suffix;
+      }
+
       if (bytes == Long.MIN_VALUE) {
         /**
          * special path for Long.MIN_VALUE
@@ -298,7 +302,7 @@ public class HumanReadableBytes
        * handle number between (-1000, 1000) first to simply further processing
        */
       if (bytes > -1000 && bytes < 1000) {
-        return StringUtils.format(pattern, (double) bytes, "", suffix);
+        return bytes + suffix;
       }
 
       /**
