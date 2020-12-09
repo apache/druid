@@ -1038,6 +1038,7 @@ timeChunk
 totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
+awaitSegmentAvailabilityTimeoutMillis
  - ../docs/ingestion/schema-design.md
 product_category
 product_id

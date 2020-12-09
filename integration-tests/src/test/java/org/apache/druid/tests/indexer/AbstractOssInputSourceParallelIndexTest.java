@@ -68,7 +68,10 @@ public abstract class AbstractOssInputSourceParallelIndexTest extends AbstractIT
     };
   }
 
-  void doTest(Pair<String, List> inputSource) throws Exception
+  void doTest(
+      Pair<String, List> inputSource,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
   {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
@@ -125,7 +128,8 @@ public abstract class AbstractOssInputSourceParallelIndexTest extends AbstractIT
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          segmentAvailabilityConfirmationPair
       );
     }
   }

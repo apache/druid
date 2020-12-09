@@ -1135,7 +1135,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         7,
-        7
+        7,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1264,7 +1265,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1385,7 +1387,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1830,7 +1833,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        1
+        1,
+        null
     );
   }
 

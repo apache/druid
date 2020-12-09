@@ -49,7 +49,9 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -74,6 +76,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -88,6 +91,9 @@ import java.util.stream.Collectors;
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
   private static final Logger log = new Logger(AbstractBatchIndexTask.class);
+
+  private final Object availabilityCondition = new Object();
+  protected boolean segmentAvailabilityConfirmationCompleted = false;
 
   @GuardedBy("this")
   private final TaskResourceCleaner resourceCloserOnAbnormalExit = new TaskResourceCleaner();
@@ -574,6 +580,74 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           )
       );
     }
+  }
+
+  /**
+   * Wait for segments to become available on the cluster. If waitTimeout is reached, giveup on waiting. This is a
+   * QoS method that can be used to make Batch Ingest tasks wait to finish until their ingested data is available on
+   * the cluster. Doing so gives an end user assurance that a Successful task status means their data is available
+   * for querying.
+   *
+   * @param toolbox {@link TaskToolbox} object with for assisting with task work.
+   * @param segmentsToWaitFor {@link List} of segments to wait for availability.
+   * @param waitTimeout Millis to wait before giving up
+   * @return True if all segments became available, otherwise False.
+   */
+  protected boolean waitForSegmentAvailability(TaskToolbox toolbox, ExecutorService exec, List<DataSegment> segmentsToWaitFor, long waitTimeout)
+  {
+    if (segmentsToWaitFor.isEmpty()) {
+      log.info("Asked to wait for segments to be available, but I wasn't provided with any segments!?");
+    }
+    log.info("Waiting for segments to be loaded by the cluster...");
+
+    SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
+                                             .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource());
+
+    notifier.start();
+    for (DataSegment s : segmentsToWaitFor) {
+      notifier.registerSegmentHandoffCallback(
+          new SegmentDescriptor(s.getInterval(), s.getVersion(), s.getShardSpec().getPartitionNum()),
+          exec,
+          () -> {
+            log.info(
+                "Confirmed availability for [%s]. Removing from list of segments to wait for",
+                s.getId()
+            );
+            synchronized (segmentsToWaitFor) {
+              segmentsToWaitFor.remove(s);
+            }
+            synchronized (availabilityCondition) {
+              availabilityCondition.notifyAll();
+            }
+          }
+      );
+    }
+
+    long forceEndWaitTime = System.currentTimeMillis() + waitTimeout;
+    try {
+      synchronized (availabilityCondition) {
+        while (!segmentsToWaitFor.isEmpty()) {
+          log.info("[%d] segments stil unavailable.", segmentsToWaitFor.size());
+          long curr = System.currentTimeMillis();
+          if (forceEndWaitTime - curr > 0) {
+            availabilityCondition.wait(forceEndWaitTime - curr);
+          } else {
+            log.warn("Segment Availabilty Wait Timeout. [%d] segments might not have become available for "
+                     + "query",
+                     segmentsToWaitFor.size()
+            );
+            return false;
+          }
+        }
+      }
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      notifier.close();
+    }
+    return true;
   }
 
   private static class LockGranularityDetermineResult

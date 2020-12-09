@@ -36,14 +36,18 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -66,6 +70,7 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -111,6 +116,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
@@ -492,6 +498,31 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   /**
+   * Attempt to wait for indexed segments to become available on the cluster.
+   * @param reportsMap Map containing information with published segments that we are going to wait for.
+   */
+  private void waitForSegmentAvailability(Map<String, PushedSegmentsReport> reportsMap)
+  {
+    ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    reportsMap.values()
+              .forEach(report -> {
+                segmentsToWaitFor.addAll(report.getNewSegments());
+              });
+    ExecutorService availabilityExec = Execs.singleThreaded("ParallelTaskAvailabilityWaitExec");
+    try {
+      segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+          toolbox,
+          availabilityExec,
+          segmentsToWaitFor,
+          ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
+      );
+    }
+    finally {
+      availabilityExec.shutdownNow();
+    }
+  }
+
+  /**
    * Run the single phase parallel indexing for best-effort rollup. In this mode, each sub task created by
    * the supervisor task reads data and generates segments individually.
    */
@@ -506,8 +537,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, runner.getReports());
+      if (ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+        waitForSegmentAvailability(runner.getReports());
+      }
     }
-    return TaskStatus.fromCode(getId(), state);
+    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
+    toolbox.getTaskReportFileWriter().write(
+        getId(),
+        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
+    );
+    return taskStatus;
   }
 
   /**
@@ -644,9 +683,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, mergeRunner.getReports());
+      if (ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+        waitForSegmentAvailability(mergeRunner.getReports());
+      }
     }
 
-    return TaskStatus.fromCode(getId(), state);
+    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
+    toolbox.getTaskReportFileWriter().write(
+        getId(),
+        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
+    );
+    return taskStatus;
   }
 
   private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
@@ -706,9 +753,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskState mergeState = runNextPhase(mergeRunner);
     if (mergeState.isSuccess()) {
       publishSegments(toolbox, mergeRunner.getReports());
+      if (ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+        waitForSegmentAvailability(mergeRunner.getReports());
+      }
     }
 
-    return TaskStatus.fromCode(getId(), mergeState);
+    TaskStatus taskStatus = TaskStatus.fromCode(getId(), mergeState);
+    toolbox.getTaskReportFileWriter().write(
+        getId(),
+        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
+    );
+    return taskStatus;
   }
 
   private static Map<Interval, Union> mergeCardinalityReports(Collection<DimensionCardinalityReport> reports)
@@ -968,6 +1023,30 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  /**
+   * Generate an IngestionStatsAndErrorsTaskReport for the task.
+   *
+   * @param taskStatus {@link TaskStatus}
+   * @param segmentAvailabilityConfirmed Whether or not the segments were confirmed to be available for query when
+   *                                     when the task completed.
+   * @return
+   */
+  private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus, boolean segmentAvailabilityConfirmed)
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                IngestionState.COMPLETED,
+                new HashMap<>(),
+                new HashMap<>(),
+                taskStatus.getErrorMsg(),
+                segmentAvailabilityConfirmed
+            )
+        )
+    );
+  }
+
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
   {
     return new IndexTuningConfig(
@@ -991,7 +1070,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getSegmentWriteOutMediumFactory(),
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
     );
   }
 

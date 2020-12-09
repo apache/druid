@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.handoff;
 
 import org.apache.druid.query.SegmentDescriptor;
 

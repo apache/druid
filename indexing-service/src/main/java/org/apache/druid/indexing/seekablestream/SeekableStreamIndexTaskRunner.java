@@ -1058,7 +1058,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                false
             )
         )
     );

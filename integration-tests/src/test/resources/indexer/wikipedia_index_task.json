@@ -79,7 +79,8 @@
         },
         "tuningConfig": {
             "type": "index",
-            "maxRowsPerSegment": 3
+            "maxRowsPerSegment": 3,
+            "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%
         }
     }
 }

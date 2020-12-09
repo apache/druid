@@ -28,6 +28,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -422,6 +423,30 @@ public class OverlordResourceTestClient
         );
       }
       LOG.info("Resumed supervisor with id[%s]", id);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public TaskReport getTaskReport(String taskID)
+  {
+    try {
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
+          StringUtils.format(
+              "%stask/%s/reports",
+              getIndexerURL(),
+              StringUtils.urlEncode(taskID)
+          )
+      );
+      Map<String, TaskReport> taskReportMap = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Map<String, TaskReport>>()
+          {
+          }
+      );
+      return taskReportMap.get("ingestionStatsAndErrors");
     }
     catch (Exception e) {
       throw new RuntimeException(e);

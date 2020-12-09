@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
@@ -65,7 +66,8 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
       doIndexTest(
           COMBINING_INDEX_DATASOURCE,
@@ -74,7 +76,8 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           COMBINING_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
     }
   }

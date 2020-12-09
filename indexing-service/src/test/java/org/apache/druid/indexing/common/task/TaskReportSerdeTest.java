@@ -55,7 +55,8 @@ public class TaskReportSerdeTest
             ImmutableMap.of(
                 "number", 1234
             ),
-            "an error message"
+            "an error message",
+            false
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);

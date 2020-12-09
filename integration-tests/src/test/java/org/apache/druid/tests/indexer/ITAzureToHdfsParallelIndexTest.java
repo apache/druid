@@ -46,6 +46,6 @@ public class ITAzureToHdfsParallelIndexTest extends AbstractAzureInputSourcePara
   @Test(dataProvider = "resources")
   public void testAzureIndexData(Pair<String, List> azureInputSource) throws Exception
   {
-    doTest(azureInputSource);
+    doTest(azureInputSource, new Pair<>(false, false));
   }
 }

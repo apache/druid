@@ -36,11 +36,11 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;

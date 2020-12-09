@@ -39,6 +39,7 @@ public interface TuningConfig
   int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
   int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
   int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
+  int DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS = 0;
 
   /**
    * The incremental index implementation to use

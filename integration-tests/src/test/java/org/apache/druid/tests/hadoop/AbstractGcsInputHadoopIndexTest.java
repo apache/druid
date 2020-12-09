@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.hadoop;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 
@@ -31,7 +32,7 @@ public abstract class AbstractGcsInputHadoopIndexTest extends AbstractITBatchInd
   private static final String INDEX_TASK = "/hadoop/wikipedia_hadoop_gcs_input_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
 
-  void doTest() throws Exception
+  void doTest(Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair) throws Exception
   {
     final String indexDatasource = "wikipedia_hadoop_index_test_" + UUID.randomUUID();
     try (
@@ -72,7 +73,8 @@ public abstract class AbstractGcsInputHadoopIndexTest extends AbstractITBatchInd
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          segmentAvailabilityConfirmationPair
       );
     }
   }

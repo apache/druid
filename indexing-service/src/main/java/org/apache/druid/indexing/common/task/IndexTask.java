@@ -69,6 +69,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -125,6 +126,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -522,7 +524,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                segmentAvailabilityConfirmationCompleted
             )
         )
     );
@@ -909,6 +912,26 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           awaitPublish(driver.publishAll(inputSegments, publisher, annotateFunction), pushTimeout);
       appenderator.close();
 
+      // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
+      // for awaitSegmentAvailabilityTimeoutMillis
+      if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+        ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
+        ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
+        ExecutorService availabilityExec =
+            Execs.singleThreaded("IndexTaskAvailabilityWaitExec");
+        try {
+          segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+              toolbox,
+              availabilityExec,
+              segmentsToWaitFor,
+              tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+          );
+        }
+        finally {
+          availabilityExec.shutdownNow();
+        }
+      }
+
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
@@ -1143,6 +1166,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final boolean logParseExceptions;
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
+    private final long awaitSegmentAvailabilityTimeoutMillis;
 
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -1210,7 +1234,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-        @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+        @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this(
@@ -1235,7 +1260,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          awaitSegmentAvailabilityTimeoutMillis
       );
 
       Preconditions.checkArgument(
@@ -1246,7 +1272,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1264,7 +1290,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @Nullable Boolean logParseExceptions,
         @Nullable Integer maxParseExceptions,
-        @Nullable Integer maxSavedParseExceptions
+        @Nullable Integer maxSavedParseExceptions,
+        @Nullable Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1300,6 +1327,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.logParseExceptions = logParseExceptions == null
                                 ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                                 : logParseExceptions;
+      if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
+        this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
+      } else {
+        this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+      }
     }
 
     @Override
@@ -1320,7 +1352,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1341,7 +1374,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1519,6 +1553,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
 
+    @JsonProperty
+    public long getAwaitSegmentAvailabilityTimeoutMillis()
+    {
+      return awaitSegmentAvailabilityTimeoutMillis;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -1543,7 +1583,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
-             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
+             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
+             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis);
     }
 
     @Override
@@ -1564,7 +1605,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          segmentWriteOutMediumFactory
+          segmentWriteOutMediumFactory,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1586,6 +1628,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              ", maxParseExceptions=" + maxParseExceptions +
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+             ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
              '}';
     }
   }

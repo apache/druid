@@ -17,10 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.handoff;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 
-public interface SegmentHandoffNotifierFactory
+public class CoordinatorBasedSegmentHandoffNotifierConfig
 {
-  SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource);
+  @JsonProperty
+  public Duration pollDuration = new Period("PT1M").toStandardDuration();
+
+  public Duration getPollDuration()
+  {
+    return pollDuration;
+  }
 }

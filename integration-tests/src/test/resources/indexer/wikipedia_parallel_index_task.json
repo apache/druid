@@ -70,7 +70,8 @@
                 "type": "maxSize",
                 "maxSplitSize": 1
             },
-            "partitionsSpec": %%PARTITIONS_SPEC%%
+            "partitionsSpec": %%PARTITIONS_SPEC%%,
+            "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%
         }
     }
 }

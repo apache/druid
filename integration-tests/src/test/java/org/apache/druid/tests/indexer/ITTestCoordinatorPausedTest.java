@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -59,7 +60,8 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           false,
-          false
+          false,
+          new Pair<>(false, false)
       );
       TimeUnit.MINUTES.sleep(3);
       if (coordinatorClient.areSegmentsLoaded(INDEX_DATASOURCE)) {

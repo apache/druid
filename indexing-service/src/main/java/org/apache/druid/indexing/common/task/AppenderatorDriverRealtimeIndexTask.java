@@ -584,7 +584,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                false
             )
         )
     );

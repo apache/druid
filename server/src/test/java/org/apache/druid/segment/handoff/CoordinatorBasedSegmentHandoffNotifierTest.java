@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.handoff;
 
 import com.google.common.collect.Sets;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;

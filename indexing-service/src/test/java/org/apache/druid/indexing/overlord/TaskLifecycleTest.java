@@ -113,6 +113,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -128,8 +130,6 @@ import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
@@ -764,6 +764,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -839,6 +840,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -1271,6 +1273,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -1373,6 +1376,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,

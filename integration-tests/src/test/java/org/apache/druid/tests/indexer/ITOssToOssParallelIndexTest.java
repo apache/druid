@@ -44,6 +44,6 @@ public class ITOssToOssParallelIndexTest extends AbstractOssInputSourceParallelI
   @Test(dataProvider = "resources")
   public void testAliyunOssIndexData(Pair<String, List> ossInputSource) throws Exception
   {
-    doTest(ossInputSource);
+    doTest(ossInputSource, new Pair<>(false, false));
   }
 }
