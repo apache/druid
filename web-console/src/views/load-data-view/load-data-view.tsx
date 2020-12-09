@@ -470,20 +470,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return Boolean(cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'));
 
       case 'schema':
-        return Boolean(
-          cacheRows &&
-            deepGet(spec, 'spec.dataSchema.timestampSpec') &&
-            deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
-        );
-
       case 'partition':
       case 'tuning':
       case 'publish':
         return Boolean(
           cacheRows &&
             deepGet(spec, 'spec.dataSchema.timestampSpec') &&
-            deepGet(spec, 'spec.dataSchema.dimensionsSpec') &&
-            deepGet(spec, 'spec.dataSchema.granularitySpec.type'),
+            deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
         );
 
       default:
