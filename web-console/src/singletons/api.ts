@@ -46,6 +46,14 @@ export class Api {
   }
 
   static encodePath(path: string): string {
-    return path.replace(/[?#%]/g, encodeURIComponent);
+    return path.replace(
+      /[?#%&'\[\]]/g,
+      c =>
+        '%' +
+        c
+          .charCodeAt(0)
+          .toString(16)
+          .toUpperCase(),
+    );
   }
 }

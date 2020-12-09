@@ -158,7 +158,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "defaultValue": 0,
             "defined": [Function],
             "info": "Number of header rows to be skipped. The default number of header rows to be skipped is 0.",
-            "label": "Skip header rows",
             "name": "extractionNamespace.namespaceParseSpec.skipHeaderRows",
             "type": "number",
           },
@@ -166,14 +165,12 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "defaultValue": false,
             "defined": [Function],
             "info": "A flag to indicate that column information can be extracted from the input files' header row",
-            "label": "Has header row",
             "name": "extractionNamespace.namespaceParseSpec.hasHeaderRow",
             "type": "boolean",
           },
           Object {
             "defined": [Function],
             "info": "The list of columns in the csv file",
-            "label": "Columns",
             "name": "extractionNamespace.namespaceParseSpec.columns",
             "placeholder": "[\\"key\\", \\"value\\"]",
             "required": [Function],
@@ -182,7 +179,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           Object {
             "defined": [Function],
             "info": "The name of the column containing the key",
-            "label": "Key column",
             "name": "extractionNamespace.namespaceParseSpec.keyColumn",
             "placeholder": "(optional - defaults to the first column)",
             "type": "string",
@@ -190,28 +186,24 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           Object {
             "defined": [Function],
             "info": "The name of the column containing the value",
-            "label": "Value column",
             "name": "extractionNamespace.namespaceParseSpec.valueColumn",
             "placeholder": "(optional - defaults to the second column)",
             "type": "string",
           },
           Object {
             "defined": [Function],
-            "label": "Delimiter",
             "name": "extractionNamespace.namespaceParseSpec.delimiter",
             "placeholder": "(optional)",
             "type": "string",
           },
           Object {
             "defined": [Function],
-            "label": "List delimiter",
             "name": "extractionNamespace.namespaceParseSpec.listDelimiter",
             "placeholder": "(optional)",
             "type": "string",
           },
           Object {
             "defined": [Function],
-            "label": "Key field name",
             "name": "extractionNamespace.namespaceParseSpec.keyFieldName",
             "placeholder": "key",
             "required": true,
@@ -219,7 +211,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           },
           Object {
             "defined": [Function],
-            "label": "Value field name",
             "name": "extractionNamespace.namespaceParseSpec.valueFieldName",
             "placeholder": "value",
             "required": true,
@@ -229,7 +220,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "defaultValue": "0",
             "defined": [Function],
             "info": "Period between polling for updates",
-            "label": "Poll period",
             "name": "extractionNamespace.pollPeriod",
             "type": "string",
           },
@@ -247,7 +237,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 .table WHERE filter
               </p>
             </React.Fragment>,
-            "label": "Namespace",
             "name": "extractionNamespace.namespace",
             "placeholder": "some_lookup",
             "required": true,
@@ -264,21 +253,18 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           Object {
             "defined": [Function],
             "info": "Defines the user to be used by the connector config",
-            "label": "User",
             "name": "extractionNamespace.connectorConfig.user",
             "type": "string",
           },
           Object {
             "defined": [Function],
             "info": "Defines the password to be used by the connector config",
-            "label": "Password",
             "name": "extractionNamespace.connectorConfig.password",
             "type": "string",
           },
           Object {
             "defined": [Function],
             "info": "Should tables be created",
-            "label": "Create tables",
             "name": "extractionNamespace.connectorConfig.createTables",
             "type": "boolean",
           },
@@ -296,7 +282,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                  WHERE filter
               </p>
             </React.Fragment>,
-            "label": "Table",
             "name": "extractionNamespace.table",
             "placeholder": "some_lookup_table",
             "required": true,
@@ -316,7 +301,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 , valueColumn, tsColumn? FROM namespace.table WHERE filter
               </p>
             </React.Fragment>,
-            "label": "Key column",
             "name": "extractionNamespace.keyColumn",
             "placeholder": "my_key_value",
             "required": true,
@@ -336,7 +320,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 , tsColumn? FROM namespace.table WHERE filter
               </p>
             </React.Fragment>,
-            "label": "Value column",
             "name": "extractionNamespace.valueColumn",
             "placeholder": "my_column_value",
             "required": true,
@@ -356,7 +339,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 </strong>
               </p>
             </React.Fragment>,
-            "label": "Filter",
             "name": "extractionNamespace.filter",
             "placeholder": "(optional)",
             "type": "string",
@@ -384,7 +366,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "defaultValue": 0,
             "defined": [Function],
             "info": "How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait",
-            "label": "First cache timeout",
             "name": "firstCacheTimeout",
             "type": "number",
           },
