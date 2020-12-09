@@ -62,7 +62,7 @@ public class IdUtils
         StringUtils.format("%s cannot contain whitespace character except space.", thingToValidate)
     );
 
-    for (int i = 0 ; i < stringToValidate.length(); i++) {
+    for (int i = 0; i < stringToValidate.length(); i++) {
       final char c = stringToValidate.charAt(i);
 
       // Curator doesn't permit any of the following ranges, so we can't either, because IDs are often used as
