@@ -17,15 +17,21 @@
 # under the License.
 #
 
-DRUID_SERVICE=router
-DRUID_LOG_PATH=/shared/logs/router.log
+DRUID_SERVICE=indexer
+DRUID_LOG_PATH=/shared/logs/indexer.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx64m -Xms64m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5004
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5008
 
 # Druid configs
-druid_auth_basic_common_cacheDirectory=/tmp/authCache/router
-druid_sql_avatica_enable=true
-druid_server_https_crlPath=/tls/revocations.crl
-druid_router_managementProxy_enabled=true
+druid_server_http_numThreads=4
+druid_storage_storageDirectory=/shared/storage
 
+druid_processing_buffer_sizeBytes=25000000
+druid_processing_numThreads=1
+druid_selectors_indexing_serviceName=druid/overlord
+druid_indexer_task_chathandler_type=announce
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/indexer
+druid_startup_logging_logProperties=true
+druid_server_https_crlPath=/tls/revocations.crl
+druid_worker_capacity=10

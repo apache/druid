@@ -370,6 +370,7 @@
                 <start.hadoop.docker>false</start.hadoop.docker>
                 <docker.run.skip>false</docker.run.skip>
                 <docker.build.skip>false</docker.build.skip>
+                <it.indexer>middleManager</it.indexer>
                 <override.config.path />
                 <resource.file.dir.path />
 
@@ -397,6 +398,7 @@
                                         <DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>${resource.file.dir.path}</DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>
                                         <DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>${docker.build.skip}</DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>
                                         <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
+                                        <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>

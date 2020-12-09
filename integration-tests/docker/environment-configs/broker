@@ -21,7 +21,7 @@ DRUID_SERVICE=broker
 DRUID_LOG_PATH=/shared/logs/broker.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx256m -Xms256m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx192m -Xms192m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
 
 # Druid configs
 druid_processing_buffer_sizeBytes=25000000

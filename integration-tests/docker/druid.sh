@@ -25,6 +25,7 @@ getConfPath()
     historical) echo $cluster_conf_base/data/historical ;;
     historical-for-query-retry-test) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
+    indexer) echo $cluster_conf_base/data/indexer ;;
     coordinator) echo $cluster_conf_base/master/coordinator ;;
     broker) echo $cluster_conf_base/query/broker ;;
     router) echo $cluster_conf_base/query/router ;;
