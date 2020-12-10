@@ -148,6 +148,7 @@ up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please m
 these containers already running if using this flag. Additionally, please make sure that the running containers
 are in the same state that the setup script (run_cluster.sh) would have brought it up in.
 - -Ddocker.build.hadoop=true to build the hadoop image when either running integration tests or when building the integration test docker images without running the tests.
+- -Dstart.hadoop.docker=true to start hadoop container when you need to run IT tests that utilize local hadoop docker
 
 ### Debugging Druid while running tests
 
