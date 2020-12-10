@@ -17,13 +17,11 @@
  */
 
 import { AnchorButton, Button, ButtonGroup, Intent, Switch } from '@blueprintjs/core';
-import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { Loader } from '../../components';
-import { AppToaster } from '../../singletons/toaster';
-import { UrlBaser } from '../../singletons/url-baser';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { QueryManager, QueryState } from '../../utils';
 
 import './show-log.scss';
@@ -65,7 +63,9 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     this.showLogQueryManager = new QueryManager({
       processQuery: async () => {
         const { endpoint, tailOffset } = this.props;
-        const resp = await axios.get(endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''));
+        const resp = await Api.instance.get(
+          endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''),
+        );
         const data = resp.data;
 
         let logValue = typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);

@@ -35,6 +35,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 public class TransformerTest extends InitializedNullHandlingTest
 {
   @Rule
@@ -216,5 +220,41 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
     Assert.assertEquals(0L, actual.getRaw("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
+
+  @Test
+  public void testInputRowListPlusRawValuesTransformWithFilter()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            new SelectorDimFilter("dim", "val1", null),
+            null
+            )
+    );
+    List<InputRow> rows = Arrays.asList(
+        new MapBasedInputRow(
+            DateTimes.nowUtc(),
+            ImmutableList.of("dim"),
+            ImmutableMap.of("dim", "val1")
+        ),
+
+        //this row will be filtered
+        new MapBasedInputRow(
+            DateTimes.nowUtc(),
+            ImmutableList.of("dim"),
+            ImmutableMap.of("dim", "val2")
+        )
+    );
+    List<Map<String, Object>> valList = Arrays.asList(
+        ImmutableMap.of("dim", "val1"),
+        ImmutableMap.of("dim", "val2")
+    );
+
+    final InputRowListPlusRawValues actual = transformer.transform(InputRowListPlusRawValues.ofList(valList, rows));
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(1, actual.getInputRows().size());
+    Assert.assertEquals(1, actual.getRawValuesList().size());
+    Assert.assertEquals("val1", actual.getInputRows().get(0).getRaw("dim"));
+    Assert.assertEquals("val1", actual.getRawValuesList().get(0).get("dim"));
   }
 }

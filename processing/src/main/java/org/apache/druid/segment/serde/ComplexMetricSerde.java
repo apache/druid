@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -45,7 +46,22 @@ public abstract class ComplexMetricSerde
    *
    * @param buffer  the buffer to deserialize
    * @param builder ColumnBuilder to add the column to
+   * @param columnConfig ColumnConfiguration used during deserialization
    */
+  public void deserializeColumn(
+      ByteBuffer buffer,
+      ColumnBuilder builder,
+      @SuppressWarnings("unused") ColumnConfig columnConfig
+  )
+  {
+    deserializeColumn(buffer, builder);
+  }
+
+  /**
+   * {@link ComplexMetricSerde#deserializeColumn(ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
+   * This method is left for backward compatibility.
+   */
+  @Deprecated
   public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**

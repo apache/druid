@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
@@ -475,7 +476,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final List<Interval> allocateIntervals = new ArrayList<>(partitionAnalysis.getAllIntervalsToIndex());
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!determineLockGranularityandTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
+        if (!determineLockGranularityAndTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 
@@ -1110,7 +1111,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
+  public static class IndexTuningConfig implements AppenderatorConfig
   {
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -1118,6 +1119,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
 
+    private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
 
@@ -1189,6 +1191,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
         @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+        @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
@@ -1211,6 +1214,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     )
     {
       this(
+          appendableIndexSpec,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
           getPartitionsSpec(
@@ -1242,10 +1246,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
+        @Nullable AppendableIndexSpec appendableIndexSpec,
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
         @Nullable PartitionsSpec partitionsSpec,
@@ -1262,9 +1267,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxSavedParseExceptions
     )
     {
+      this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
-      // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+      // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.partitionsSpec = partitionsSpec;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -1300,6 +1306,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig withBasePersistDirectory(File dir)
     {
       return new IndexTuningConfig(
+          appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
@@ -1320,6 +1327,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
     {
       return new IndexTuningConfig(
+          appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
@@ -1335,6 +1343,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions
       );
+    }
+
+    @JsonProperty
+    @Override
+    public AppendableIndexSpec getAppendableIndexSpec()
+    {
+      return appendableIndexSpec;
     }
 
     @JsonProperty
@@ -1514,7 +1529,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         return false;
       }
       IndexTuningConfig that = (IndexTuningConfig) o;
-      return maxRowsInMemory == that.maxRowsInMemory &&
+      return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
+             maxRowsInMemory == that.maxRowsInMemory &&
              maxBytesInMemory == that.maxBytesInMemory &&
              maxPendingPersists == that.maxPendingPersists &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
@@ -1534,6 +1550,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public int hashCode()
     {
       return Objects.hash(
+          appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,

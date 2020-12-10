@@ -97,9 +97,11 @@ example `GROUP BY ROLLUP (country, city)` is equivalent to `GROUP BY GROUPING SE
 and will produce grouped rows for each country / city pair, along with subtotals for each country, along with a grand
 total. Finally, GROUP BY CUBE computes a grouping set for each combination of grouping expressions. For example,
 `GROUP BY CUBE (country, city)` is equivalent to `GROUP BY GROUPING SETS ( (country, city), (country), (city), () )`.
+
 Grouping columns that do not apply to a particular row will contain `NULL`. For example, when computing
 `GROUP BY GROUPING SETS ( (country, city), () )`, the grand total row corresponding to `()` will have `NULL` for the
-"country" and "city" columns.
+"country" and "city" columns. Column may also be `NULL` if it was `NULL` in the data itself. To differentiate such rows, 
+you can use `GROUPING` aggregation. 
 
 When using GROUP BY GROUPING SETS, GROUP BY ROLLUP, or GROUP BY CUBE, be aware that results may not be generated in the
 order that you specify your grouping sets in the query. If you need results to be generated in a particular order, use
@@ -167,9 +169,9 @@ together and appear one after the other.
 
 #### Table-level
 
-UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in the FROM clause,
-and the subqueries that are inputs to the UNION ALL operator must be simple table SELECTs (no expressions, column
-aliasing, etc). The query will run natively using a [union datasource](datasource.md#union).
+UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in a subquery in the
+FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs
+(no expressions, column aliasing, etc). The query will run natively using a [union datasource](datasource.md#union).
 
 The same columns must be selected from each table in the same order, and those columns must either have the same types,
 or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally
@@ -190,7 +192,7 @@ GROUP BY col1
 
 When UNION ALL occurs at the table level, the rows from the unioned tables are not guaranteed to be processed in
 any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
-use [ORDER BY](#order-by).
+use [ORDER BY](#order-by) on the outer query.
 
 ### EXPLAIN PLAN
 
@@ -337,6 +339,7 @@ Only the COUNT aggregation can accept DISTINCT.
 |`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
 |`ANY_VALUE(expr)`|Returns any value of `expr` including null. `expr` must be numeric. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)|
 |`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+|`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
 
@@ -1221,5 +1224,5 @@ Druid SQL planning occurs on the Broker and is configured by
 
 ## Security
 
-Please see [Defining SQL permissions](../development/extensions-core/druid-basic-security.md#sql-permissions) in the
-basic security documentation for information on what permissions are needed for making SQL queries.
+Please see [Defining SQL permissions](../operations/security-user-auth.md#sql-permissions) in the
+basic security documentation for information on permissions needed for making SQL queries.

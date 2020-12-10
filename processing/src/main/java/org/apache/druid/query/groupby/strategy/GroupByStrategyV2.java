@@ -405,6 +405,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // Iterate through each subtotalSpec, build results for it and add to subtotalsResults
       for (List<String> subtotalSpec : subtotals) {
         final ImmutableSet<String> dimsInSubtotalSpec = ImmutableSet.copyOf(subtotalSpec);
+        // Dimension spec including dimension name and output name
+        final List<DimensionSpec> subTotalDimensionSpec = new ArrayList<>(dimsInSubtotalSpec.size());
         final List<DimensionSpec> dimensions = query.getDimensions();
         final List<DimensionSpec> newDimensions = new ArrayList<>();
 
@@ -418,6 +420,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                     dimensionSpec.getOutputType()
                 )
             );
+            subTotalDimensionSpec.add(dimensionSpec);
           } else {
             // Insert dummy dimension so all subtotals queries have ResultRows with the same shape.
             // Use a field name that does not appear in the main query result, to assure the result will be null.
@@ -447,7 +450,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subtotalSpec, subtotalQuery, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -459,7 +462,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
               baseSubtotalQuery,
               subtotalQuery,
-              resultSupplierOneFinal.results(subtotalSpec),
+              resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
               resource,
               spillMapper,
@@ -468,7 +471,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subtotalSpec, subtotalQuery, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
           );
         }
       }
@@ -486,7 +489,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
-      List<String> dimsToInclude,
+      List<DimensionSpec> dimsToInclude,
       GroupByQuery subtotalQuery,
       boolean closeOnSequenceRead
   )

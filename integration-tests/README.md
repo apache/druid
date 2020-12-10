@@ -37,7 +37,7 @@ Integration Testing Using Docker
 Before starting, if you don't already have docker on your machine, install it as described on 
 [Docker installation instructions](https://docs.docker.com/install/). Ensure that you 
 have at least 4GB of memory allocated to the docker engine. (You can verify it 
-under Preferences > Advanced.)
+under Preferences > Resources > Advanced.)
 
 Also set the `DOCKER_IP`
 environment variable to localhost on your system, as follows:
@@ -72,31 +72,40 @@ Druid routers for security group integration test (permissive tls, no client aut
 
 ## Docker compose
 
-Docker compose yamls located in "docker" folder
+There are a few different Docker compose yamls located in "docker" folder. Before you can run any of these, you must
+build the Docker images. See "Manually bringing up Docker containers and running tests" below.
 
 docker-compose.base.yml - Base file that defines all containers for integration test
 
 docker-compose.yml - Defines Druid cluster with default configuration that is used for running integration tests in Travis CI.
-    
-    docker-compose -f docker-compose.yml up
-    // DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
-    DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
+
+```
+docker-compose -f docker-compose.yml up
+// DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
+DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
+```
 
 docker-compose.override-env.yml - Defines Druid cluster with default configuration plus any additional and/or overriden configurations from override-env file.
 
-    // OVERRIDE_ENV - variable that must contains path to Druid configuration file 
-    OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
-    
+```
+// OVERRIDE_ENV - variable that must contains path to Druid configuration file
+OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
+```
+
 docker-compose.security.yml - Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively. 
 This is meant to be use together with docker-compose.yml or docker-compose.override-env.yml and is only needed for the "security" group integration test. 
 
-    docker-compose -f docker-compose.yml -f docker-compose.security.yml up 
-    
+```
+docker-compose -f docker-compose.yml -f docker-compose.security.yml up
+```
+
 docker-compose.druid-hadoop.yml - for starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial
 
-    docker-compose -f docker-compose.druid-hadoop.yml up
+```
+docker-compose -f docker-compose.druid-hadoop.yml up
+```
 
-## Manual bringing up docker containers and running tests
+## Manually bringing up Docker containers and running tests
 
 1. Build druid-cluster, druid-hadoop docker images. From root module run maven command:
 ```
@@ -106,30 +115,38 @@ mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=t
 2. Run druid cluster by docker-compose:
 
 ```
-- Basic Druid cluster (skip this if running Druid cluster with override configs):
+# Basic Druid cluster (skip this if running Druid cluster with override configs):
 docker-compose -f integration-tests/docker/docker-compose.yml up
-- Druid cluster with override configs (skip this if running Basic Druid cluster):
+
+# Druid cluster with override configs (skip this if running Basic Druid cluster):
 OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up
-- Druid hadoop (if needed):
+
+# Druid hadoop (if needed):
 docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up
-- Druid routers for security group integration test (if needed):
- docker-compose -f ${DOCKERDIR}/docker-compose.security.yml up
+
+# Druid routers for security group integration test (if needed):
+docker-compose -f ${DOCKERDIR}/docker-compose.security.yml up
 ```
 
 3. Run maven command to execute tests with -Ddocker.build.skip=true -Ddocker.run.skip=true
+
+For example:
+
+```
+mvn verify -P integration-tests -pl integration-tests -Dit.test=ITIndexerTest -Ddocker.build.skip=true -Ddocker.run.skip=true
+```
 
 ## Tips & tricks for debugging and developing integration tests
 
 ### Useful mvn command flags
 
-- -Ddocker.build.skip=true to skip build druid containers. 
-If you do not apply any change to druid then you can do not rebuild druid. 
-This can save ~4 minutes to build druid cluster and druid hadoop.
+- -Ddocker.build.skip=true to skip building the containers.
+If you do not apply any change to Druid then you skip rebuilding the containers. This can save ~4 minutes.
 You need to build druid containers only once, after you can skip docker build step. 
 - -Ddocker.run.skip=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
 up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
 these containers already running if using this flag. Additionally, please make sure that the running containers
-are in the same state that the setup script (run_cluster.sh) would have brought it up in. 
+are in the same state that the setup script (run_cluster.sh) would have brought it up in.
 
 ### Debugging Druid while running tests
 

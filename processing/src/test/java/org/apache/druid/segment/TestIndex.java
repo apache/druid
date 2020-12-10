@@ -150,11 +150,11 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
+  public static final IndexSpec INDEX_SPEC = new IndexSpec();
 
-  private static final IndexMerger INDEX_MERGER =
+  public static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+  public static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());

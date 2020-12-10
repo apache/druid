@@ -17,10 +17,10 @@
  */
 
 import { Tab, Tabs } from '@blueprintjs/core';
-import axios from 'axios';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
+import { Api } from '../../singletons';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
@@ -41,7 +41,7 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
 
   const [historyState] = useQueryManager<string, VersionSpec[]>({
     processQuery: async (endpoint: string) => {
-      const resp = await axios.get(endpoint);
+      const resp = await Api.instance.get(endpoint);
       return resp.data;
     },
     initQuery: endpoint,

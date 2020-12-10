@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Exception representing a failed query. The name "QueryInterruptedException" is a misnomer; this is actually
@@ -33,7 +32,7 @@ import java.util.concurrent.TimeoutException;
  *
  * Fields:
  * - "errorCode" is a well-defined errorCode code taken from a specific list (see the static constants). "Unknown exception"
- * represents all wrapped exceptions other than interrupt, timeout, cancellation, resource limit exceeded, unauthorized
+ * represents all wrapped exceptions other than interrupt, cancellation, resource limit exceeded, unauthorized
  * request, and unsupported operation.
  * - "errorMessage" is the toString of the wrapped exception
  * - "errorClass" is the class of the wrapped exception
@@ -45,7 +44,6 @@ import java.util.concurrent.TimeoutException;
 public class QueryInterruptedException extends QueryException
 {
   public static final String QUERY_INTERRUPTED = "Query interrupted";
-  public static final String QUERY_TIMEOUT = "Query timeout";
   public static final String QUERY_CANCELLED = "Query cancelled";
   public static final String RESOURCE_LIMIT_EXCEEDED = "Resource limit exceeded";
   public static final String UNAUTHORIZED = "Unauthorized request.";
@@ -100,8 +98,6 @@ public class QueryInterruptedException extends QueryException
       return QUERY_INTERRUPTED;
     } else if (e instanceof CancellationException) {
       return QUERY_CANCELLED;
-    } else if (e instanceof TimeoutException) {
-      return QUERY_TIMEOUT;
     } else if (e instanceof ResourceLimitExceededException) {
       return RESOURCE_LIMIT_EXCEEDED;
     } else if (e instanceof UnsupportedOperationException) {

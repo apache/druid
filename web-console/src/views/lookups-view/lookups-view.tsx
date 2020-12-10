@@ -18,7 +18,6 @@
 
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 import ReactTable from 'react-table';
 
@@ -32,9 +31,9 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
-import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
-import { AppToaster } from '../../singletons/toaster';
+import { LookupSpec } from '../../druid-models';
+import { Api, AppToaster } from '../../singletons';
 import {
   getDruidErrorMessage,
   isLookupsUninitialized,
@@ -107,14 +106,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     this.lookupsQueryManager = new QueryManager({
       processQuery: async () => {
-        const tiersResp = await axios.get('/druid/coordinator/v1/lookups/config?discover=true');
+        const tiersResp = await Api.instance.get(
+          '/druid/coordinator/v1/lookups/config?discover=true',
+        );
         const tiers =
           tiersResp.data && tiersResp.data.length > 0
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
         const lookupEntries: {}[] = [];
-        const lookupResp = await axios.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
@@ -151,7 +152,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   private async initializeLookup() {
     try {
-      await axios.post(`/druid/coordinator/v1/lookups/config`, {});
+      await Api.instance.post(`/druid/coordinator/v1/lookups/config`, {});
       this.lookupsQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
@@ -167,7 +168,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
     if (!lookupEntriesAndTiers) return;
 
-    const target: any = lookupEntriesAndTiers.lookupEntries.find((lookupEntry: any) => {
+    const target: any = lookupEntriesAndTiers.lookupEntries.find(lookupEntry => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
     if (id === '') {
@@ -179,7 +180,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           lookupEdit: {
             name: '',
             tier: loadingEntriesAndTiers ? loadingEntriesAndTiers.tiers[0] : '',
-            spec: { type: '' },
+            spec: { type: 'map', map: {} },
             version: new Date().toISOString(),
           },
         };
@@ -228,7 +229,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       };
     }
     try {
-      await axios.post(endpoint, dataJson);
+      await Api.instance.post(endpoint, dataJson);
       this.setState({
         lookupEdit: undefined,
       });
@@ -260,13 +261,15 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   renderDeleteLookupAction() {
     const { deleteLookupTier, deleteLookupName } = this.state;
-    if (!deleteLookupTier) return;
+    if (!deleteLookupTier || !deleteLookupName) return;
 
     return (
       <AsyncActionDialog
         action={async () => {
-          await axios.delete(
-            `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
+          await Api.instance.delete(
+            `/druid/coordinator/v1/lookups/config/${Api.encodePath(
+              deleteLookupTier,
+            )}/${Api.encodePath(deleteLookupName)}`,
           );
         }}
         confirmButtonText="Delete lookup"

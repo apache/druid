@@ -45,7 +45,7 @@ services:
       - 51111:51111
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.13
+        ipv4_address: 172.172.172.15
     privileged: true
     volumes:
       - ${HOME}/shared:/shared
@@ -173,12 +173,31 @@ services:
       - ./environment-configs/common
       - ./environment-configs/middlemanager
 
+  druid-indexer:
+    image: druid/cluster
+    container_name: druid-indexer
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.8
+    ports:
+      - 5008:5008
+      - 8091:8091
+      - 8291:8291
+    privileged: true
+    volumes:
+      - ./../src/test/resources:/resources
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/indexer
+
   druid-broker:
     image: druid/cluster
     container_name: druid-broker
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.8
+        ipv4_address: 172.172.172.9
     ports:
       - 5005:5005
       - 8082:8082
@@ -196,7 +215,7 @@ services:
     container_name: druid-router
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.9
+        ipv4_address: 172.172.172.10
     ports:
       - 5004:5004
       - 8888:8888
@@ -214,7 +233,7 @@ services:
     container_name: druid-router-permissive-tls
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.10
+        ipv4_address: 172.172.172.11
     ports:
       - 5001:5001
       - 8889:8889
@@ -232,7 +251,7 @@ services:
     container_name: druid-router-no-client-auth-tls
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.11
+        ipv4_address: 172.172.172.12
     ports:
       - 5002:5002
       - 8890:8890
@@ -250,7 +269,7 @@ services:
     container_name: druid-router-custom-check-tls
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.12
+        ipv4_address: 172.172.172.13
     ports:
       - 5003:5003
       - 8891:8891

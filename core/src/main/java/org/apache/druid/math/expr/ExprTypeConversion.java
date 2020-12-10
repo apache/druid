@@ -31,7 +31,7 @@ public class ExprTypeConversion
    * Infer the output type of a list of possible 'conditional' expression outputs (where any of these could be the
    * output expression if the corresponding case matching expression evaluates to true)
    */
-  static ExprType conditional(Expr.InputBindingTypes inputTypes, List<Expr> args)
+  static ExprType conditional(Expr.InputBindingInspector inspector, List<Expr> args)
   {
     ExprType type = null;
     for (Expr arg : args) {
@@ -39,12 +39,31 @@ public class ExprTypeConversion
         continue;
       }
       if (type == null) {
-        type = arg.getOutputType(inputTypes);
+        type = arg.getOutputType(inspector);
       } else {
-        type = doubleMathFunction(type, arg.getOutputType(inputTypes));
+        type = function(type, arg.getOutputType(inspector));
       }
     }
     return type;
+  }
+
+  /**
+   * Given 2 'input' types, which might not be fully trustable, choose the most appropriate combined type for
+   * non-vectorized, per-row type detection. In this mode, null values are {@link ExprType#STRING} typed, despite
+   * potentially coming from an underlying numeric column, or when an underlying column was completely missing and so
+   * all values are null. This method is not well suited for array handling.
+   */
+  public static ExprType autoDetect(ExprEval eval, ExprEval otherEval)
+  {
+    ExprType type = eval.type();
+    ExprType otherType = otherEval.type();
+    if (type == ExprType.STRING && otherType == ExprType.STRING) {
+      return ExprType.STRING;
+    }
+
+    type = eval.value() != null ? type : otherType;
+    otherType = otherEval.value() != null ? otherType : type;
+    return numeric(type, otherType);
   }
 
   /**
@@ -53,18 +72,19 @@ public class ExprTypeConversion
    * arrays must be the same type
    * if both types are {@link ExprType#STRING}, the output type will be preserved as string
    * if both types are {@link ExprType#LONG}, the output type will be preserved as long
-   *
+   * otherwise, output is {@link ExprType#DOUBLE}
    */
   @Nullable
   public static ExprType operator(@Nullable ExprType type, @Nullable ExprType other)
   {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
+    if (type == null) {
+      return other;
     }
-    // arrays cannot be auto converted
+    if (other == null) {
+      return type;
+    }
     if (ExprType.isArray(type) || ExprType.isArray(other)) {
-      if (!type.equals(other)) {
+      if (type != other) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }
       return type;
@@ -87,15 +107,17 @@ public class ExprTypeConversion
    *  {@link ExprType#DOUBLE}
    */
   @Nullable
-  public static ExprType doubleMathFunction(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExprType function(@Nullable ExprType type, @Nullable ExprType other)
   {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
+    if (type == null) {
+      type = other;
+    }
+    if (other == null) {
+      other = type;
     }
     // arrays cannot be auto converted
     if (ExprType.isArray(type) || ExprType.isArray(other)) {
-      if (!type.equals(other)) {
+      if (type != other) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }
       return type;
@@ -108,6 +130,7 @@ public class ExprTypeConversion
     return numeric(type, other);
   }
 
+
   /**
    * Given 2 'input' types, choose the most appropriate combined type, if possible
    *
@@ -118,37 +141,22 @@ public class ExprTypeConversion
   @Nullable
   public static ExprType integerMathFunction(@Nullable ExprType type, @Nullable ExprType other)
   {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
-    }
-    // arrays cannot be auto converted
-    if (ExprType.isArray(type) || ExprType.isArray(other)) {
-      if (!type.equals(other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
-      }
-      return type;
-    }
-    // if either argument is a string, type becomes a string
-    if (ExprType.STRING.equals(type) || ExprType.STRING.equals(other)) {
-      return ExprType.STRING;
-    }
-
+    final ExprType functionType = ExprTypeConversion.function(type, other);
     // any number is long
-    return ExprType.LONG;
+    return ExprType.isNumeric(functionType) ? ExprType.LONG : functionType;
   }
 
   /**
    * Default best effort numeric type conversion. If both types are {@link ExprType#LONG}, returns
    * {@link ExprType#LONG}, else {@link ExprType#DOUBLE}
    */
-  public static ExprType numeric(ExprType type, ExprType other)
+  public static ExprType numeric(@Nullable ExprType type, @Nullable ExprType other)
   {
     // all numbers win over longs
+    // floats vs doubles would be handled here, but we currently only support doubles...
     if (ExprType.LONG.equals(type) && ExprType.LONG.equals(other)) {
       return ExprType.LONG;
     }
-    // floats vs doubles would be handled here, but we currently only support doubles...
     return ExprType.DOUBLE;
   }
 

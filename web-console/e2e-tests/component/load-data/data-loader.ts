@@ -18,10 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { clickButton } from '../../util/playwright';
-import { clickLabeledButton } from '../../util/playwright';
-import { setLabeledInput } from '../../util/playwright';
-import { setLabeledTextarea } from '../../util/playwright';
+import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
 import { ConfigureSchemaConfig } from './config/configure-schema';
 import { PartitionConfig } from './config/partition';
@@ -128,13 +125,8 @@ export class DataLoader {
 
   private async applyPartitionConfig(partitionConfig: PartitionConfig) {
     await setLabeledInput(this.page, 'Segment granularity', partitionConfig.segmentGranularity);
-    if (partitionConfig.forceGuaranteedRollup) {
-      await clickLabeledButton(
-        this.page,
-        'Force guaranteed rollup',
-        partitionConfig.forceGuaranteedRollupText,
-      );
-      await setLabeledTextarea(this.page, 'Time intervals', partitionConfig.timeIntervals!);
+    if (partitionConfig.timeIntervals) {
+      await setLabeledTextarea(this.page, 'Time intervals', partitionConfig.timeIntervals);
     }
     if (partitionConfig.partitionsSpec != null) {
       await partitionConfig.partitionsSpec.apply(this.page);

@@ -222,7 +222,6 @@ version: 2.10.2
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
-  - com.fasterxml.jackson.core: jackson-databind
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
   - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
   - com.fasterxml.jackson.datatype: jackson-datatype-guava
@@ -231,6 +230,38 @@ libraries:
   - com.fasterxml.jackson.jaxrs: jackson-jaxrs-json-provider
   - com.fasterxml.jackson.jaxrs: jackson-jaxrs-smile-provider
   - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
+  - com.fasterxml.jackson.module: jackson-module-guice
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers, as well as supported
+  commercially by FasterXML.com.
+
+  ## Licensing
+
+  Jackson core and extension components may licensed under different licenses.
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+  For more information, including possible other licensing options, contact
+  FasterXML.com (http://fasterxml.com).
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+---
+
+name: Jackson
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.10.5.1
+libraries:
+  - com.fasterxml.jackson.core: jackson-databind
 notice: |
   # Jackson JSON processor
 
@@ -342,6 +373,16 @@ license_name: Apache License version 2.0
 version: 2.3.0
 libraries:
   - com.jayway.jsonpath: json-path
+
+---
+
+name: CronScheduler
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.1
+libraries:
+  - io.timeandspace: cron-scheduler
 
 ---
 
@@ -1661,7 +1702,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.30.v20200611
+version: 9.4.34.v20201102
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -4116,16 +4157,6 @@ libraries:
 
 ---
 
-name: "Jackson Module: Guice"
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.6.7
-libraries:
-  - com.fasterxml.jackson.module: jackson-module-guice
-
----
-
 name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
@@ -4741,7 +4772,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.9.15
+version: 0.10.5
 
 ---
 
@@ -4902,6 +4933,16 @@ license_name: MIT License
 copyright: Simon Lydell
 version: 4.0.0
 license_file_path: licenses/bin/js-tokens.MIT
+
+---
+
+name: "json-bigint-native"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Vadim Ogievetsky, Andrey Sidorov
+version: 1.0.0
+license_file_path: licenses/bin/json-bigint-native.MIT
 
 ---
 

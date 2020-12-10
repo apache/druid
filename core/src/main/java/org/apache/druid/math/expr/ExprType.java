@@ -126,7 +126,7 @@ public enum ExprType
     }
   }
 
-  public static boolean isNumeric(ExprType type)
+  public static boolean isNumeric(@Nullable ExprType type)
   {
     return LONG.equals(type) || DOUBLE.equals(type);
   }

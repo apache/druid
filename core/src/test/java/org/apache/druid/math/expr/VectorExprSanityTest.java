@@ -72,8 +72,9 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryOperators()
   {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns);
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent"};
+    final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
+    final String[][] templateInputs = makeTemplateArgs(columns, columns2);
     final String[] templates =
         Arrays.stream(templateInputs)
               .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
@@ -86,9 +87,9 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryOperatorTrees()
   {
-    final String[] columns = new String[]{"d1", "l1", "1", "1.0"};
+    final String[] columns = new String[]{"d1", "l1", "1", "1.0", "nonexistent"};
     final String[] columns2 = new String[]{"d2", "l2", "2", "2.0"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns2, columns);
+    final String[][] templateInputs = makeTemplateArgs(columns, columns2, columns2);
     final String[] templates =
         Arrays.stream(templateInputs)
               .map(i -> StringUtils.format("(%s %s %s) %s %s", i[0], "%s", i[1], "%s", i[2]))
@@ -157,7 +158,14 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "scalb",
         "pow"
     };
-    final String[] templates = new String[]{"%s(d1, d2)", "%s(d1, l1)", "%s(l1, d1)", "%s(l1, l2)"};
+    final String[] templates = new String[]{
+        "%s(d1, d2)",
+        "%s(d1, l1)",
+        "%s(l1, d1)",
+        "%s(l1, l2)",
+        "%s(nonexistent, l1)",
+        "%s(nonexistent, d1)"
+    };
     testFunctions(types, templates, functions);
   }
 
@@ -218,7 +226,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     for (int i = 0; i < VECTOR_SIZE; i++) {
       ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
       if (!eval.isNumericNull()) {
-        Assert.assertEquals(outputType, eval.type());
+        Assert.assertEquals(eval.type(), outputType);
       }
       Assert.assertEquals(
           StringUtils.format("Values do not match for row %s for expression %s", i, expr),
@@ -455,7 +463,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     @Override
     public <T> T[] getObjectVector(String name)
     {
-      return (T[]) objects.get(name);
+      return (T[]) objects.getOrDefault(name, new Object[getCurrentVectorSize()]);
     }
 
     @Override
@@ -467,20 +475,22 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     @Override
     public long[] getLongVector(String name)
     {
-      return longs.get(name);
+      return longs.getOrDefault(name, new long[getCurrentVectorSize()]);
     }
 
     @Override
     public double[] getDoubleVector(String name)
     {
-      return doubles.get(name);
+      return doubles.getOrDefault(name, new double[getCurrentVectorSize()]);
     }
 
     @Nullable
     @Override
     public boolean[] getNullVector(String name)
     {
-      return nulls.get(name);
+      final boolean[] defaultVector = new boolean[getCurrentVectorSize()];
+      Arrays.fill(defaultVector, NullHandling.sqlCompatible());
+      return nulls.getOrDefault(name, defaultVector);
     }
 
     @Override

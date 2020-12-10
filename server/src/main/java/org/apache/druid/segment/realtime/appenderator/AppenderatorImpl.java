@@ -64,7 +64,6 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -199,7 +198,7 @@ public class AppenderatorImpl implements Appenderator
       this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
     }
 
-    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
+    maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
   }
 
   @Override
@@ -404,6 +403,7 @@ public class AppenderatorImpl implements Appenderator
           schema,
           identifier.getShardSpec(),
           identifier.getVersion(),
+          tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           null
@@ -968,21 +968,24 @@ public class AppenderatorImpl implements Appenderator
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-persist", maxPendingPersists)
+          Execs.newBlockingSingleThreaded(
+              "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
+              maxPendingPersists
+          )
       );
     }
 
     if (pushExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-merge", 1)
+          Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-merge", 1)
       );
     }
 
     if (intermediateTempExecutor == null) {
       // use single threaded executor with SynchronousQueue so that all abandon operations occur sequentially
       intermediateTempExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-abandon", 0)
+          Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-abandon", 0)
       );
     }
   }
@@ -1121,6 +1124,7 @@ public class AppenderatorImpl implements Appenderator
             schema,
             identifier.getShardSpec(),
             identifier.getVersion(),
+            tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             null,

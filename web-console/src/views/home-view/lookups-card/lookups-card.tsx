@@ -17,13 +17,13 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
-import { Capabilities } from '../../../utils/capabilities';
+import { Capabilities } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface LookupsCardProps {
@@ -34,7 +34,7 @@ export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardPro
   const [lookupsCountState] = useQueryManager<Capabilities, number>({
     processQuery: async capabilities => {
       if (capabilities.hasCoordinatorAccess()) {
-        const resp = await axios.get('/druid/coordinator/v1/lookups/status');
+        const resp = await Api.instance.get('/druid/coordinator/v1/lookups/status');
         const data = resp.data;
         return sum(Object.keys(data).map(k => Object.keys(data[k]).length));
       } else {

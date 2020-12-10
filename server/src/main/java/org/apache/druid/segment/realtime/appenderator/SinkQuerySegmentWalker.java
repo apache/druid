@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.CachingQueryRunner;
@@ -293,6 +294,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         true
     );
+  }
+
+  @VisibleForTesting
+  String getDataSource()
+  {
+    return dataSource;
   }
 
   /**

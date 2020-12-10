@@ -46,6 +46,7 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
 1. Add new Jersey resources by calling `Jerseys.addResource(binder, clazz)`.
 1. Add new Jetty filters by extending `org.apache.druid.server.initialization.jetty.ServletFilterHolder`.
 1. Add new secret providers by extending `org.apache.druid.metadata.PasswordProvider`.
+1. Add new dynamic configuration providers by extending `org.apache.druid.metadata.DynamicConfigProvider`.
 1. Add new ingest transform by implementing the `org.apache.druid.segment.transform.Transform` interface from the `druid-processing` package.
 1. Bundle your extension with all the other Druid extensions
 
@@ -239,6 +240,23 @@ In your implementation of `org.apache.druid.initialization.DruidModule`, `getJac
 ```
 
 where `SomePasswordProvider` is the implementation of `PasswordProvider` interface, you can have a look at `org.apache.druid.metadata.EnvironmentVariablePasswordProvider` for example.
+
+### Adding a new DynamicConfigProvider implementation
+
+You will need to implement `org.apache.druid.metadata.DynamicConfigProvider` interface. For every place where Druid uses DynamicConfigProvider, a new instance of the implementation will be created,
+thus make sure all the necessary information required for fetching all information is supplied during object instantiation.
+In your implementation of `org.apache.druid.initialization.DruidModule`, `getJacksonModules` should look something like this -
+
+``` java
+    return ImmutableList.of(
+        new SimpleModule("SomeDynamicConfigProviderModule")
+            .registerSubtypes(
+                new NamedType(SomeDynamicConfigProvider.class, "some")
+            )
+    );
+```
+
+where `SomeDynamicConfigProvider` is the implementation of `DynamicConfigProvider` interface, you can have a look at `org.apache.druid.metadata.MapStringDynamicConfigProvider` for example.
 
 ### Adding a Transform Extension
 

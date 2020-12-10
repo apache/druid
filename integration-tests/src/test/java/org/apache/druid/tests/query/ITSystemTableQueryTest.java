@@ -63,7 +63,7 @@ public class ITSystemTableQueryTest
   public void testSystemTableQueries()
   {
     try {
-      this.queryHelper.testQueriesFromFile(SYSTEM_QUERIES_RESOURCE, 2);
+      this.queryHelper.testQueriesFromFile(SYSTEM_QUERIES_RESOURCE);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

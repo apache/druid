@@ -99,7 +99,11 @@ public class DruidStatement implements Closeable
     this.sqlLifecycle = Preconditions.checkNotNull(sqlLifecycle, "sqlLifecycle");
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
-        StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
+        StringUtils.format(
+            "JDBCYielderOpenCloseExecutor-connection-%s-statement-%d",
+            StringUtils.encodeForFormat(connectionId),
+            statementId
+        )
     );
   }
 
@@ -360,9 +364,9 @@ public class DruidStatement implements Closeable
         type.getSqlTypeName().getJdbcOrdinal(),
         type.getSqlTypeName().getName(),
         Calcites.sqlTypeNameJdbcToJavaClass(type.getSqlTypeName()).getName(),
-        field.getName());
+        field.getName()
+    );
   }
-
 
 
   private DruidStatement closeAndPropagateThrowable(Throwable t)
