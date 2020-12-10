@@ -309,8 +309,9 @@ public class CompressionUtils
 
       // Skip the rest of the zip file to work around https://github.com/apache/druid/issues/6905
       final byte[] buf = new byte[512];
-      //noinspection StatementWithEmptyBody
-      while (in.read(buf) != -1);
+      while (in.read(buf) != -1) {
+        // Intentionally left empty.
+      }
 
       return result;
     }
