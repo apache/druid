@@ -63,7 +63,7 @@ public class DoubleMinAggregationTest
     selector = new TestDoubleColumnSelectorImpl(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
-    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null).anyTimes();
     EasyMock.replay(colSelectorFactory);
 
 
@@ -74,7 +74,7 @@ public class DoubleMinAggregationTest
 
     vectorColumnSelectorFactory = EasyMock.createMock(VectorColumnSelectorFactory.class);
     EasyMock.expect(vectorColumnSelectorFactory.getColumnCapabilities("dblFld"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.DOUBLE).setDictionaryEncoded(true)).anyTimes();
+            .andReturn(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE)).anyTimes();
     EasyMock.expect(vectorColumnSelectorFactory.makeValueSelector("dblFld")).andReturn(vectorValueSelector).anyTimes();
     EasyMock.replay(vectorColumnSelectorFactory);
   }

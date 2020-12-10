@@ -19,35 +19,36 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
+import java.nio.ByteBuffer;
+
 /**
- * Null-aware numeric {@link Aggregator} which can handle null valued inputs.
+ * Null-aware numeric {@link BufferAggregator} whose input is not nullable, but which should be null valued if no
+ * values are aggregated at all.
  *
- * The result of this aggregator will be null if all the values to be aggregated are null values or no values are
- * aggregated at all. If any of the values are non-null, the result will be the aggregated value of the delegate
- * aggregator. This class is only used when SQL compatible null handling is enabled.
+ * The result of this aggregator will only be null if no values are aggregated at all, otherwise the result will
+ * be the aggregated value of the delegate aggregator. This class is only used when SQL compatible null handling
+ * is enabled.
  *
- * @see NullableNumericAggregatorFactory#factorize(ColumnSelectorFactory)
- * @see NullableNumericBufferAggregator for the non-vectorized buffer version.
+ * @see NullableNumericAggregatorFactory#factorizeBuffered(ColumnSelectorFactory)
+ * @see NullableNumericAggregator for the non-vectorized heap version.
  * @see NullableNumericVectorAggregator the vectorized version.
  */
-@PublicApi
-public final class NullableNumericAggregator extends NullAwareNumericAggregator
+public final class NonnullNumericBufferAggregator extends NullAwareNumericBufferAggregator
 {
-  public NullableNumericAggregator(Aggregator delegate, BaseNullableColumnValueSelector selector)
+  public NonnullNumericBufferAggregator(
+      BufferAggregator delegate,
+      BaseNullableColumnValueSelector nullSelector
+  )
   {
-    super(delegate, selector);
+    super(delegate, nullSelector);
   }
 
   @Override
-  public void aggregate()
+  public void aggregate(ByteBuffer buf, int position)
   {
-    boolean isNotNull = !selector.isNull();
-    if (isNotNull) {
-      doAggregate();
-    }
+    doAggregate(buf, position);
   }
 }

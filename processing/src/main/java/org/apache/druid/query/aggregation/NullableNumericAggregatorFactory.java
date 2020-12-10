@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
@@ -47,12 +48,19 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 public abstract class NullableNumericAggregatorFactory<T extends BaseNullableColumnValueSelector>
     extends AggregatorFactory
 {
+  private final boolean sqlCompatible = NullHandling.sqlCompatible();
+
   @Override
   public final Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
     T selector = selector(columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericAggregator(aggregator, selector);
+    if (!sqlCompatible) {
+      return aggregator;
+    }
+    return hasNulls(columnSelectorFactory)
+           ? new NullableNumericAggregator(aggregator, selector)
+           : new NonnullNumericAggregator(aggregator, selector);
   }
 
   @Override
@@ -60,7 +68,12 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericBufferAggregator(aggregator, selector);
+    if (!sqlCompatible) {
+      return aggregator;
+    }
+    return hasNulls(columnSelectorFactory)
+           ? new NullableNumericBufferAggregator(aggregator, selector)
+           : new NonnullNumericBufferAggregator(aggregator, selector);
   }
 
   @Override
@@ -69,23 +82,41 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericVectorAggregator(aggregator, selector);
+    if (!sqlCompatible) {
+      return aggregator;
+    }
+    return hasNulls(columnSelectorFactory)
+           ? new NullableNumericVectorAggregator(aggregator, selector)
+           : new NonnullNumericVectorAggregator(aggregator, selector);
   }
 
   @Override
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
     AggregateCombiner combiner = makeAggregateCombiner();
-    return NullHandling.replaceWithDefault() ? combiner : new NullableNumericAggregateCombiner(combiner);
+    return sqlCompatible ? new NullableNumericAggregateCombiner(combiner) : combiner;
   }
 
   @Override
   public final int getMaxIntermediateSizeWithNulls()
   {
-    return getMaxIntermediateSize() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
+    return getMaxIntermediateSize() + (sqlCompatible ? Byte.BYTES : 0);
   }
 
-  // ---- ABSTRACT METHODS BELOW ------
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return getType();
+  }
+
+  /**
+   * Returns true if the aggregator will actually produce null values given its input selectors, e.g. if
+   * the inputs to the aggregator have any nulls.
+   */
+  protected boolean hasNulls(ColumnInspector inspector)
+  {
+    return sqlCompatible;
+  }
 
   /**
    * Creates a {@link ColumnValueSelector} for the aggregated column.
@@ -122,10 +153,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
    *
    * @see BufferAggregator
    */
-  protected abstract BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory columnSelectorFactory,
-      T selector
-  );
+  protected abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory, T selector);
 
   /**
    * Creates a {@link VectorAggregator} to aggregate values from several rows into a ByteBuffer.
@@ -137,19 +165,12 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
    */
   protected VectorAggregator factorizeVector(
       VectorColumnSelectorFactory columnSelectorFactory,
-      VectorValueSelector selector
-  )
+      VectorValueSelector selector)
   {
     if (!canVectorize(columnSelectorFactory)) {
       throw new UnsupportedOperationException("Cannot vectorize");
     } else {
       throw new UnsupportedOperationException("canVectorize returned true but 'factorizeVector' is not implemented");
     }
-  }
-
-  @Override
-  public ValueType getFinalizedType()
-  {
-    return getType();
   }
 }

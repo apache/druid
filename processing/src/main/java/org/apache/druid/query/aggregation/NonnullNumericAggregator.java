@@ -19,25 +19,24 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 /**
- * Null-aware numeric {@link Aggregator} which can handle null valued inputs.
+ * Null-aware numeric {@link Aggregator} whose input is not nullable, but which should be null valued if no
+ * values are aggregated at all.
  *
- * The result of this aggregator will be null if all the values to be aggregated are null values or no values are
- * aggregated at all. If any of the values are non-null, the result will be the aggregated value of the delegate
- * aggregator. This class is only used when SQL compatible null handling is enabled.
+ * The result of this aggregator will be null only if no values are aggregated at all, otherwise the result will
+ * be the aggregated value of the delegate aggregator. This class is only used when SQL compatible null handling
+ * is enabled.
  *
  * @see NullableNumericAggregatorFactory#factorize(ColumnSelectorFactory)
- * @see NullableNumericBufferAggregator for the non-vectorized buffer version.
- * @see NullableNumericVectorAggregator the vectorized version.
+ * @see NonnullNumericBufferAggregator for the non-vectorized buffer version.
+ * @see NonnullNumericVectorAggregator the vectorized version.
  */
-@PublicApi
-public final class NullableNumericAggregator extends NullAwareNumericAggregator
+public final class NonnullNumericAggregator extends NullAwareNumericAggregator
 {
-  public NullableNumericAggregator(Aggregator delegate, BaseNullableColumnValueSelector selector)
+  public NonnullNumericAggregator(Aggregator delegate, BaseNullableColumnValueSelector selector)
   {
     super(delegate, selector);
   }
@@ -45,9 +44,6 @@ public final class NullableNumericAggregator extends NullAwareNumericAggregator
   @Override
   public void aggregate()
   {
-    boolean isNotNull = !selector.isNull();
-    if (isNotNull) {
-      doAggregate();
-    }
+    doAggregate();
   }
 }

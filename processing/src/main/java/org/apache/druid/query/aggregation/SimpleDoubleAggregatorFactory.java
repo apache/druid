@@ -20,28 +20,16 @@
 package org.apache.druid.query.aggregation;
 
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
-import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * This is an abstract class inherited by various {@link AggregatorFactory} implementations that consume double input
@@ -49,16 +37,9 @@ import java.util.Objects;
  * It extends "NullableAggregatorFactory<ColumnValueSelector>" instead of "NullableAggregatorFactory<BaseDoubleColumnValueSelector>"
  * to additionally support aggregation on single/multi value string column types.
  */
-public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
+public abstract class SimpleDoubleAggregatorFactory extends SimpleNumericAggregatorFactory<BaseDoubleColumnValueSelector>
 {
-  protected final String name;
-  @Nullable
-  protected final String fieldName;
-  @Nullable
-  protected final String expression;
-  protected final ExprMacroTable macroTable;
   protected final boolean storeDoubleAsFloat;
-  protected final Supplier<Expr> fieldExpression;
 
   public SimpleDoubleAggregatorFactory(
       ExprMacroTable macroTable,
@@ -67,49 +48,11 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
       @Nullable String expression
   )
   {
-    this.macroTable = macroTable;
-    this.name = name;
-    this.fieldName = fieldName;
-    this.expression = expression;
+    super(macroTable, name, fieldName, expression);
     this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
-    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkArgument(
-        fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression"
-    );
   }
 
-  @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
-  {
-    if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
-      return new StringColumnDoubleAggregatorWrapper(
-          selector,
-          SimpleDoubleAggregatorFactory.this::buildAggregator,
-          nullValue()
-      );
-    } else {
-      return buildAggregator(selector);
-    }
-  }
-
-  @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
-      ColumnValueSelector selector
-  )
-  {
-    if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
-      return new StringColumnDoubleBufferAggregatorWrapper(
-          selector,
-          SimpleDoubleAggregatorFactory.this::buildBufferAggregator,
-          nullValue()
-      );
-    } else {
-      return buildBufferAggregator(selector);
-    }
-  }
+  protected abstract double nullValue();
 
   @Override
   protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
@@ -123,18 +66,23 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   }
 
   @Override
-  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  protected Aggregator buildStringColumnAggregatorWrapper(BaseObjectColumnValueSelector selector)
   {
-    return AggregatorUtil.makeVectorValueSelector(columnSelectorFactory, fieldName, expression, fieldExpression);
+    return new StringColumnDoubleAggregatorWrapper(
+        selector,
+        SimpleDoubleAggregatorFactory.this::buildAggregator,
+        nullValue()
+    );
   }
 
-  private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)
+  @Override
+  protected BufferAggregator buildStringColumnBufferAggregatorWrapper(BaseObjectColumnValueSelector selector)
   {
-    if (fieldName != null) {
-      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-      return capabilities != null && capabilities.getType() == ValueType.STRING;
-    }
-    return false;
+    return new StringColumnDoubleBufferAggregatorWrapper(
+        selector,
+        SimpleDoubleAggregatorFactory.this::buildBufferAggregator,
+        nullValue()
+    );
   }
 
   @Override
@@ -167,92 +115,4 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   {
     return DoubleSumAggregator.COMPARATOR;
   }
-
-  @Override
-  @Nullable
-  public Object finalizeComputation(@Nullable Object object)
-  {
-    return object;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return fieldName != null
-           ? Collections.singletonList(fieldName)
-           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
-  }
-
-  @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(fieldName, expression, name);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    SimpleDoubleAggregatorFactory that = (SimpleDoubleAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @Nullable
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @Nullable
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  public boolean canVectorize(ColumnInspector columnInspector)
-  {
-    return AggregatorUtil.canVectorize(columnInspector, fieldName, expression, fieldExpression);
-  }
-
-  protected abstract double nullValue();
-
-  protected abstract Aggregator buildAggregator(BaseDoubleColumnValueSelector selector);
-
-  protected abstract BufferAggregator buildBufferAggregator(BaseDoubleColumnValueSelector selector);
 }

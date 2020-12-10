@@ -59,7 +59,7 @@ public class FloatMaxAggregationTest
 
     vectorColumnSelectorFactory = EasyMock.createMock(VectorColumnSelectorFactory.class);
     EasyMock.expect(vectorColumnSelectorFactory.getColumnCapabilities("fltFld"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.FLOAT).setDictionaryEncoded(true)).anyTimes();
+            .andReturn(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT)).anyTimes();
     EasyMock.expect(vectorColumnSelectorFactory.makeValueSelector("fltFld")).andReturn(vectorValueSelector).anyTimes();
     EasyMock.replay(vectorColumnSelectorFactory);
   }
