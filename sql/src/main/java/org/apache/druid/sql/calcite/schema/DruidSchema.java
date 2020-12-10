@@ -449,25 +449,27 @@ public class DruidSchema extends AbstractSchema
   {
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
-      if (server.getType().equals(ServerType.BROKER)) {
-        // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
-        // historical, however mark the datasource for refresh because it might no longer be broadcast or something
-        dataSourcesNeedingRebuild.add(segment.getDataSource());
-      } else {
-        final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
-        final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
-        final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
-        final ImmutableSet<DruidServerMetadata> servers = FluentIterable
-            .from(segmentServers)
-            .filter(Predicates.not(Predicates.equalTo(server)))
-            .toSet();
+      final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
+      if (knownSegments != null && !knownSegments.isEmpty()) {
+        if (server.getType().equals(ServerType.BROKER)) {
+          // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
+          // historical, however mark the datasource for refresh because it might no longer be broadcast or something
+          dataSourcesNeedingRebuild.add(segment.getDataSource());
+        } else {
+          final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
+          final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+          final ImmutableSet<DruidServerMetadata> servers = FluentIterable
+              .from(segmentServers)
+              .filter(Predicates.not(Predicates.equalTo(server)))
+              .toSet();
 
-        final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
-            .from(segmentMetadata)
-            .withReplicas(servers)
-            .withRealtime(recomputeIsRealtime(servers))
-            .build();
-        knownSegments.put(segment.getId(), metadataWithNumReplicas);
+          final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
+              .from(segmentMetadata)
+              .withReplicas(servers)
+              .withRealtime(recomputeIsRealtime(servers))
+              .build();
+          knownSegments.put(segment.getId(), metadataWithNumReplicas);
+        }
       }
       lock.notifyAll();
     }
