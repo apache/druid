@@ -1,0 +1,12 @@
+{
+  "broker_host": "localhost",
+  "broker_port": "30100",
+  "router_host": "localhost",
+  "router_port": "30400",
+  "indexer_host": "localhost",
+  "indexer_port": "8081",
+  "coordinator_host": "localhost",
+  "coordinator_port": "30200",
+  "middlemanager_host": "localhost",
+  "zookeeper_hosts": "localhost"
+}
