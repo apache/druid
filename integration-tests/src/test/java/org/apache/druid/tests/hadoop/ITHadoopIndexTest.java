@@ -196,14 +196,12 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
    *
    * @throws Exception
    */
+  @Test
   public void testIndexDataAwaitSegmentAvailability() throws Exception
   {
     String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
-    String reindexDatasource = REINDEX_DATASOURCE + "_" + UUID.randomUUID();
-
     try (
         final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       final Function<String, String> specPathsTransform = spec -> {
         try {
@@ -243,14 +241,6 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           true,
           new Pair<>(true, true)
       );
-
-      doReindexTest(
-          indexDatasource,
-          reindexDatasource,
-          REINDEX_TASK,
-          REINDEX_QUERIES_RESOURCE,
-          new Pair<>(true, true)
-      );
     }
   }
 
@@ -261,6 +251,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
    *
    * @throws Exception
    */
+  @Test
   public void testIndexDataAwaitSegmentAvailabilityFailsButTaskSucceeds() throws Exception
   {
     String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
@@ -309,7 +300,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
       );
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
       ITRetryUtil.retryUntilTrue(
-          () -> coordinator.areSegmentsLoaded(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()), "Segment Load"
+          () -> coordinatorClient.areSegmentsLoaded(indexDatasource + config.getExtraDatasourceNameSuffix()), "Segment Load For: " + indexDatasource + config.getExtraDatasourceNameSuffix()
       );
     }
   }

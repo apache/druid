@@ -30,7 +30,7 @@ public class ITRetryUtil
 
   private static final Logger LOG = new Logger(ITRetryUtil.class);
 
-  public static final int DEFAULT_RETRY_COUNT = 150; // 5 minutes
+  public static final int DEFAULT_RETRY_COUNT = 300; // 10 minutes. legacy batch hadoop takes long time on local mode.
 
   public static final long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(2);
 

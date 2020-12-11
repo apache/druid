@@ -56,7 +56,6 @@
         "targetPartitionSize": 75000,
         "type": "hashed"
       },
-      "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%,
       "jobProperties": {
         "fs.permissions.umask-mode": "022",
         "fs.default.name" : "hdfs://druid-it-hadoop:9000",
