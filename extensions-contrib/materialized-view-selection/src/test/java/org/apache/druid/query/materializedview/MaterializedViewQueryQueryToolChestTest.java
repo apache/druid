@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -57,6 +58,10 @@ public class MaterializedViewQueryQueryToolChestTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
+  static {
+    NullHandling.initializeForTests();
+  }
+  
   @Test
   public void testMakePostComputeManipulatorFn()
   {

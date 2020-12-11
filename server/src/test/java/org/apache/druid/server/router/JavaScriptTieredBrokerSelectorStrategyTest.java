@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -38,7 +39,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.LinkedHashMap;
 
-public class JavaScriptTieredBrokerSelectorStrategyTest
+public class JavaScriptTieredBrokerSelectorStrategyTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

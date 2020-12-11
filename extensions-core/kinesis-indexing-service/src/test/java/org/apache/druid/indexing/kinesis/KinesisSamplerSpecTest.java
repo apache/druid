@@ -61,30 +61,31 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 {
   private static final String STREAM = "sampling";
   private static final String SHARD_ID = "1";
-  private static final DataSchema DATA_SCHEMA = new DataSchema(
-      "test_ds",
-      new TimestampSpec("timestamp", "iso", null),
-      new DimensionsSpec(
-          Arrays.asList(
-              new StringDimensionSchema("dim1"),
-              new StringDimensionSchema("dim1t"),
-              new StringDimensionSchema("dim2"),
-              new LongDimensionSchema("dimLong"),
-              new FloatDimensionSchema("dimFloat")
-          ),
-          null,
-          null
-      ),
-      new AggregatorFactory[]{
-          new DoubleSumAggregatorFactory("met1sum", "met1"),
-          new CountAggregatorFactory("rows")
-      },
-      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null
-  );
+  private static final DataSchema DATA_SCHEMA;
 
   static {
     NullHandling.initializeForTests();
+    DATA_SCHEMA = new DataSchema(
+        "test_ds",
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(
+            Arrays.asList(
+                new StringDimensionSchema("dim1"),
+                new StringDimensionSchema("dim1t"),
+                new StringDimensionSchema("dim2"),
+                new LongDimensionSchema("dimLong"),
+                new FloatDimensionSchema("dimFloat")
+            ),
+            null,
+            null
+        ),
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("met1sum", "met1"),
+            new CountAggregatorFactory("rows")
+        },
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        null
+    );
   }
 
   private final KinesisRecordSupplier recordSupplier = mock(KinesisRecordSupplier.class);

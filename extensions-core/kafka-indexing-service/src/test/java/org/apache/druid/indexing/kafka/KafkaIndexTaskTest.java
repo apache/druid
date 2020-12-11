@@ -36,6 +36,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -167,6 +168,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private static int topicPostfix;
 
   static {
+    NullHandling.initializeForTests();
     new KafkaIndexTaskModule().getJacksonModules().forEach(OBJECT_MAPPER::registerModule);
   }
 
