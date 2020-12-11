@@ -26,31 +26,16 @@ export SHARED_DIR=${HOME}/shared
 # so docker IP addr will be known during docker build
 echo ${DOCKER_IP:=127.0.0.1} > $DOCKERDIR/docker_ip
 
-
-if !($DRUID_INTEGRATION_TEST_SKIP_RUN_K8S); then
-  bash ./stop_k8s_cluster.sh
-  bash ./script/k8s_run_cluster.sh
-  bash ./script/build_docker_image_for_k8s.sh
-  exit 0
-fi
-
-
-# DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER default false
 if !($DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER); then
   bash ./script/copy_resources.sh
   bash ./script/docker_build_containers.sh
 fi
 
-# DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER default fasle
 if !($DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER); then
   bash ./stop_cluster.sh
   bash ./script/docker_run_cluster.sh
-elif !($DRUID_INTEGRATION_TEST_SKIP_RUN_K8S); then
-  bash ./stop_k8s_cluster.sh
-  bash ./script/k8s_run_cluster.sh
 fi
 
-# DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER default false
 if ($DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER); then
   bash ./script/copy_hadoop_resources.sh
 fi

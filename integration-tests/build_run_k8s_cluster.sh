@@ -20,5 +20,4 @@ if !($DRUID_INTEGRATION_TEST_SKIP_RUN_K8S); then
   bash ./stop_k8s_cluster.sh
   bash ./script/k8s_run_cluster.sh
   bash ./script/build_docker_image_for_k8s.sh
-  exit 0
 fi
