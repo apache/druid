@@ -16,11 +16,15 @@
  * limitations under the License.
  */
 
-import { Api } from './api';
+import { shallow } from 'enzyme';
+import React from 'react';
 
-describe('Api', () => {
-  it('escapes stuff', () => {
-    expect(Api.encodePath('wikipedia')).toEqual('wikipedia');
-    expect(Api.encodePath(`wi%ki?pe#dia&'[]`)).toEqual('wi%25ki%3Fpe%23dia%26%27%5B%5D');
+import { NumericInputWithDefault } from './numeric-input-with-default';
+
+describe('NumericInputWithDefault', () => {
+  it('matches snapshot', () => {
+    const numericInputWithDefault = shallow(<NumericInputWithDefault value={5} defaultValue={3} />);
+
+    expect(numericInputWithDefault).toMatchSnapshot();
   });
 });

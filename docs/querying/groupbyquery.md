@@ -228,7 +228,7 @@ The response for the query above would look something like:
 
 > Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0. 
 > In release 0.17.0 and earlier, such dimensions were entirely excluded from the result. If you were relying on this old behavior to determine whether a particular dimension was not part of
-> a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#Grouping Aggregator) instead.  
+> a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#grouping-aggregator) instead.  
 
 
 ## Implementation details

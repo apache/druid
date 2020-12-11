@@ -222,7 +222,6 @@ version: 2.10.2
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
-  - com.fasterxml.jackson.core: jackson-databind
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
   - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
   - com.fasterxml.jackson.datatype: jackson-datatype-guava
@@ -232,6 +231,37 @@ libraries:
   - com.fasterxml.jackson.jaxrs: jackson-jaxrs-smile-provider
   - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
   - com.fasterxml.jackson.module: jackson-module-guice
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers, as well as supported
+  commercially by FasterXML.com.
+
+  ## Licensing
+
+  Jackson core and extension components may licensed under different licenses.
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+  For more information, including possible other licensing options, contact
+  FasterXML.com (http://fasterxml.com).
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+---
+
+name: Jackson
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.10.5.1
+libraries:
+  - com.fasterxml.jackson.core: jackson-databind
 notice: |
   # Jackson JSON processor
 

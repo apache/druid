@@ -63,6 +63,7 @@ Dropwizard
 dropwizard
 DruidInputSource
 DruidSQL
+DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
@@ -217,6 +218,7 @@ colocation
 compactable
 config
 configs
+consumerProperties
 cron
 csv
 customizable
