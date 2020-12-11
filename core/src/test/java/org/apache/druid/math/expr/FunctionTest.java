@@ -528,71 +528,71 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testSizeFormat()
   {
-    assertExpr("binary_byte_format(-1024)", "-1.00KiB");
-    assertExpr("binary_byte_format(1024)", "1.00KiB");
-    assertExpr("binary_byte_format(1024*1024)", "1.00MiB");
-    assertExpr("binary_byte_format(1024*1024*1024)", "1.00GiB");
-    assertExpr("binary_byte_format(1024*1024*1024*1024)", "1.00TiB");
-    assertExpr("binary_byte_format(1024*1024*1024*1024*1024)", "1.00PiB");
+    assertExpr("binary_byte_format(-1024)", "-1.00 KiB");
+    assertExpr("binary_byte_format(1024)", "1.00 KiB");
+    assertExpr("binary_byte_format(1024*1024)", "1.00 MiB");
+    assertExpr("binary_byte_format(1024*1024*1024)", "1.00 GiB");
+    assertExpr("binary_byte_format(1024*1024*1024*1024)", "1.00 TiB");
+    assertExpr("binary_byte_format(1024*1024*1024*1024*1024)", "1.00 PiB");
 
-    assertExpr("decimal_byte_format(-1000)", "-1.00KB");
-    assertExpr("decimal_byte_format(1000)", "1.00KB");
-    assertExpr("decimal_byte_format(1000*1000)", "1.00MB");
-    assertExpr("decimal_byte_format(1000*1000*1000)", "1.00GB");
-    assertExpr("decimal_byte_format(1000*1000*1000*1000)", "1.00TB");
+    assertExpr("decimal_byte_format(-1000)", "-1.00 KB");
+    assertExpr("decimal_byte_format(1000)", "1.00 KB");
+    assertExpr("decimal_byte_format(1000*1000)", "1.00 MB");
+    assertExpr("decimal_byte_format(1000*1000*1000)", "1.00 GB");
+    assertExpr("decimal_byte_format(1000*1000*1000*1000)", "1.00 TB");
 
-    assertExpr("decimal_format(-1000)", "-1.00K");
-    assertExpr("decimal_format(1000)", "1.00K");
-    assertExpr("decimal_format(1000*1000)", "1.00M");
-    assertExpr("decimal_format(1000*1000*1000)", "1.00G");
-    assertExpr("decimal_format(1000*1000*1000*1000)", "1.00T");
+    assertExpr("decimal_format(-1000)", "-1.00 K");
+    assertExpr("decimal_format(1000)", "1.00 K");
+    assertExpr("decimal_format(1000*1000)", "1.00 M");
+    assertExpr("decimal_format(1000*1000*1000)", "1.00 G");
+    assertExpr("decimal_format(1000*1000*1000*1000)", "1.00 T");
   }
 
   @Test
   public void testSizeFormatWithDifferentPrecision()
   {
-    assertExpr("binary_byte_format(1024, 0)", "1KiB");
-    assertExpr("binary_byte_format(1024*1024, 1)", "1.0MiB");
-    assertExpr("binary_byte_format(1024*1024*1024, 2)", "1.00GiB");
-    assertExpr("binary_byte_format(1024*1024*1024*1024, 3)", "1.000TiB");
+    assertExpr("binary_byte_format(1024, 0)", "1 KiB");
+    assertExpr("binary_byte_format(1024*1024, 1)", "1.0 MiB");
+    assertExpr("binary_byte_format(1024*1024*1024, 2)", "1.00 GiB");
+    assertExpr("binary_byte_format(1024*1024*1024*1024, 3)", "1.000 TiB");
 
-    assertExpr("decimal_byte_format(1234, 0)", "1KB");
-    assertExpr("decimal_byte_format(1234*1000, 1)", "1.2MB");
-    assertExpr("decimal_byte_format(1234*1000*1000, 2)", "1.23GB");
-    assertExpr("decimal_byte_format(1234*1000*1000*1000, 3)", "1.234TB");
+    assertExpr("decimal_byte_format(1234, 0)", "1 KB");
+    assertExpr("decimal_byte_format(1234*1000, 1)", "1.2 MB");
+    assertExpr("decimal_byte_format(1234*1000*1000, 2)", "1.23 GB");
+    assertExpr("decimal_byte_format(1234*1000*1000*1000, 3)", "1.234 TB");
 
-    assertExpr("decimal_format(1234, 0)", "1K");
-    assertExpr("decimal_format(1234*1000,1)", "1.2M");
-    assertExpr("decimal_format(1234*1000*1000,2)", "1.23G");
-    assertExpr("decimal_format(1234*1000*1000*1000,3)", "1.234T");
+    assertExpr("decimal_format(1234, 0)", "1 K");
+    assertExpr("decimal_format(1234*1000,1)", "1.2 M");
+    assertExpr("decimal_format(1234*1000*1000,2)", "1.23 G");
+    assertExpr("decimal_format(1234*1000*1000*1000,3)", "1.234 T");
   }
 
   @Test
   public void testSizeFormatWithEdgeCases()
   {
     //a nonexist value is null which is treated as 0
-    assertExpr("binary_byte_format(nonexist)", "0B");
+    assertExpr("binary_byte_format(nonexist)", "0 B");
 
     //f = 12.34
-    assertExpr("binary_byte_format(f)", "12B");
+    assertExpr("binary_byte_format(f)", "12 B");
 
     //nan is Double.NaN
-    assertExpr("binary_byte_format(nan)", "0B");
+    assertExpr("binary_byte_format(nan)", "0 B");
 
     //inf = Double.POSITIVE_INFINITY
-    assertExpr("binary_byte_format(inf)", "8.00EiB");
+    assertExpr("binary_byte_format(inf)", "8.00 EiB");
 
     //inf = Double.NEGATIVE_INFINITY
-    assertExpr("binary_byte_format(-inf)", "-8.00EiB");
+    assertExpr("binary_byte_format(-inf)", "-8.00 EiB");
 
     // o = 0
-    assertExpr("binary_byte_format(o)", "0B");
+    assertExpr("binary_byte_format(o)", "0 B");
 
     // od = 0D
-    assertExpr("binary_byte_format(od)", "0B");
+    assertExpr("binary_byte_format(od)", "0 B");
 
     // of = 0F
-    assertExpr("binary_byte_format(of)", "0B");
+    assertExpr("binary_byte_format(of)", "0 B");
   }
 
   @Test
@@ -705,8 +705,8 @@ public class FunctionTest extends InitializedNullHandlingTest
       // normal cases
       // y is not null, the function returns correctly
       //
-      assertExpr("binary_byte_format(y)", "2B");
-      assertExpr("decimal_byte_format(y)", "2B");
+      assertExpr("binary_byte_format(y)", "2 B");
+      assertExpr("decimal_byte_format(y)", "2 B");
       assertExpr("decimal_format(y)", "2");
 
       //

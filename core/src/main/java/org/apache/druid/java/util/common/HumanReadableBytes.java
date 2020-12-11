@@ -243,7 +243,7 @@ public class HumanReadableBytes
       throw new IAE("precision [%d] must be in the range of [0,3]", precision);
     }
 
-    String pattern = "%." + precision + "f%s%s";
+    String pattern = "%." + precision + "f %s%s";
     switch (unitSystem) {
       case BINARY_BYTE:
         return BinaryFormatter.format(bytes, pattern, "B");
@@ -263,7 +263,7 @@ public class HumanReadableBytes
     static String format(long bytes, String pattern, String suffix)
     {
       if (bytes > -1024 && bytes < 1024) {
-        return bytes + suffix;
+        return bytes + " " + suffix;
       }
 
       if (bytes == Long.MIN_VALUE) {
@@ -302,7 +302,7 @@ public class HumanReadableBytes
        * handle number between (-1000, 1000) first to simply further processing
        */
       if (bytes > -1000 && bytes < 1000) {
-        return bytes + suffix;
+        return bytes + " " + suffix;
       }
 
       /**

@@ -16308,7 +16308,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 // NOTE: the first expression BINARY_BYTE_FORMAT(45678) in SQL is calculated during SQL parse phase,
                 // so the converted Druid native query is its result intead of the raw function call
                 //
-                .virtualColumns(expressionVirtualColumn("v0", "'44.61KiB'", ValueType.STRING),
+                .virtualColumns(expressionVirtualColumn("v0", "'44.61 KiB'", ValueType.STRING),
                                 expressionVirtualColumn("v1", "binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
                                 expressionVirtualColumn("v2", "binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
                                 expressionVirtualColumn("v3", "decimal_byte_format((\"m1\" * 12345))", ValueType.STRING),
@@ -16322,11 +16322,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{(float) 2.0,
-                         "44.61KiB", // 45678 / 1024
-                         "24.11KiB", // = m1(2.0) * 12345 / 1024
-                         "24KiB", // = m1(2.0) * 12345 / 1024, precision = 0
-                         "24.69KB", // decimal byte format, m1(2.0) * 12345 / 1000,
-                         "24.69K" // decimal format, m1(2.0) * 12345 / 1000,
+                         "44.61 KiB", // 45678 / 1024
+                         "24.11 KiB", // = m1(2.0) * 12345 / 1024
+                         "24 KiB", // = m1(2.0) * 12345 / 1024, precision = 0
+                         "24.69 KB", // decimal byte format, m1(2.0) * 12345 / 1000,
+                         "24.69 K" // decimal format, m1(2.0) * 12345 / 1000,
             }
         )
     );
