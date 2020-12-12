@@ -550,15 +550,15 @@ jobs:
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
     - &integration_batch_index_k8s
-      name: "(Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITIndexer integration test running on K8s"
+      name: "(Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) batch-index integration test"
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker
-      env: CONFIG_FILE='k8s_run_config_file.json' ${IT_TEST}='-Dit.test=ITIndexerTest'
+      env: CONFIG_FILE='k8s_run_config_file.json' TESTNG_GROUPS='-Dgroups=batch-index'
       before_script:
         - ./build_run_k8s_cluster.sh
       script: &run_integration_test_k8s
-        - ${MVN} verify -P int-tests-config-file ${IT_TEST}
+        - ${MVN} verify -P int-tests-config-file ${TESTNG_GROUPS} ${MAVEN_SKIP}
       after_script:
         - ./stop_k8s_cluster.sh
       after_failure: &integration_test_diags_k8s
@@ -566,7 +566,6 @@ jobs:
           echo $v dmesg ======================== ;
           /usr/local/bin/kubectl exec -it druid-tiny-cluster-"$v"s-0 sh -c 'dmesg | tail -3' ;
           done
-
     - name: "security vulnerabilities"
       stage: cron
       install: skip

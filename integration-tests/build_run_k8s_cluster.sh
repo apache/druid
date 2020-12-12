@@ -54,5 +54,6 @@ sudo /usr/local/bin/kubectl apply -f druid-operator/examples/tiny-cluster-zk.yam
 sudo /usr/local/bin/kubectl apply -f druid-operator/examples/tiny-cluster.yaml
 
 # Wait 4 * 15 seconds to launch pods.
-count=0
-JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n default get pods -lapp=travis-example -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 4;if [ $count -eq 15 ];then break 2 ;else let "count++";fi;echo $i;echo "waiting for travis-example deployment to be available"; kubectl get pods -n default; done
+#count=0
+#JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until sudo /usr/local/bin/kubectl -n default get pods -lapp=travis-example -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 4;if [ $count -eq 15 ];then break 2 ;else let "count++";fi;echo $i;echo "waiting for travis-example deployment to be available"; sudo /usr/local/bin/kubectl get pods -n default; done
+sleep 60
