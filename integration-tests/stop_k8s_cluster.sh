@@ -15,12 +15,5 @@
 # limitations under the License.
 
 set -e
-
-# Skip stopping docker if flag set (For use during development)
-if [ -n "$DRUID_INTEGRATION_TEST_SKIP_RUN_K8S" ] && [ "$DRUID_INTEGRATION_TEST_SKIP_RUN_K8S" == true ]
-  then
-    exit 0
-fi
-
-/usr/local/bin/minikube delete
-rm -rf /tmp/druid
+sudo /usr/local/bin/minikube delete
+sudo rm -rf `pwd`/tmp
