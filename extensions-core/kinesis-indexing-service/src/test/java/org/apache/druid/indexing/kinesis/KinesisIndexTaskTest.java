@@ -40,6 +40,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -153,7 +154,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private static final String SHARD_ID1 = "1";
   private static final String SHARD_ID0 = "0";
   private static KinesisRecordSupplier recordSupplier;
-  private static List<OrderedPartitionableRecord<String, String>> records;
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> records;
 
   private static ServiceEmitter emitter;
 
@@ -249,7 +250,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     emitter.close();
   }
 
-  private static List<OrderedPartitionableRecord<String, String>> generateRecords(String stream)
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(String stream)
   {
     return ImmutableList.of(
         new OrderedPartitionableRecord<>(stream, "1", "0", jbl("2008", "a", "y", "10", "20.0", "1.0")),
@@ -267,15 +268,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             stream,
             "1",
             "6",
-            Collections.singletonList(StringUtils.toUtf8("unparseable"))
+            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
         ),
         new OrderedPartitionableRecord<>(
             stream,
             "1",
             "7",
-            Collections.singletonList(StringUtils.toUtf8("unparseable2"))
+            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable2")))
         ),
-        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new ByteEntity(StringUtils.toUtf8("{}")))),
         new OrderedPartitionableRecord<>(stream, "1", "9", jbl("2013", "f", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, "1", "10", jbl("2049", "f", "y", "notanumber", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, "1", "11", jbl("2049", "f", "y", "10", "notanumber", "1.0")),
@@ -285,7 +286,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  private static List<OrderedPartitionableRecord<String, String>> generateSinglePartitionRecords(String stream)
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateSinglePartitionRecords(String stream)
   {
     return ImmutableList.of(
         new OrderedPartitionableRecord<>(stream, "1", "0", jbl("2008", "a", "y", "10", "20.0", "1.0")),
@@ -2579,7 +2580,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    List<OrderedPartitionableRecord<String, String>> eosRecord = ImmutableList.of(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> eosRecord = ImmutableList.of(
         new OrderedPartitionableRecord<>(STREAM, SHARD_ID1, KinesisSequenceNumber.END_OF_SHARD_MARKER, null)
     );
 

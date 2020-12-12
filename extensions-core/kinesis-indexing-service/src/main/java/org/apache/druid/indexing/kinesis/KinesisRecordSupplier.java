@@ -48,6 +48,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -92,7 +93,7 @@ import java.util.stream.Collectors;
  * This class implements a local buffer for storing fetched Kinesis records. Fetching is done
  * in background threads.
  */
-public class KinesisRecordSupplier implements RecordSupplier<String, String>
+public class KinesisRecordSupplier implements RecordSupplier<String, String, ByteEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
@@ -234,7 +235,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
-        OrderedPartitionableRecord<String, String> currRecord;
+        OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
 
         try {
 
@@ -267,7 +268,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
 
-            final List<byte[]> data;
+            final List<ByteEntity> data;
 
 
             if (deaggregate) {
@@ -282,10 +283,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               );
 
               for (Object userRecord : userRecords) {
-                data.add(toByteArray((ByteBuffer) getDataHandle.invoke(userRecord)));
+                data.add(new ByteEntity((ByteBuffer) getDataHandle.invoke(userRecord)));
               }
             } else {
-              data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+              data = Collections.singletonList(new ByteEntity(kinesisRecord.getData()));
             }
 
             currRecord = new OrderedPartitionableRecord<>(
@@ -302,7 +303,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                 currRecord.getPartitionId(),
                 currRecord.getSequenceNumber(),
                 records.remainingCapacity(),
-                currRecord.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
+                currRecord.getData().stream().map(b -> StringUtils.fromUtf8(b.getBuffer())).collect(Collectors.toList())
             );
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
@@ -427,7 +428,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
-  private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
+  private BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> records;
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
@@ -636,14 +637,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<String, String>> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, String, ByteEntity>> poll(long timeout)
   {
     start();
 
     try {
       int expectedSize = Math.min(Math.max(records.size(), 1), maxRecordsPerPoll);
 
-      List<OrderedPartitionableRecord<String, String>> polledRecords = new ArrayList<>(expectedSize);
+      List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = new ArrayList<>(expectedSize);
 
       Queues.drain(
           records,
@@ -928,7 +929,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     // filter records in buffer and only retain ones whose partition was not seeked
-    BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
+    BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
 
     records.stream()
            .filter(x -> !partitions.contains(x.getStreamPartition()))

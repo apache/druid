@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
@@ -3822,7 +3823,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected RecordSupplier<Integer, Long> setupRecordSupplier()
+    protected RecordSupplier<Integer, Long, KafkaRecordEntity> setupRecordSupplier()
     {
       final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       consumerConfigs.put("metadata.max.age.ms", "1");
