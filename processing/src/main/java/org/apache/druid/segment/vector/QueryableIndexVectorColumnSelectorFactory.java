@@ -71,7 +71,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
-  public ReadableVectorOffset getReadableVectorOffset()
+  public ReadableVectorInspector getReadableVectorInspector()
   {
     return offset;
   }

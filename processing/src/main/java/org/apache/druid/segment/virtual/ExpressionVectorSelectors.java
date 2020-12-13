@@ -52,7 +52,7 @@ public class ExpressionVectorSelectors
 
     if (plan.isConstant()) {
       String constant = plan.getExpression().eval(ExprUtils.nilBindings()).asString();
-      return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getReadableVectorOffset(), constant);
+      return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getReadableVectorInspector(), constant);
     }
     throw new IllegalStateException("Only constant expressions currently support dimension selectors");
   }
@@ -67,7 +67,7 @@ public class ExpressionVectorSelectors
 
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorValueSelector(
-          factory.getReadableVectorOffset(),
+          factory.getReadableVectorInspector(),
           (Number) plan.getExpression().eval(ExprUtils.nilBindings()).value()
       );
     }
@@ -86,7 +86,7 @@ public class ExpressionVectorSelectors
 
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorObjectSelector(
-          factory.getReadableVectorOffset(),
+          factory.getReadableVectorInspector(),
           plan.getExpression().eval(ExprUtils.nilBindings()).value()
       );
     }
@@ -102,7 +102,7 @@ public class ExpressionVectorSelectors
   )
   {
     ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(
-        vectorColumnSelectorFactory.getReadableVectorOffset()
+        vectorColumnSelectorFactory.getReadableVectorInspector()
     );
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
     for (String columnName : columns) {

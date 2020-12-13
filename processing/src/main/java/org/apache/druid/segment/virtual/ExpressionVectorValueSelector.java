@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -37,8 +37,8 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
 
   @MonotonicNonNull
   private ExprEvalVector<?> evalResult;
-  private int currentOffsetId = ReadableVectorOffset.NULL_ID;
-  private int currentFloatsId = ReadableVectorOffset.NULL_ID;
+  private int currentOffsetId = ReadableVectorInspector.NULL_ID;
+  private int currentFloatsId = ReadableVectorInspector.NULL_ID;
 
   public ExpressionVectorValueSelector(ExprVectorProcessor<?> processor, Expr.VectorInputBinding bindings)
   {

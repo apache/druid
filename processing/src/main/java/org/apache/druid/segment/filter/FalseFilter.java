@@ -67,7 +67,7 @@ public class FalseFilter implements Filter
   @Override
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
-    return new FalseVectorMatcher(factory.getReadableVectorOffset());
+    return new FalseVectorMatcher(factory.getReadableVectorInspector());
   }
 
   @Override

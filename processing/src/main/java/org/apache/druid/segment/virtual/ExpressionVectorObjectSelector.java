@@ -22,7 +22,7 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -33,7 +33,7 @@ public class ExpressionVectorObjectSelector implements VectorObjectSelector
 
   @MonotonicNonNull
   private Object[] cached;
-  private int currentId = ReadableVectorOffset.NULL_ID;
+  private int currentId = ReadableVectorInspector.NULL_ID;
 
   public ExpressionVectorObjectSelector(ExprVectorProcessor<?> processor, Expr.VectorInputBinding bindings)
   {

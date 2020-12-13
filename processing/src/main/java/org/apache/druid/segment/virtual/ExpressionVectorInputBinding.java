@@ -22,7 +22,7 @@ package org.apache.druid.segment.virtual;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.segment.vector.NilVectorSelector;
-import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -37,15 +37,15 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   private final Map<String, ExprType> types;
   private final NilVectorSelector nilSelector;
 
-  private final ReadableVectorOffset vectorOffset;
+  private final ReadableVectorInspector vectorInspector;
 
-  public ExpressionVectorInputBinding(ReadableVectorOffset vectorOffset)
+  public ExpressionVectorInputBinding(ReadableVectorInspector vectorInspector)
   {
     this.numeric = new HashMap<>();
     this.objects = new HashMap<>();
     this.types = new HashMap<>();
-    this.vectorOffset = vectorOffset;
-    this.nilSelector = NilVectorSelector.create(vectorOffset);
+    this.vectorInspector = vectorInspector;
+    this.nilSelector = NilVectorSelector.create(this.vectorInspector);
   }
 
   public ExpressionVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
@@ -96,18 +96,18 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   @Override
   public int getMaxVectorSize()
   {
-    return vectorOffset.getMaxVectorSize();
+    return vectorInspector.getMaxVectorSize();
   }
 
   @Override
   public int getCurrentVectorSize()
   {
-    return vectorOffset.getCurrentVectorSize();
+    return vectorInspector.getCurrentVectorSize();
   }
 
   @Override
   public int getCurrentVectorId()
   {
-    return vectorOffset.getId();
+    return vectorInspector.getId();
   }
 }

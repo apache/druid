@@ -23,8 +23,8 @@ public abstract class BaseLongVectorValueSelector implements VectorValueSelector
 {
   protected final ReadableVectorOffset offset;
 
-  private int floatId = ReadableVectorOffset.NULL_ID;
-  private int doubleId = ReadableVectorOffset.NULL_ID;
+  private int floatId = ReadableVectorInspector.NULL_ID;
+  private int doubleId = ReadableVectorInspector.NULL_ID;
 
   private float[] floatVector;
   private double[] doubleVector;
