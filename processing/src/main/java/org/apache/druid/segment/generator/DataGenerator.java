@@ -163,7 +163,7 @@ public class DataGenerator
   }
 
   /**
-   * Add rows form any generator to an index.
+   * Add rows from any generator to an index.
    *
    * @param stream the stream of rows to add
    * @param index the index to add rows to
@@ -181,7 +181,7 @@ public class DataGenerator
   }
 
   /**
-   * Add rows form this generator to an index.
+   * Add rows from this generator to an index.
    *
    * @param index the index to add rows to
    * @param numOfRows the number of rows to add
@@ -192,7 +192,7 @@ public class DataGenerator
   }
 
   /**
-   * Put rows form this generator to an list.
+   * Put rows from this generator to a list.
    *
    * @param numOfRows the number of rows to put in the list
    * @return a List of InputRow

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.jsontype.SubtypeResolver;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.Closeable;
@@ -35,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -132,7 +132,7 @@ public class IncrementalIndexCreator implements Closeable
   public static AppendableIndexSpec parseIndexType(String indexType) throws JsonProcessingException
   {
     return JSON_MAPPER.readValue(
-        String.format(Locale.ENGLISH, "{\"type\": \"%s\"}", indexType),
+        StringUtils.format("{\"type\": \"%s\"}", indexType),
         AppendableIndexSpec.class
     );
   }
@@ -170,11 +170,32 @@ public class IncrementalIndexCreator implements Closeable
   }
 
   /**
-   * Used to parameterize the tests with all the permutations of the parameters
-   * together with all the incremental index implementations.
+   * Generates all the permutations of the parameters with each of the registered appendable index types.
+   * It is used to parameterize the tests with all the permutations of the parameters
+   * together with all the appnedbale index types.
+   *
+   * For example, for a parameterized test with the following constrctor:
+   * {@code
+   *   public IncrementalIndexTest(String indexType, String mode, boolean deserializeComplexMetrics)
+   *   {
+   *     ...
+   *   }
+   * }
+   *
+   * we can test all the input combinations as follows:
+   * {@code
+   *   @Parameterized.Parameters(name = "{index}: {0}, {1}, deserialize={2}")
+   *   public static Collection<?> constructorFeeder()
+   *   {
+   *     return IncrementalIndexCreator.indexTypeCartesianProduct(
+   *         ImmutableList.of("rollup", "plain"),
+   *         ImmutableList.of(true, false)
+   *     );
+   *   }
+   * }
    *
    * @param c a list of collections of parameters
-   * @return the cartesian product of all parameters
+   * @return the cartesian product of all parameters and appendable index types
    */
   public static List<Object[]> indexTypeCartesianProduct(Collection<?>... c)
   {
@@ -190,7 +211,7 @@ public class IncrementalIndexCreator implements Closeable
    * @param c a list of collections of parameters
    * @return the cartesian product of all parameters
    */
-  public static List<Object[]> cartesianProduct(Collection<?>... c)
+  private static List<Object[]> cartesianProduct(Collection<?>... c)
   {
     final ArrayList<Object[]> res = new ArrayList<>();
     final int curLength = c.length;
