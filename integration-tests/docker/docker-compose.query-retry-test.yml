@@ -101,7 +101,7 @@ services:
     container_name: druid-historical-for-query-retry-test
     networks:
       druid-it-net:
-        ipv4_address: 172.172.172.13
+        ipv4_address: 172.172.172.14
     ports:
       - 8084:8083
       - 8284:8283

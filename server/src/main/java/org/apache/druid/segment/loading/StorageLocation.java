@@ -20,12 +20,12 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;

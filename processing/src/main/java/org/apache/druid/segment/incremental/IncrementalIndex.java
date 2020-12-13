@@ -289,7 +289,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ValueType type = dimSchema.getValueType();
       String dimName = dimSchema.getName();
-      ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type);
+
+      // Note: Things might be simpler if DimensionSchema had a method "getColumnCapabilities()" which could return
+      // type specific capabilities by itself. However, for various reasons, DimensionSchema currently lives in druid-core
+      // while ColumnCapabilities lives in druid-processing which makes that approach difficult.
+      ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type, dimSchema.getTypeName());
+
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
 
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
@@ -588,7 +593,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                   dimension,
                   // for schemaless type discovery, everything is a String. this should probably try to autodetect
                   // based on the value to use a better handler
-                  makeDefaultCapabilitiesFromValueType(ValueType.STRING),
+                  makeDefaultCapabilitiesFromValueType(ValueType.STRING, null),
                   null
               )
           );
@@ -839,7 +844,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type)
+  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type, String typeName)
   {
     switch (type) {
       case STRING:
@@ -850,7 +855,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                                            .setDictionaryValuesUnique(true)
                                            .setDictionaryValuesSorted(false);
       case COMPLEX:
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true);
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true).setComplexTypeName(typeName);
       default:
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }

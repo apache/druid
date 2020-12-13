@@ -53,7 +53,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   // partitionsSpec type: dynamic
   {
     name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
-    label: 'Max rows per segment',
     type: 'number',
     defaultValue: 5000000,
     defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
@@ -61,7 +60,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   },
   {
     name: 'tuningConfig.partitionsSpec.maxTotalRows',
-    label: 'Max total rows',
     type: 'number',
     defaultValue: 20000000,
     defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
@@ -70,7 +68,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   // partitionsSpec type: hashed
   {
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
-    label: 'Target rows per segment',
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
@@ -91,7 +88,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   },
   {
     name: 'tuningConfig.partitionsSpec.numShards',
-    label: 'Num shards',
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
@@ -113,7 +109,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   },
   {
     name: 'tuningConfig.partitionsSpec.partitionDimensions',
-    label: 'Partition dimensions',
     type: 'string-array',
     placeholder: '(all dimensions)',
     defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
@@ -122,7 +117,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   // partitionsSpec type: single_dim
   {
     name: 'tuningConfig.partitionsSpec.partitionDimension',
-    label: 'Partition dimension',
     type: 'string',
     defined: (t: CompactionConfig) =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
@@ -131,7 +125,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   },
   {
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
-    label: 'Target rows per segment',
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
@@ -149,7 +142,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   },
   {
     name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
-    label: 'Max rows per segment',
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
@@ -162,7 +154,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   },
   {
     name: 'tuningConfig.partitionsSpec.assumeGrouped',
-    label: 'Assume grouped',
     type: 'boolean',
     defaultValue: false,
     defined: (t: CompactionConfig) =>
@@ -172,22 +163,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
         Assume that input data has already been grouped on time and dimensions. Ingestion will run
         faster, but may choose sub-optimal partitions if this assumption is violated.
       </p>
-    ),
-  },
-  {
-    name: 'tuningConfig.maxNumConcurrentSubTasks',
-    label: 'Max num concurrent sub tasks',
-    type: 'number',
-    defaultValue: 1,
-    min: 1,
-    info: (
-      <>
-        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
-        worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this
-        value is set to 1, the supervisor task processes data ingestion on its own instead of
-        spawning worker tasks. If this value is set to too large, too many worker tasks can be
-        created which might block other ingestion.
-      </>
     ),
   },
   {
@@ -205,8 +180,22 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     ),
   },
   {
+    name: 'tuningConfig.maxNumConcurrentSubTasks',
+    type: 'number',
+    defaultValue: 1,
+    min: 1,
+    info: (
+      <>
+        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
+        worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this
+        value is set to 1, the supervisor task processes data ingestion on its own instead of
+        spawning worker tasks. If this value is set to too large, too many worker tasks can be
+        created which might block other ingestion.
+      </>
+    ),
+  },
+  {
     name: 'tuningConfig.totalNumMergeTasks',
-    label: 'Total num merge tasks',
     type: 'number',
     defaultValue: 10,
     min: 1,
@@ -215,17 +204,36 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     info: <>Maximum number of merge tasks which can be run at the same time.</>,
   },
   {
-    name: 'tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask',
-    label: 'Max input segment bytes per task',
+    name: 'tuningConfig.splitHintSpec.maxSplitSize',
     type: 'number',
-    defaultValue: 500000000,
+    defaultValue: 1073741824,
     min: 1000000,
-    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'segments'),
+    hideInMore: true,
+    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of bytes of input segments to process in a single task. If a single segment
         is larger than this number, it will be processed by itself in a single task (input segments
         are never split across tasks).
+      </>
+    ),
+  },
+  {
+    name: 'tuningConfig.splitHintSpec.maxNumFiles',
+    label: 'Max num files (segments)',
+    type: 'number',
+    defaultValue: 1000,
+    min: 1,
+    hideInMore: true,
+    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
+    info: (
+      <>
+        Maximum number of input segments to process in a single subtask. This limit is to avoid task
+        failures when the ingestion spec is too long. There are two known limits on the max size of
+        serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+        <Code>jute.maxbuffer</Code>) and the max packet size in MySQL (
+        <Code>max_allowed_packet</Code>). These can make ingestion tasks fail if the serialized
+        ingestion spec size hits one of them.
       </>
     ),
   },

@@ -39,7 +39,7 @@ import {
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
 import { getLink } from '../../links';
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
 

@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 echo $DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH
 
 export DIR=$(cd $(dirname $0) && pwd)

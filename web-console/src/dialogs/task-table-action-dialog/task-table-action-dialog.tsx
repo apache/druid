@@ -19,6 +19,7 @@
 import React, { useState } from 'react';
 
 import { ShowJson, ShowLog } from '../../components';
+import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
@@ -63,6 +64,7 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
     },
   ];
 
+  const taskEndpointBase = `/druid/indexer/v1/task/${Api.encodePath(taskId)}`;
   return (
     <TableActionDialog
       sideButtonMetadata={taskTableSideButtonMetadata}
@@ -72,21 +74,21 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
     >
       {activeTab === 'status' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/task/${taskId}/status`}
+          endpoint={`${taskEndpointBase}/status`}
           transform={x => deepGet(x, 'status')}
           downloadFilename={`task-status-${taskId}.json`}
         />
       )}
       {activeTab === 'payload' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/task/${taskId}`}
+          endpoint={taskEndpointBase}
           transform={x => deepGet(x, 'payload')}
           downloadFilename={`task-payload-${taskId}.json`}
         />
       )}
       {activeTab === 'reports' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/task/${taskId}/reports`}
+          endpoint={`${taskEndpointBase}/reports`}
           transform={x => deepGet(x, 'ingestionStatsAndErrors.payload')}
           downloadFilename={`task-reports-${taskId}.json`}
         />
@@ -94,7 +96,7 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
       {activeTab === 'log' && (
         <ShowLog
           status={status}
-          endpoint={`/druid/indexer/v1/task/${taskId}/log`}
+          endpoint={`${taskEndpointBase}/log`}
           downloadFilename={`task-log-${taskId}.log`}
           tailOffset={16000}
         />
