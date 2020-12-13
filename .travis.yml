@@ -555,12 +555,10 @@ jobs:
       services: &integration_test_services_k8s
         - docker
       env: CONFIG_FILE='k8s_run_config_file.json' TESTNG_GROUPS='-Dgroups=batch-index'
-      before_script:
-        - ./build_run_k8s_cluster.sh
+      before_script: integration-tests/script/build_run_k8s_cluster.sh
       script: &run_integration_test_k8s
         - ${MVN} verify -P int-tests-config-file ${TESTNG_GROUPS} ${MAVEN_SKIP}
-      after_script:
-        - ./stop_k8s_cluster.sh
+      after_script: integration-tests/script/stop_k8s_cluster.sh
       after_failure: &integration_test_diags_k8s
         - for v in broker middlemanager router coordinator historical ; do
           echo $v dmesg ======================== ;
