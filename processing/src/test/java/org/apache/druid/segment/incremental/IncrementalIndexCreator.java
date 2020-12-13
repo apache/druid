@@ -40,9 +40,18 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * An incremental-index creator for parameterized incremental-index tests.
- * It lists all the available incremental-index implementations, and responsible to create and close incremental-index
- * instances during the tests.
+ * This class handles the incremental-index lifecycle for testing.
+ * Any index created using this class during the test will be closed automatically once this class is closed.
+ *
+ * To allow testing multiple incremental-index implementations, this class can be instantiated with any
+ * {@code AppendableIndexSpec} instance.
+ * Alternatively, this class can instantiate an {@code AppendableIndexSpec} for you given the appendable-index type as
+ * a string.
+ * This allows tests' parameterization with the appendable-index types as strings.
+ *
+ * To further facilitate the tests' parameterization, this class supports listing all the available incremental-index
+ * implementations, and produce a cartesian product of many parameter options together with each incremental-index
+ * implementation.
  */
 public class IncrementalIndexCreator implements Closeable
 {
