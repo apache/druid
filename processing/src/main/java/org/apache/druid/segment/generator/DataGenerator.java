@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,6 +50,8 @@ public class DataGenerator
   private double currentTime;
   private int timeCounter;
   private List<String> dimensionNames;
+
+  private static final Logger log = new Logger(DataGenerator.class);
 
   public DataGenerator(
       List<GeneratorColumnSchema> columnSchemas,
@@ -153,13 +157,30 @@ public class DataGenerator
 
   /**
    * Initialize a Java Stream generator for InputRow from this DataGenerator.
+   * The generator will log its progress once every 10,000 rows.
    *
    * @param numOfRows the number of rows to generate
    * @return a generator
    */
   private Stream<InputRow> generator(int numOfRows)
   {
-    return Stream.generate(this::nextRow).limit(numOfRows);
+    return Stream.generate(
+        new Supplier<InputRow>()
+        {
+          int i = 0;
+
+          @Override
+          public InputRow get()
+          {
+            InputRow row = DataGenerator.this.nextRow();
+            i++;
+            if (i % 10_000 == 0) {
+              log.info("%,d/%,d rows generated.", i, numOfRows);
+            }
+            return row;
+          }
+        }
+    ).limit(numOfRows);
   }
 
   /**
