@@ -713,12 +713,12 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexTTFR(Blackhole blackhole) throws IOException
+  public void queryMultiQueryableIndexTTFR(Blackhole blackhole, QueryableIndexState state) throws IOException
   {
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(executorService, makeMultiRunners())
+            factory.mergeRunners(state.executorService, makeMultiRunners(state))
         ),
         (QueryToolChest) toolChest
     );
@@ -757,12 +757,12 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexWithSpillingTTFR(Blackhole blackhole) throws IOException
+  public void queryMultiQueryableIndexWithSpillingTTFR(Blackhole blackhole, QueryableIndexState state) throws IOException
   {
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(executorService, makeMultiRunners())
+            factory.mergeRunners(state.executorService, makeMultiRunners(state))
         ),
         (QueryToolChest) toolChest
     );

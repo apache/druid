@@ -118,11 +118,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementalIndexRowSizeEmptyString()
   {
-    IncrementalIndex index = new IncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-        .setMaxRowCount(10000)
-        .setMaxBytesInMemory(1000)
-        .buildOnheap();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
