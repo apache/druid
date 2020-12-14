@@ -113,7 +113,14 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     for (StorageLocation location : locations) {
       File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
       if (localStorageDir.exists()) {
-        return location;
+        if (checkSegmentFilesIntact(localStorageDir)) {
+          log.warn("[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.", localStorageDir.getAbsolutePath());
+          cleanupCacheFiles(location.getPath(), localStorageDir);
+          location.removeSegmentDir(localStorageDir, segment);
+          break;
+        } else {
+          return location;
+        }
       }
     }
     return null;
@@ -184,15 +191,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       try {
         StorageLocation loc = findStorageLocationIfLoaded(segment);
         String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
-        if (loc != null) {
-          File localStorageDir = new File(loc.getPath(), storageDir);
-          if (checkSegmentFilesIntact(localStorageDir)) {
-            log.warn("[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.", localStorageDir.getAbsolutePath());
-            cleanupCacheFiles(loc.getPath(), localStorageDir);
-            loc.removeSegmentDir(localStorageDir, segment);
-            loc = null;
-          }
-        }
+
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
