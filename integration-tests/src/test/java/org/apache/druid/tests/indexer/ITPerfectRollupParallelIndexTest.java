@@ -78,6 +78,11 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
               "%%FORCE_GUARANTEED_ROLLUP%%",
               Boolean.toString(true)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
           return StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",

@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -60,9 +61,23 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           throw new RuntimeException(e);
         }
       };
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
+          transform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,
