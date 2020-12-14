@@ -18,7 +18,7 @@ kind: "Druid"
 metadata:
   name: tiny-cluster
 spec:
-  image: druid/cluster
+  image: druid/cluster:v1
   # Optionally specify image for all nodes. Can be specify on nodes also
   # imagePullSecrets:
   # - name: tutu
@@ -27,9 +27,11 @@ spec:
     environment: stage
     release: alpha
   securityContext:
-    fsGroup: 1000
-    runAsUser: 1000
-    runAsGroup: 1000
+    fsGroup: 0
+    runAsUser: 0
+    runAsGroup: 0
+  containerSecurityContext:
+    privileged: true
   services:
     - spec:
         type: ClusterIP
@@ -116,16 +118,15 @@ spec:
 
         # HTTP server threads
         druid.broker.http.numConnections=5
-        druid.server.http.numThreads=10
+        druid.server.http.numThreads=40
 
         # Processing threads and buffers
-        druid.processing.buffer.sizeBytes=1
-        druid.processing.numMergeBuffers=1
+        druid.processing.buffer.sizeBytes=25000000
         druid.processing.numThreads=1
         druid.sql.enable=true
       extra.jvm.options: |-
-        -Xmx1G
-        -Xms1G
+        -Xmx512m
+        -Xms512m
       volumeMounts:
         - mountPath: /druid/data
           name: data-volume
@@ -135,11 +136,9 @@ spec:
             path: REPLACE_VOLUMES/tmp
       resources:
         requests:
-          memory: "2G"
-          cpu: "2"
+          memory: "800Mi"
         limits:
-          memory: "2G"
-          cpu: "2"
+          memory: "800Mi"
 
     coordinators:
       # Optionally specify for running coordinator as Deployment
@@ -177,8 +176,8 @@ spec:
         druid.indexer.queue.startDelay=PT30S
         druid.indexer.runner.type=local
       extra.jvm.options: |-
-        -Xmx1G
-        -Xms1G
+        -Xmx800m
+        -Xms800m
       volumeMounts:
         - mountPath: /druid/data
           name: data-volume
@@ -188,11 +187,9 @@ spec:
             path: REPLACE_VOLUMES/tmp
       resources:
         requests:
-          memory: "2G"
-          cpu: "2"
+          memory: "1G"
         limits:
-          memory: "2G"
-          cpu: "2"
+          memory: "1G"
 
     historicals:
       nodeType: "historical"
@@ -217,16 +214,14 @@ spec:
       replicas: 1
       runtime.properties: |
         druid.service=druid/historical
-        druid.server.http.numThreads=5
-        druid.processing.buffer.sizeBytes=1
-        druid.processing.numMergeBuffers=1
-        druid.processing.numThreads=1
+        druid.processing.buffer.sizeBytes=25000000
+        druid.processing.numThreads=2
         # Segment storage
         druid.segmentCache.locations=[{"path":"/druid/data/segments","maxSize":10737418240}]
         druid.server.maxSize=10737418240
       extra.jvm.options: |-
-        -Xmx1G
-        -Xms1G
+        -Xmx512m
+        -Xms512m
       volumeMounts:
         - mountPath: /druid/data
           name: data-volume
@@ -236,11 +231,9 @@ spec:
             path: REPLACE_VOLUMES/tmp
       resources:
         requests:
-          memory: "2G"
-          cpu: "2"
+          memory: "1G"
         limits:
-          memory: "2G"
-          cpu: "2"
+          memory: "1G"
 
     routers:
       nodeType: "router"
@@ -283,20 +276,36 @@ spec:
     middlemanagers:
       nodeType: "middleManager"
       nodeConfigMountPath: "/opt/druid/conf/druid/cluster/data/middleManager"
-      druid.port: 8080
+      druid.port: 8088
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: middlemanager-service-port
+                nodePort: 30500
+                port: 8088
+                protocol: TCP
+                targetPort: 8088
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-middleManagers
+          metadata:
+            name: middlemanager-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
       replicas: 1
       runtime.properties: |
         druid.service=druid/middleManager
-        druid.worker.capacity=1
-        druid.indexer.runner.javaOpts=-server -XX:MaxDirectMemorySize=10240g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -Dlog4j.debug -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=50 -XX:GCLogFileSize=10m -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:+UseG1GC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Xloggc:/druid/data/logs/peon.gc.%t.%p.log -XX:HeapDumpPath=/druid/data/logs/peon.%t.%p.hprof -Xms1G -Xmx1G
+        druid.worker.capacity=10
+        druid.indexer.runner.javaOpts=-server -XX:MaxDirectMemorySize=10240g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -Dlog4j.debug -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=50 -XX:GCLogFileSize=10m -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:+UseG1GC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Xloggc:/druid/data/logs/peon.gc.%t.%p.log -XX:HeapDumpPath=/druid/data/logs/peon.%t.%p.hprof -Xms256m -Xmx256m
         druid.indexer.task.baseTaskDir=/druid/data/baseTaskDir
         druid.server.http.numThreads=10
         druid.indexer.fork.property.druid.processing.buffer.sizeBytes=268435456
         druid.indexer.fork.property.druid.processing.numMergeBuffers=1
         druid.indexer.fork.property.druid.processing.numThreads=1
       extra.jvm.options: |-
-        -Xmx1G
-        -Xms1G
+        -Xmx256m
+        -Xms256m
       volumeMounts:
         - mountPath: /druid/data
           name: data-volume
@@ -306,8 +315,6 @@ spec:
             path: REPLACE_VOLUMES/tmp
       resources:
         requests:
-          memory: "2G"
-          cpu: "2"
+          memory: "3G"
         limits:
-          memory: "2G"
-          cpu: "2"
+          memory: "3G"

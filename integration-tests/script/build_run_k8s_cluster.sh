@@ -16,9 +16,22 @@
 
 set -e
 
+# setup client keystore
+export SHARED_DIR=${HOME}/shared
+cd integration-tests
+./docker/tls/generate-client-certs-and-keystores.sh
+rm -rf docker/client_tls
+cp -r client_tls docker/client_tls
+cd ..
+
 # Build Docker images for pods
-mvn clean install -Pdist -DskipTests -Dgpg.skip -Dcheckstyle.skip
-docker build -t druid/cluster -f distribution/docker/Dockerfile .
+mvn -B -ff -q dependency:go-offline \
+      install \
+      -Pdist,bundle-contrib-exts \
+      -Pskip-static-checks,skip-tests \
+      -Dmaven.javadoc.skip=true
+
+docker build -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
 
 # Set Necessary ENV
 export CHANGE_MINIKUBE_NONE_USER=true
@@ -40,8 +53,12 @@ sudo /usr/local/bin/minikube update-context
 
 # Prepare For Druid-Operator
 git clone https://github.com/druid-io/druid-operator.git
+cd druid-operator
+git checkout -b druid-operator-0.0.3 druid-operator-0.0.3
+cd ..
 sed -i 's|REPLACE_IMAGE|druidio/druid-operator:0.0.3|g' druid-operator/deploy/operator.yaml
-cp tiny-cluster.yaml druid-operator/druid-operator/examples/
+cp integration-tests/tiny-cluster.yaml druid-operator/examples/
+cp integration-tests/tiny-cluster-zk.yaml druid-operator/examples/
 sed -i "s|REPLACE_VOLUMES|`pwd`|g" druid-operator/examples/tiny-cluster.yaml
 
 # Create ZK, Historical, MiddleManager, Overlord-coordiantor, Broker and Router pods using statefulset
@@ -56,4 +73,11 @@ sudo /usr/local/bin/kubectl apply -f druid-operator/examples/tiny-cluster.yaml
 # Wait 4 * 15 seconds to launch pods.
 #count=0
 #JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until sudo /usr/local/bin/kubectl -n default get pods -lapp=travis-example -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 4;if [ $count -eq 15 ];then break 2 ;else let "count++";fi;echo $i;echo "waiting for travis-example deployment to be available"; sudo /usr/local/bin/kubectl get pods -n default; done
-sleep 60
+sleep 120
+
+## Debug And FastFail
+
+sudo /usr/local/bin/kubectl get pod
+sudo /usr/local/bin/kubectl get svc
+docker images
+sudo /usr/local/bin/kubectl describe pod druid-tiny-cluster-middlemanagers-0
