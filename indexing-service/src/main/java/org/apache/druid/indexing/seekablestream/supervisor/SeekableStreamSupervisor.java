@@ -521,9 +521,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;
-    this.exec = Execs.singleThreaded(supervisorId);
-    this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
-    this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
+    this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId));
+    this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Scheduler-%d");
+    this.reportingExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Reporting-%d");
     this.stateManager = new SeekableStreamSupervisorStateManager(
         spec.getSupervisorStateManagerConfig(),
         spec.isSuspended()
@@ -533,7 +533,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                          ? this.tuningConfig.getWorkerThreads()
                          : Math.min(10, this.ioConfig.getTaskCount()));
 
-    this.workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(workerThreads, supervisorId + "-Worker-%d"));
+    this.workerExec = MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(
+            workerThreads,
+            StringUtils.encodeForFormat(supervisorId) + "-Worker-%d"
+        )
+    );
     log.info("Created worker pool with [%d] threads for dataSource [%s]", workerThreads, this.dataSource);
 
     this.taskInfoProvider = new TaskInfoProvider()
@@ -921,6 +926,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Collect row ingestion stats from all tasks managed by this supervisor.
    *
    * @return A map of groupId->taskId->task row stats
+   *
    * @throws InterruptedException
    * @throws ExecutionException
    * @throws TimeoutException
@@ -1597,7 +1603,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       throw new RuntimeException(e);
     }
 
-    final DataSourceMetadata rawDataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
+    final DataSourceMetadata rawDataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(
+        dataSource);
 
     if (rawDataSourceMetadata != null && !checkSourceMetadataMatch(rawDataSourceMetadata)) {
       throw new IAE(
@@ -2088,13 +2095,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * It will mark the expired partitions in metadata and recompute the partition->task group mappings, updating
    * the metadata, the partitionIds list, and the partitionGroups mappings.
    *
-   * @param storedPartitions Set of partitions previously tracked, from the metadata store
-   * @param newlyClosedPartitions Set of partitions that are closed in the metadata store but still present in the
-   *                              current {@link #partitionIds}
+   * @param storedPartitions                Set of partitions previously tracked, from the metadata store
+   * @param newlyClosedPartitions           Set of partitions that are closed in the metadata store but still present in the
+   *                                        current {@link #partitionIds}
    * @param activePartitionsIdsFromSupplier Set of partitions currently returned by the record supplier, but with
    *                                        any partitions that are closed/expired in the metadata store removed
-   * @param previouslyExpiredPartitions Set of partitions that are recorded as expired in the metadata store
-   * @param partitionIdsFromSupplier Set of partitions currently returned by the record supplier.
+   * @param previouslyExpiredPartitions     Set of partitions that are recorded as expired in the metadata store
+   * @param partitionIdsFromSupplier        Set of partitions currently returned by the record supplier.
    */
   private void cleanupClosedAndExpiredPartitions(
       Set<PartitionIdType> storedPartitions,
@@ -2176,6 +2183,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * by this method.
    *
    * @param availablePartitions
+   *
    * @return a remapped copy of partitionGroups, containing only the partitions in availablePartitions
    */
   protected Map<Integer, Set<PartitionIdType>> recomputePartitionGroupsForExpiration(
@@ -2192,6 +2200,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @param currentMetadata     The current DataSourceMetadata from metadata storage
    * @param expiredPartitionIds The set of expired partition IDs.
+   *
    * @return currentMetadata but with any expired partitions removed.
    */
   protected SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadataWithExpiredPartitions(
@@ -2804,6 +2813,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * should be removed from the starting offsets sent to the tasks.
    *
    * @param startingOffsets
+   *
    * @return startingOffsets with entries for expired partitions removed
    */
   protected Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> filterExpiredPartitionsFromStartingOffsets(
@@ -2832,8 +2842,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           minimumMessageTime = Optional.of(ioConfig.getLateMessageRejectionStartDateTime().get());
         } else {
           minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
-                                DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
-                               ) : Optional.absent());
+              DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
+          ) : Optional.absent());
         }
 
         Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
@@ -3039,7 +3049,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
-    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
+    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(
+        dataSource);
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
         && checkSourceMetadataMatch(dataSourceMetadata)) {
       @SuppressWarnings("unchecked")
@@ -3338,6 +3349,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * the given replicas count
    *
    * @return list of specific kafka/kinesis index taksks
+   *
    * @throws JsonProcessingException
    */
   protected abstract List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>> createIndexTasks(
@@ -3355,6 +3367,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * different between Kafka/Kinesis since Kinesis uses String as partition id
    *
    * @param partition partition id
+   *
    * @return taskgroup id
    */
   protected abstract int getTaskGroupIdForPartition(PartitionIdType partition);
@@ -3364,6 +3377,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * of [kafka/kinesis]DataSourceMetadata
    *
    * @param metadata datasource metadata
+   *
    * @return true if isInstance else false
    */
   protected abstract boolean checkSourceMetadataMatch(DataSourceMetadata metadata);
@@ -3373,6 +3387,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * [Kafka/Kinesis]IndexTask
    *
    * @param task task
+   *
    * @return true if isInstance else false
    */
   protected abstract boolean doesTaskTypeMatchSupervisor(Task task);
@@ -3382,6 +3397,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @param stream stream name
    * @param map    partitionId -> sequence
+   *
    * @return specific instance of datasource metadata
    */
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(

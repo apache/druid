@@ -60,7 +60,7 @@ export const ISO_MATCHER = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([1
 
 // Note: AUTO and ISO are basically the same except ISO has a space as a separator instead of the T
 
-export function timeFormatMatches(format: string, value: string | number): boolean {
+export function timeFormatMatches(format: string, value: string | number | bigint): boolean {
   const absValue = Math.abs(Number(value));
   switch (format) {
     case 'auto':

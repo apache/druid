@@ -95,6 +95,7 @@ export class QueryManager<Q, R> {
         this.setState(
           new QueryState<R>({
             data,
+            lastData: this.state.getSomeData(),
           }),
         );
       },
@@ -107,6 +108,7 @@ export class QueryManager<Q, R> {
         this.setState(
           new QueryState<R>({
             error: e,
+            lastData: this.state.getSomeData(),
           }),
         );
       },
@@ -119,6 +121,7 @@ export class QueryManager<Q, R> {
     this.setState(
       new QueryState<R>({
         loading: true,
+        lastData: this.state.getSomeData(),
       }),
     );
 

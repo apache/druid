@@ -78,6 +78,10 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private void loadDataAndCompact(String indexTask, String queriesResource) throws Exception
   {
     loadData(indexTask);
+
+    // 4 segments across 2 days
+    checkNumberOfSegments(4);
+
     final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
     intervalsBeforeCompaction.sort(null);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -100,10 +104,9 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       queryHelper.testQueriesFromString(queryResponseTemplate);
       compactData();
 
-      // 4 segments across 2 days, compacted into 2 new segments (6 total)
-      checkCompactionFinished(6);
+      // The original 4 segments should be compacted into 2 new segments
+      checkNumberOfSegments(2);
       queryHelper.testQueriesFromString(queryResponseTemplate);
-
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -136,7 +139,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void checkCompactionFinished(int numExpectedSegments)
+  private void checkNumberOfSegments(int numExpectedSegments)
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
@@ -144,7 +147,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
           return metadataSegmentCount == numExpectedSegments;
         },
-        "Compaction segment count check"
+        "Segment count check"
     );
   }
 

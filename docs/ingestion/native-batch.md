@@ -230,7 +230,7 @@ Note that each worker task processes a single input split. You can control the a
 
 #### Size-based Split Hint Spec
 
-The size-based split hint spec is respected by all splittable input sources except for the HTTP input source.
+The size-based split hint spec is respected by all splittable input sources except for the HTTP input source and SQL input source.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -1135,7 +1135,7 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 The HTTP input source is to support reading files directly
 from remote sites via HTTP.
 The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read only one file.
+where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
 Sample specs:
 
@@ -1340,6 +1340,7 @@ Only rows where `page` = `Druid` will be returned.
 
 The SQL input source is used to read data directly from RDBMS.
 The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
+This input source does not support Split Hint Spec.
 Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 Please refer to the Recommended practices section below before using this input source.
 

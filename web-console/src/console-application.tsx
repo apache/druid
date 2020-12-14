@@ -23,9 +23,8 @@ import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar, Loader } from './components';
-import { AppToaster } from './singletons/toaster';
-import { QueryManager } from './utils';
-import { Capabilities } from './utils/capabilities';
+import { AppToaster } from './singletons';
+import { Capabilities, QueryManager } from './utils';
 import {
   DatasourcesView,
   HomeView,

@@ -17,6 +17,7 @@
  */
 
 import {
+  adjustId,
   cleanSpec,
   downgradeSpec,
   getColumnTypeFromHeaderAndRows,
@@ -44,9 +45,8 @@ describe('ingestion-spec', () => {
       dataSchema: {
         dataSource: 'wikipedia',
         granularitySpec: {
-          type: 'uniform',
-          segmentGranularity: 'DAY',
-          queryGranularity: 'HOUR',
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
           rollup: true,
         },
         parser: {
@@ -182,9 +182,8 @@ describe('spec utils', () => {
       dataSchema: {
         dataSource: 'wikipedia',
         granularitySpec: {
-          type: 'uniform',
-          segmentGranularity: 'DAY',
-          queryGranularity: 'HOUR',
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
         },
         timestampSpec: {
           column: 'timestamp',
@@ -206,9 +205,14 @@ describe('spec utils', () => {
   });
 
   it('updateSchemaWithSample', () => {
-    expect(
-      updateSchemaWithSample(ingestionSpec, { header: ['header'], rows: [] }, 'specific', true),
-    ).toMatchInlineSnapshot(`
+    const withRollup = updateSchemaWithSample(
+      ingestionSpec,
+      { header: ['header'], rows: [] },
+      'specific',
+      true,
+    );
+
+    expect(withRollup).toMatchInlineSnapshot(`
       Object {
         "spec": Object {
           "dataSchema": Object {
@@ -219,10 +223,9 @@ describe('spec utils', () => {
               ],
             },
             "granularitySpec": Object {
-              "queryGranularity": "HOUR",
+              "queryGranularity": "hour",
               "rollup": true,
-              "segmentGranularity": "DAY",
-              "type": "uniform",
+              "segmentGranularity": "day",
             },
             "metricsSpec": Array [
               Object {
@@ -248,11 +251,72 @@ describe('spec utils', () => {
             "type": "index_parallel",
           },
           "tuningConfig": Object {
+            "forceGuaranteedRollup": true,
+            "partitionsSpec": Object {
+              "type": "hashed",
+            },
             "type": "index_parallel",
           },
         },
         "type": "index_parallel",
       }
     `);
+
+    const noRollup = updateSchemaWithSample(
+      ingestionSpec,
+      { header: ['header'], rows: [] },
+      'specific',
+      false,
+    );
+
+    expect(noRollup).toMatchInlineSnapshot(`
+      Object {
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "header",
+              ],
+            },
+            "granularitySpec": Object {
+              "queryGranularity": "none",
+              "rollup": false,
+              "segmentGranularity": "day",
+            },
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://static.imply.io/data/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "dynamic",
+            },
+            "type": "index_parallel",
+          },
+        },
+        "type": "index_parallel",
+      }
+    `);
+  });
+
+  it('adjustId', () => {
+    expect(adjustId('')).toEqual('');
+    expect(adjustId('lol')).toEqual('lol');
+    expect(adjustId('.l/o/l')).toEqual('lol');
+    expect(adjustId('l\t \nl')).toEqual('l l');
   });
 });

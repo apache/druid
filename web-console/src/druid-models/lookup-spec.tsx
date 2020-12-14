@@ -104,8 +104,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   // cachedNamespace lookups have more options
   {
     name: 'extractionNamespace.type',
-    type: 'string',
     label: 'Globally cached lookup type',
+    type: 'string',
     placeholder: 'uri',
     suggestions: ['uri', 'jdbc'],
     defined: (model: LookupSpec) => model.type === 'cachedNamespace',
@@ -113,8 +113,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   },
   {
     name: 'extractionNamespace.uriPrefix',
-    type: 'string',
     label: 'URI prefix',
+    type: 'string',
     placeholder: 's3://bucket/some/key/prefix/',
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -145,8 +145,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   },
   {
     name: 'extractionNamespace.fileRegex',
-    type: 'string',
     label: 'File regex',
+    type: 'string',
     defaultValue: '.*',
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -157,8 +157,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   // namespaceParseSpec
   {
     name: 'extractionNamespace.namespaceParseSpec.format',
-    type: 'string',
     label: 'Parse format',
+    type: 'string',
     suggestions: ['csv', 'tsv', 'simpleJson', 'customJson'],
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'uri',
     required: true,
@@ -177,7 +177,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.skipHeaderRows',
     type: 'number',
-    label: 'Skip header rows',
     defaultValue: 0,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -187,7 +186,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.hasHeaderRow',
     type: 'boolean',
-    label: 'Has header row',
     defaultValue: false,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -197,7 +195,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.columns',
     type: 'string-array',
-    label: 'Columns',
     placeholder: `["key", "value"]`,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -209,7 +206,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.keyColumn',
     type: 'string',
-    label: 'Key column',
     placeholder: '(optional - defaults to the first column)',
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -219,7 +215,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.valueColumn',
     type: 'string',
-    label: 'Value column',
     placeholder: '(optional - defaults to the second column)',
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -231,7 +226,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.delimiter',
     type: 'string',
-    label: 'Delimiter',
     placeholder: `(optional)`,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -240,7 +234,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.listDelimiter',
     type: 'string',
-    label: 'List delimiter',
     placeholder: `(optional)`,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -251,7 +244,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.keyFieldName',
     type: 'string',
-    label: 'Key field name',
     placeholder: `key`,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -261,7 +253,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespaceParseSpec.valueFieldName',
     type: 'string',
-    label: 'Value field name',
     placeholder: `value`,
     defined: (model: LookupSpec) =>
       deepGet(model, 'extractionNamespace.type') === 'uri' &&
@@ -271,7 +262,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.pollPeriod',
     type: 'string',
-    label: 'Poll period',
     defaultValue: '0',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'uri',
     info: `Period between polling for updates`,
@@ -281,7 +271,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.namespace',
     type: 'string',
-    label: 'Namespace',
     placeholder: 'some_lookup',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     required: true,
@@ -297,8 +286,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   },
   {
     name: 'extractionNamespace.connectorConfig.connectURI',
-    type: 'string',
     label: 'Connect URI',
+    type: 'string',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     required: true,
     info: 'Defines the connectURI value on the The connector config to used',
@@ -306,28 +295,24 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.connectorConfig.user',
     type: 'string',
-    label: 'User',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     info: 'Defines the user to be used by the connector config',
   },
   {
     name: 'extractionNamespace.connectorConfig.password',
     type: 'string',
-    label: 'Password',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     info: 'Defines the password to be used by the connector config',
   },
   {
     name: 'extractionNamespace.connectorConfig.createTables',
     type: 'boolean',
-    label: 'Create tables',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     info: 'Should tables be created',
   },
   {
     name: 'extractionNamespace.table',
     type: 'string',
-    label: 'Table',
     placeholder: 'some_lookup_table',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     required: true,
@@ -347,7 +332,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.keyColumn',
     type: 'string',
-    label: 'Key column',
     placeholder: 'my_key_value',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     required: true,
@@ -367,7 +351,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.valueColumn',
     type: 'string',
-    label: 'Value column',
     placeholder: 'my_column_value',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     required: true,
@@ -387,7 +370,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.filter',
     type: 'string',
-    label: 'Filter',
     placeholder: '(optional)',
     defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
     info: (
@@ -427,7 +409,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'firstCacheTimeout',
     type: 'number',
-    label: 'First cache timeout',
     defaultValue: 0,
     defined: (model: LookupSpec) => model.type === 'cachedNamespace',
     info: `How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait`,

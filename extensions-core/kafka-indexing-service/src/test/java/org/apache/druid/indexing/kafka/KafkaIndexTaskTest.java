@@ -2330,6 +2330,47 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @Test(timeout = 60_000L)
+  public void testRunUnTransactionMode() throws Exception
+  {
+    Map<String, Object> configs = kafkaServer.consumerProperties();
+    configs.put("isolation.level", "read_uncommitted");
+    final KafkaIndexTask task = createTask(
+            null,
+            new KafkaIndexTaskIOConfig(
+                    0,
+                    "sequence0",
+                    new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
+                    new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L)),
+                    configs,
+                    KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+                    true,
+                    null,
+                    null,
+                    INPUT_FORMAT
+            )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Insert 2 records initially
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (ProducerRecord<byte[], byte[]> record : Iterables.limit(records, 2)) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.flush();
+      kafkaProducer.abortTransaction();
+    }
+
+    while (countEvents(task) != 2) {
+      Thread.sleep(25);
+    }
+
+    Assert.assertEquals(2, countEvents(task));
+  }
+
+  @Test(timeout = 60_000L)
   public void testCanStartFromLaterThanEarliestOffset() throws Exception
   {
     final String baseSequenceName = "sequence0";

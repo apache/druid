@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,6 +61,17 @@ public class IdUtils
         !m.matches(),
         StringUtils.format("%s cannot contain whitespace character except space.", thingToValidate)
     );
+
+    for (int i = 0; i < stringToValidate.length(); i++) {
+      final char c = stringToValidate.charAt(i);
+
+      // Curator doesn't permit any of the following ranges, so we can't either, because IDs are often used as
+      // znode paths. The first two ranges are control characters, the second two ranges correspond to surrogate
+      // pairs. This means that characters outside the basic multilingual plane, such as emojis, are not allowed. 😢
+      if (c > 0 && c < 31 || c > 127 && c < 159 || c > '\ud800' && c < '\uf8ff' || c > '\ufff0' && c < '\uffff') {
+        throw new IAE("%s cannot contain character #%d (at position %d).", thingToValidate, (int) c, i);
+      }
+    }
   }
 
   public static String getRandomId()

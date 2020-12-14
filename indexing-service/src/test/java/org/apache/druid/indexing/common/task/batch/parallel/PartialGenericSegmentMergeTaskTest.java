@@ -24,7 +24,9 @@ import org.apache.druid.segment.TestHelper;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 
@@ -54,6 +56,9 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
               .build()
       );
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   private PartialGenericSegmentMergeTask target;
 
   @Before
@@ -81,5 +86,28 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
   {
     String id = target.getId();
     Assert.assertThat(id, Matchers.startsWith(PartialGenericSegmentMergeTask.TYPE));
+  }
+
+  @Test
+  public void requiresGranularitySpecInputIntervals()
+  {
+    exception.expect(IllegalArgumentException.class);
+    exception.expectMessage("Missing intervals in granularitySpec");
+
+    new PartialGenericSegmentMergeTask(
+        ParallelIndexTestingFactory.AUTOMATIC_ID,
+        ParallelIndexTestingFactory.GROUP_ID,
+        ParallelIndexTestingFactory.TASK_RESOURCE,
+        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.NUM_ATTEMPTS,
+        new PartialGenericSegmentMergeIngestionSpec(
+            ParallelIndexTestingFactory.createDataSchema(null),
+            IO_CONFIG,
+            new ParallelIndexTestingFactory.TuningConfigBuilder()
+                .partitionsSpec(PARTITIONS_SPEC)
+                .build()
+        ),
+        ParallelIndexTestingFactory.CONTEXT
+    );
   }
 }

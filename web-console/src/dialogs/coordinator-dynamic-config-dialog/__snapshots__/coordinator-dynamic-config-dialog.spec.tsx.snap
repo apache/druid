@@ -17,6 +17,10 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
     </Memo(ExternalLink)>
     .
   </p>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <AutoForm
     fields={
       Array [
@@ -47,13 +51,11 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": false,
           "info": <React.Fragment>
-            Send kill tasks for ALL dataSources if property
-             
+            Send kill tasks for ALL dataSources if property 
             <Unknown>
               druid.coordinator.kill.on
             </Unknown>
-             is true. If this is set to true then
-             
+             is true. If this is set to true then 
             <Unknown>
               killDataSourceWhitelist
             </Unknown>

@@ -29,3 +29,5 @@ export * from './filter';
 export * from './dimension-spec';
 export * from './metric-spec';
 export * from './ingestion-spec';
+export * from './coordinator-dynamic-config';
+export * from './overlord-dynamic-config';

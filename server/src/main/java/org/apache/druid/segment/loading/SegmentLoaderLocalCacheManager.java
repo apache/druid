@@ -30,9 +30,9 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,6 +82,38 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   @Inject
   public SegmentLoaderLocalCacheManager(
       IndexIO indexIO,
+      List<StorageLocation> locations,
+      SegmentLoaderConfig config,
+      @Nonnull StorageLocationSelectorStrategy strategy,
+      @Json ObjectMapper mapper
+  )
+  {
+    this.indexIO = indexIO;
+    this.config = config;
+    this.jsonMapper = mapper;
+    this.locations = locations;
+    this.strategy = strategy;
+    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
+  }
+
+  @VisibleForTesting
+  SegmentLoaderLocalCacheManager(
+      IndexIO indexIO,
+      SegmentLoaderConfig config,
+      @Nonnull StorageLocationSelectorStrategy strategy,
+      @Json ObjectMapper mapper
+  )
+  {
+    this(indexIO, config.toStorageLocations(), config, strategy, mapper);
+  }
+
+  /**
+   * creates instance with default storage location selector strategy
+   *
+   * This ctor is mainly for test cases, including test cases in other modules
+   */
+  public SegmentLoaderLocalCacheManager(
+      IndexIO indexIO,
       SegmentLoaderConfig config,
       @Json ObjectMapper mapper
   )
@@ -89,17 +121,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     this.indexIO = indexIO;
     this.config = config;
     this.jsonMapper = mapper;
-    this.locations = new ArrayList<>();
-    for (StorageLocationConfig locationConfig : config.getLocations()) {
-      locations.add(
-          new StorageLocation(
-              locationConfig.getPath(),
-              locationConfig.getMaxSize(),
-              locationConfig.getFreeSpacePercent()
-          )
-      );
-    }
-    this.strategy = config.getStorageLocationSelectorStrategy(locations);
+    this.locations = config.toStorageLocations();
+    this.strategy = new LeastBytesUsedStorageLocationSelectorStrategy(locations);
+    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
   }
 
   @Override

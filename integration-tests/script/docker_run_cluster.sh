@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 # Create docker network
 {
   docker network create --subnet=172.172.172.0/24 druid-it-net
@@ -45,21 +47,40 @@ fi
     docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up -d
   fi
 
+  # Start Druid services
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
-     if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
-     then
-       # Start default Druid services and additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
-       docker-compose -f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.security.yml up -d
-     elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
-     then
-       # Start default Druid services with an additional historical modified for query retry test
-       # See CliHistoricalForQueryRetryTest.
-       docker-compose -f ${DOCKERDIR}/docker-compose.query-retry-test.yml up -d
-     else
-       # Start default Druid services
-       docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d
-     fi
+    # Sanity check: DRUID_INTEGRATION_TEST_INDEXER must be "indexer" or "middleManager"
+    if [ "$DRUID_INTEGRATION_TEST_INDEXER" != "indexer" ] && [ "$DRUID_INTEGRATION_TEST_INDEXER" != "middleManager" ]
+    then
+      echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')"
+      exit 1
+    fi
+
+    if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
+    then
+      # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
+      if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
+      then
+        echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
+        exit 1
+      fi
+
+      # Replace MiddleManager with Indexer
+      docker-compose -f ${DOCKERDIR}/docker-compose.cli-indexer.yml up -d
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
+    then
+      # Start default Druid services and additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
+      docker-compose -f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.security.yml up -d
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
+    then
+      # Start default Druid services with an additional historical modified for query retry test
+      # See CliHistoricalForQueryRetryTest.
+      docker-compose -f ${DOCKERDIR}/docker-compose.query-retry-test.yml up -d
+    else
+      # Start default Druid services
+      docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d
+    fi
   else
     # run druid cluster with override config
     OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up -d
