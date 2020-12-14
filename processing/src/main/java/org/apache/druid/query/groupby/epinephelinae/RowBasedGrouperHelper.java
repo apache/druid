@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -87,6 +88,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -534,19 +536,41 @@ public class RowBasedGrouperHelper
   public static CloseableGrouperIterator<RowBasedKey, ResultRow> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
-      @Nullable final List<String> dimsToInclude,
+      @Nullable final List<DimensionSpec> dimsToInclude,
       final Closeable closeable
   )
   {
     final boolean includeTimestamp = query.getResultRowHasTimestamp();
     final BitSet dimsToIncludeBitSet = new BitSet(query.getDimensions().size());
     final int resultRowDimensionStart = query.getResultRowDimensionStart();
+    final BitSet groupingAggregatorsBitSet = new BitSet(query.getAggregatorSpecs().size());
+    final Object[] groupingAggregatorValues = new Long[query.getAggregatorSpecs().size()];
 
     if (dimsToInclude != null) {
-      for (String dimension : dimsToInclude) {
-        final int dimIndex = query.getResultRowSignature().indexOf(dimension);
+      for (DimensionSpec dimensionSpec : dimsToInclude) {
+        String outputName = dimensionSpec.getOutputName();
+        final int dimIndex = query.getResultRowSignature().indexOf(outputName);
         if (dimIndex >= 0) {
           dimsToIncludeBitSet.set(dimIndex - resultRowDimensionStart);
+        }
+      }
+
+      // KeyDimensionNames are the input column names of dimensions. Its required since aggregators are not aware of the
+      //  output column names.
+      //  As we exclude certain dimensions from the result row, the value for any grouping_id aggregators have to change
+      //  to reflect the new grouping dimensions, that aggregation is being done upon. We will mark the indices which have
+      //  grouping aggregators and update the value for each row at those indices.
+      Set<String> keyDimensionNames = dimsToInclude.stream()
+                                                   .map(DimensionSpec::getDimension)
+                                                   .collect(Collectors.toSet());
+      for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
+        AggregatorFactory aggregatorFactory = query.getAggregatorSpecs().get(i);
+        if (aggregatorFactory instanceof GroupingAggregatorFactory) {
+
+          groupingAggregatorsBitSet.set(i);
+          groupingAggregatorValues[i] = ((GroupingAggregatorFactory) aggregatorFactory)
+              .withKeyDimensions(keyDimensionNames)
+              .getValue();
         }
       }
     }
@@ -576,7 +600,13 @@ public class RowBasedGrouperHelper
           // Add aggregations.
           final int resultRowAggregatorStart = query.getResultRowAggregatorStart();
           for (int i = 0; i < entry.getValues().length; i++) {
-            resultRow.set(resultRowAggregatorStart + i, entry.getValues()[i]);
+            if (dimsToInclude != null && groupingAggregatorsBitSet.get(i)) {
+              // Override with a new value, reflecting the new set of grouping dimensions
+              resultRow.set(resultRowAggregatorStart + i, groupingAggregatorValues[i]);
+            } else {
+              resultRow.set(resultRowAggregatorStart + i, entry.getValues()[i]);
+
+            }
           }
 
           return resultRow;

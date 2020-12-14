@@ -267,7 +267,8 @@ export class DatasourcesView extends React.PureComponent<
     ELSE 0
   END AS avg_row_size
 FROM sys.segments
-GROUP BY 1`;
+GROUP BY 1
+ORDER BY 1`;
 
   static formatRules(rules: Rule[]): string {
     if (rules.length === 0) {
@@ -461,7 +462,9 @@ GROUP BY 1`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkAsUnusedAllSegmentsIn}`,
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              datasourceToMarkAsUnusedAllSegmentsIn,
+            )}`,
             {},
           );
           return resp.data;
@@ -492,7 +495,9 @@ GROUP BY 1`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn,
+            )}`,
             {},
           );
           return resp.data;
@@ -524,7 +529,9 @@ GROUP BY 1`;
           if (!useUnuseInterval) return;
           const param = isUse ? 'markUsed' : 'markUnused';
           const resp = await Api.instance.post(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkSegmentsByIntervalIn}/${param}`,
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              datasourceToMarkSegmentsByIntervalIn,
+            )}/${Api.encodePath(param)}`,
             {
               interval: useUnuseInterval,
             },
@@ -566,7 +573,9 @@ GROUP BY 1`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              killDatasource,
+            )}?kill=true&interval=1000/3000`,
             {},
           );
           return resp.data;
@@ -653,7 +662,7 @@ GROUP BY 1`;
 
   private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
-      await Api.instance.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
+      await Api.instance.post(`/druid/coordinator/v1/rules/${Api.encodePath(datasource)}`, rules, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,
@@ -716,7 +725,9 @@ GROUP BY 1`;
         text: 'Confirm',
         onClick: async () => {
           try {
-            await Api.instance.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
+            await Api.instance.delete(
+              `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
+            );
             this.setState({ compactionDialogOpenOn: undefined }, () =>
               this.datasourceQueryManager.rerunLastQuery(),
             );
@@ -746,18 +757,21 @@ GROUP BY 1`;
   ): BasicAction[] {
     const { goToQuery, goToTask, capabilities } = this.props;
 
-    const goToActions: BasicAction[] = [
-      {
+    const goToActions: BasicAction[] = [];
+
+    if (capabilities.hasSql()) {
+      goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
         onAction: () => goToQuery(SqlQuery.create(SqlRef.table(datasource)).toString()),
-      },
-      {
-        icon: IconNames.GANTT_CHART,
-        title: 'Go to tasks',
-        onAction: () => goToTask(datasource),
-      },
-    ];
+      });
+    }
+
+    goToActions.push({
+      icon: IconNames.GANTT_CHART,
+      title: 'Go to tasks',
+      onAction: () => goToTask(datasource),
+    });
 
     if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;

@@ -422,9 +422,8 @@ public class SegmentLoaderLocalCacheManagerTest
 
     manager = new SegmentLoaderLocalCacheManager(
       TestHelper.getTestIndexIO(),
-      new SegmentLoaderConfig().withLocations(locationConfigs).withStorageLocationSelectorStrategy(
-        new RoundRobinStorageLocationSelectorStrategy(locations)
-      ),
+      new SegmentLoaderConfig().withLocations(locationConfigs),
+      new RoundRobinStorageLocationSelectorStrategy(locations),
       jsonMapper
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
@@ -669,21 +668,12 @@ public class SegmentLoaderLocalCacheManagerTest
     locationConfigs.add(locationConfig2);
     locationConfigs.add(locationConfig3);
 
-    List<StorageLocation> locations = new ArrayList<>();
-    for (StorageLocationConfig locConfig : locationConfigs) {
-      locations.add(
-              new StorageLocation(
-                      locConfig.getPath(),
-                      locConfig.getMaxSize(),
-                      null
-              )
-      );
-    }
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig().withLocations(locationConfigs);
+
     manager = new SegmentLoaderLocalCacheManager(
             TestHelper.getTestIndexIO(),
-            new SegmentLoaderConfig().withLocations(locationConfigs).withStorageLocationSelectorStrategy(
-                    new RandomStorageLocationSelectorStrategy(locations)
-            ),
+            new SegmentLoaderConfig().withLocations(locationConfigs),
+            new RandomStorageLocationSelectorStrategy(segmentLoaderConfig.toStorageLocations()),
             jsonMapper
     );
 

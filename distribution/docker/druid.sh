@@ -55,6 +55,7 @@ getConfPath() {
     _common) echo $cluster_conf_base/_common ;;
     historical) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
+    indexer) echo $cluster_conf_base/data/indexer ;;
     coordinator | overlord) echo $cluster_conf_base/master/coordinator-overlord ;;
     broker) echo $cluster_conf_base/query/broker ;;
     router) echo $cluster_conf_base/query/router ;;

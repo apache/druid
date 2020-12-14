@@ -476,7 +476,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final List<Interval> allocateIntervals = new ArrayList<>(partitionAnalysis.getAllIntervalsToIndex());
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!determineLockGranularityandTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
+        if (!determineLockGranularityAndTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 
