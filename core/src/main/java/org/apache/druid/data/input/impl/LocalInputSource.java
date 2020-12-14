@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -61,9 +62,11 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Nullable
   private final String filter;
   private final Set<File> files;
+  private final InputSourceSecurityConfig securityConfig;
 
   @JsonCreator
   public LocalInputSource(
+      @JacksonInject InputSourceSecurityConfig securityConfig,
       @JsonProperty("baseDir") @Nullable File baseDir,
       @JsonProperty("filter") @Nullable String filter,
       @JsonProperty("files") @Nullable Set<File> files
@@ -72,15 +75,17 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     this.baseDir = baseDir;
     this.filter = baseDir != null ? Preconditions.checkNotNull(filter, "filter") : filter;
     this.files = files == null ? Collections.emptySet() : files;
-
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
       throw new IAE("At least one of baseDir or files should be specified");
     }
+    securityConfig.validateFileAccess(baseDir);
+    securityConfig.validateFileAccess(files);
+    this.securityConfig = securityConfig;
   }
 
-  public LocalInputSource(File baseDir, String filter)
+  public LocalInputSource(InputSourceSecurityConfig config, File baseDir, String filter)
   {
-    this(baseDir, filter, null);
+    this(config, baseDir, filter, null);
   }
 
   @Nullable
@@ -171,7 +176,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public SplittableInputSource<List<File>> withSplit(InputSplit<List<File>> split)
   {
-    return new LocalInputSource(null, null, new HashSet<>(split.get()));
+    return new LocalInputSource(securityConfig, null, null, new HashSet<>(split.get()));
   }
 
   @Override
@@ -208,12 +213,13 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     LocalInputSource that = (LocalInputSource) o;
     return Objects.equals(baseDir, that.baseDir) &&
            Objects.equals(filter, that.filter) &&
-           Objects.equals(files, that.files);
+           Objects.equals(files, that.files) &&
+           Objects.equals(securityConfig, that.securityConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDir, filter, files);
+    return Objects.hash(baseDir, filter, files, securityConfig);
   }
 }

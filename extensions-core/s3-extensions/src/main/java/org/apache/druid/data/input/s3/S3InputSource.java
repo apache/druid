@@ -34,6 +34,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
@@ -59,6 +60,7 @@ public class S3InputSource extends CloudObjectInputSource
   @JsonProperty("properties")
   private final S3InputSourceConfig s3InputSourceConfig;
   private final S3InputDataConfig inputDataConfig;
+  private final InputSourceSecurityConfig securityConfig;
 
   /**
    * Constructor for S3InputSource
@@ -81,13 +83,15 @@ public class S3InputSource extends CloudObjectInputSource
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JacksonInject ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       @JacksonInject S3InputDataConfig inputDataConfig,
+      @JacksonInject InputSourceSecurityConfig securityConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, securityConfig);
+
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceConfig = s3InputSourceConfig;
@@ -109,6 +113,7 @@ public class S3InputSource extends CloudObjectInputSource
           }
         }
     );
+    this.securityConfig = securityConfig;
   }
 
   @Nullable
@@ -146,6 +151,7 @@ public class S3InputSource extends CloudObjectInputSource
         s3ClientSupplier.get(),
         null,
         inputDataConfig,
+        securityConfig,
         null,
         null,
         split.get(),

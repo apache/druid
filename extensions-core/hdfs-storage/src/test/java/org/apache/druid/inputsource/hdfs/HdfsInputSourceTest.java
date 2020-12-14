@@ -32,6 +32,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
@@ -55,6 +56,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,6 +90,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
   {
     private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
 
+
     private HdfsInputSource.Builder hdfsInputSourceBuilder;
 
     @Rule
@@ -98,6 +101,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       hdfsInputSourceBuilder = HdfsInputSource.builder()
                                               .paths(PATH)
+                                              .inputSourceSecurityConfig(InputSourceSecurityConfig.ALLOW_ALL)
                                               .configuration(CONFIGURATION);
     }
 
@@ -139,7 +143,13 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     private static ObjectMapper createObjectMapper()
     {
       final ObjectMapper mapper = new ObjectMapper();
-      mapper.setInjectableValues(new InjectableValues.Std().addValue(Configuration.class, new Configuration()));
+      mapper.setInjectableValues(
+          new InjectableValues.Std()
+              .addValue(Configuration.class, new Configuration())
+              .addValue(
+                  InputSourceSecurityConfig.class,
+                  InputSourceSecurityConfig.ALLOW_ALL
+              ));
       new HdfsStorageDruidModule().getJacksonModules().forEach(mapper::registerModule);
       return mapper;
     }
@@ -157,7 +167,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
       Wrapper(HdfsInputSource.Builder hdfsInputSourceBuilder)
       {
-        this.inputSource = hdfsInputSourceBuilder.build();
+        this.inputSource = hdfsInputSourceBuilder.inputSourceSecurityConfig(InputSourceSecurityConfig.ALLOW_ALL).build();
       }
     }
   }
@@ -204,6 +214,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       target = HdfsInputSource.builder()
                               .paths(dfsCluster.getURI() + PATH + "*")
                               .configuration(CONFIGURATION)
+                              .inputSourceSecurityConfig(InputSourceSecurityConfig.ALLOW_ALL)
                               .build();
     }
 
@@ -291,6 +302,39 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
         String actualPath = Iterables.getOnlyElement(inputSource.getInputPaths());
         Assert.assertEquals(expectedPath, actualPath);
       }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testDenyAllPaths() throws Exception
+    {
+      HdfsInputSource.builder()
+                     .paths(dfsCluster.getURI() + PATH + "*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.emptyList(), null))
+                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1))
+                     .collect(Collectors.toList());
+    }
+
+    @Test
+    public void testAllowPath() throws Exception
+    {
+      HdfsInputSource.builder()
+                     .paths(dfsCluster.getURI() + PATH + "*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null))
+                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1))
+                     .collect(Collectors.toList());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testDenyPathsRelativeToAllowPaths() throws Exception
+    {
+      HdfsInputSource.builder()
+                     .paths(dfsCluster.getURI() + PATH + "/../../test2")
+                     .configuration(CONFIGURATION)
+                     .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null))
+                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1))
+                     .collect(Collectors.toList());
     }
   }
 

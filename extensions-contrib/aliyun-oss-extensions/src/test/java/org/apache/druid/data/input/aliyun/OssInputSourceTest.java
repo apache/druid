@@ -47,6 +47,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -86,6 +87,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
   private static final ObjectMapper MAPPER = createObjectMapper();
   private static final OSS OSSCLIENT = EasyMock.createMock(OSSClient.class);
   private static final OssInputDataConfig INPUT_DATA_CONFIG;
+  private static final InputSourceSecurityConfig SECURITY_CONFIG = new InputSourceSecurityConfig(null, null);
   private static final int MAX_LISTING_LENGTH = 10;
 
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
@@ -137,6 +139,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withUris = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         EXPECTED_URIS,
         null,
         null,
@@ -152,6 +155,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withPrefixes = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         PREFIXES,
         null,
@@ -168,6 +172,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withPrefixes = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -191,6 +196,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withPrefixes = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -210,6 +216,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withPrefixes = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -229,6 +236,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withPrefixes = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -246,6 +254,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final OssInputSource withPrefixes = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
@@ -264,6 +273,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
         EXPECTED_LOCATION,
@@ -279,6 +289,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
@@ -294,6 +305,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         ImmutableList.of(),
         PREFIXES,
         EXPECTED_LOCATION,
@@ -307,6 +319,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         EXPECTED_URIS,
         null,
         null,
@@ -332,6 +345,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         PREFIXES,
         null,
@@ -358,6 +372,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         PREFIXES,
         null,
@@ -387,6 +402,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         PREFIXES,
         null,
@@ -415,6 +431,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
@@ -445,6 +462,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
@@ -488,6 +506,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
+        SECURITY_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
         null,

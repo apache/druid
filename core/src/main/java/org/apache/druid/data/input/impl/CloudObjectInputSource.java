@@ -49,12 +49,16 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       String scheme,
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
-      @Nullable List<CloudObjectLocation> objects
+      @Nullable List<CloudObjectLocation> objects,
+      InputSourceSecurityConfig securityConfig
   )
   {
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
+    securityConfig.validateURIAccess(uris);
+    securityConfig.validateURIAccess(prefixes);
+    securityConfig.validateCloudLocationAccess(objects, scheme);
 
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));

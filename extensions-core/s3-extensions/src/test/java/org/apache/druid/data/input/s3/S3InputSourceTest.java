@@ -48,6 +48,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -96,6 +97,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       new NoopServerSideEncryption()
   );
   private static final S3InputDataConfig INPUT_DATA_CONFIG;
+  private static final InputSourceSecurityConfig ALLOW_ALL = InputSourceSecurityConfig.ALLOW_ALL;
   private static final int MAX_LISTING_LENGTH = 10;
 
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
@@ -146,6 +148,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         EXPECTED_URIS,
         null,
         null,
@@ -162,6 +165,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         PREFIXES,
         null,
@@ -179,6 +183,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         null,
         EXPECTED_LOCATION,
@@ -202,6 +207,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         null,
         EXPECTED_LOCATION,
@@ -231,6 +237,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         null,
         EXPECTED_LOCATION,
@@ -253,6 +260,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         null,
         EXPECTED_LOCATION,
@@ -274,6 +282,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         null,
         EXPECTED_LOCATION,
@@ -292,6 +301,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
@@ -311,6 +321,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         EXPECTED_URIS,
         PREFIXES,
         EXPECTED_LOCATION,
@@ -327,6 +338,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
@@ -343,6 +355,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         ImmutableList.of(),
         PREFIXES,
         EXPECTED_LOCATION,
@@ -357,6 +370,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         EXPECTED_URIS,
         null,
         null,
@@ -383,6 +397,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         PREFIXES,
         null,
@@ -410,6 +425,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         PREFIXES,
         null,
@@ -440,6 +456,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         PREFIXES,
         null,
@@ -469,6 +486,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
@@ -500,6 +518,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
@@ -544,6 +563,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
+        ALLOW_ALL,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
         null,
@@ -572,6 +592,76 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
 
     EasyMock.verify(S3_CLIENT);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDenyAll() throws IOException{
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        new InputSourceSecurityConfig(Collections.emptyList(), null),
+        null,
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
+        null
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDenyPath() throws IOException{
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        new InputSourceSecurityConfig(null, Collections.singletonList(URI.create("s3://deny-bucket"))),
+        null,
+        ImmutableList.of(URI.create("s3://deny-bucket/path")),
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testAllowSingleBucketPathMatching() throws IOException{
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        new InputSourceSecurityConfig(Collections.singletonList(URI.create("s3://allow-bucket/allow-path")), null),
+        null,
+        ImmutableList.of(URI.create("s3://allow-bucket/allow-path")),
+        null,
+        null
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAllowSingleBucketPathNotMatching() {
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        new InputSourceSecurityConfig(Collections.singletonList(URI.create("s3://allow-bucket/allow-path")), null),
+        null,
+        ImmutableList.of(URI.create("s3://allow-bucket/")),
+        null,
+        null
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAllowSingleBucketPathDifferentBucket() {
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        new InputSourceSecurityConfig(Collections.singletonList(URI.create("s3://allow-bucket/allow-path")), null),
+        null,
+        ImmutableList.of(URI.create("s3://deny-bucket/")),
+        null,
+        null
+    );
   }
 
   private static void expectListObjects(URI prefix, List<URI> uris, byte[] content)
@@ -668,6 +758,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     final ObjectMapper baseMapper = injector.getInstance(ObjectMapper.class);
 
     baseModule.getJacksonModules().forEach(baseMapper::registerModule);
+
     return baseMapper;
   }
 
@@ -688,6 +779,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     @Override
     public void configure(Binder binder)
     {
+      binder.bind(InputSourceSecurityConfig.class).toInstance(InputSourceSecurityConfig.ALLOW_ALL);
     }
 
     @Provides
