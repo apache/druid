@@ -22,6 +22,7 @@ package org.apache.druid.k8s.discovery;
 import com.google.common.base.Preconditions;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ public class DiscoveryDruidNodeList
 
   public DiscoveryDruidNodeList(
       String resourceVersion,
-      Map<String, DiscoveryDruidNode> druidNodes
+      @Nullable Map<String, DiscoveryDruidNode> druidNodes
   )
   {
     this.resourceVersion = Preconditions.checkNotNull(resourceVersion, "NULL resource version!");
