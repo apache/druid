@@ -514,7 +514,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private AtomicReference<Status> processRequest(DataSegmentChangeRequest changeRequest)
   {
     synchronized (requestStatusesLock) {
-      if (requestStatuses.getIfPresent(changeRequest) == null) {
+      AtomicReference<Status> status = requestStatuses.getIfPresent(changeRequest);
+
+      // If last load/drop request status is failed, here can try that again
+      if (status == null || status.get().getState() == Status.STATE.FAILED) {
         changeRequest.go(
             new DataSegmentChangeHandler()
             {
