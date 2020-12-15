@@ -107,7 +107,7 @@ public class ITHighAvailabilityTest
   private void swapLeadersAndWait(String coordinatorLeader, String overlordLeader)
   {
     Runnable waitUntilCoordinatorSupplier;
-    if (coordinatorLeader.contains(transformHost(config.getCoordinatorInternalHost()))) {
+    if (isCoordinatorOneLeader(config, coordinatorLeader)) {
       druidClusterAdminClient.restartCoordinatorContainer();
       waitUntilCoordinatorSupplier = () -> druidClusterAdminClient.waitUntilCoordinatorReady();
     } else {
@@ -116,7 +116,7 @@ public class ITHighAvailabilityTest
     }
 
     Runnable waitUntilOverlordSupplier;
-    if (coordinatorLeader.contains(transformHost(config.getOverlordInternalHost()))) {
+    if (isOverlordOneLeader(config, overlordLeader)) {
       druidClusterAdminClient.restartOverlordContainer();
       waitUntilOverlordSupplier = () -> druidClusterAdminClient.waitUntilIndexerReady();
     } else {
@@ -196,14 +196,13 @@ public class ITHighAvailabilityTest
 
   private static boolean isCoordinatorOneLeader(IntegrationTestingConfig config, String coordinatorLeader)
   {
-    return coordinatorLeader.contains(transformHost(config.getCoordinatorInternalHost()))
+    return coordinatorLeader.contains(transformHost(config.getCoordinatorInternalHost()));
   }
 
   private static boolean isOverlordOneLeader(IntegrationTestingConfig config, String overlordLeader)
   {
     return overlordLeader.contains(transformHost(config.getOverlordInternalHost()));
   }
-
 
   /**
    * host + ':' which should be enough to distinguish subsets, e.g. 'druid-coordinator:8081' from
