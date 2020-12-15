@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: "3"
+version: "2.2"
 
 # IP address ranges:
 # 172.172.172.2: zookeeper + kafka (dockerfile depends on this)
