@@ -17,7 +17,6 @@
 set -e
 
 # setup client keystore
-export SHARED_DIR=${HOME}/shared
 cd integration-tests
 ./docker/tls/generate-client-certs-and-keystores.sh
 rm -rf docker/client_tls
