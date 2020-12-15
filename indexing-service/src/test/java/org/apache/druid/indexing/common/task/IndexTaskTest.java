@@ -49,6 +49,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
@@ -56,6 +57,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -70,6 +72,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -83,14 +87,18 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -115,6 +123,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 @RunWith(Parameterized.class)
 public class IndexTaskTest extends IngestionTestBase
@@ -951,6 +960,162 @@ public class IndexTaskTest extends IngestionTestBase
       Assert.assertEquals(expectedInterval, segment.getInterval());
       Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
       Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
+    }
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityNoSegments() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+    ExecutorService mockExec = EasyMock.createMock(ExecutorService.class);
+    List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    IndexTask indexTask = new IndexTask(
+      null,
+      null,
+      createDefaultIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              null
+          ),
+          null,
+          createTuningConfigWithMaxRowsPerSegment(2, true),
+          false
+      ),
+      null
+    );
+
+    EasyMock.replay(mockToolbox);
+    EasyMock.replay(mockExec);
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, mockExec, segmentsToWaitFor, 1000));
+    EasyMock.verify(mockToolbox);
+    EasyMock.verify(mockExec);
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityMultipleSegmentsTimeout() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+    ExecutorService mockExec = EasyMock.createMock(ExecutorService.class);
+    SegmentHandoffNotifierFactory mockFactory = EasyMock.createMock(SegmentHandoffNotifierFactory.class);
+    SegmentHandoffNotifier mockNotifier = EasyMock.createMock(SegmentHandoffNotifier.class);
+
+    DataSegment mockDataSegment1 = EasyMock.createMock(DataSegment.class);
+    DataSegment mockDataSegment2 = EasyMock.createMock(DataSegment.class);
+    List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    segmentsToWaitFor.add(mockDataSegment1);
+    segmentsToWaitFor.add(mockDataSegment2);
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false
+        ),
+        null
+    );
+
+    EasyMock.expect(mockDataSegment1.getInterval()).andReturn(new Interval(0L, 1L)).once();
+    EasyMock.expect(mockDataSegment1.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment1.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+    EasyMock.expect(mockDataSegment2.getInterval()).andReturn(new Interval(0L, 1L)).once();
+    EasyMock.expect(mockDataSegment2.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment2.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+
+    EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
+    EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
+    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource")).andReturn(mockNotifier).once();
+    mockNotifier.start();
+    EasyMock.expectLastCall().once();
+    mockNotifier.registerSegmentHandoffCallback(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().andReturn(true).times(2);
+    mockNotifier.close();
+    EasyMock.expectLastCall().once();
+
+
+    EasyMock.replay(mockToolbox);
+    EasyMock.replay(mockExec);
+    EasyMock.replay(mockDataSegment1, mockDataSegment2);
+    EasyMock.replay(mockFactory, mockNotifier);
+
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, mockExec, segmentsToWaitFor, 1000));
+    EasyMock.verify(mockToolbox);
+    EasyMock.verify(mockExec);
+    EasyMock.verify(mockDataSegment1, mockDataSegment2);
+    EasyMock.verify(mockFactory, mockNotifier);
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityMultipleSegmentsSuccess() throws IOException
+  {
+    ExecutorService exec = Execs.singleThreaded("HandoffTest");
+    try {
+      final File tmpDir = temporaryFolder.newFolder();
+
+      TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+
+      DataSegment mockDataSegment1 = EasyMock.createMock(DataSegment.class);
+      DataSegment mockDataSegment2 = EasyMock.createMock(DataSegment.class);
+      List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+      segmentsToWaitFor.add(mockDataSegment1);
+      segmentsToWaitFor.add(mockDataSegment2);
+
+      IndexTask indexTask = new IndexTask(
+          null,
+          null,
+          createDefaultIngestionSpec(
+              jsonMapper,
+              tmpDir,
+              new UniformGranularitySpec(
+                  Granularities.HOUR,
+                  Granularities.MINUTE,
+                  null
+              ),
+              null,
+              createTuningConfigWithMaxRowsPerSegment(2, true),
+              false
+          ),
+          null
+      );
+
+      EasyMock.expect(mockDataSegment1.getInterval()).andReturn(new Interval(0L, 1L)).once();
+      EasyMock.expect(mockDataSegment1.getVersion()).andReturn("dummyString").once();
+      EasyMock.expect(mockDataSegment1.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+      EasyMock.expect(mockDataSegment1.getId()).andReturn(SegmentId.dummy("MockDataSource")).once();
+      EasyMock.expect(mockDataSegment2.getInterval()).andReturn(new Interval(0L, 1L)).once();
+      EasyMock.expect(mockDataSegment2.getVersion()).andReturn("dummyString").once();
+      EasyMock.expect(mockDataSegment2.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+      EasyMock.expect(mockDataSegment2.getId()).andReturn(SegmentId.dummy("MockDataSource")).once();
+
+      EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory())
+              .andReturn(new NoopSegmentHandoffNotifierFactory())
+              .once();
+      EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
+
+      EasyMock.replay(mockToolbox);
+      EasyMock.replay(mockDataSegment1, mockDataSegment2);
+
+      Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, exec, segmentsToWaitFor, 30000));
+      EasyMock.verify(mockToolbox);
+      EasyMock.verify(mockDataSegment1, mockDataSegment2);
+    }
+    finally {
+      exec.shutdownNow();
     }
   }
 
