@@ -16,6 +16,8 @@
 version: "3"
 
 # IP address ranges:
+# 172.172.172.2: zookeeper + kafka (dockerfile depends on this)
+# 172.172.172.3: metadata store
 # 172.172.172.10-19: overlord
 # 172.172.172.20-29: coordinator
 # 172.172.172.30-39: historicals
@@ -23,7 +25,7 @@ version: "3"
 # 172.172.172.50-59: indexers
 # 172.172.172.60-69: brokers
 # 172.172.172.70-79: routers
-# 172.172.172.100+:  zookeeper, kafka, hadoop, other supporting infra
+# 172.172.172.101+:  hadoop, other supporting infra
 networks:
   druid-it-net:
     name: druid-it-net
