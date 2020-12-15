@@ -30,7 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
-import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -43,6 +43,7 @@ import org.junit.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -80,30 +81,30 @@ public class InputSourceModuleTest
   public void testHttpInputSourceAllowConfig()
   {
     Properties props = new Properties();
-    props.put("druid.ingestion.http.allowListDomains", "[\"allow.com\"]");
+    props.put("druid.ingestion.uri.allowPrefexList", "[\"http://allow.com\"]");
     Injector injector = makeInjectorWithProperties(props);
-    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(Collections.singletonList("allow.com"), null), instance);
+    InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
+    Assert.assertEquals(new InputSourceSecurityConfig(Collections.singletonList(URI.create("http://allow.com")), null), instance);
   }
 
   @Test
   public void testHttpInputSourceDenyConfig()
   {
     Properties props = new Properties();
-    props.put("druid.ingestion.http.denyListDomains", "[\"deny.com\"]");
+    props.put("druid.ingestion.uri.denyPrefixList", "[\"http://deny.com\"]");
     Injector injector = makeInjectorWithProperties(props);
-    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(null, Collections.singletonList("deny.com")), instance);
+    InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
+    Assert.assertEquals(new InputSourceSecurityConfig(null, Collections.singletonList(URI.create("http://deny.com"))), instance);
   }
 
   @Test(expected = ProvisionException.class)
   public void testHttpInputSourceBothAllowDenyConfig()
   {
     Properties props = new Properties();
-    props.put("druid.ingestion.http.allowListDomains", "[\"allow.com\"]");
-    props.put("druid.ingestion.http.denyListDomains", "[\"deny.com\"]");
+    props.put("druid.ingestion.uri.allowPrefexList", "[\"http://allow.com\"]");
+    props.put("druid.ingestion.uri.denyPrefixList", "[\"http://deny.com\"]");
     Injector injector = makeInjectorWithProperties(props);
-    injector.getInstance(HttpInputSourceConfig.class);
+    injector.getInstance(InputSourceSecurityConfig.class);
   }
 
   @Test
@@ -111,10 +112,10 @@ public class InputSourceModuleTest
   {
     Properties props = new Properties();
     Injector injector = makeInjectorWithProperties(props);
-    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(null, null), instance);
-    Assert.assertNull(instance.getAllowListDomains());
-    Assert.assertNull(instance.getDenyListDomains());
+    InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
+    Assert.assertEquals(new InputSourceSecurityConfig(null, null), instance);
+    Assert.assertNull(instance.getallowPrefexList());
+    Assert.assertNull(instance.getdenyPrefixList());
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

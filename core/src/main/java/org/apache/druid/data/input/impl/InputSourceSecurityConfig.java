@@ -75,7 +75,7 @@ public class InputSourceSecurityConfig
 
   public void validateURIAccess(@Nullable Collection<URI> uris)
   {
-    if(uris == null){
+    if (uris == null) {
       return;
     }
     uris.forEach(this::validateURIAccess);
@@ -83,7 +83,7 @@ public class InputSourceSecurityConfig
 
   public void validateURIAccess(@Nullable URI uri)
   {
-    if(uri == null){
+    if (uri == null) {
       return;
     }
     Preconditions.checkArgument(
@@ -94,7 +94,7 @@ public class InputSourceSecurityConfig
 
   public void validateFileAccess(@Nullable File file)
   {
-    if(file == null){
+    if (file == null) {
       return;
     }
     validateURIAccess(file.toURI());
@@ -102,14 +102,15 @@ public class InputSourceSecurityConfig
 
   public void validateFileAccess(@Nullable Collection<File> files)
   {
-    if(files == null){
+    if (files == null) {
       return;
     }
     files.forEach(this::validateFileAccess);
   }
 
-  private void validateCloudLocationAccess(@Nullable CloudObjectLocation location, String scheme){
-    if(location == null){
+  private void validateCloudLocationAccess(@Nullable CloudObjectLocation location, String scheme)
+  {
+    if (location == null) {
       return;
     }
     validateURIAccess(location.toUri(scheme));
@@ -117,7 +118,7 @@ public class InputSourceSecurityConfig
 
   public void validateCloudLocationAccess(@Nullable Collection<CloudObjectLocation> locations, String scheme)
   {
-    if(locations == null){
+    if (locations == null) {
       return;
     }
     locations.forEach(location -> validateCloudLocationAccess(location, scheme));

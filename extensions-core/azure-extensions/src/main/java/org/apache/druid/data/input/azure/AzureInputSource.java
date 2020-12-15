@@ -139,7 +139,8 @@ public class AzureInputSource extends CloudObjectInputSource
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
-        inputDataConfig
+        inputDataConfig,
+        securityConfig
     );
   }
 
@@ -160,7 +161,8 @@ public class AzureInputSource extends CloudObjectInputSource
            entityFactory.equals(that.entityFactory) &&
            azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
            azureCloudBlobToLocationConverter.equals(that.azureCloudBlobToLocationConverter) &&
-           inputDataConfig.equals(that.inputDataConfig);
+           inputDataConfig.equals(that.inputDataConfig) &&
+           securityConfig.equals(that.securityConfig);
   }
 
   @Override

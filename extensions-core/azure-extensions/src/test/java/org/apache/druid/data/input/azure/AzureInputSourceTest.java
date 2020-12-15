@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
@@ -40,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -104,6 +106,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
         inputDataConfig,
+        InputSourceSecurityConfig.ALLOW_ALL,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         EMPTY_OBJECTS
@@ -124,6 +127,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
         inputDataConfig,
+        InputSourceSecurityConfig.ALLOW_ALL,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         objects
@@ -157,6 +161,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
         inputDataConfig,
+        InputSourceSecurityConfig.ALLOW_ALL,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS
@@ -185,6 +190,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
         inputDataConfig,
+        InputSourceSecurityConfig.ALLOW_ALL,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS
@@ -205,6 +211,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
         inputDataConfig,
+        InputSourceSecurityConfig.ALLOW_ALL,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS
@@ -214,14 +221,87 @@ public class AzureInputSourceTest extends EasyMockSupport
     Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[]}", actualToString);
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void test_Deny_All()
+  {
+    azureInputSource = new AzureInputSource(
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        azureCloudBlobToLocationConverter,
+        inputDataConfig,
+        new InputSourceSecurityConfig(Collections.emptyList(), null),
+        EMPTY_URIS,
+        Collections.singletonList(URI.create("azure://container/blob")),
+        EMPTY_OBJECTS
+    );
+
+    String actualToString = azureInputSource.toString();
+    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[]}", actualToString);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDenyAll()
+  {
+    new AzureInputSource(
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        azureCloudBlobToLocationConverter,
+        inputDataConfig,
+        new InputSourceSecurityConfig(Collections.emptyList(), null),
+        EMPTY_URIS,
+        Collections.singletonList(URI.create("azure://container/blob")),
+        EMPTY_OBJECTS
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDenyURI()
+  {
+    new AzureInputSource(
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        azureCloudBlobToLocationConverter,
+        inputDataConfig,
+        new InputSourceSecurityConfig(null, Collections.singletonList(URI.create("azure://container/blob"))),
+        Collections.singletonList(URI.create("azure://container/blob")),
+        EMPTY_URIS,
+        EMPTY_OBJECTS
+    );
+  }
+
+  @Test
+  public void testAllowURI()
+  {
+    new AzureInputSource(
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        azureCloudBlobToLocationConverter,
+        inputDataConfig,
+        new InputSourceSecurityConfig(Collections.singletonList(URI.create("azure://container/blob")), null),
+        Collections.singletonList(URI.create("azure://container/blob")),
+        EMPTY_URIS,
+        EMPTY_OBJECTS
+    );
+  }
+
   @Test
   public void abidesEqualsContract()
   {
     EqualsVerifier.forClass(AzureInputSource.class)
                   .usingGetClass()
                   .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+                  .withPrefabValues(
+                      InputSourceSecurityConfig.class,
+                      InputSourceSecurityConfig.ALLOW_ALL,
+                      new InputSourceSecurityConfig(Collections.emptyList(), null)
+                  )
                   .withNonnullFields("storage")
                   .withNonnullFields("entityFactory")
+                  .withNonnullFields("securityConfig")
                   .withNonnullFields("azureCloudBlobIterableFactory")
                   .withNonnullFields("azureCloudBlobToLocationConverter")
                   .withNonnullFields("inputDataConfig")

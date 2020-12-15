@@ -46,7 +46,8 @@ public class InputSourceSecurityConfigTest
   @Test
   public void testAllowList()
   {
-    InputSourceSecurityConfig config = new InputSourceSecurityConfig(Collections.singletonList(URI.create("gs://allowed-bucket/allowed-path")), null);
+    InputSourceSecurityConfig config = new InputSourceSecurityConfig(Collections.singletonList(URI.create(
+        "gs://allowed-bucket/allowed-path")), null);
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path")));
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path/subsirectory")));
 
@@ -60,14 +61,24 @@ public class InputSourceSecurityConfigTest
   @Test
   public void testDenyList()
   {
-    InputSourceSecurityConfig config = new InputSourceSecurityConfig(null, Collections.singletonList(URI.create("gs://deny-bucket/deny-path")));
+    InputSourceSecurityConfig config = new InputSourceSecurityConfig(
+        null,
+        Collections.singletonList(URI.create("gs://deny-bucket/deny-path"))
+    );
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path")));
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path/subsirectory")));
 
     Assert.assertFalse(config.isURIAllowed(URI.create("gs://deny-bucket/deny-path")));
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://deny-bucket/allow-path")));
     Assert.assertFalse(config.isURIAllowed(URI.create("gs://deny-bucket/allow-path/../deny-path")));
+  }
 
-
+  @Test(expected = IllegalArgumentException.class)
+  public void testCannotSetBothAllowAndDenyList()
+  {
+    new InputSourceSecurityConfig(
+        Collections.singletonList(URI.create("http://allow.com")),
+        Collections.singletonList(URI.create("http://deny.com"))
+    );
   }
 }

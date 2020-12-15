@@ -650,6 +650,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     @Override
     public void configure(Binder binder)
     {
+      binder.bind(InputSourceSecurityConfig.class).toInstance(InputSourceSecurityConfig.ALLOW_ALL);
     }
 
     @Provides

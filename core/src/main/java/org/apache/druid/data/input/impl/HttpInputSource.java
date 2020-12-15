@@ -29,7 +29,6 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
@@ -48,21 +47,18 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
-  private final HttpInputSourceConfig config;
+  private final InputSourceSecurityConfig config;
 
   @JsonCreator
   public HttpInputSource(
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
-      @JacksonInject HttpInputSourceConfig config
+      @JacksonInject InputSourceSecurityConfig config
   )
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
-    uris.forEach(uri -> Preconditions.checkArgument(
-        config.isURIAllowed(uri),
-        StringUtils.format("Access to [%s] DENIED!", uri)
-    ));
+    config.validateURIAccess(uris);
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
