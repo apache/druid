@@ -78,6 +78,7 @@ fi
       # See CliHistoricalForQueryRetryTest.
       docker-compose -f ${DOCKERDIR}/docker-compose.query-retry-test.yml up -d
     elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]
+    then
       # start the 'high availability' test cluster with multiple coordinators and overlords
       docker-compose -f ${DOCKERDIR}/docker-compose.high-availability.yml up -d
     else
