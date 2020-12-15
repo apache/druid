@@ -66,7 +66,7 @@ public class OverlordResourceTestClient
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.indexer = config.getIndexerUrl();
+    this.indexer = config.getOverlordUrl();
   }
 
   private String getIndexerURL()

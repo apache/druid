@@ -60,7 +60,7 @@ fi
     if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
     then
       # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
-      if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
+      if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]
       then
         echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
         exit 1
@@ -77,6 +77,9 @@ fi
       # Start default Druid services with an additional historical modified for query retry test
       # See CliHistoricalForQueryRetryTest.
       docker-compose -f ${DOCKERDIR}/docker-compose.query-retry-test.yml up -d
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]
+      # start the 'high availability' test cluster with multiple coordinators and overlords
+      docker-compose -f ${DOCKERDIR}/docker-compose.high-availability.yml up -d
     else
       # Start default Druid services
       docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d

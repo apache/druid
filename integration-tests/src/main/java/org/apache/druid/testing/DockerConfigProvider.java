@@ -33,7 +33,6 @@ import java.util.Map;
 
 public class DockerConfigProvider implements IntegrationTestingConfigProvider
 {
-
   @JsonProperty
   @NotNull
   private String dockerIp;
@@ -81,15 +80,39 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
-      public String getIndexerUrl()
+      public String getCoordinatorTwoUrl()
+      {
+        return "http://" + dockerIp + ":8581";
+      }
+
+      @Override
+      public String getCoordinatorTwoTLSUrl()
+      {
+        return "https://" + dockerIp + ":8781";
+      }
+
+      @Override
+      public String getOverlordUrl()
       {
         return "http://" + dockerIp + ":8090";
       }
 
       @Override
-      public String getIndexerTLSUrl()
+      public String getOverlordTLSUrl()
       {
         return "https://" + dockerIp + ":8290";
+      }
+
+      @Override
+      public String getOverlordTwoUrl()
+      {
+        return "http://" + dockerIp + ":8590";
+      }
+
+      @Override
+      public String getOverlordTwoTLSUrl()
+      {
+        return "https://" + dockerIp + ":8790";
       }
 
       @Override
@@ -165,9 +188,27 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getIndexerUrl()
+      {
+        return "http://" + dockerIp + ":8091";
+      }
+
+      @Override
+      public String getIndexerTLSUrl()
+      {
+        return "https://" + dockerIp + ":8291";
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return dockerIp;
+      }
+
+      @Override
+      public String getHistoricalHost()
+      {
+        return null;
       }
 
       @Override
@@ -194,6 +235,42 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       {
         // docker container name
         return "druid-zookeeper-kafka:9092";
+      }
+
+      @Override
+      public String getBrokerHost()
+      {
+        return "druid-broker";
+      }
+
+      @Override
+      public String getRouterHost()
+      {
+        return "druid-router";
+      }
+
+      @Override
+      public String getCoordinatorHost()
+      {
+        return "druid-coordinator";
+      }
+
+      @Override
+      public String getCoordinatorTwoHost()
+      {
+        return "druid-coordinator-two";
+      }
+
+      @Override
+      public String getOverlordHost()
+      {
+        return "druid-overlord";
+      }
+
+      @Override
+      public String getOverlordTwoHost()
+      {
+        return "druid-overlord-two";
       }
 
       @Override

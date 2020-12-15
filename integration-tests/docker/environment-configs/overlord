@@ -24,6 +24,7 @@ DRUID_LOG_PATH=/shared/logs/overlord.log
 SERVICE_DRUID_JAVA_OPTS=-server -Xmx64m -Xms64m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5009
 
 # Druid configs
+druid_host=druid-overlord
 druid_metadata_storage_type=mysql
 druid_metadata_storage_connector_connectURI=jdbc:mysql://druid-metadata-storage/druid
 druid_metadata_storage_connector_user=druid

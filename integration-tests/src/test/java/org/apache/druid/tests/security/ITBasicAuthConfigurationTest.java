@@ -542,7 +542,7 @@ public class ITBasicAuthConfigurationTest
   private void testOptionsRequests(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getOverlordUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
@@ -601,7 +601,7 @@ public class ITBasicAuthConfigurationTest
   private void checkNodeAccess(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getOverlordUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
@@ -610,7 +610,7 @@ public class ITBasicAuthConfigurationTest
   private void checkLoadStatus(HttpClient httpClient) throws Exception
   {
     checkLoadStatusSingle(httpClient, config.getCoordinatorUrl());
-    checkLoadStatusSingle(httpClient, config.getIndexerUrl());
+    checkLoadStatusSingle(httpClient, config.getOverlordUrl());
     checkLoadStatusSingle(httpClient, config.getBrokerUrl());
     checkLoadStatusSingle(httpClient, config.getHistoricalUrl());
     checkLoadStatusSingle(httpClient, config.getRouterUrl());
