@@ -239,6 +239,7 @@ deserialize
 deserialized
 downtimes
 druid
+druid–kubernetes-extensions
 e.g.
 encodings
 endian
@@ -278,6 +279,7 @@ joinable
 kerberos
 keystore
 keytab
+kubernetes
 laning
 lifecycle
 localhost
@@ -700,6 +702,12 @@ OAuth
 Okta
 OpenID
 pac4j
+ - ../docs/development/extensions-core/kubernetes.md
+Env
+POD_NAME
+POD_NAMESPACE
+ConfigMap
+PT17S
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
