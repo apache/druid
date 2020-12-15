@@ -597,6 +597,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   {
     if (segmentsToWaitFor.isEmpty()) {
       log.info("Asked to wait for segments to be available, but I wasn't provided with any segments!?");
+      return false;
     }
     log.info("Waiting for segments to be loaded by the cluster...");
 
@@ -613,10 +614,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 "Confirmed availability for [%s]. Removing from list of segments to wait for",
                 s.getId()
             );
-            synchronized (segmentsToWaitFor) {
-              segmentsToWaitFor.remove(s);
-            }
             synchronized (availabilityCondition) {
+              segmentsToWaitFor.remove(s);
               availabilityCondition.notifyAll();
             }
           }
@@ -627,7 +626,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     try {
       synchronized (availabilityCondition) {
         while (!segmentsToWaitFor.isEmpty()) {
-          log.info("[%d] segments stil unavailable.", segmentsToWaitFor.size());
+          log.info("[%d] segments still unavailable.", segmentsToWaitFor.size());
           long curr = System.currentTimeMillis();
           if (forceEndWaitTime - curr > 0) {
             availabilityCondition.wait(forceEndWaitTime - curr);
