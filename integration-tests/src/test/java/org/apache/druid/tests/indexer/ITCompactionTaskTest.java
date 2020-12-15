@@ -119,6 +119,11 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+        jsonMapper.writeValueAsString("0")
+    );
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
