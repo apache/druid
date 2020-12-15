@@ -159,7 +159,10 @@ public class CliIndexer extends ServerRunnable
             binder.bind(SegmentManager.class).in(LazySingleton.class);
             binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             Jerseys.addResource(binder, HistoricalResource.class);
-            LifecycleModule.register(binder, ZkCoordinator.class);
+
+            if (isZkEnabled) {
+              LifecycleModule.register(binder, ZkCoordinator.class);
+            }
 
             bindNodeRoleAndAnnouncer(
                 binder,

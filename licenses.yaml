@@ -827,6 +827,256 @@ libraries:
 
 ---
 
+name: kubernetes official java client
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 10.0.0
+libraries:
+  - io.kubernetes: client-java
+
+---
+
+name: kubernetes official java client api
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 10.0.0
+libraries:
+  - io.kubernetes: client-java-api
+
+---
+
+name: kubernetes official java client extended
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 10.0.0
+libraries:
+  - io.kubernetes: client-java-extended
+
+---
+
+name: io.prometheus simpleclient_common
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.9.0
+libraries:
+  - io.prometheus: simpleclient_common
+
+---
+
+name: org.apache.commons commons-collections4
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 4.4
+libraries:
+  - org.apache.commons: commons-collections4
+
+---
+
+name: io.sundr builder-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.22.0
+libraries:
+  - io.sundr: builder-annotations
+
+---
+
+name: com.squareup.okio okio
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.17.2
+libraries:
+  - com.squareup.okio: okio
+
+---
+
+name: io.gsonfire gson-fire
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.8.4
+libraries:
+  - io.gsonfire: gson-fire
+
+---
+
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.6.2
+libraries:
+  - io.swagger: swagger-annotations
+
+---
+
+name: io.prometheus simpleclient_httpserver
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.9.0
+libraries:
+  - io.prometheus: simpleclient_httpserver
+
+---
+
+name: org.bitbucket.b_c jose4j
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.7.2
+libraries:
+  - org.bitbucket.b_c: jose4j
+
+---
+
+name: org.joda joda-convert
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.2.1
+libraries:
+  - org.joda: joda-convert
+
+---
+
+name: com.squareup.okhttp3 okhttp
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 3.14.9
+libraries:
+  - com.squareup.okhttp3: okhttp
+
+---
+
+name: io.prometheus simpleclient
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.9.0
+libraries:
+  - io.prometheus: simpleclient
+
+---
+
+name: io.kubernetes client-java-proto
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 10.0.0
+libraries:
+  - io.kubernetes: client-java-proto
+
+---
+
+name: org.yaml snakeyaml
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.27
+libraries:
+  - org.yaml: snakeyaml
+
+---
+
+name: com.flipkart.zjsonpatch zjsonpatch
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.4.11
+libraries:
+  - com.flipkart.zjsonpatch: zjsonpatch
+
+---
+
+name: org.bouncycastle bcprov-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: 1.66
+libraries:
+  - org.bouncycastle: bcprov-jdk15on
+
+---
+
+name: io.sundr resourcecify-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.22.0
+libraries:
+  - io.sundr: resourcecify-annotations
+
+---
+
+name: io.sundr sundr-codegen
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.22.0
+libraries:
+  - io.sundr: sundr-codegen
+
+---
+
+name: org.bouncycastle bcprov-ext-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: 1.66
+libraries:
+  - org.bouncycastle: bcprov-ext-jdk15on
+
+---
+
+name: io.sundr sundr-core
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.22.0
+libraries:
+  - io.sundr: sundr-core
+
+---
+
+name: com.squareup.okhttp3 logging-interceptor
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 3.14.9
+libraries:
+  - com.squareup.okhttp3: logging-interceptor
+
+---
+
+name: org.bouncycastle bcpkix-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: 1.66
+libraries:
+  - org.bouncycastle: bcpkix-jdk15on
+
+---
+
+name: com.github.vladimir-bukhtoyarov bucket4j-core
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 4.10.0
+libraries:
+  - com.github.vladimir-bukhtoyarov: bucket4j-core
+
+---
+
 name: Netty
 license_category: binary
 module: java-core
