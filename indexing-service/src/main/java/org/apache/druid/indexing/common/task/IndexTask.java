@@ -914,7 +914,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
       // for awaitSegmentAvailabilityTimeoutMillis
-      if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+      if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
         ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
         ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
         ExecutorService availabilityExec =
