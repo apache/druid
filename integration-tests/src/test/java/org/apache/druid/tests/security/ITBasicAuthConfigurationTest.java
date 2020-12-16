@@ -40,6 +40,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -55,6 +56,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -811,7 +813,7 @@ public class ITBasicAuthConfigurationTest
   {
     String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
     json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
-    json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
+    json = StringUtils.replace(json,"%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return json;
   }
 }
