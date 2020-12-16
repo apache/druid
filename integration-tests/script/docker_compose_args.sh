@@ -55,7 +55,7 @@ getComposeArgs()
       echo "-f ${DOCKERDIR}/docker-compose.high-availability.yml"
     else
       # default
-      echo "${DOCKERDIR}/docker-compose.yml"
+      echo "-f ${DOCKERDIR}/docker-compose.yml"
     fi
   else
     # with override config
