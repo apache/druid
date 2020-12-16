@@ -202,7 +202,8 @@ public class ExecutorLifecycle
               throw new RuntimeException(e);
             }
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

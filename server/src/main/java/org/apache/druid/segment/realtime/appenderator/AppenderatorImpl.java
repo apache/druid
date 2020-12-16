@@ -336,7 +336,8 @@ public class AppenderatorImpl implements Appenderator
               {
                 persistError = t;
               }
-            }
+            },
+            Execs.directExecutor()
         );
       } else {
         isPersistRequired = true;

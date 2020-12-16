@@ -35,6 +35,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -497,7 +498,8 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
                                                       .collect(Collectors.toList());
         return Futures.transform(
             persistAll(committer),
-            (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> new SegmentsAndCommitMetadata(segments, commitMetadata)
+            (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> new SegmentsAndCommitMetadata(segments, commitMetadata),
+            Execs.directExecutor()
         );
       } else {
         if (interruptPush) {

@@ -68,6 +68,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -687,7 +688,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                         log.error("Persist failed, dying");
                         backgroundThreadException = t;
                       }
-                    }
+                    },
+                    Execs.directExecutor()
                 );
               }
 
@@ -949,7 +951,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           } else {
             return publishedSegmentsAndMetadata;
           }
-        }
+        },
+        Execs.directExecutor()
     );
     publishWaitList.add(publishFuture);
 
@@ -1005,7 +1008,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     handoffFuture.set(handoffSegmentsAndCommitMetadata);
                     return null;
                   }
-                }
+                },
+                Execs.directExecutor()
             );
           }
 
@@ -1015,7 +1019,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             log.error(t, "Error while publishing segments for sequenceNumber[%s]", sequenceMetadata);
             handoffFuture.setException(t);
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

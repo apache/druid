@@ -942,7 +942,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     groupId,
                     taskId,
                     currentStats
-                )
+                ),
+                Execs.directExecutor()
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -960,7 +961,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       groupId,
                       taskId,
                       currentStats
-                  )
+                  ),
+                  Execs.directExecutor()
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1798,7 +1800,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             return null;
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 
@@ -2476,7 +2479,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   {
                     return null;
                   }
-                }
+                },
+                Execs.directExecutor()
             );
           }
 
@@ -3177,7 +3181,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               return null;
-            }
+            },
+            Execs.directExecutor()
         )
     ).collect(Collectors.toList());
 
