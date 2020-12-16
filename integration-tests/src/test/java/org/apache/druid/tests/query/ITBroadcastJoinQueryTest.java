@@ -100,6 +100,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
               return true;
             }
             catch (Exception ex) {
+              LOG.error(ex, "SQL metadata not yet in expected state");
               return false;
             }
           },
