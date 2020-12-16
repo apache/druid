@@ -18,6 +18,8 @@ set -e
 
 . $(dirname "$0")/script/docker_compose_args.sh
 
+DOCKERDIR=$(dirname "$0")/docker
+
 # Skip stopping docker if flag set (For use during development)
 if [ -n "$DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER" == true ]
 then

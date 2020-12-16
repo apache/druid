@@ -208,13 +208,55 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getHistoricalHost()
       {
-        return null;
+        return dockerIp;
+      }
+
+      @Override
+      public String getBrokerHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getRouterHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getCoordinatorHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getCoordinatorTwoHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getOverlordHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getOverlordTwoHost()
+      {
+        return dockerIp;
       }
 
       @Override
       public String getZookeeperHosts()
       {
         return dockerIp + ":2181";
+      }
+
+      @Override
+      public String getKafkaHost()
+      {
+        return dockerIp + ":9093";
       }
 
       @Override
@@ -225,52 +267,53 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
-      public String getKafkaHost()
-      {
-        return dockerIp + ":9093";
-      }
-
-      @Override
       public String getKafkaInternalHost()
       {
         // docker container name
         return "druid-zookeeper-kafka:9092";
       }
 
+
       @Override
-      public String getBrokerHost()
+      public String getBrokerInternalHost()
       {
         return "druid-broker";
       }
 
       @Override
-      public String getRouterHost()
+      public String getRouterInternalHost()
       {
         return "druid-router";
       }
 
       @Override
-      public String getCoordinatorHost()
+      public String getCoordinatorInternalHost()
       {
         return "druid-coordinator";
       }
 
       @Override
-      public String getCoordinatorTwoHost()
+      public String getCoordinatorTwoInternalHost()
       {
         return "druid-coordinator-two";
       }
 
       @Override
-      public String getOverlordHost()
+      public String getOverlordInternalHost()
       {
         return "druid-overlord";
       }
 
       @Override
-      public String getOverlordTwoHost()
+      public String getOverlordTwoInternalHost()
       {
         return "druid-overlord-two";
+      }
+
+      @Override
+      public String getHistoricalInternalHost()
+      {
+        return "druid-historical";
       }
 
       @Override

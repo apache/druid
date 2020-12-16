@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -39,7 +40,6 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -55,7 +55,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -802,15 +801,17 @@ public class ITBasicAuthConfigurationTest
     );
   }
 
-  private static String fillSegementServersTemplate(IntegrationTestingConfig config, String file)
+  private static String fillSegementServersTemplate(IntegrationTestingConfig config, String template)
   {
-    return StringUtils.replace("%%HISTORICAL%%", config.getHistoricalInternalHost(), file);
+    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
+    return json;
   }
 
   private static String fillServersTemplate(IntegrationTestingConfig config, String template)
   {
-    String json = StringUtils.replace("%%HISTORICAL%%", config.getHistoricalInternalHost(), template);
-    json = StringUtils.replace("%%BROKER%%", config.getBrokerInternalHost(), json);
+    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
+    json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
+    json = StringUtils.replace(json,"%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return json;
   }
 }
