@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
 import io.opencensus.proto.metrics.v1.Metric;
 import io.opencensus.proto.metrics.v1.Point;
 import io.opencensus.proto.metrics.v1.TimeSeries;
@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -120,7 +121,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
 
     Metric metric;
     try {
-      metric = Metric.parseFrom(ByteString.copyFrom(input));
+      metric = Metric.parseFrom(input);
     }
     catch (InvalidProtocolBufferException e) {
       throw new ParseException(e, "Protobuf message could not be parsed");
@@ -172,7 +173,9 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
       // One row per timeSeries point.
       for (Point point : ts.getPointsList()) {
         // Time in millis
-        labels.put(TIMESTAMP_COLUMN, point.getTimestamp().getSeconds() * 1000);
+        final Timestamp t = point.getTimestamp();
+        final long millis = Instant.ofEpochSecond(t.getSeconds(), t.getNanos()).toEpochMilli();
+        labels.put(TIMESTAMP_COLUMN, millis);
 
         switch (point.getValueCase()) {
           case DOUBLE_VALUE:
