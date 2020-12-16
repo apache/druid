@@ -47,6 +47,7 @@ import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
@@ -216,13 +217,19 @@ public class ITBasicAuthConfigurationTest
     );
 
     final List<Map<String, Object>> adminServerSegments = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE),
+        fillSegementServersTemplate(
+            config,
+            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
+        ),
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
     final List<Map<String, Object>> adminServers = getServersWithoutCurrentSize(
         jsonMapper.readValue(
-            TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE),
+            fillServersTemplate(
+                config,
+                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
+            ),
             SYS_SCHEMA_RESULTS_TYPE_REFERENCE
         )
     );
@@ -793,5 +800,17 @@ public class ITBasicAuthConfigurationTest
           return newServer;
         }
     );
+  }
+
+  private static String fillSegementServersTemplate(IntegrationTestingConfig config, String file)
+  {
+    return StringUtils.replace("%%HISTORICAL%%", config.getHistoricalInternalHost(), file);
+  }
+
+  private static String fillServersTemplate(IntegrationTestingConfig config, String template)
+  {
+    String json = StringUtils.replace("%%HISTORICAL%%", config.getHistoricalInternalHost(), template);
+    json = StringUtils.replace("%%BROKER%%", config.getBrokerInternalHost(), json);
+    return json;
   }
 }
