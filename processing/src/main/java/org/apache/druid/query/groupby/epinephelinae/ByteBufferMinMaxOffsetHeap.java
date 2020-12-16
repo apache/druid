@@ -59,9 +59,8 @@ public class ByteBufferMinMaxOffsetHeap
     this.heapIndexUpdater = heapIndexUpdater;
   }
 
-
-
-  public ByteBufferMinMaxOffsetHeap copy() {
+  public ByteBufferMinMaxOffsetHeap copy()
+  {
     LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater updater =
         heapIndexUpdater.copy();
 
@@ -79,7 +78,7 @@ public class ByteBufferMinMaxOffsetHeap
     buf.position(bufPosition);
     buf.limit(bufLimit);
 
-    ByteBufferMinMaxOffsetHeap retVal = new ByteBufferMinMaxOffsetHeap(buffer,this.limit,minComparator,updater);
+    ByteBufferMinMaxOffsetHeap retVal = new ByteBufferMinMaxOffsetHeap(buffer, this.limit, minComparator, updater);
     retVal.heapSize = this.heapSize;
 
     return retVal;
@@ -482,7 +481,8 @@ public class ByteBufferMinMaxOffsetHeap
       int leftChildOffset = buf.getInt(lcIdx * Integer.BYTES);
       if (comparator.compare(offset, leftChildOffset) > 0) {
         throw new ISE("Left child val[%d] at idx[%d] is less than val[%d] at idx[%d]",
-                      leftChildOffset, lcIdx, offset, i);
+                      leftChildOffset, lcIdx, offset, i
+        );
       }
     }
 
@@ -491,7 +491,8 @@ public class ByteBufferMinMaxOffsetHeap
       int rightChildOffset = buf.getInt(rcIdx * Integer.BYTES);
       if (comparator.compare(offset, rightChildOffset) > 0) {
         throw new ISE("Right child val[%d] at idx[%d] is less than val[%d] at idx[%d]",
-                      rightChildOffset, rcIdx, offset, i);
+                      rightChildOffset, rcIdx, offset, i
+        );
       }
     }
 
@@ -500,7 +501,8 @@ public class ByteBufferMinMaxOffsetHeap
       int parentOffset = buf.getInt(parentIdx * Integer.BYTES);
       if (comparator.compare(offset, parentOffset) > 0) {
         throw new ISE("Parent val[%d] at idx[%d] is less than val[%d] at idx[%d]",
-                      parentOffset, parentIdx, offset, i);
+                      parentOffset, parentIdx, offset, i
+        );
       }
     }
 
@@ -509,7 +511,8 @@ public class ByteBufferMinMaxOffsetHeap
       int gpOffset = buf.getInt(gpIdx * Integer.BYTES);
       if (comparator.compare(gpOffset, offset) > 0) {
         throw new ISE("Grandparent val[%d] at idx[%d] is less than val[%d] at idx[%d]",
-                      gpOffset, gpIdx, offset, i);
+                      gpOffset, gpIdx, offset, i
+        );
       }
     }
 

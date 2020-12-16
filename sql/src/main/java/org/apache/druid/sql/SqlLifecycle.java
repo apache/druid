@@ -268,7 +268,7 @@ public class SqlLifecycle
     try {
       setParameters(SqlQuery.getParameterList(parameters));
       planAndAuthorize(authenticationResult);
-      result = execute(); //agt
+      result = execute();
     }
     catch (Throwable e) {
       emitLogsAndMetrics(e, null, -1);
