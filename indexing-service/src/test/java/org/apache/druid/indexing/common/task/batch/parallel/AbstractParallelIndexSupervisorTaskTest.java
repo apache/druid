@@ -40,6 +40,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -533,8 +534,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(CoordinatorClient.class, coordinatorClient)
             .addValue(SegmentLoaderFactory.class, new SegmentLoaderFactory(indexIO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
+            .addValue(InputSourceSecurityConfig.class, InputSourceSecurityConfig.ALLOW_ALL)
     );
-    objectMapper.registerSubtypes(
+    objectMapper.registerSubtypes(AzureInputSourceSerdeTest
         new NamedType(ParallelIndexSupervisorTask.class, ParallelIndexSupervisorTask.TYPE),
         new NamedType(SinglePhaseSubTask.class, SinglePhaseSubTask.TYPE),
         new NamedType(PartialHashSegmentGenerateTask.class, PartialHashSegmentGenerateTask.TYPE),

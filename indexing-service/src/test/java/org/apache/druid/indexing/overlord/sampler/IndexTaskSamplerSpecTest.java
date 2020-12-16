@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.FirehoseModule;
@@ -56,6 +57,7 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
         new InjectableValues.Std()
             .addValue(InputSourceSampler.class, inputSourceSampler)
             .addValue(ObjectMapper.class, MAPPER)
+            .addValue(InputSourceSecurityConfig.class, InputSourceSecurityConfig.ALLOW_ALL)
     );
     MAPPER.registerModules((Iterable<Module>) new SamplerModule().getJacksonModules());
     MAPPER.registerModules((Iterable<Module>) new FirehoseModule().getJacksonModules());

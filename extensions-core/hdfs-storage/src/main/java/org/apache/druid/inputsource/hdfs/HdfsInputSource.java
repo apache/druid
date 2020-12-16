@@ -218,7 +218,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   private void cachePathsIfNeeded() throws IOException
   {
     if (cachedPaths == null) {
-      Collection<Path> paths = Preconditions.checkNotNull(getPaths(inputPaths, configuration),  "paths");
+      Collection<Path> paths = Preconditions.checkNotNull(getPaths(inputPaths, configuration), "paths");
       paths.forEach(path -> securityConfig.validateURIAccess(path.toUri()));
       cachedPaths = ImmutableList.copyOf(paths);
     }
@@ -251,7 +251,8 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
       return this;
     }
 
-    Builder inputSourceSecurityConfig(InputSourceSecurityConfig config){
+    Builder inputSourceSecurityConfig(InputSourceSecurityConfig config)
+    {
       this.config = config;
       return this;
     }

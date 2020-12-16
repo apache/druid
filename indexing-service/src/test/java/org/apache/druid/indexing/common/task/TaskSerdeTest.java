@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -245,7 +246,7 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
+            new IndexIOConfig(null, new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, new File("lol"), "rofl"), new NoopInputFormat(), true),
             new IndexTuningConfig(
                 null,
                 null,
@@ -327,7 +328,7 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
+            new IndexIOConfig(null, new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, new File("lol"), "rofl"), new NoopInputFormat(), true),
             new IndexTuningConfig(
                 null,
                 null,

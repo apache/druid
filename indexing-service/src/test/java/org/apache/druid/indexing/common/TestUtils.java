@@ -28,6 +28,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.guice.FirehoseModule;
@@ -99,6 +100,7 @@ public class TestUtils
             .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(IndexTaskClientFactory.class, TASK_CLIENT_FACTORY)
+            .addValue(InputSourceSecurityConfig.class, InputSourceSecurityConfig.ALLOW_ALL)
     );
 
     jsonMapper.registerModule(

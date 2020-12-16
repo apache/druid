@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -1967,7 +1968,7 @@ public class IndexTaskTest extends IngestionTestBase
           ),
           new IndexIOConfig(
               null,
-              new LocalInputSource(baseDir, "druid*"),
+              new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, baseDir, "druid*"),
               inputFormat,
               appendToExisting
           ),

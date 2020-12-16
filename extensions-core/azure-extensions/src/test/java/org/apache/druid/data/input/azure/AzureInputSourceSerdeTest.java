@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
@@ -158,6 +159,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
         azureCloudBlobToLocationConverter
     );
     injectableValues.addValue(AzureInputDataConfig.class, inputDataConfig);
+    injectableValues.addValue(InputSourceSecurityConfig.class, InputSourceSecurityConfig.ALLOW_ALL);
     return injectableValues;
   }
 

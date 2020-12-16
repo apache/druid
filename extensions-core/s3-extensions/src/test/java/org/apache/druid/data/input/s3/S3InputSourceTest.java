@@ -595,7 +595,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testDenyAll() throws IOException{
+  public void testDenyAll() throws IOException
+  {
     new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -609,7 +610,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testDenyPath() throws IOException{
+  public void testDenyPath() throws IOException
+  {
     new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -623,7 +625,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testAllowSingleBucketPathMatching() throws IOException{
+  public void testAllowSingleBucketPathMatching() throws IOException
+  {
     new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -637,7 +640,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testAllowSingleBucketPathNotMatching() {
+  public void testAllowSingleBucketPathNotMatching()
+  {
     new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -651,7 +655,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testAllowSingleBucketPathDifferentBucket() {
+  public void testAllowSingleBucketPathDifferentBucket()
+  {
     new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,

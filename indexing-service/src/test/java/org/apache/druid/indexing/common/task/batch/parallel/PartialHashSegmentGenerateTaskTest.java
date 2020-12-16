@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -46,7 +47,7 @@ public class PartialHashSegmentGenerateTaskTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final ParallelIndexIngestionSpec INGESTION_SPEC = ParallelIndexTestingFactory.createIngestionSpec(
-      new LocalInputSource(new File("baseDir"), "filer"),
+      new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, new File("baseDir"), "filer"),
       new JsonInputFormat(null, null, null),
       new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
       ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
@@ -158,7 +159,7 @@ public class PartialHashSegmentGenerateTaskTest
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         ParallelIndexTestingFactory.createIngestionSpec(
-            new LocalInputSource(new File("baseDir"), "filer"),
+            new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, new File("baseDir"), "filer"),
             new JsonInputFormat(null, null, null),
             new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
             ParallelIndexTestingFactory.createDataSchema(null)
