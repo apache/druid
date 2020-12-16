@@ -55,7 +55,7 @@ sudo /usr/local/bin/minikube update-context
 # Prepare For Druid-Operator
 git clone https://github.com/druid-io/druid-operator.git
 cd druid-operator
-git checkout -b druid-operator-0.0.3 druid-operator-0.0.3
+git checkout -b druid-operator-$DRUID_OPERATOR_VERSION druid-operator-$DRUID_OPERATOR_VERSION
 cd ..
 sed -i "s|REPLACE_IMAGE|druidio/druid-operator:$DRUID_OPERATOR_VERSION|g" druid-operator/deploy/operator.yaml
 cp integration-tests/tiny-cluster.yaml druid-operator/examples/
