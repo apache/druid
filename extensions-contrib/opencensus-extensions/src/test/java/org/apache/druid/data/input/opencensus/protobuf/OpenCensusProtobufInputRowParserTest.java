@@ -45,21 +45,23 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
 public class OpenCensusProtobufInputRowParserTest
 {
+  private static final Instant INSTANT = Instant.parse("2019-07-12T09:30:01.123Z");
+  private static final Timestamp TIMESTAMP = Timestamp.newBuilder()
+                                                      .setSeconds(INSTANT.getEpochSecond())
+                                                      .setNanos(INSTANT.getNano()).build();
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -101,22 +103,15 @@ public class OpenCensusProtobufInputRowParserTest
 
 
   @Test
-  public void testDoubleGaugeParse() throws Exception
+  public void testDoubleGaugeParse()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
 
-    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    Metric metric = doubleGaugeMetric(TIMESTAMP);
 
-    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
-        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
-
-    Metric metric = doubleGaugeMetric(timestamp);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
-
-    InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    InputRow row = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray())).get(0);
+    Assert.assertEquals(INSTANT.toEpochMilli(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "name", "metric_gauge_double");
     assertDimensionEquals(row, "foo_key", "foo_value");
@@ -126,22 +121,15 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testIntGaugeParse() throws Exception
+  public void testIntGaugeParse()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
 
-    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    Metric metric = intGaugeMetric(TIMESTAMP);
 
-    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
-        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
-
-    Metric metric = intGaugeMetric(timestamp);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
-
-    InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    InputRow row = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray())).get(0);
+    Assert.assertEquals(INSTANT.toEpochMilli(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "name", "metric_gauge_int64");
     assertDimensionEquals(row, "foo_key", "foo_value");
@@ -150,85 +138,64 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testSummaryParse() throws Exception
+  public void testSummaryParse()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
 
-    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    Metric metric = summaryMetric(TIMESTAMP);
 
-    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
-        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
-
-    Metric metric = summaryMetric(timestamp);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
-
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
     InputRow row = rows.get(0);
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(INSTANT.toEpochMilli(), row.getTimestampFromEpoch());
     assertDimensionEquals(row, "name", "metric_summary-count");
     assertDimensionEquals(row, "foo_key", "foo_value");
     Assert.assertEquals(40, row.getMetric("value").doubleValue(), 0.0);
 
     row = rows.get(1);
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(INSTANT.toEpochMilli(), row.getTimestampFromEpoch());
     assertDimensionEquals(row, "name", "metric_summary-sum");
     assertDimensionEquals(row, "foo_key", "foo_value");
     Assert.assertEquals(10, row.getMetric("value").doubleValue(), 0.0);
   }
 
   @Test
-  public void testDistributionParse() throws Exception
+  public void testDistributionParse()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
 
-    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    Metric metric = distributionMetric(TIMESTAMP);
 
-    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
-        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
-
-    Metric metric = distributionMetric(timestamp);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
-
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
     InputRow row = rows.get(0);
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(INSTANT.toEpochMilli(), row.getTimestampFromEpoch());
     assertDimensionEquals(row, "name", "metric_distribution-count");
     assertDimensionEquals(row, "foo_key", "foo_value");
     Assert.assertEquals(100, row.getMetric("value").intValue());
 
     row = rows.get(1);
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(INSTANT.toEpochMilli(), row.getTimestampFromEpoch());
     assertDimensionEquals(row, "name", "metric_distribution-sum");
     assertDimensionEquals(row, "foo_key", "foo_value");
     Assert.assertEquals(500, row.getMetric("value").doubleValue(), 0.0);
   }
 
   @Test
-  public void testDimensionsParseWithParseSpecDimensions() throws Exception
+  public void testDimensionsParseWithParseSpecDimensions()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpecWithDimensions, null, null, "");
 
-    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    Metric metric = summaryMetric(TIMESTAMP);
 
-    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
-        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
-
-    Metric metric = summaryMetric(timestamp);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
-
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
@@ -245,21 +212,14 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testDimensionsParseWithoutParseSpecDimensions() throws Exception
+  public void testDimensionsParseWithoutParseSpecDimensions()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
 
-    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    Metric metric = summaryMetric(TIMESTAMP);
 
-    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
-        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
-
-    Metric metric = summaryMetric(timestamp);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
-
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
@@ -278,16 +238,14 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testMetricNameOverride() throws Exception
+  public void testMetricNameOverride()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, "dimension_name", null, "");
 
     Metric metric = summaryMetric(Timestamp.getDefaultInstance());
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
 
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
@@ -305,16 +263,14 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testDefaultPrefix() throws Exception
+  public void testDefaultPrefix()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, null);
 
     Metric metric = summaryMetric(Timestamp.getDefaultInstance());
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
 
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
@@ -332,16 +288,14 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testCustomPrefix() throws Exception
+  public void testCustomPrefix()
   {
     //configure parser with desc file
     OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, "descriptor.", "custom.");
 
     Metric metric = summaryMetric(Timestamp.getDefaultInstance());
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    metric.writeTo(out);
 
-    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(metric.toByteArray()));
 
     Assert.assertEquals(2, rows.size());
 
