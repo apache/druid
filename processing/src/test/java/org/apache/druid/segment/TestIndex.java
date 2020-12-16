@@ -207,7 +207,8 @@ public class TestIndex
               METRIC_AGGS,
               mergedFile,
               INDEX_SPEC,
-              null
+              null,
+              -1
           )
       );
     }

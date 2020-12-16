@@ -176,7 +176,8 @@ public class IndexBuilder
                   AggregatorFactory.class
               ),
               new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
-              indexSpec
+              indexSpec,
+              -1
           )
       );
       for (QueryableIndex index : persisted) {

@@ -334,6 +334,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -458,6 +459,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,
@@ -614,6 +616,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
@@ -671,6 +674,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -742,6 +746,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1128,6 +1133,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,

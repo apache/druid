@@ -28,6 +28,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -861,7 +862,7 @@ public class IndexMergerV9 implements IndexMerger
     org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
     log.debug("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
-    return merge(
+    return multiphaseMerge(
         Collections.singletonList(
             new IncrementalIndexAdapter(
                 dataInterval,
@@ -878,7 +879,8 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         progress,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        -1
     );
   }
 
@@ -889,7 +891,8 @@ public class IndexMergerV9 implements IndexMerger
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
   ) throws IOException
   {
     return mergeQueryableIndex(
@@ -899,7 +902,8 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         new BaseProgressIndicator(),
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        maxColumnsToMerge
     );
   }
 
@@ -911,17 +915,19 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
   ) throws IOException
   {
-    return merge(
+    return multiphaseMerge(
         IndexMerger.toIndexableAdapters(indexes),
         rollup,
         metricAggs,
         outDir,
         indexSpec,
         progress,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        maxColumnsToMerge
     );
   }
 
@@ -931,10 +937,125 @@ public class IndexMergerV9 implements IndexMerger
       boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
-      IndexSpec indexSpec
+      IndexSpec indexSpec,
+      int maxColumnsToMerge
   ) throws IOException
   {
-    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null);
+    return multiphaseMerge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null, maxColumnsToMerge);
+  }
+
+  private File multiphaseMerge(
+      List<IndexableAdapter> indexes,
+      final boolean rollup,
+      final AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
+  ) throws IOException
+  {
+    FileUtils.deleteDirectory(outDir);
+    org.apache.commons.io.FileUtils.forceMkdir(outDir);
+
+    if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
+      return merge(
+          indexes,
+          rollup,
+          metricAggs,
+          outDir,
+          indexSpec,
+          progress,
+          segmentWriteOutMediumFactory
+      );
+    }
+
+    List<List<IndexableAdapter>> currentPhases = getMergePhases(indexes, maxColumnsToMerge);
+    List<File> currentOutputs = new ArrayList<>();
+
+    while (true) {
+      for (List<IndexableAdapter> phase : currentPhases) {
+        File phaseOutDir;
+        if (currentPhases.size() == 1) {
+          // use the given outDir on the final merge phase
+          phaseOutDir = outDir;
+        } else {
+          phaseOutDir = java.nio.file.Files.createTempDirectory(outDir.toPath(), UUIDUtils.generateUuid()).toFile();
+        }
+        File phaseOutput = merge(
+            phase,
+            rollup,
+            metricAggs,
+            phaseOutDir,
+            indexSpec,
+            progress,
+            segmentWriteOutMediumFactory
+        );
+        currentOutputs.add(phaseOutput);
+      }
+      if (currentOutputs.size() == 1) {
+        // we're done, making a single File output
+        return currentOutputs.get(0);
+      } else {
+        // convert Files to QueryableIndexIndexableAdapter and do another merge phase
+        List<IndexableAdapter> qIndexAdapters = new ArrayList<>();
+        for (File outputFile : currentOutputs) {
+          QueryableIndex qIndex = indexIO.loadIndex(outputFile, true);
+          qIndexAdapters.add(new QueryableIndexIndexableAdapter(qIndex));
+        }
+        currentPhases = getMergePhases(qIndexAdapters, maxColumnsToMerge);
+        currentOutputs = new ArrayList<>();
+      }
+    }
+  }
+
+  private List<List<IndexableAdapter>> getMergePhases(List<IndexableAdapter> indexes, int maxColumnsToMerge)
+  {
+    List<List<IndexableAdapter>> toMerge = new ArrayList<>();
+    // always merge at least two segments regardless of column limit
+    if (indexes.size() <= 2) {
+      if (getIndexColumnCount(indexes) > maxColumnsToMerge) {
+        log.warn("index pair has more columns than maxColumnsToMerge [%d].", maxColumnsToMerge);
+      }
+      toMerge.add(indexes);
+    } else {
+      List<IndexableAdapter> currentPhase = new ArrayList<>();
+      int currentColumnCount = 0;
+      for (IndexableAdapter index : indexes) {
+        int indexColumnCount = getIndexColumnCount(index);
+        if (indexColumnCount > maxColumnsToMerge) {
+          log.warn("index has more columns [%d] than maxColumnsToMerge [%d]!", indexColumnCount, maxColumnsToMerge);
+        }
+
+        // always merge at least two segments regardless of column limit
+        if (currentPhase.size() > 1 && currentColumnCount + indexColumnCount > maxColumnsToMerge) {
+          toMerge.add(currentPhase);
+          currentPhase = new ArrayList<>();
+          currentColumnCount = indexColumnCount;
+          currentPhase.add(index);
+        } else {
+          currentPhase.add(index);
+          currentColumnCount += indexColumnCount;
+        }
+      }
+      toMerge.add(currentPhase);
+    }
+    return toMerge;
+  }
+
+  private int getIndexColumnCount(IndexableAdapter indexableAdapter)
+  {
+    // +1 for the __time column
+    return 1 + indexableAdapter.getDimensionNames().size() + indexableAdapter.getMetricNames().size();
+  }
+
+  private int getIndexColumnCount(List<IndexableAdapter> indexableAdapters)
+  {
+    int count = 0;
+    for (IndexableAdapter indexableAdapter : indexableAdapters) {
+      count += getIndexColumnCount(indexableAdapter);
+    }
+    return count;
   }
 
   private File merge(
@@ -947,9 +1068,6 @@ public class IndexMergerV9 implements IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
-    FileUtils.deleteDirectory(outDir);
-    org.apache.commons.io.FileUtils.forceMkdir(outDir);
-
     final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
 
     final List<String> mergedMetrics = IndexMerger.mergeIndexed(

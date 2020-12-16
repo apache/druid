@@ -339,7 +339,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
               dataSchema.getAggregators(),
               outDir,
               tuningConfig.getIndexSpec(),
-              tuningConfig.getSegmentWriteOutMediumFactory()
+              tuningConfig.getSegmentWriteOutMediumFactory(),
+              tuningConfig.getMaxColumnsToMerge()
           )
       );
 
