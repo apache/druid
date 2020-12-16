@@ -90,8 +90,8 @@ public class IndexPersistBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"0", "1000", "10000"})
-  private int rollupOpportunity;
+  @Param({"none", "moderate", "high"})
+  private String rollupOpportunity;
 
   @Param({"onheap", "offheap"})
   private String indexType;
@@ -119,11 +119,25 @@ public class IndexPersistBenchmark
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        rollupOpportunity,
+        getValuesPerTimestamp(rollupOpportunity),
         1000.0
     );
 
     rows = gen.toList(rowsPerSegment);
+  }
+
+  public static int getValuesPerTimestamp(String rollupOpportunity)
+  {
+    switch (rollupOpportunity) {
+      case "moderate":
+        return 1000;
+      case "high":
+        return 10000;
+      case "none":
+        return 1;
+      default:
+        throw new IllegalArgumentException("Rollup opportunity must be moderate, high or none.");
+    }
   }
 
   @Setup(Level.Iteration)

@@ -65,8 +65,8 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"0", "1000", "10000"})
-  private int rollupOpportunity;
+  @Param({"none", "moderate", "high"})
+  private String rollupOpportunity;
 
   @Param({"onheap", "offheap"})
   private String indexType;
@@ -98,7 +98,7 @@ public class IndexIngestionBenchmark
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        rollupOpportunity,
+        IndexPersistBenchmark.getValuesPerTimestamp(rollupOpportunity),
         1000.0
     );
 
