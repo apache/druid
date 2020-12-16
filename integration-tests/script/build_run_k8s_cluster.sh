@@ -16,6 +16,8 @@
 
 set -e
 
+export DRUID_OPERATOR_VERSION=0.0.3
+
 # setup client keystore
 cd integration-tests
 ./docker/tls/generate-client-certs-and-keystores.sh
@@ -55,7 +57,7 @@ git clone https://github.com/druid-io/druid-operator.git
 cd druid-operator
 git checkout -b druid-operator-0.0.3 druid-operator-0.0.3
 cd ..
-sed -i 's|REPLACE_IMAGE|druidio/druid-operator:0.0.3|g' druid-operator/deploy/operator.yaml
+sed -i "s|REPLACE_IMAGE|druidio/druid-operator:$DRUID_OPERATOR_VERSION|g" druid-operator/deploy/operator.yaml
 cp integration-tests/tiny-cluster.yaml druid-operator/examples/
 cp integration-tests/tiny-cluster-zk.yaml druid-operator/examples/
 sed -i "s|REPLACE_VOLUMES|`pwd`|g" druid-operator/examples/tiny-cluster.yaml
