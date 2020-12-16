@@ -81,7 +81,7 @@ public class InputSourceModuleTest
   public void testHttpInputSourceAllowConfig()
   {
     Properties props = new Properties();
-    props.put("druid.ingestion.uri.allowPrefexList", "[\"http://allow.com\"]");
+    props.put("druid.ingestion.uri.allowPrefixList", "[\"http://allow.com\"]");
     Injector injector = makeInjectorWithProperties(props);
     InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
     Assert.assertEquals(new InputSourceSecurityConfig(Collections.singletonList(URI.create("http://allow.com")), null), instance);
@@ -101,7 +101,7 @@ public class InputSourceModuleTest
   public void testHttpInputSourceBothAllowDenyConfig()
   {
     Properties props = new Properties();
-    props.put("druid.ingestion.uri.allowPrefexList", "[\"http://allow.com\"]");
+    props.put("druid.ingestion.uri.allowPrefixList", "[\"http://allow.com\"]");
     props.put("druid.ingestion.uri.denyPrefixList", "[\"http://deny.com\"]");
     Injector injector = makeInjectorWithProperties(props);
     injector.getInstance(InputSourceSecurityConfig.class);
@@ -114,7 +114,7 @@ public class InputSourceModuleTest
     Injector injector = makeInjectorWithProperties(props);
     InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
     Assert.assertEquals(new InputSourceSecurityConfig(null, null), instance);
-    Assert.assertNull(instance.getallowPrefexList());
+    Assert.assertNull(instance.getallowPrefixList());
     Assert.assertNull(instance.getdenyPrefixList());
   }
 

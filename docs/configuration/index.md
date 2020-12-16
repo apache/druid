@@ -1360,8 +1360,8 @@ You can optionally configure following additional configs to restrict druid inge
  
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.ingestion.uri.allowPrefexList`|List of URIs|Allowed uris from which ingestion will be allowed. Only one of allowPrefexList or denyPrefixList can be set.|empty list|
-|`druid.ingestion.uri.denyPrefixList`|List of URIs|Blacklisted uris from which ingestion will NOT be allowed. Only one of allowPrefexList or denyPrefixList can be set. |empty list|
+|`druid.ingestion.uri.allowPrefixList`|List of URIs|Allowed uris from which ingestion will be allowed. Only one of allowPrefixList or denyPrefixList can be set.|empty list|
+|`druid.ingestion.uri.denyPrefixList`|List of URIs|Blacklisted uris from which ingestion will NOT be allowed. Only one of allowPrefixList or denyPrefixList can be set. |empty list|
 
 
 #### Query Configurations

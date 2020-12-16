@@ -36,27 +36,27 @@ public class InputSourceSecurityConfig
 
   public static InputSourceSecurityConfig ALLOW_ALL = new InputSourceSecurityConfig(null, null);
   @JsonProperty
-  private final List<URI> allowPrefexList;
+  private final List<URI> allowPrefixList;
   @JsonProperty
   private final List<URI> denyPrefixList;
 
   @JsonCreator
   public InputSourceSecurityConfig(
-      @JsonProperty("allowPrefexList") @Nullable List<URI> allowPrefexList,
+      @JsonProperty("allowPrefixList") @Nullable List<URI> allowPrefixList,
       @JsonProperty("denyPrefixList") @Nullable List<URI> denyPrefixList
   )
   {
-    this.allowPrefexList = allowPrefexList;
+    this.allowPrefixList = allowPrefixList;
     this.denyPrefixList = denyPrefixList;
     Preconditions.checkArgument(
-        this.denyPrefixList == null || this.allowPrefexList == null,
+        this.denyPrefixList == null || this.allowPrefixList == null,
         "Can only use one of allowList or blackList"
     );
   }
 
-  public List<URI> getallowPrefexList()
+  public List<URI> getallowPrefixList()
   {
-    return allowPrefexList;
+    return allowPrefixList;
   }
 
   public List<URI> getdenyPrefixList()
@@ -126,8 +126,8 @@ public class InputSourceSecurityConfig
 
   public boolean isURIAllowed(URI uri)
   {
-    if (allowPrefexList != null) {
-      return matchesAny(allowPrefexList, uri);
+    if (allowPrefixList != null) {
+      return matchesAny(allowPrefixList, uri);
     }
     if (denyPrefixList != null) {
       return !matchesAny(denyPrefixList, uri);
@@ -140,7 +140,7 @@ public class InputSourceSecurityConfig
   public String toString()
   {
     return "InputSourceSecurityConfig{" +
-           "allowPrefexList=" + allowPrefexList +
+           "allowPrefixList=" + allowPrefixList +
            ", denyPrefixList=" + denyPrefixList +
            '}';
   }
@@ -155,14 +155,14 @@ public class InputSourceSecurityConfig
       return false;
     }
     InputSourceSecurityConfig config = (InputSourceSecurityConfig) o;
-    return Objects.equals(allowPrefexList, config.allowPrefexList) &&
+    return Objects.equals(allowPrefixList, config.allowPrefixList) &&
            Objects.equals(denyPrefixList, config.denyPrefixList);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(allowPrefexList, denyPrefixList);
+    return Objects.hash(allowPrefixList, denyPrefixList);
   }
 }
 
