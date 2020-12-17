@@ -311,8 +311,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                      .paths(dfsCluster.getURI() + PATH + "*")
                      .configuration(CONFIGURATION)
                      .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.emptyList(), null))
-                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1))
-                     .collect(Collectors.toList());
+                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1));
     }
 
     @Test
@@ -322,8 +321,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                      .paths(dfsCluster.getURI() + PATH + "*")
                      .configuration(CONFIGURATION)
                      .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null))
-                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1))
-                     .collect(Collectors.toList());
+                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -333,8 +331,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                      .paths(dfsCluster.getURI() + PATH + "/../../test2")
                      .configuration(CONFIGURATION)
                      .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null))
-                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1))
-                     .collect(Collectors.toList());
+                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1));
     }
   }
 

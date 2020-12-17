@@ -1668,6 +1668,7 @@ addr
 affinityConfig
 allowAll
 allowList
+allowPrefixList
 ANDed
 array_mod
 autoscale
@@ -1682,6 +1683,7 @@ dataSourceName
 datetime
 defaultHistory
 denyList
+denyPrefixList
 doubleMax
 doubleMin
 doubleSum

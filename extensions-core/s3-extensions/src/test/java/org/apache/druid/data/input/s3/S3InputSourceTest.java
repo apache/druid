@@ -595,7 +595,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testDenyAll() throws IOException
+  public void testDenyAll()
   {
     new S3InputSource(
         SERVICE,
@@ -610,7 +610,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testDenyPath() throws IOException
+  public void testDenyPath()
   {
     new S3InputSource(
         SERVICE,
@@ -625,7 +625,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testAllowSingleBucketPathMatching() throws IOException
+  public void testAllowSingleBucketPathMatching()
   {
     new S3InputSource(
         SERVICE,
