@@ -972,21 +972,21 @@ public class IndexTaskTest extends IngestionTestBase
     ExecutorService mockExec = EasyMock.createMock(ExecutorService.class);
     List<DataSegment> segmentsToWaitFor = new ArrayList<>();
     IndexTask indexTask = new IndexTask(
-      null,
-      null,
-      createDefaultIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              null
-          ),
-          null,
-          createTuningConfigWithMaxRowsPerSegment(2, true),
-          false
-      ),
-      null
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false
+        ),
+        null
     );
 
     EasyMock.replay(mockToolbox);
