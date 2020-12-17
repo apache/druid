@@ -137,10 +137,38 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     for (StorageLocation location : locations) {
       File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
       if (localStorageDir.exists()) {
-        return location;
+        if (checkSegmentFilesIntact(localStorageDir)) {
+          log.warn("[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.", localStorageDir.getAbsolutePath());
+          cleanupCacheFiles(location.getPath(), localStorageDir);
+          location.removeSegmentDir(localStorageDir, segment);
+          break;
+        } else {
+          return location;
+        }
       }
     }
     return null;
+  }
+
+  /**
+   * check data intact.
+   * @param dir segments cache dir
+   * @return true means segment files may be damaged.
+   */
+  private boolean checkSegmentFilesIntact(File dir)
+  {
+    return checkSegmentFilesIntactWithStartMarker(dir);
+  }
+
+  /**
+   * If there is 'downloadStartMarker' existed in localStorageDir, the segments files might be damaged.
+   * Because each time, Druid will delete the 'downloadStartMarker' file after pulling and unzip the segments from DeepStorage.
+   * downloadStartMarker existed here may mean something error during download segments and the segment files may be damaged.
+   */
+  private boolean checkSegmentFilesIntactWithStartMarker(File localStorageDir)
+  {
+    final File downloadStartMarker = new File(localStorageDir.getPath(), "downloadStartMarker");
+    return downloadStartMarker.exists();
   }
 
   @Override
@@ -173,6 +201,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return factory.factorize(segment, segmentFiles, lazy);
   }
 
+  /**
+   * Make sure segments files in loc is intact, otherwise function like loadSegments will failed because of segment files is damaged.
+   * @param segment
+   * @return
+   * @throws SegmentLoadingException
+   */
   @Override
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {

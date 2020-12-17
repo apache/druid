@@ -113,6 +113,22 @@ public class IdUtilsTest
   }
 
   @Test
+  public void testInvalidUnprintableChars()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("thingToValidate cannot contain character #129 (at position 4).");
+    IdUtils.validateId(THINGO, "form\u0081feed?");
+  }
+
+  @Test
+  public void testInvalidEmojis()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("thingToValidate cannot contain character #55357 (at position 4).");
+    IdUtils.validateId(THINGO, "form💯feed?");
+  }
+
+  @Test
   public void testNewTaskIdWithoutInterval()
   {
     final String id = IdUtils.newTaskId(

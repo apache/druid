@@ -560,6 +560,21 @@ jobs:
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
+    - &integration_batch_index_k8s
+      name: "(Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test"
+      jdk: openjdk8
+      services: &integration_test_services_k8s
+        - docker
+      env: CONFIG_FILE='k8s_run_config_file.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest'
+      before_script: integration-tests/script/build_run_k8s_cluster.sh
+      script: &run_integration_test_k8s
+        - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP}
+      after_script: integration-tests/script/stop_k8s_cluster.sh
+      after_failure: &integration_test_diags_k8s
+        - for v in broker middlemanager router coordinator historical ; do
+          echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
+          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0;
+          done
     - name: "security vulnerabilities"
       stage: cron
       install: skip
