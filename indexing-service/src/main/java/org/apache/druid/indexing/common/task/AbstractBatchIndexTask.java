@@ -46,6 +46,7 @@ import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -76,7 +77,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -92,7 +95,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 {
   private static final Logger log = new Logger(AbstractBatchIndexTask.class);
 
-  private final Object availabilityCondition = new Object();
   protected boolean segmentAvailabilityConfirmationCompleted = false;
 
   @GuardedBy("this")
@@ -593,16 +595,25 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * @param waitTimeout Millis to wait before giving up
    * @return True if all segments became available, otherwise False.
    */
-  protected boolean waitForSegmentAvailability(TaskToolbox toolbox, ExecutorService exec, List<DataSegment> segmentsToWaitFor, long waitTimeout)
+  protected boolean waitForSegmentAvailability(
+      TaskToolbox toolbox,
+      List<DataSegment> segmentsToWaitFor,
+      long waitTimeout
+  )
   {
     if (segmentsToWaitFor.isEmpty()) {
-      log.info("Asked to wait for segments to be available, but I wasn't provided with any segments!?");
+      log.warn("Asked to wait for segments to be available, but I wasn't provided with any segments!?");
+      return false;
+    } else if (waitTimeout <= 0) {
+      log.warn("Asked to wait for availability for <= 0 seconds?! Requested waitTimeout: [%s]", waitTimeout);
       return false;
     }
     log.info("Waiting for segments to be loaded by the cluster...");
 
     SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
                                              .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource());
+    ExecutorService exec = Execs.directExecutor();
+    CountDownLatch doneSignal = new CountDownLatch(segmentsToWaitFor.size());
 
     notifier.start();
     for (DataSegment s : segmentsToWaitFor) {
@@ -614,39 +625,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 "Confirmed availability for [%s]. Removing from list of segments to wait for",
                 s.getId()
             );
-            synchronized (availabilityCondition) {
-              segmentsToWaitFor.remove(s);
-              availabilityCondition.notifyAll();
-            }
+            doneSignal.countDown();
           }
       );
     }
 
-    long forceEndWaitTime = System.currentTimeMillis() + waitTimeout;
     try {
-      synchronized (availabilityCondition) {
-        while (!segmentsToWaitFor.isEmpty()) {
-          log.info("[%d] segments still unavailable.", segmentsToWaitFor.size());
-          long curr = System.currentTimeMillis();
-          if (forceEndWaitTime - curr > 0) {
-            availabilityCondition.wait(forceEndWaitTime - curr);
-          } else {
-            log.warn("Segment Availabilty Wait Timeout. [%d] segments might not have become available for "
-                     + "query",
-                     segmentsToWaitFor.size()
-            );
-            return false;
-          }
-        }
-      }
+      return doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
     }
     catch (InterruptedException e) {
-      throw new RuntimeException(e);
+      log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
+      return false;
     }
     finally {
       notifier.close();
     }
-    return true;
   }
 
   private static class LockGranularityDetermineResult

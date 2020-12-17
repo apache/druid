@@ -70,7 +70,6 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -116,7 +115,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
@@ -173,6 +171,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
+  private long awaitSegmentAvailabilityTimeoutMillis;
+
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
@@ -207,6 +207,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
+
+    awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -508,18 +510,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
               .forEach(report -> {
                 segmentsToWaitFor.addAll(report.getNewSegments());
               });
-    ExecutorService availabilityExec = Execs.singleThreaded("ParallelTaskAvailabilityWaitExec");
-    try {
-      segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
-          toolbox,
-          availabilityExec,
-          segmentsToWaitFor,
-          ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
-      );
-    }
-    finally {
-      availabilityExec.shutdownNow();
-    }
+    segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+        toolbox,
+        segmentsToWaitFor,
+        awaitSegmentAvailabilityTimeoutMillis
+    );
   }
 
   /**
@@ -537,7 +532,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, runner.getReports());
-      if (ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+      if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(runner.getReports());
       }
     }
@@ -683,7 +678,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, mergeRunner.getReports());
-      if (ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+      if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
     }
@@ -753,7 +748,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskState mergeState = runNextPhase(mergeRunner);
     if (mergeState.isSuccess()) {
       publishSegments(toolbox, mergeRunner.getReports());
-      if (ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+      if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
     }

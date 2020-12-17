@@ -53,7 +53,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -85,7 +84,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.concurrent.ExecutorService;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
@@ -452,19 +450,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         if (spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
           ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
           ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(buildSegmentsStatus.getDataSegments());
-          ExecutorService availabilityExec =
-              Execs.singleThreaded("HadoopTaskAvailabilityWaitExec");
-          try {
-            segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
-                toolbox,
-                availabilityExec,
-                segmentsToWaitFor,
-                spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
-            );
-          }
-          finally {
-            availabilityExec.shutdownNow();
-          }
+          segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+              toolbox,
+              segmentsToWaitFor,
+              spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
+          );
         }
 
         ingestionState = IngestionState.COMPLETED;

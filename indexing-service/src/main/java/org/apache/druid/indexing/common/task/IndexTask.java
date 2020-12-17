@@ -69,7 +69,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -126,7 +125,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -917,19 +915,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
         ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
         ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
-        ExecutorService availabilityExec =
-            Execs.singleThreaded("IndexTaskAvailabilityWaitExec");
-        try {
-          segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
-              toolbox,
-              availabilityExec,
-              segmentsToWaitFor,
-              tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
-          );
-        }
-        finally {
-          availabilityExec.shutdownNow();
-        }
+        segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+            toolbox,
+            segmentsToWaitFor,
+            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        );
       }
 
       ingestionState = IngestionState.COMPLETED;
