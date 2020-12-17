@@ -23,9 +23,9 @@ title: "Simple SSLContext Provider Module"
   -->
 
 
-This Apache Druid module contains a simple implementation of [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html)
+This Apache Druid module contains a simple implementation of [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext)
 that will be injected to be used with HttpClient that Druid processes use internally to communicate with each other. To learn more about
-Java's SSL support, please refer to [this](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html) guide.
+Java's SSL support, please refer to [this](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide) guide.
 
 
 |Property|Description|Default|Required|
@@ -48,5 +48,5 @@ The following table contains optional parameters for supporting client certifica
 |`druid.client.https.keyManagerPassword`|The [Password Provider](../../operations/password-provider.md) or String password for the Key Manager.|none|no|
 |`druid.client.https.validateHostnames`|Validate the hostname of the server. This should not be disabled unless you are using [custom TLS certificate checks](../../operations/tls-support.md) and know that standard hostname validation is not needed.|true|no|
 
-This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
+This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.

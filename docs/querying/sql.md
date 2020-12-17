@@ -62,23 +62,23 @@ FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 
 The FROM clause can refer to any of the following:
 
-- [Table datasources](datasource.html#table) from the `druid` schema. This is the default schema, so Druid table
+- [Table datasources](datasource.md#table) from the `druid` schema. This is the default schema, so Druid table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
-- [Lookups](datasource.html#lookup) from the `lookup` schema, for example `lookup.countries`. Note that lookups can
+- [Lookups](datasource.md#lookup) from the `lookup` schema, for example `lookup.countries`. Note that lookups can
 also be queried using the [`LOOKUP` function](#string-functions).
-- [Subqueries](datasource.html#query).
-- [Joins](datasource.html#join) between anything in this list, except between native datasources (table, lookup,
+- [Subqueries](datasource.md#query).
+- [Joins](datasource.md#join) between anything in this list, except between native datasources (table, lookup,
 query) and system tables. The join condition must be an equality between expressions from the left- and right-hand side
 of the join.
 - [Metadata tables](#metadata-tables) from the `INFORMATION_SCHEMA` or `sys` schemas. Unlike the other options for the
 FROM clause, metadata tables are not considered datasources. They exist only in the SQL layer.
 
-For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.html)
+For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)
 documentation.
 
 ### WHERE
 
-The WHERE clause refers to columns in the FROM table, and will be translated to [native filters](filters.html). The
+The WHERE clause refers to columns in the FROM table, and will be translated to [native filters](filters.md). The
 WHERE clause can also reference a subquery, like `WHERE col1 IN (SELECT foo FROM ...)`. Queries like this are executed
 as a join on the subquery, described below in the [Query translation](#subqueries) section.
 
@@ -259,14 +259,14 @@ converted to zeroes).
 ### Multi-value strings
 
 Druid's native type system allows strings to potentially have multiple values. These
-[multi-value string dimensions](multi-value-dimensions.html) will be reported in SQL as `VARCHAR` typed, and can be
+[multi-value string dimensions](multi-value-dimensions.md) will be reported in SQL as `VARCHAR` typed, and can be
 syntactically used like any other VARCHAR. Regular string functions that refer to multi-value string dimensions will be
 applied to all values for each row individually. Multi-value string dimensions can also be treated as arrays via special
 [multi-value string functions](#multi-value-string-functions), which can perform powerful array-aware operations.
 
 Grouping by a multi-value expression will observe the native Druid multi-value aggregation behavior, which is similar to
 the `UNNEST` functionality available in some other SQL dialects. Refer to the documentation on
-[multi-value string dimensions](multi-value-dimensions.html) for additional details.
+[multi-value string dimensions](multi-value-dimensions.md) for additional details.
 
 > Because multi-value dimensions are treated by the SQL planner as `VARCHAR`, there are some inconsistencies between how
 > they are handled in Druid SQL and in native queries. For example, expressions involving multi-value dimensions may be
@@ -277,7 +277,7 @@ the `UNNEST` functionality available in some other SQL dialects. Refer to the do
 
 ### NULL values
 
-The `druid.generic.useDefaultValueForNull` [runtime property](../configuration/index.html#sql-compatible-null-handling)
+The `druid.generic.useDefaultValueForNull` [runtime property](../configuration/index.md#sql-compatible-null-handling)
 controls Druid's NULL handling mode.
 
 In the default mode (`true`), Druid treats NULLs and empty strings interchangeably, rather than according to the SQL
@@ -316,23 +316,23 @@ Only the COUNT aggregation can accept DISTINCT.
 |`MAX(expr)`|Takes the maximum of numbers.|
 |`AVG(expr)`|Averages numbers.|
 |`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|
-|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.html) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
-|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.html) column. The `size` parameter is described in the Theta sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
-|`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.html) on the values of expr, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
-|`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.html) on the values of expr, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
-|`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.html#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
-|`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
-|`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
-|`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) on the values of expr, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
-|`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positive rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
-|`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`|Builds a T-Digest sketch on values produced by `expr` and returns the value for the quantile. Compression parameter (default value 100) determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.html) documentation for additional details.|
-|`TDIGEST_GENERATE_SKETCH(expr, [compression])`|Builds a T-Digest sketch on values produced by `expr`. Compression parameter (default value 100) determines the accuracy and size of the sketch Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.html) documentation for additional details.|
-|`VAR_POP(expr)`|Computes variance population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
-|`VAR_SAMP(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
-|`VARIANCE(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
-|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
-|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
-|`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. The `size` parameter is described in the Theta sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|
+|`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.md) on the values of expr, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|
+|`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.md) on the values of expr, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|
+|`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.md#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.md) must be loaded to use this function.|
+|`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|
+|`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.md) must be loaded to use this function.|
+|`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) on the values of expr, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|
+|`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positive rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
+|`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`|Builds a T-Digest sketch on values produced by `expr` and returns the value for the quantile. Compression parameter (default value 100) determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.md) documentation for additional details.|
+|`TDIGEST_GENERATE_SKETCH(expr, [compression])`|Builds a T-Digest sketch on values produced by `expr`. Compression parameter (default value 100) determines the accuracy and size of the sketch Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.md) documentation for additional details.|
+|`VAR_POP(expr)`|Computes variance population of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|
+|`VAR_SAMP(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|
+|`VARIANCE(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|
+|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|
+|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|
+|`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|
 |`EARLIEST(expr)`|Returns the earliest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "earliest" is the value first encountered with the minimum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the first value encountered.|
 |`EARLIEST(expr, maxBytesPerString)`|Like `EARLIEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
 |`LATEST(expr)`|Returns the latest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "latest" is the value last encountered with the maximum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|
@@ -341,7 +341,7 @@ Only the COUNT aggregation can accept DISTINCT.
 |`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
 |`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|
 
-For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
+For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
 
 ## Scalar functions
 
@@ -394,7 +394,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
-|`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html). Note that lookups can also be queried directly using the [`lookup` schema](#from).|
+|`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](#from).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
 |`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
@@ -518,8 +518,8 @@ These functions operate on expressions or columns that return sketch objects.
 
 #### HLL sketch functions
 
-The following functions operate on [DataSketches HLL sketches](../development/extensions-core/datasketches-hll.html).
-The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use the following functions.
+The following functions operate on [DataSketches HLL sketches](../development/extensions-core/datasketches-hll.md).
+The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use the following functions.
 
 |Function|Notes|
 |--------|-----|
@@ -530,8 +530,8 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 
 #### Theta sketch functions
 
-The following functions operate on [theta sketches](../development/extensions-core/datasketches-theta.html).
-The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use the following functions.
+The following functions operate on [theta sketches](../development/extensions-core/datasketches-theta.md).
+The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use the following functions.
 
 |Function|Notes|
 |--------|-----|
@@ -543,8 +543,8 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 
 #### Quantiles sketch functions
 
-The following functions operate on [quantiles sketches](../development/extensions-core/datasketches-quantiles.html).
-The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use the following functions.
+The following functions operate on [quantiles sketches](../development/extensions-core/datasketches-quantiles.md).
+The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use the following functions.
 
 |Function|Notes|
 |--------|-----|
@@ -565,7 +565,7 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
 |`NVL(expr,expr-for-null)`|Returns 'expr-for-null' if 'expr' is null (or empty string for string type).|
-|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in a Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in a Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## Multi-value string functions
 
@@ -701,20 +701,20 @@ enabling logging and running this query, we can see that it actually runs as the
 
 Druid SQL uses four different native query types.
 
-- [Scan](scan-query.html) is used for queries that do not aggregate (no GROUP BY, no DISTINCT).
+- [Scan](scan-query.md) is used for queries that do not aggregate (no GROUP BY, no DISTINCT).
 
-- [Timeseries](timeseriesquery.html) is used for queries that GROUP BY `FLOOR(__time TO <unit>)` or `TIME_FLOOR(__time,
+- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO <unit>)` or `TIME_FLOOR(__time,
 period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
 ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
 have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
 by time.
 
-- [TopN](topnquery.html) is used by default for queries that group by a single expression, do have ORDER BY and LIMIT
+- [TopN](topnquery.md) is used by default for queries that group by a single expression, do have ORDER BY and LIMIT
 clauses, do not have HAVING clauses, and are not nested. However, the TopN query type will deliver approximate ranking
 and results in some cases; if you want to avoid this, set "useApproximateTopN" to "false". TopN results are always
 computed in memory. See the TopN documentation for more details.
 
-- [GroupBy](groupbyquery.html) is used for all other aggregations, including any nested aggregation queries. Druid's
+- [GroupBy](groupbyquery.md) is used for all other aggregations, including any nested aggregation queries. Druid's
 GroupBy is a traditional aggregation engine: it delivers exact results and rankings and supports a wide variety of
 features. GroupBy aggregates in memory if it can, but it may spill to disk if it doesn't have enough memory to complete
 your query. Results are streamed back from data processes through the Broker if you ORDER BY the same expressions in your
@@ -799,9 +799,9 @@ Druid does not support all SQL features. In particular, the following features a
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
 include:
 
-- [Inline datasources](datasource.html#inline).
-- [Spatial filters](../development/geo.html).
-- [Query cancellation](querying.html#query-cancellation).
+- [Inline datasources](datasource.md#inline).
+- [Spatial filters](../development/geo.md).
+- [Query cancellation](querying.md#query-cancellation).
 - [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.
@@ -898,7 +898,7 @@ will be a list of column names. For the `object` and `objectLines` formats, the 
 keys are column names, and the values are null.
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
-same format as [native Druid query errors](../querying/querying.html#query-errors). If an error occurs while the response body is
+same format as [native Druid query errors](../querying/querying.md#query-errors). If an error occurs while the response body is
 being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
 simply end midstream and an error will be logged by the Druid server that was handling your request.
 
@@ -962,7 +962,7 @@ final ResultSet resultSet = statement.executeQuery();
 
 Druid SQL supports setting connection parameters on the client. The parameters in the table below affect SQL planning.
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
-[Query context](query-context.html) for details on the possible options.
+[Query context](query-context.md) for details on the possible options.
 
 ```java
 String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
@@ -987,13 +987,13 @@ Connection context can be specified as JDBC connection properties or as a "conte
 |`sqlQueryId`|Unique identifier given to this SQL query. For HTTP client, it will be returned in `X-Druid-SQL-Query-Id` header.|auto-generated|
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the Broker (default: UTC)|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the Broker (default: true)|
-|`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the Broker (default: true)|
+|`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.md) will be used instead.|druid.sql.planner.useApproximateTopN on the Broker (default: true)|
 
 ## Metadata tables
 
 Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
 plan SQL queries. This metadata is cached on Broker startup and also updated periodically in the background through
-[SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
+[SegmentMetadata queries](segmentmetadataquery.md). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
 Druid exposes system information through special system tables. There are two such schemas available: Information Schema and Sys Schema.
@@ -1136,9 +1136,9 @@ Servers table lists all discovered servers in the cluster.
 |plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
 |tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
 |server_type|STRING|Type of Druid service. Possible values include: COORDINATOR, OVERLORD,  BROKER, ROUTER, HISTORICAL, MIDDLE_MANAGER or PEON.|
-|tier|STRING|Distribution tier see [druid.server.tier](../configuration/index.html#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
+|tier|STRING|Distribution tier see [druid.server.tier](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
 |current_size|LONG|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
-|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.html#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
+|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
 
 To retrieve information about all servers, use the query:
 
@@ -1171,13 +1171,13 @@ GROUP BY servers.server;
 #### TASKS table
 
 The tasks table provides information about active and recently-completed indexing tasks. For more information
-check out the documentation for [ingestion tasks](../ingestion/tasks.html).
+check out the documentation for [ingestion tasks](../ingestion/tasks.md).
 
 |Column|Type|Notes|
 |------|-----|-----|
 |task_id|STRING|Unique task identifier|
 |group_id|STRING|Task group ID for this task, the value depends on the task `type`. For example, for native index tasks, it's same as `task_id`, for sub tasks, this value is the parent task's ID|
-|type|STRING|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.html)|
+|type|STRING|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.md)|
 |datasource|STRING|Datasource name being indexed|
 |created_time|STRING|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
 |queue_insertion_time|STRING|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the Overlord|
@@ -1203,8 +1203,8 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|STRING|Supervisor task identifier|
-|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|detailed_state|STRING|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|detailed_state|STRING|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |healthy|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
 |type|STRING|Type of supervisor, e.g. `kafka`, `kinesis` or `materialized_view`|
 |source|STRING|Source of the supervisor, e.g. Kafka topic or Kinesis stream|
@@ -1220,9 +1220,9 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 ## Server configuration
 
 Druid SQL planning occurs on the Broker and is configured by
-[Broker runtime properties](../configuration/index.html#sql).
+[Broker runtime properties](../configuration/index.md#sql).
 
 ## Security
 
 Please see [Defining SQL permissions](../operations/security-user-auth.md#sql-permissions) in the
-basic security documentation for information on what permissions are needed for making SQL queries.
+basic security documentation for information on permissions needed for making SQL queries.
