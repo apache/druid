@@ -59,16 +59,14 @@ git checkout -b druid-operator-$DRUID_OPERATOR_VERSION druid-operator-$DRUID_OPE
 cd ..
 sed -i "s|REPLACE_IMAGE|druidio/druid-operator:$DRUID_OPERATOR_VERSION|g" druid-operator/deploy/operator.yaml
 cp integration-tests/tiny-cluster.yaml druid-operator/examples/
-cp integration-tests/tiny-cluster-zk.yaml druid-operator/examples/
 sed -i "s|REPLACE_VOLUMES|`pwd`|g" druid-operator/examples/tiny-cluster.yaml
 
-# Create ZK, Historical, MiddleManager, Overlord-coordiantor, Broker and Router pods using statefulset
+# Deploy Druid Operator and Druid CR spec
 sudo /usr/local/bin/kubectl create -f druid-operator/deploy/service_account.yaml
 sudo /usr/local/bin/kubectl create -f druid-operator/deploy/role.yaml
 sudo /usr/local/bin/kubectl create -f druid-operator/deploy/role_binding.yaml
 sudo /usr/local/bin/kubectl create -f druid-operator/deploy/crds/druid.apache.org_druids_crd.yaml
 sudo /usr/local/bin/kubectl create -f druid-operator/deploy/operator.yaml
-sudo /usr/local/bin/kubectl apply -f druid-operator/examples/tiny-cluster-zk.yaml
 sudo /usr/local/bin/kubectl apply -f druid-operator/examples/tiny-cluster.yaml
 
 # Wait 4 * 15 seconds to launch pods.
