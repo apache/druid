@@ -26,6 +26,8 @@ spec:
   podLabels:
     environment: stage
     release: alpha
+  podAnnotations:
+    dummy: k8s_extn_needs_atleast_one_annotation
   securityContext:
     fsGroup: 0
     runAsUser: 0
@@ -91,6 +93,19 @@ spec:
     #
     druid.selectors.indexing.serviceName=druid/overlord
     druid.selectors.coordinator.serviceName=druid/coordinator
+
+    druid.indexer.logs.type=file
+    druid.indexer.logs.directory=/druid/data/task-logs
+    druid.indexer.task.baseDir=/druid/data/task-base
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
 
   nodes:
     brokers:
@@ -180,7 +195,6 @@ spec:
         druid.coordinator.asOverlord.enabled=true
         druid.coordinator.asOverlord.overlordService=druid/overlord
         druid.indexer.queue.startDelay=PT30S
-        druid.indexer.runner.type=local
       extra.jvm.options: |-
         -Xmx800m
         -Xms800m

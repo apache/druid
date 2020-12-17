@@ -554,7 +554,7 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker
-      env: CONFIG_FILE='k8s_run_config_file.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest'
+      env: CONFIG_FILE='k8s_run_config_file.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest' POD_NAME=int-test POD_NAMESPACE=default
       before_script: integration-tests/script/build_run_k8s_cluster.sh
       script: &run_integration_test_k8s
         - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP}
