@@ -812,7 +812,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        if (!p.getServer().pick(query).getServer().isSegmentReplicationTarget()) {
+        QueryableDruidServer queryableServer = p.getServer().pick(query);
+        if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;
         }
