@@ -1453,6 +1453,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     @Override
+    @JsonProperty
     public int getMaxColumnsToMerge()
     {
       return maxColumnsToMerge;
