@@ -80,3 +80,12 @@ sudo /usr/local/bin/kubectl get pod
 sudo /usr/local/bin/kubectl get svc
 docker images
 sudo /usr/local/bin/kubectl describe pod druid-tiny-cluster-middlemanagers-0
+
+echo "MM Logs............"
+sudo /usr/local/bin/kubectl logs --previous druid-tiny-cluster-middlemanagers-0
+
+echo "Router Logs........."
+sudo /usr/local/bin/kubectl logs --previous druid-tiny-cluster-routers-0
+
+
+
