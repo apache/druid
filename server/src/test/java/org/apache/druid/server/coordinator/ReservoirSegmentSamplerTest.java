@@ -195,35 +195,24 @@ public class ReservoirSegmentSamplerTest
   @Test
   public void getRandomBalancerSegmentHolderTestSegmentsToConsiderLimit()
   {
-    EasyMock.expect(druidServer1.getType()).andReturn(ServerType.HISTORICAL).atLeastOnce();
-    EasyMock.expect(druidServer1.getName()).andReturn("1").atLeastOnce();
-    EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
-    EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
+    int iterations = 5000;
+
+    EasyMock.expect(druidServer1.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
     ImmutableDruidServerTests.expectSegments(druidServer1, segments1);
-    EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
-    EasyMock.expect(druidServer2.getType()).andReturn(ServerType.HISTORICAL).atLeastOnce();
-    EasyMock.expect(druidServer2.getName()).andReturn("2").atLeastOnce();
-    EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
-    EasyMock.expect(druidServer2.getCurrSize()).andReturn(30L).atLeastOnce();
-    EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServer2.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
     ImmutableDruidServerTests.expectSegments(druidServer2, segments2);
-    EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
-    EasyMock.expect(druidServer3.getType()).andReturn(ServerType.HISTORICAL).atLeastOnce();
-    EasyMock.expect(druidServer3.getName()).andReturn("3").atLeastOnce();
-    EasyMock.expect(druidServer3.getTier()).andReturn("normal").anyTimes();
-    EasyMock.expect(druidServer3.getCurrSize()).andReturn(30L).atLeastOnce();
-    EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServer3.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
     ImmutableDruidServerTests.expectSegments(druidServer3, segments3);
-    EasyMock.expect(druidServer3.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
     ImmutableDruidServerTests.expectSegments(druidServer4, segments4);
     EasyMock.replay(druidServer4);
 
+    // Have to use anyTimes() because the number of times a segment on a given server is chosen is indetermistic.
     EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();
     EasyMock.replay(holder1);
     EasyMock.expect(holder2.getServer()).andReturn(druidServer2).anyTimes();
@@ -241,7 +230,7 @@ public class ReservoirSegmentSamplerTest
     holderList.add(holder4);
 
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
-    for (int i = 0; i < 5000; i++) {
+    for (int i = 0; i < iterations; i++) {
       segmentCountMap.put(
           ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 75).getSegment(), 1
       );
