@@ -47,8 +47,10 @@ public class DruidClusterAdminClient
 {
   private static final Logger LOG = new Logger(DruidClusterAdminClient.class);
   private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
+  private static final String COORDINATOR_TWO_DOCKER_CONTAINER_NAME = "/druid-coordinator-two";
   private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
   private static final String OVERLORD_DOCKER_CONTAINER_NAME = "/druid-overlord";
+  private static final String OVERLORD_TWO_DOCKER_CONTAINER_NAME = "/druid-overlord-two";
   private static final String BROKER_DOCKER_CONTAINER_NAME = "/druid-broker";
   private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
   private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
@@ -74,6 +76,11 @@ public class DruidClusterAdminClient
     restartDockerContainer(COORDINATOR_DOCKER_CONTAINER_NAME);
   }
 
+  public void restartCoordinatorTwoContainer()
+  {
+    restartDockerContainer(COORDINATOR_TWO_DOCKER_CONTAINER_NAME);
+  }
+
   public void restartHistoricalContainer()
   {
     restartDockerContainer(HISTORICAL_DOCKER_CONTAINER_NAME);
@@ -82,6 +89,11 @@ public class DruidClusterAdminClient
   public void restartOverlordContainer()
   {
     restartDockerContainer(OVERLORD_DOCKER_CONTAINER_NAME);
+  }
+
+  public void restartOverlordTwoContainer()
+  {
+    restartDockerContainer(OVERLORD_TWO_DOCKER_CONTAINER_NAME);
   }
 
   public void restartBrokerContainer()
@@ -102,7 +114,22 @@ public class DruidClusterAdminClient
   public void waitUntilCoordinatorReady()
   {
     waitUntilInstanceReady(config.getCoordinatorUrl());
-    postDynamicConfig(CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1).build());
+    postDynamicConfig(CoordinatorDynamicConfig.builder()
+                                              .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1)
+                                              .build());
+  }
+
+  public void waitUntilCoordinatorTwoReady()
+  {
+    waitUntilInstanceReady(config.getCoordinatorTwoUrl());
+    postDynamicConfig(CoordinatorDynamicConfig.builder()
+                                              .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1)
+                                              .build());
+  }
+
+  public void waitUntilOverlordTwoReady()
+  {
+    waitUntilInstanceReady(config.getOverlordTwoUrl());
   }
 
   public void waitUntilHistoricalReady()
@@ -112,7 +139,7 @@ public class DruidClusterAdminClient
 
   public void waitUntilIndexerReady()
   {
-    waitUntilInstanceReady(config.getIndexerUrl());
+    waitUntilInstanceReady(config.getOverlordUrl());
   }
 
   public void waitUntilBrokerReady()
@@ -180,7 +207,8 @@ public class DruidClusterAdminClient
             ).get();
 
             LOG.info("%s %s", response.getStatus(), response.getContent());
-            return response.getStatus().equals(HttpResponseStatus.OK);
+            // if coordinator is not leader then it will return 307 instead of 200
+            return response.getStatus().equals(HttpResponseStatus.OK) || response.getStatus().equals(HttpResponseStatus.TEMPORARY_REDIRECT);
           }
           catch (Throwable e) {
             LOG.error(e, "");

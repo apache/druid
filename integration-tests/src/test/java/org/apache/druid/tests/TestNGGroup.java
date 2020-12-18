@@ -144,4 +144,6 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
+
+  public static final String HIGH_AVAILABILTY = "high-availability";
 }

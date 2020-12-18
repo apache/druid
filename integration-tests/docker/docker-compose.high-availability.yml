@@ -29,45 +29,63 @@ services:
     depends_on:
       - druid-zookeeper-kafka
 
-  druid-overlord:
-    extends:
-      file: docker-compose.base.yml
-      service: druid-overlord
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    depends_on:
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
-
   druid-coordinator:
     extends:
       file: docker-compose.base.yml
       service: druid-coordinator
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - DRUID_LOG_PATH=/shared/logs/ha-coordinator-one.log
+      - druid_manager_config_pollDuration=PT10S
+      - druid_manager_rules_pollDuration=PT10S
+      - druid_manager_segments_pollDuration=PT10S
+      - druid_coordinator_period=PT10S
     depends_on:
-      - druid-overlord
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
-  druid-historical:
+  druid-coordinator-two:
     extends:
       file: docker-compose.base.yml
-      service: druid-historical
+      service: druid-coordinator-two
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - DRUID_LOG_PATH=/shared/logs/ha-coordinator-two.log
+      - druid_host=druid-coordinator-two
+      - druid_manager_config_pollDuration=PT10S
+      - druid_manager_rules_pollDuration=PT10S
+      - druid_manager_segments_pollDuration=PT10S
+      - druid_coordinator_period=PT10S
     depends_on:
+      - druid-metadata-storage
       - druid-zookeeper-kafka
 
-  druid-indexer:
+  druid-overlord:
     extends:
       file: docker-compose.base.yml
-      service: druid-indexer
+      service: druid-overlord
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - DRUID_LOG_PATH=/shared/logs/ha-overlord-one.log
     depends_on:
+      - druid-coordinator
+      - druid-coordinator-two
+      - druid-metadata-storage
       - druid-zookeeper-kafka
-      - druid-overlord
+
+  druid-overlord-two:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-overlord-two
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - DRUID_LOG_PATH=/shared/logs/ha-overlord-two.log
+      - druid_host=druid-overlord-two
+    depends_on:
+      - druid-coordinator
+      - druid-coordinator-two
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
 
   druid-broker:
     extends:
@@ -76,9 +94,11 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
+      - druid-coordinator
+      - druid-coordinator-two
+      - druid-overlord
+      - druid-overlord-two
       - druid-zookeeper-kafka
-      - druid-indexer
-      - druid-historical
 
   druid-router:
     extends:
@@ -87,8 +107,10 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-zookeeper-kafka
       - druid-coordinator
+      - druid-coordinator-two
+      - druid-overlord
+      - druid-overlord-two
       - druid-broker
 
 networks:

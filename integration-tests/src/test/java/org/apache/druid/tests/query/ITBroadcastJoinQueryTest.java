@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -41,6 +42,7 @@ import org.testng.annotations.Test;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
 {
+  private static final Logger LOG = new Logger(ITBroadcastJoinQueryTest.class);
   private static final String BROADCAST_JOIN_TASK = "/indexer/broadcast_join_index_task.json";
   private static final String BROADCAST_JOIN_METADATA_QUERIES_RESOURCE = "/queries/broadcast_join_metadata_queries.json";
   private static final String BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE = "/queries/broadcast_join_after_drop_metadata_queries.json";
@@ -110,6 +112,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
               return true;
             }
             catch (Exception ex) {
+              LOG.error(ex, "SQL metadata not yet in expected state");
               return false;
             }
           },
@@ -139,6 +142,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
               return true;
             }
             catch (Exception ex) {
+              LOG.error(ex, "SQL metadata not yet in expected state");
               return false;
             }
           },
