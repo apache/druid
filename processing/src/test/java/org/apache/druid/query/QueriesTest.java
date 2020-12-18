@@ -423,6 +423,7 @@ public class QueriesTest
                                                   "j0.",
                                                   "\"foo.x\" == \"bar.x\"",
                                                   JoinType.INNER,
+                                                  null,
                                                   ExprMacroTable.nil()
                                               )
                                           )
@@ -459,6 +460,7 @@ public class QueriesTest
                                                       "j0.",
                                                       "\"foo.x\" == \"bar.x\"",
                                                       JoinType.INNER,
+                                                      null,
                                                       ExprMacroTable.nil()
                                                   )
                                               )

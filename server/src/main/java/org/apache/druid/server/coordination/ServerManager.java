@@ -200,6 +200,7 @@ public class ServerManager implements QuerySegmentWalker
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseFilter().orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)

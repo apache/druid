@@ -31,6 +31,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -45,13 +46,16 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -64,6 +68,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__join__");
 
+  private final Filter leftFilter;
   private final PartialDruidQuery partialQuery;
   private final Join joinRel;
   private RelNode left;
@@ -73,6 +78,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       RelOptCluster cluster,
       RelTraitSet traitSet,
       Join joinRel,
+      Filter leftFilter,
       PartialDruidQuery partialQuery,
       QueryMaker queryMaker
   )
@@ -81,6 +87,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     this.joinRel = joinRel;
     this.left = joinRel.getLeft();
     this.right = joinRel.getRight();
+    this.leftFilter = leftFilter;
     this.partialQuery = partialQuery;
   }
 
@@ -89,6 +96,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
    */
   public static DruidJoinQueryRel create(
       final Join joinRel,
+      final Filter leftFilter,
       final QueryMaker queryMaker
   )
   {
@@ -96,6 +104,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel.getCluster(),
         joinRel.getTraitSet(),
         joinRel,
+        leftFilter,
         PartialDruidQuery.create(joinRel),
         queryMaker
     );
@@ -125,6 +134,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getCluster(),
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         joinRel,
+        leftFilter,
         newQueryBuilder,
         getQueryMaker()
     );
@@ -177,6 +187,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             prefixSignaturePair.lhs,
             condition.getExpression(),
             toDruidJoinType(joinRel.getJoinType()),
+            getDimFilter(getPlannerContext(), leftSignature, leftFilter),
             getPlannerContext().getExprMacroTable()
         ),
         prefixSignaturePair.rhs,
@@ -214,6 +225,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
                    .map(input -> RelOptRule.convert(input, DruidConvention.instance()))
                    .collect(Collectors.toList())
         ),
+        leftFilter,
         partialQuery,
         getQueryMaker()
     );
@@ -252,6 +264,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getCluster(),
         traitSet,
         joinRel.copy(joinRel.getTraitSet(), inputs),
+        leftFilter,
         getPartialDruidQuery(),
         getQueryMaker()
     );
@@ -375,6 +388,30 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     } else {
       final RelSubset subset = (RelSubset) child;
       return (DruidRel<?>) Iterables.getFirst(subset.getRels(), null);
+    }
+  }
+
+  @Nullable
+  private static DimFilter getDimFilter(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      @Nullable final Filter filter
+  )
+  {
+    if (filter == null) {
+      return null;
+    }
+    final RexNode condition = filter.getCondition();
+    final DimFilter dimFilter = Expressions.toFilter(
+        plannerContext,
+        rowSignature,
+        null,
+        condition
+    );
+    if (dimFilter == null) {
+      throw new CannotBuildQueryException(filter, condition);
+    } else {
+      return dimFilter;
     }
   }
 }

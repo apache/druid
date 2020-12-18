@@ -143,6 +143,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     }
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        null,
         analysis.getPreJoinableClauses(),
         new AtomicLong(),
         analysis.getBaseQuery().orElse(query)

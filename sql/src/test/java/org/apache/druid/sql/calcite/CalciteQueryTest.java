@@ -8282,6 +8282,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExplainCorrelatedSubQuery() throws Exception
+  {
+    skipVectorize();
+
+    /*testQuery(
+        "select a.dim4, count(*) from (select dim4, dim3, m1 from numfoo where dim3 = 'l') a INNER JOIN (select dim4, dim3, m1 from numfoo) b ON a.dim3 = b.dim3 group by 1",
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{""})
+    );*/
+    testQuery(
+        "SELECT dim4, count(*), AVG(select sum(m1) FROM numfoo where dim4 = \"outer\".dim4) as avg_monthyl_count FROM numfoo as \"outer\" where \"outer\".dim3 = 'l' GROUP BY 1",
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{""})
+    );
+  }
+
+  @Test
   public void testExactCountDistinctUsingSubqueryWithWherePushDown() throws Exception
   {
     testQuery(
@@ -9904,9 +9921,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT lookyloo.v, COUNT(*)\n"
-        + "FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k\n"
-        + "GROUP BY lookyloo.v",
+        "SELECT l.k, COUNT(*)\n"
+        + "FROM foo INNER JOIN (select k, v from lookup.lookyloo where k like 'xa%') l  ON foo.dim1 = l.v\n"
+        + "GROUP BY l.k",
         queryContext,
         ImmutableList.of(
             GroupByQuery.builder()
@@ -9915,13 +9932,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new TableDataSource(CalciteTests.DATASOURCE1),
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
-                                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.v")),
                                 JoinType.INNER
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.k", "d0")))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(queryContext)
                         .build()

@@ -72,6 +72,7 @@ public class JoinableFactoryWrapperTest
   public void test_createSegmentMapFn_noClauses()
   {
     final Function<SegmentReference, SegmentReference> segmentMapFn = NOOP_JOINABLE_FACTORY_WRAPPER.createSegmentMapFn(
+        null,
         ImmutableList.of(),
         new AtomicLong(),
         null
@@ -95,6 +96,7 @@ public class JoinableFactoryWrapperTest
     expectedException.expectMessage("dataSource is not joinable");
 
     final Function<SegmentReference, SegmentReference> ignored = NOOP_JOINABLE_FACTORY_WRAPPER.createSegmentMapFn(
+        null,
         ImmutableList.of(clause),
         new AtomicLong(),
         null
@@ -138,6 +140,7 @@ public class JoinableFactoryWrapperTest
       }
     });
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        null,
         ImmutableList.of(clause),
         new AtomicLong(),
         new TestQuery(

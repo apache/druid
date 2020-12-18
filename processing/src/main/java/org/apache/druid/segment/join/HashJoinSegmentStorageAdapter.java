@@ -37,6 +37,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
@@ -47,6 +48,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -56,6 +58,7 @@ import java.util.Set;
 public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
+  private final Filter baseFilter;
   private final List<JoinableClause> clauses;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
@@ -70,7 +73,24 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       final JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
+    this(baseAdapter, null, clauses, joinFilterPreAnalysis);
+  }
+
+  /**
+   * @param baseAdapter           A StorageAdapter for the left-hand side base segment
+   * @param baseFilter            A filter for the left-hand side base segment
+   * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
+   * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this storage adapter
+   */
+  HashJoinSegmentStorageAdapter(
+      final StorageAdapter baseAdapter,
+      final Filter baseFilter,
+      final List<JoinableClause> clauses,
+      final JoinFilterPreAnalysis joinFilterPreAnalysis
+  )
+  {
     this.baseAdapter = baseAdapter;
+    this.baseFilter = baseFilter;
     this.clauses = clauses;
     this.joinFilterPreAnalysis = joinFilterPreAnalysis;
   }
@@ -239,16 +259,17 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         postJoinVirtualColumns
     );
 
+    // We merge the filter on base table specified by the user and filter on the base table that is pushed from
+    // the join
     JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    Filter newBaseFilter = joinFilterSplit.getBaseTableFilter().isPresent()
+                           ? Filters.and(Arrays.asList(baseFilter, joinFilterSplit.getBaseTableFilter().get()))
+                           : baseFilter;
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
-    // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
-    // (by splitting out pushable pieces of 'filter') or it could be done at a higher level (i.e. in the SQL planner).
-    //
-    // If it's done in the SQL planner, that will likely mean adding a 'baseFilter' parameter to this class that would
-    // be passed in to the below baseAdapter.makeCursors call (instead of the null filter).
+
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
+        newBaseFilter,
         interval,
         VirtualColumns.create(preJoinVirtualColumns),
         gran,

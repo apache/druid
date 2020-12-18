@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
@@ -69,6 +70,7 @@ public class JoinableFactoryWrapper
    *                           query from the end user.
    */
   public Function<SegmentReference, SegmentReference> createSegmentMapFn(
+      final Filter baseFilter,
       final List<PreJoinableClause> clauses,
       final AtomicLong cpuTimeAccumulator,
       final Query<?> query
@@ -94,6 +96,7 @@ public class JoinableFactoryWrapper
             return baseSegment ->
                 new HashJoinSegment(
                     baseSegment,
+                    baseFilter,
                     joinableClauses.getJoinableClauses(),
                     joinFilterPreAnalysis
                 );

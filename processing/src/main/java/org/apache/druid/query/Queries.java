@@ -181,6 +181,7 @@ public class Queries
    * Unlike the seemingly-similar {@link Query#withDataSource}, this will walk down the datasource tree and replace
    * only the base datasource (in the sense defined in {@link DataSourceAnalysis}).
    */
+  //TODO: base filter
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
     final Query<T> retVal;
