@@ -80,8 +80,3 @@ sleep 120
 sudo /usr/local/bin/kubectl get pod
 sudo /usr/local/bin/kubectl get svc
 
-echo "Router Logs........."
-sudo /usr/local/bin/kubectl logs --previous druid-tiny-cluster-routers-0
-
-
-
