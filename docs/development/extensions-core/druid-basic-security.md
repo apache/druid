@@ -455,4 +455,3 @@ Please see [Defining permissions](../../operations/security-user-auth.md#definin
 ##### Cache Load Status
 `GET(/druid-ext/basic-security/authorization/loadStatus)`
 Return the current load status of the local caches of the authorization Druid metadata store.
-

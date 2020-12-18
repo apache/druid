@@ -69,7 +69,7 @@ The properties under this section are common configurations that should be share
 
 There are four JVM parameters that we set on all of our processes:
 
-1.  `-Duser.timezone=UTC` This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs. To issue queries in a non-UTC timezone, see [query granularities](../querying/granularities.html#period-granularities)
+1.  `-Duser.timezone=UTC` This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs. To issue queries in a non-UTC timezone, see [query granularities](../querying/granularities.md#period-granularities)
 2.  `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs.
 3.  `-Djava.io.tmpdir=<a path>` Various parts of the system that interact with the file system do it via temporary files, and these files can get somewhat large. Many production systems are set up to have small (but fast) `/tmp` directories, which can be problematic with Druid so we recommend pointing the JVM’s tmp directory to something with a little more meat. This directory should not be volatile tmpfs. This directory should also have good read and write speed and hence NFS mount should strongly be avoided.
 4.  `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` This allows log4j2 to handle logs for non-log4j2 components (like jetty) which use standard java logging.
@@ -177,9 +177,9 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 #### Jetty Server TLS Configuration
 
 Druid uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
-reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html) might be helpful.
+reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.32.v20200930/configuring-ssl.html) might be helpful.
 To get more in depth knowledge of TLS/SSL support in Java in general, please refer to this [guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html#configuring-sslcontextfactory)
+The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.32.v20200930/configuring-ssl.html#configuring-sslcontextfactory)
 can help in understanding TLS/SSL configurations listed below. This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the below mentioned configs among others provided by Java implementation.
 
@@ -312,7 +312,7 @@ For native query, only request logs where query/time is above the threshold are 
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0, i.e., no filtering|
-|`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](http://druid.apache.org/docs/latest/querying/querying.html). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: ["scan", "timeBoundary"]| []|
+|`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](http://druid.apache.org/docs/latest/querying/querying). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: ["scan", "timeBoundary"]| []|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composite Request Logging
@@ -398,7 +398,7 @@ The Druid servers [emit various metrics](../operations/metrics.md) and alerts vi
 #### Http Emitter Module TLS Overrides
 
 When emitting events to a TLS-enabled receiver, the Http Emitter will by default use an SSLContext obtained via the
-process described at [Druid's internal communication over TLS](../operations/tls-support.html), i.e., the same
+process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
 SSLContext that would be used for internal communications between Druid processes.
 
 In some use cases it may be desirable to have the Http Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
@@ -489,10 +489,10 @@ The below table shows some important configurations for S3. See [S3 Deep Storage
 |--------|-----------|-------|
 |`druid.storage.bucket`|S3 bucket name.|none|
 |`druid.storage.baseKey`|S3 object key prefix for storage.|none|
-|`druid.storage.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. This may require to set additional permissions. See [S3 permissions settings](../development/extensions-core/s3.html#s3-permissions-settings).|false|
+|`druid.storage.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. This may require to set additional permissions. See [S3 permissions settings](../development/extensions-core/s3.md#s3-permissions-settings).|false|
 |`druid.storage.archiveBucket`|S3 bucket name for archiving when running the *archive task*.|none|
 |`druid.storage.archiveBaseKey`|S3 object key prefix for archiving.|none|
-|`druid.storage.sse.type`|Server-side encryption type. Should be one of `s3`, `kms`, and `custom`. See the below [Server-side encryption section](../development/extensions-core/s3.html#server-side-encryption) for more details.|None|
+|`druid.storage.sse.type`|Server-side encryption type. Should be one of `s3`, `kms`, and `custom`. See the below [Server-side encryption section](../development/extensions-core/s3.md#server-side-encryption) for more details.|None|
 |`druid.storage.sse.kms.keyId`|AWS KMS key ID. This is used only when `druid.storage.sse.type` is `kms` and can be empty to use the default key ID.|None|
 |`druid.storage.sse.custom.base64EncodedKey`|Base64-encoded key. Should be specified if `druid.storage.sse.type` is `custom`.|None|
 |`druid.storage.useS3aSchema`|If true, use the "s3a" filesystem when using Hadoop-based ingestion. If false, the "s3n" filesystem will be used. Only affects Hadoop-based ingestion.|false|
@@ -660,7 +660,7 @@ All Druid components can communicate with each other over HTTP.
 
 ## Master Server
 
-This section contains the configuration options for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section contains the configuration options for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Coordinator
 
@@ -806,7 +806,7 @@ These configuration options control the behavior of the Lookup dynamic configura
 ##### Compaction Dynamic Configuration
 
 Compaction configurations can also be set or updated dynamically using
-[Coordinator's API](../operations/api-reference.html#compaction-configuration) without restarting Coordinators.
+[Coordinator's API](../operations/api-reference.md#compaction-configuration) without restarting Coordinators.
 
 For details about segment compaction, please check [Segment Size Optimization](../operations/segment-optimization.md).
 
@@ -815,12 +815,12 @@ A description of the compaction config is:
 |Property|Description|Required|
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
-|`taskPriority`|[Priority](../ingestion/tasks.html#priority) of compaction task.|no (default = 25)|
+|`taskPriority`|[Priority](../ingestion/tasks.md#priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
 |`maxRowsPerSegment`|Max number of rows per segment after compaction.|no|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compaction-tuningconfig).|no|
-|`taskContext`|[Task context](../ingestion/tasks.html#context) for compaction tasks.|no|
+|`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|
 
 An example of compaction config is:
 
@@ -893,7 +893,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|PT30S|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|PT1M|
 
-The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, please see (../design/overlord.html).
+The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord Process](../design/overlord.md).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1153,7 +1153,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 ## Data Server
 
-This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 Configuration options for the experimental [Indexer process](../design/indexer.md) are also provided here.
 
@@ -1323,14 +1323,14 @@ Druid uses Jetty to serve HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.numThreads`|Number of threads for HTTP requests. Please see the [Indexer Server HTTP threads](../design/indexer.html#server-http-threads) documentation for more details on how the Indexer uses this configuration.|max(10, (Number of cores * 17) / 16 + 2) + 30|
+|`druid.server.http.numThreads`|Number of threads for HTTP requests. Please see the [Indexer Server HTTP threads](../design/indexer.md#server-http-threads) documentation for more details on how the Indexer uses this configuration.|max(10, (Number of cores * 17) / 16 + 2) + 30|
 |`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5M|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete.|`PT0S` (do not wait)|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|[]|
@@ -1487,7 +1487,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 ## Query Server
 
-This section contains the configuration options for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section contains the configuration options for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 Configuration options for the experimental [Router process](../design/router.md) are also provided here.
 
@@ -1658,7 +1658,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
-|`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
+|`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.md) will be used instead.|true|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries without filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
@@ -1801,7 +1801,7 @@ This section describes configurations that control behavior of Druid's query typ
 
 ### Overriding default query context values
 
-Any [Query Context General Parameter](../querying/query-context.html#general-parameters) default value can be 
+Any [Query Context General Parameter](../querying/query-context.md#general-parameters) default value can be 
 overridden by setting runtime property in the format of `druid.query.default.context.{query_context_key}`. 
 `druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future 
 query context keys, the same as how query context parameter passed with the query works. Note that the runtime property 
@@ -1833,7 +1833,7 @@ context). If query does have `maxQueuedBytes` in the context, then that value is
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../querying/topnquery.html#aliasing) for details.|1000|
+|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../querying/topnquery.md#aliasing) for details.|1000|
 
 ### Search query config
 
@@ -1951,9 +1951,9 @@ Supported query contexts:
 |`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|{"_default_tier": "<defaultBrokerServiceName>"}|
 |`druid.router.defaultRule`|The default rule for all datasources.|"_default"|
 |`druid.router.pollPeriod`|How often to poll for new rules.|PT1M|
-|`druid.router.strategies`|Please see [Router Strategies](../design/router.html#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
-|`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.html#avatica-query-balancing).|rendezvousHash|
-|`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.html#router-as-management-proxy) functionality.|false|
+|`druid.router.strategies`|Please see [Router Strategies](../design/router.md#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
+|`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|rendezvousHash|
+|`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.md#router-as-management-proxy) functionality.|false|
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
 |`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
