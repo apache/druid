@@ -28,7 +28,6 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -958,6 +957,8 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.deleteDirectory(outDir);
     org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
+    List<File> tempDirs = new ArrayList<>();
+
     if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(
           indexes,
@@ -973,38 +974,57 @@ public class IndexMergerV9 implements IndexMerger
     List<List<IndexableAdapter>> currentPhases = getMergePhases(indexes, maxColumnsToMerge);
     List<File> currentOutputs = new ArrayList<>();
 
-    while (true) {
-      for (List<IndexableAdapter> phase : currentPhases) {
-        File phaseOutDir;
-        if (currentPhases.size() == 1) {
-          // use the given outDir on the final merge phase
-          phaseOutDir = outDir;
+    log.debug("base outDir: " + outDir);
+
+    try {
+      while (true) {
+        for (List<IndexableAdapter> phase : currentPhases) {
+          File phaseOutDir;
+          if (currentPhases.size() == 1) {
+            // use the given outDir on the final merge phase
+            phaseOutDir = outDir;
+          } else {
+            phaseOutDir = FileUtils.createTempDir();
+            tempDirs.add(phaseOutDir);
+          }
+          log.debug("phase outDir: " + phaseOutDir);
+
+          File phaseOutput = merge(
+              phase,
+              rollup,
+              metricAggs,
+              phaseOutDir,
+              indexSpec,
+              progress,
+              segmentWriteOutMediumFactory
+          );
+          currentOutputs.add(phaseOutput);
+        }
+        if (currentOutputs.size() == 1) {
+          // we're done, we made a single File output
+          return currentOutputs.get(0);
         } else {
-          phaseOutDir = java.nio.file.Files.createTempDirectory(outDir.toPath(), UUIDUtils.generateUuid()).toFile();
+          // convert Files to QueryableIndexIndexableAdapter and do another merge phase
+          List<IndexableAdapter> qIndexAdapters = new ArrayList<>();
+          for (File outputFile : currentOutputs) {
+            QueryableIndex qIndex = indexIO.loadIndex(outputFile, true);
+            qIndexAdapters.add(new QueryableIndexIndexableAdapter(qIndex));
+          }
+          currentPhases = getMergePhases(qIndexAdapters, maxColumnsToMerge);
+          currentOutputs = new ArrayList<>();
         }
-        File phaseOutput = merge(
-            phase,
-            rollup,
-            metricAggs,
-            phaseOutDir,
-            indexSpec,
-            progress,
-            segmentWriteOutMediumFactory
-        );
-        currentOutputs.add(phaseOutput);
       }
-      if (currentOutputs.size() == 1) {
-        // we're done, making a single File output
-        return currentOutputs.get(0);
-      } else {
-        // convert Files to QueryableIndexIndexableAdapter and do another merge phase
-        List<IndexableAdapter> qIndexAdapters = new ArrayList<>();
-        for (File outputFile : currentOutputs) {
-          QueryableIndex qIndex = indexIO.loadIndex(outputFile, true);
-          qIndexAdapters.add(new QueryableIndexIndexableAdapter(qIndex));
+    }
+    finally {
+      for (File tempDir : tempDirs) {
+        if (tempDir.exists()) {
+          try {
+            FileUtils.deleteDirectory(tempDir);
+          }
+          catch (Exception e) {
+            log.warn(e, "Failed to remove directory[%s]", tempDir);
+          }
         }
-        currentPhases = getMergePhases(qIndexAdapters, maxColumnsToMerge);
-        currentOutputs = new ArrayList<>();
       }
     }
   }
