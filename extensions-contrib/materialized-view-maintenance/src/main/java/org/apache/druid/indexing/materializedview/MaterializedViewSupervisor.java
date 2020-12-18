@@ -137,7 +137,7 @@ public class MaterializedViewSupervisor implements Supervisor
             new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
         );
       }
-      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded(supervisorId));
+      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId)));
       final Duration delay = config.getTaskCheckDuration().toStandardDuration();
       future = exec.scheduleWithFixedDelay(
           MaterializedViewSupervisor.this::run,

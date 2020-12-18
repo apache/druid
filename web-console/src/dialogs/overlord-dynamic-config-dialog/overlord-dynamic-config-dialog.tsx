@@ -18,14 +18,14 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React, { useState } from 'react';
 
 import { SnitchDialog } from '..';
 import { AutoForm, ExternalLink } from '../../components';
+import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
-import { AppToaster } from '../../singletons/toaster';
+import { Api, AppToaster } from '../../singletons';
 import { getDruidErrorMessage } from '../../utils';
 
 import './overlord-dynamic-config-dialog.scss';
@@ -38,11 +38,11 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   props: OverlordDynamicConfigDialogProps,
 ) {
   const { onClose } = props;
-  const [dynamicConfig, setDynamicConfig] = useState<Record<string, any>>({});
+  const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig>({});
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
-      const historyResp = await axios(`/druid/indexer/v1/worker/history?count=100`);
+      const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`);
       return historyResp.data;
     },
     initQuery: null,
@@ -51,8 +51,8 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   useQueryManager<null, Record<string, any>>({
     processQuery: async () => {
       try {
-        const configResp = await axios(`/druid/indexer/v1/worker`);
-        setDynamicConfig(configResp.data);
+        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`);
+        setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,
@@ -69,7 +69,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
 
   async function saveConfig(comment: string) {
     try {
-      await axios.post('/druid/indexer/v1/worker', dynamicConfig, {
+      await Api.instance.post('/druid/indexer/v1/worker', dynamicConfig, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,
@@ -108,18 +108,9 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
         .
       </p>
       <AutoForm
-        fields={[
-          {
-            name: 'selectStrategy',
-            type: 'json',
-          },
-          {
-            name: 'autoScaler',
-            type: 'json',
-          },
-        ]}
+        fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
         model={dynamicConfig}
-        onChange={m => setDynamicConfig(m)}
+        onChange={setDynamicConfig}
       />
     </SnitchDialog>
   );

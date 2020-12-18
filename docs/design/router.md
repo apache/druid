@@ -34,11 +34,11 @@ In addition to query routing, the Router also runs the [Druid Console](../operat
 
 ### Configuration
 
-For Apache Druid Router Process Configuration, see [Router Configuration](../configuration/index.html#router).
+For Apache Druid Router Process Configuration, see [Router Configuration](../configuration/index.md#router).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Router, see [Router API](../operations/api-reference.html#router).
+For a list of API endpoints supported by the Router, see [Router API](../operations/api-reference.md#router).
 
 ### Running
 

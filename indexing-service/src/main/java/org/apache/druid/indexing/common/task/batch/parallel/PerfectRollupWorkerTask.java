@@ -62,12 +62,7 @@ abstract class PerfectRollupWorkerTask extends AbstractBatchIndexTask
 
     checkPartitionsSpec(tuningConfig.getGivenOrDefaultPartitionsSpec());
 
-    granularitySpec = dataSchema.getGranularitySpec();
-    Preconditions.checkArgument(
-        !granularitySpec.inputIntervals().isEmpty(),
-        "Missing intervals in granularitySpec"
-    );
-
+    this.granularitySpec = dataSchema.getGranularitySpec();
     this.dataSchema = dataSchema;
     this.tuningConfig = tuningConfig;
   }

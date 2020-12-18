@@ -332,7 +332,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         0
     );
     expect(server.isSegmentReplicationTarget()).andReturn(isHistorical).anyTimes();
-    expect(serverSelector.pick()).andReturn(queryableDruidServer).anyTimes();
+    expect(serverSelector.pick(query)).andReturn(queryableDruidServer).anyTimes();
     expect(queryableDruidServer.getServer()).andReturn(server).anyTimes();
     expect(serverSelector.getSegment()).andReturn(segment).anyTimes();
     replay(serverSelector, queryableDruidServer, server);

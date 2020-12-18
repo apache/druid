@@ -32,7 +32,7 @@ exports[`sql view matches snapshot 1`] = `
         runeMode={false}
       />
       <div
-        className="control-bar"
+        className="query-control-bar"
       >
         <HotkeysTarget(RunButton)
           loading={true}
@@ -109,7 +109,7 @@ exports[`sql view matches snapshot with query 1`] = `
         runeMode={false}
       />
       <div
-        className="control-bar"
+        className="query-control-bar"
       >
         <HotkeysTarget(RunButton)
           loading={true}

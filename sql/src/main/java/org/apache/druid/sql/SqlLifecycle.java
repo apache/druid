@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
@@ -340,7 +341,7 @@ public class SqlLifecycle
         if (e != null) {
           statsMap.put("exception", e.toString());
 
-          if (e instanceof QueryInterruptedException) {
+          if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
             statsMap.put("interrupted", true);
             statsMap.put("reason", e.toString());
           }

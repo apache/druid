@@ -66,7 +66,7 @@ public class OverlordResourceTestClient
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.indexer = config.getIndexerUrl();
+    this.indexer = config.getOverlordUrl();
   }
 
   private String getIndexerURL()
@@ -223,10 +223,10 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID)
   {
-    waitUntilTaskCompletes(taskID, 10000, 60);
+    waitUntilTaskCompletes(taskID, ITRetryUtil.DEFAULT_RETRY_SLEEP, ITRetryUtil.DEFAULT_RETRY_COUNT);
   }
 
-  public void waitUntilTaskCompletes(final String taskID, final int millisEach, final int numTimes)
+  public void waitUntilTaskCompletes(final String taskID, final long millisEach, final int numTimes)
   {
     ITRetryUtil.retryUntil(
         new Callable<Boolean>()
@@ -254,7 +254,7 @@ public class OverlordResourceTestClient
   }
 
 
-  public void waitUntilTaskFails(final String taskID, final int millisEach, final int numTimes)
+  public void waitUntilTaskFails(final String taskID, final long millisEach, final int numTimes)
   {
     ITRetryUtil.retryUntil(
         new Callable<Boolean>()

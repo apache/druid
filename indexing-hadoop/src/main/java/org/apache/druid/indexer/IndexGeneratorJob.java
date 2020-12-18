@@ -304,7 +304,7 @@ public class IndexGeneratorJob implements Jobby
     // Build the incremental-index according to the spec that was chosen by the user
     IncrementalIndex newIndex = tuningConfig.getAppendableIndexSpec().builder()
         .setIndexSchema(indexSchema)
-        .setMaxRowCount(tuningConfig.getRowFlushBoundary())
+        .setMaxRowCount(tuningConfig.getMaxRowsInMemory())
         .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
         .build();
 
@@ -645,10 +645,7 @@ public class IndexGeneratorJob implements Jobby
           null
       );
       try {
-        File baseFlushFile = File.createTempFile("base", "flush");
-        baseFlushFile.delete();
-        baseFlushFile.mkdirs();
-
+        File baseFlushFile = FileUtils.createTempDir("base-flush");
         Set<File> toMerge = new TreeSet<>();
         int indexCount = 0;
         int lineCount = 0;

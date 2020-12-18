@@ -188,6 +188,21 @@ public class StringUtils
     }
   }
 
+  /**
+   * Encodes a string "s" for insertion into a format string.
+   *
+   * Returns null if the input is null.
+   */
+  @Nullable
+  public static String encodeForFormat(@Nullable final String s)
+  {
+    if (s == null) {
+      return null;
+    } else {
+      return StringUtils.replaceChar(s, '%', "%%");
+    }
+  }
+
   public static String toLowerCase(String s)
   {
     return s.toLowerCase(Locale.ENGLISH);

@@ -18,7 +18,6 @@
 
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import classNames from 'classnames';
 import { SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
@@ -39,14 +38,20 @@ import {
 } from '../../components';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
-import { AppToaster } from '../../singletons/toaster';
 import {
-  addFilter,
   CompactionConfig,
   CompactionStatus,
-  countBy,
-  formatBytes,
   formatCompactionConfigAndStatus,
+  zeroCompactionStatus,
+} from '../../druid-models';
+import { Api, AppToaster } from '../../singletons';
+import {
+  addFilter,
+  Capabilities,
+  CapabilitiesMode,
+  countBy,
+  deepGet,
+  formatBytes,
   formatInteger,
   formatMillions,
   formatPercent,
@@ -57,13 +62,10 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  zeroCompactionStatus,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { Rule, RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
@@ -74,6 +76,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment load/drop queues',
     'Total data size',
     'Segment size',
+    'Segment granularity',
     'Total rows',
     'Avg. row size',
     'Replicated size',
@@ -100,6 +103,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Segment load/drop queues',
     'Total data size',
     'Segment size',
+    'Segment granularity',
     'Total rows',
     'Avg. row size',
     'Replicated size',
@@ -149,6 +153,11 @@ interface DatasourceQueryResultRow {
   readonly num_available_segments: number;
   readonly num_segments_to_load: number;
   readonly num_segments_to_drop: number;
+  readonly minute_aligned_segments: number;
+  readonly hour_aligned_segments: number;
+  readonly day_aligned_segments: number;
+  readonly month_aligned_segments: number;
+  readonly year_aligned_segments: number;
   readonly total_data_size: number;
   readonly replicated_size: number;
   readonly min_segment_rows: number;
@@ -156,6 +165,17 @@ interface DatasourceQueryResultRow {
   readonly max_segment_rows: number;
   readonly total_rows: number;
   readonly avg_row_size: number;
+}
+
+function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
+  return (
+    Number(Boolean(row.num_segments)) +
+    Number(Boolean(row.minute_aligned_segments)) +
+    Number(Boolean(row.hour_aligned_segments)) +
+    Number(Boolean(row.day_aligned_segments)) +
+    Number(Boolean(row.month_aligned_segments)) +
+    Number(Boolean(row.year_aligned_segments))
+  );
 }
 
 interface Datasource extends DatasourceQueryResultRow {
@@ -227,6 +247,11 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments,
+  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments,
   SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
   SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
   MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows,
@@ -242,7 +267,8 @@ export class DatasourcesView extends React.PureComponent<
     ELSE 0
   END AS avg_row_size
 FROM sys.segments
-GROUP BY 1`;
+GROUP BY 1
+ORDER BY 1`;
 
   static formatRules(rules: Rule[]): string {
     if (rules.length === 0) {
@@ -291,8 +317,10 @@ GROUP BY 1`;
         if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
         } else if (capabilities.hasCoordinatorAccess()) {
-          const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
-          const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
+          const datasourcesResp = await Api.instance.get(
+            '/druid/coordinator/v1/datasources?simple',
+          );
+          const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.data.map(
             (d: any): DatasourceQueryResultRow => {
@@ -306,6 +334,11 @@ GROUP BY 1`;
                 num_segments: numSegments,
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
+                minute_aligned_segments: -1,
+                hour_aligned_segments: -1,
+                day_aligned_segments: -1,
+                month_aligned_segments: -1,
+                year_aligned_segments: -1,
                 replicated_size: -1,
                 total_data_size: totalDataSize,
                 min_segment_rows: -1,
@@ -336,22 +369,26 @@ GROUP BY 1`;
         if (this.state.showUnused) {
           // Using 'includeDisabled' parameter for compatibility.
           // Should be changed to 'includeUnused' in Druid 0.17
-          const unusedResp = await axios.get(
+          const unusedResp = await Api.instance.get(
             '/druid/coordinator/v1/metadata/datasources?includeDisabled',
           );
           unused = unusedResp.data.filter((d: string) => !seen[d]);
         }
 
-        const rulesResp = await axios.get('/druid/coordinator/v1/rules');
+        const rulesResp = await Api.instance.get('/druid/coordinator/v1/rules');
         const rules = rulesResp.data;
 
-        const compactionConfigsResp = await axios.get('/druid/coordinator/v1/config/compaction');
+        const compactionConfigsResp = await Api.instance.get(
+          '/druid/coordinator/v1/config/compaction',
+        );
         const compactionConfigs = lookupBy(
           compactionConfigsResp.data.compactionConfigs || [],
           (c: CompactionConfig) => c.dataSource,
         );
 
-        const compactionStatusesResp = await axios.get('/druid/coordinator/v1/compaction/status');
+        const compactionStatusesResp = await Api.instance.get(
+          '/druid/coordinator/v1/compaction/status',
+        );
         const compactionStatuses = lookupBy(
           compactionStatusesResp.data.latestStatus || [],
           (c: CompactionStatus) => c.dataSource,
@@ -381,7 +418,7 @@ GROUP BY 1`;
     this.tiersQueryManager = new QueryManager({
       processQuery: async capabilities => {
         if (capabilities.hasCoordinatorAccess()) {
-          const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
+          const tiersResp = await Api.instance.get('/druid/coordinator/v1/tiers');
           return tiersResp.data;
         } else {
           throw new Error(`must have coordinator access`);
@@ -424,8 +461,10 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.delete(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkAsUnusedAllSegmentsIn}`,
+          const resp = await Api.instance.delete(
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              datasourceToMarkAsUnusedAllSegmentsIn,
+            )}`,
             {},
           );
           return resp.data;
@@ -455,8 +494,10 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
+          const resp = await Api.instance.post(
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn,
+            )}`,
             {},
           );
           return resp.data;
@@ -487,8 +528,10 @@ GROUP BY 1`;
         action={async () => {
           if (!useUnuseInterval) return;
           const param = isUse ? 'markUsed' : 'markUnused';
-          const resp = await axios.post(
-            `/druid/coordinator/v1/datasources/${datasourceToMarkSegmentsByIntervalIn}/${param}`,
+          const resp = await Api.instance.post(
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              datasourceToMarkSegmentsByIntervalIn,
+            )}/${Api.encodePath(param)}`,
             {
               interval: useUnuseInterval,
             },
@@ -529,8 +572,10 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.delete(
-            `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
+          const resp = await Api.instance.delete(
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              killDatasource,
+            )}?kill=true&interval=1000/3000`,
             {},
           );
           return resp.data;
@@ -545,6 +590,10 @@ GROUP BY 1`;
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
         }}
+        warningChecks={[
+          `I understand that this operation will delete all metadata about the unused segments of ${killDatasource} and removes them from deep storage.`,
+          'I understand that this operation cannot be undone.',
+        ]}
       >
         <p>
           {`Are you sure you want to permanently delete unused segments in '${killDatasource}'?`}
@@ -593,7 +642,7 @@ GROUP BY 1`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/coordinator/v1/compaction/compact`, {});
+          const resp = await Api.instance.post(`/druid/coordinator/v1/compaction/compact`, {});
           return resp.data;
         }}
         confirmButtonText="Force compaction run"
@@ -613,7 +662,7 @@ GROUP BY 1`;
 
   private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
-      await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
+      await Api.instance.post(`/druid/coordinator/v1/rules/${Api.encodePath(datasource)}`, rules, {
         headers: {
           'X-Druid-Author': 'console',
           'X-Druid-Comment': comment,
@@ -654,7 +703,7 @@ GROUP BY 1`;
   private saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
-      await axios.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
       this.setState({ compactionDialogOpenOn: undefined });
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
@@ -676,7 +725,9 @@ GROUP BY 1`;
         text: 'Confirm',
         onClick: async () => {
           try {
-            await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
+            await Api.instance.delete(
+              `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
+            );
             this.setState({ compactionDialogOpenOn: undefined }, () =>
               this.datasourceQueryManager.rerunLastQuery(),
             );
@@ -706,18 +757,21 @@ GROUP BY 1`;
   ): BasicAction[] {
     const { goToQuery, goToTask, capabilities } = this.props;
 
-    const goToActions: BasicAction[] = [
-      {
+    const goToActions: BasicAction[] = [];
+
+    if (capabilities.hasSql()) {
+      goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
         onAction: () => goToQuery(SqlQuery.create(SqlRef.table(datasource)).toString()),
-      },
-      {
-        icon: IconNames.GANTT_CHART,
-        title: 'Go to tasks',
-        onAction: () => goToTask(datasource),
-      },
-    ];
+      });
+    }
+
+    goToActions.push({
+      icon: IconNames.GANTT_CHART,
+      title: 'Go to tasks',
+      onAction: () => goToTask(datasource),
+    });
 
     if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;
@@ -1030,6 +1084,37 @@ GROUP BY 1`;
                   />
                 </>
               ),
+            },
+            {
+              Header: twoLines('Segment', 'granularity'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment granularity'),
+              id: 'segment_granularity',
+              accessor: segmentGranularityCountsToRank,
+              filterable: false,
+              width: 100,
+              Cell: ({ original }) => {
+                const segmentGranularities: string[] = [];
+                if (!original.num_segments) return '-';
+                if (original.num_segments - original.minute_aligned_segments) {
+                  segmentGranularities.push('Sub minute');
+                }
+                if (original.minute_aligned_segments - original.hour_aligned_segments) {
+                  segmentGranularities.push('Minute');
+                }
+                if (original.hour_aligned_segments - original.day_aligned_segments) {
+                  segmentGranularities.push('Hour');
+                }
+                if (original.day_aligned_segments - original.month_aligned_segments) {
+                  segmentGranularities.push('Day');
+                }
+                if (original.month_aligned_segments - original.year_aligned_segments) {
+                  segmentGranularities.push('Month');
+                }
+                if (original.year_aligned_segments) {
+                  segmentGranularities.push('Year');
+                }
+                return segmentGranularities.join(', ');
+              },
             },
             {
               Header: twoLines('Total', 'rows'),

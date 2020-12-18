@@ -97,9 +97,8 @@ public class JobHelper
    * Dose authenticate against a secured hadoop cluster
    * In case of any bug fix make sure to fix the code at HdfsStorageAuthentication#authenticate as well.
    *
-   * @param config containing the principal name and keytab path.
    */
-  public static void authenticate(HadoopDruidIndexerConfig config)
+  public static void authenticate()
   {
     String principal = HadoopDruidIndexerConfig.HADOOP_KERBEROS_CONFIG.getPrincipal();
     String keytab = HadoopDruidIndexerConfig.HADOOP_KERBEROS_CONFIG.getKeytab();
@@ -348,7 +347,7 @@ public class JobHelper
 
   public static void ensurePaths(HadoopDruidIndexerConfig config)
   {
-    authenticate(config);
+    authenticate();
     // config.addInputPaths() can have side-effects ( boo! :( ), so this stuff needs to be done before anything else
     try {
       Job job = Job.getInstance(

@@ -588,7 +588,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
-        final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick();
+        final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick(query);
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -812,7 +812,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        if (!p.getServer().pick().getServer().isSegmentReplicationTarget()) {
+        QueryableDruidServer queryableServer = p.getServer().pick(query);
+        if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;
         }

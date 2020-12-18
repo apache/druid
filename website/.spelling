@@ -63,6 +63,7 @@ Dropwizard
 dropwizard
 DruidInputSource
 DruidSQL
+DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
@@ -114,6 +115,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -141,6 +143,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -164,6 +167,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -214,6 +218,7 @@ colocation
 compactable
 config
 configs
+consumerProperties
 cron
 csv
 customizable
@@ -234,6 +239,7 @@ deserialize
 deserialized
 downtimes
 druid
+druid–kubernetes-extensions
 e.g.
 encodings
 endian
@@ -273,6 +279,7 @@ joinable
 kerberos
 keystore
 keytab
+kubernetes
 laning
 lifecycle
 localhost
@@ -404,6 +411,7 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
@@ -694,6 +702,12 @@ OAuth
 Okta
 OpenID
 pac4j
+ - ../docs/development/extensions-core/kubernetes.md
+Env
+POD_NAME
+POD_NAMESPACE
+ConfigMap
+PT17S
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
@@ -1500,6 +1514,7 @@ exprs
 group_id
 interval_expr
 is_available
+is_leader
 is_overshadowed
 is_published
 is_realtime
@@ -1576,6 +1591,9 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+10KiB
+2GiB
+512KiB
 1GiB
 KiB
 GiB
@@ -1645,6 +1663,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+allowList
 ANDed
 array_mod
 autoscale
@@ -1658,6 +1677,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+denyList
 doubleMax
 doubleMin
 doubleSum

@@ -100,7 +100,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
     this.kafkaProperties = Preconditions.checkNotNull(kafkaProperties, "kafkaProperties required");
     executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(
-        "kafka-factory-" + kafkaTopic + "-%s",
+        "kafka-factory-" + StringUtils.encodeForFormat(kafkaTopic) + "-%s",
         Thread.MIN_PRIORITY
     ));
     this.cacheManager = cacheManager;

@@ -11,12 +11,16 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
     Edit the coordinator dynamic configuration on the fly. For more information please refer to the
      
     <Memo(ExternalLink)
-      href="https://druid.apache.org/docs/0.19.0/configuration/index.html#dynamic-configuration"
+      href="https://druid.apache.org/docs/0.20.0/configuration/index.html#dynamic-configuration"
     >
       documentation
     </Memo(ExternalLink)>
     .
   </p>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <AutoForm
     fields={
       Array [
@@ -47,13 +51,11 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": false,
           "info": <React.Fragment>
-            Send kill tasks for ALL dataSources if property
-             
+            Send kill tasks for ALL dataSources if property 
             <Unknown>
               druid.coordinator.kill.on
             </Unknown>
-             is true. If this is set to true then
-             
+             is true. If this is set to true then 
             <Unknown>
               killDataSourceWhitelist
             </Unknown>
@@ -166,12 +168,12 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "type": "number",
         },
         Object {
-          "defaultValue": 100,
+          "defaultValue": false,
           "info": <React.Fragment>
-            The percentage of the total number of segments in the cluster that are considered every time a segment needs to be selected for a move. Druid orders servers by available capacity ascending (the least available capacity first) and then iterates over the servers. For each server, Druid iterates over the segments on the server, considering them for moving. The default config of 100% means that every segment on every server is a candidate to be moved. This should make sense for most small to medium-sized clusters. However, an admin may find it preferable to drop this value lower if they don't think that it is worthwhile to consider every single segment in the cluster each time it is looking for a segment to move.
+            Boolean flag for whether or not the coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up.
           </React.Fragment>,
-          "name": "percentOfSegmentsToConsiderPerMove",
-          "type": "number",
+          "name": "pauseCoordination",
+          "type": "boolean",
         },
       ]
     }
