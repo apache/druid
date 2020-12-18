@@ -28,6 +28,10 @@ spec:
     release: alpha
   podAnnotations:
     dummy: k8s_extn_needs_atleast_one_annotation
+  readinessProbe:
+    httpGet:
+      path: /status/health
+      port: 8088
   securityContext:
     fsGroup: 0
     runAsUser: 0
