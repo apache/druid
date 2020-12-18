@@ -26,7 +26,22 @@ then
   exit 0
 fi
 
-docker-compose $(getComposeArgs) down
+
+# stop hadoop container if it exists (can't use docker-compose down because it shares network)
+HADOOP_CONTAINER="$(docker ps -aq -f name=druid-it-hadoop)"
+if [ ! -z "$HADOOP_CONTAINER" ]
+then
+  docker stop druid-it-hadoop
+  docker rm druid-it-hadoop
+fi
+
+# bring down using the same compose args we started with
+if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
+then
+  docker-compose $(getComposeArgs) down
+else
+  OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose $(getComposeArgs) down
+fi
 
 if [ ! -z "$(docker network ls -q -f name=druid-it-net)" ]
 then
