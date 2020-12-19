@@ -75,7 +75,7 @@ public interface BalancerStrategy
   BalancerSegmentHolder pickSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int percentOfSegmentsToConsider
+      double percentOfSegmentsToConsider
   );
 
   /**

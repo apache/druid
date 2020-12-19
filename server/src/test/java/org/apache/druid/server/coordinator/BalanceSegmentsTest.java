@@ -719,7 +719,7 @@ public class BalanceSegmentsTest
     public BalancerSegmentHolder pickSegmentToMove(
         List<ServerHolder> serverHolders,
         Set<String> broadcastDatasources,
-        int percentOfSegmentsToConsider
+        double percentOfSegmentsToConsider
     )
     {
       return pickOrder.get(pickCounter.getAndIncrement() % pickOrder.size());

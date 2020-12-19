@@ -53,7 +53,7 @@ public class CoordinatorDynamicConfig
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
-  private final int percentOfSegmentsToConsiderPerMove;
+  private final double percentOfSegmentsToConsiderPerMove;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
@@ -96,7 +96,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
-      @JsonProperty("percentOfSegmentsToConsiderPerMove") int percentOfSegmentsToConsiderPerMove,
+      @JsonProperty("percentOfSegmentsToConsiderPerMove") double percentOfSegmentsToConsiderPerMove,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -125,12 +125,10 @@ public class CoordinatorDynamicConfig
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
-    // This helps with ease of migration to the new config, but could confuse users. Docs explicitly state this value must be > 0
-    if (percentOfSegmentsToConsiderPerMove <= 0 || percentOfSegmentsToConsiderPerMove > 100) {
-      this.percentOfSegmentsToConsiderPerMove = 100;
-    } else {
-      this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
-    }
+
+    Preconditions.checkArgument(percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100, "percentOfSegmentsToConsiderPerMove should be between 1 and 100!");
+    this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
+
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
@@ -220,7 +218,7 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public int getPercentOfSegmentsToConsiderPerMove()
+  public double getPercentOfSegmentsToConsiderPerMove()
   {
     return percentOfSegmentsToConsiderPerMove;
   }

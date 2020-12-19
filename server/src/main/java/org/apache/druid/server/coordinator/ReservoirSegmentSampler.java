@@ -45,7 +45,7 @@ final class ReservoirSegmentSampler
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int percentOfSegmentsToConsider
+      double percentOfSegmentsToConsider
   )
   {
     ServerHolder fromServerHolder = null;
@@ -56,8 +56,8 @@ final class ReservoirSegmentSampler
     // Reset a bad value of percentOfSegmentsToConsider to 100. We don't allow consideration less than or equal to
     // 0% of segments or greater than 100% of segments.
     if (percentOfSegmentsToConsider <= 0 || percentOfSegmentsToConsider > 100) {
-      log.debug("Resetting percentOfSegmentsToConsider to 100 because only values from 1 to 100 are allowed."
-                + " You Provided [%d]", percentOfSegmentsToConsider);
+      log.warn("Resetting percentOfSegmentsToConsider to 100 because only values from 1 to 100 are allowed."
+                + " You Provided [%f]", percentOfSegmentsToConsider);
       percentOfSegmentsToConsider = 100;
     }
 
@@ -70,7 +70,7 @@ final class ReservoirSegmentSampler
       // If totalSegments are zero, we will assume it is a mistake and move on to iteration without updating
       // calculatedSegmentLimit
       if (totalSegments != 0) {
-        calculatedSegmentLimit = (int) Math.ceil((double) totalSegments * ((double) percentOfSegmentsToConsider / (double) 100));
+        calculatedSegmentLimit = (int) Math.ceil((double) totalSegments * (percentOfSegmentsToConsider / 100.0));
       }
     }
 
@@ -97,8 +97,8 @@ final class ReservoirSegmentSampler
         // We have iterated over the alloted number of segments and will return the currently proposed segment or null
         // We will only break out early if we are iterating less than 100% of the total cluster segments
         if (percentOfSegmentsToConsider < 100 && numSoFar >= calculatedSegmentLimit) {
-          log.debug("Breaking out of iteration over potential segments to move because we hit the limit [%d percent] of"
-                    + " segments to consider to move. Segments Iterated: [%s]", percentOfSegmentsToConsider, numSoFar);
+          log.debug("Breaking out of iteration over potential segments to move because we hit the limit [%f percent] of"
+                    + " segments to consider to move. Segments Iterated: [%d]", percentOfSegmentsToConsider, numSoFar);
           break;
         }
       }

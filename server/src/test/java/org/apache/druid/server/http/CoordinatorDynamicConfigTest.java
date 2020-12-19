@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -168,37 +169,68 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testSerdeCorrectsInvalidBadMaxPercentOfSegmentsToConsiderPerMove() throws Exception
   {
-    String jsonStr = "{\n"
-                     + "  \"percentOfSegmentsToConsiderPerMove\": 0\n"
-                     + "}\n";
+    try {
+      String jsonStr = "{\n"
+                       + "  \"percentOfSegmentsToConsiderPerMove\": 0\n"
+                       + "}\n";
 
-    CoordinatorDynamicConfig actual = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                CoordinatorDynamicConfig.class
-            )
-        ),
-        CoordinatorDynamicConfig.class
-    );
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  CoordinatorDynamicConfig.class
+              )
+          ),
+          CoordinatorDynamicConfig.class
+      );
 
-    Assert.assertEquals(100, actual.getPercentOfSegmentsToConsiderPerMove());
+      Assert.fail("deserialization should fail.");
+    }
+    catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    }
 
-    jsonStr = "{\n"
-              + "  \"percentOfSegmentsToConsiderPerMove\": -100\n"
-              + "}\n";
+    try {
+      String jsonStr = "{\n"
+                       + "  \"percentOfSegmentsToConsiderPerMove\": -100\n"
+                       + "}\n";
 
-    actual = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                CoordinatorDynamicConfig.class
-            )
-        ),
-        CoordinatorDynamicConfig.class
-    );
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  CoordinatorDynamicConfig.class
+              )
+          ),
+          CoordinatorDynamicConfig.class
+      );
 
-    Assert.assertEquals(100, actual.getPercentOfSegmentsToConsiderPerMove());
+      Assert.fail("deserialization should fail.");
+    }
+    catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    }
+
+    try {
+      String jsonStr = "{\n"
+                       + "  \"percentOfSegmentsToConsiderPerMove\": 105\n"
+                       + "}\n";
+
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  CoordinatorDynamicConfig.class
+              )
+          ),
+          CoordinatorDynamicConfig.class
+      );
+
+      Assert.fail("deserialization should fail.");
+    }
+    catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    }
   }
 
   @Test
