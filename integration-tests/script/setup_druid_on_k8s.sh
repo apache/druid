@@ -16,7 +16,7 @@
 
 set -e
 
-export DRUID_OPERATOR_VERSION=0.0.3
+export KUBECTL="sudo /usr/local/bin/kubectl"
 
 # setup client keystore
 cd integration-tests
@@ -34,41 +34,13 @@ mvn -B -ff -q dependency:go-offline \
 
 docker build -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
 
-# Set Necessary ENV
-export CHANGE_MINIKUBE_NONE_USER=true
-export MINIKUBE_WANTUPDATENOTIFICATION=false
-export MINIKUBE_WANTREPORTERRORPROMPT=false
-export MINIKUBE_HOME=$HOME
-export KUBECONFIG=$HOME/.kube/config
-sudo apt install -y conntrack
-
 # This tmp dir is used for MiddleManager pod and Historical Pod to cache segments.
 mkdir tmp
 chmod 777 tmp
 
-# Lacunch K8S cluster
-curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.8.1/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-sudo /usr/local/bin/minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.18.1
-sudo /usr/local/bin/minikube update-context
-
-# Prepare For Druid-Operator
-git clone https://github.com/druid-io/druid-operator.git
-cd druid-operator
-git checkout -b druid-operator-$DRUID_OPERATOR_VERSION druid-operator-$DRUID_OPERATOR_VERSION
-cd ..
-sed -i "s|REPLACE_IMAGE|druidio/druid-operator:$DRUID_OPERATOR_VERSION|g" druid-operator/deploy/operator.yaml
-
-# Deploy Druid Operator and Druid CR spec
-sudo /usr/local/bin/kubectl create -f druid-operator/deploy/service_account.yaml
-sudo /usr/local/bin/kubectl create -f druid-operator/deploy/role.yaml
-sudo /usr/local/bin/kubectl create -f druid-operator/deploy/role_binding.yaml
-sudo /usr/local/bin/kubectl create -f druid-operator/deploy/crds/druid.apache.org_druids_crd.yaml
-sudo /usr/local/bin/kubectl create -f druid-operator/deploy/operator.yaml
-
-sudo /usr/local/bin/kubectl apply -f integration-tests/k8s/role-and-binding.yaml
+$KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
 sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
-sudo /usr/local/bin/kubectl apply -f integration-tests/k8s/tiny-cluster.yaml
+$KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
 
 # Wait 4 * 15 seconds to launch pods.
 #count=0
