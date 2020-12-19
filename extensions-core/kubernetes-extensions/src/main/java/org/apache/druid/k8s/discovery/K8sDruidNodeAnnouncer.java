@@ -120,7 +120,7 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
       LOGGER.info("Announced DiscoveryDruidNode[%s]", discoveryDruidNode);
     }
     catch (Exception ex) {
-      throw new RE(ex, "Failed to announce DiscoveryDruidNode[%s], Does the Pod have atleast one label and annotation?", discoveryDruidNode);
+      throw new RE(ex, "Failed to announce DiscoveryDruidNode[%s]", discoveryDruidNode);
     }
   }
 
