@@ -126,7 +126,10 @@ public class CoordinatorDynamicConfig
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
 
-    Preconditions.checkArgument(percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100, "percentOfSegmentsToConsiderPerMove should be between 1 and 100!");
+    Preconditions.checkArgument(
+        percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100,
+        "percentOfSegmentsToConsiderPerMove should be between 1 and 100!"
+    );
     this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
 
     this.replicantLifetime = replicantLifetime;
@@ -439,7 +442,7 @@ public class CoordinatorDynamicConfig
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
-    private Integer percentOfSegmentsToConsiderPerMove;
+    private Double percentOfSegmentsToConsiderPerMove;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
     private Boolean emitBalancingStats;
@@ -463,7 +466,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
-        @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Integer percentOfSegmentsToConsiderPerMove,
+        @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -483,6 +486,10 @@ public class CoordinatorDynamicConfig
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
+      Preconditions.checkArgument(
+          percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100,
+          "percentOfSegmentsToConsiderPerMove should be between 1 and 100!"
+      );
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
@@ -521,7 +528,7 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withPercentOfSegmentsToConsiderPerMove(int percentOfSegmentsToConsiderPerMove)
+    public Builder withPercentOfSegmentsToConsiderPerMove(double percentOfSegmentsToConsiderPerMove)
     {
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       return this;
