@@ -261,16 +261,16 @@ spec:
 
     routers:
       nodeType: "router"
-      druid.port: 8888
+      druid.port: 8088
       services:
         - spec:
             type: NodePort
             ports:
               - name: router-service-port
                 nodePort: 30400
-                port: 8888
+                port: 8088
                 protocol: TCP
-                targetPort: 8888
+                targetPort: 8088
           selector:
             nodeSpecUniqueStr: druid-tiny-cluster-routers
           metadata:
@@ -282,7 +282,7 @@ spec:
       replicas: 1
       runtime.properties: |
         druid.service=druid/router
-        druid.plaintextPort=8888
+        druid.plaintextPort=8088
 
         # HTTP proxy
         druid.router.http.numConnections=50
