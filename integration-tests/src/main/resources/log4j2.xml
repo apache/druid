@@ -28,5 +28,8 @@
     <Root level="info">
       <AppenderRef ref="Console"/>
     </Root>
+    <Logger name="org.apache.druid.java.util.emitter.core.LoggingEmitter" additivity="false" level="warn">
+      <AppenderRef ref="msgonly"/>
+    </Logger>
   </Loggers>
 </Configuration>

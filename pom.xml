@@ -118,6 +118,7 @@
              see http://curator.apache.org/zk-compatibility.html -->
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.14</zookeeper.version>
+        <kubernetes.client.version>11.0.1-SNAPSHOT</kubernetes.client.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>

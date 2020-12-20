@@ -33,7 +33,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.TaskResponseObject;
-import org.apache.druid.testing.utils.DruidClusterAdminClient;
+import org.apache.druid.testing.utils.AbstractDruidClusterAdminClient;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.JsonEventSerializer;
@@ -96,7 +96,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       String.join("/", DATA_RESOURCE_ROOT, "json", INPUT_FORMAT_SPEC_DIR, "input_format.json");
 
   @Inject
-  private DruidClusterAdminClient druidClusterAdminClient;
+  private AbstractDruidClusterAdminClient druidClusterAdminClient;
 
   @Inject
   private IntegrationTestingConfig config;

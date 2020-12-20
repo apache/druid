@@ -19,28 +19,27 @@
 
 package org.apache.druid.tests.leadership;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.cli.CliCustomNodeRole;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
-import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidNodeDiscovery;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.guice.DruidTestModule;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.DruidClusterAdminClient;
+import org.apache.druid.testing.utils.AbstractDruidClusterAdminClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
@@ -53,8 +52,10 @@ import org.testng.annotations.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -73,13 +74,7 @@ public class ITHighAvailabilityTest
   private IntegrationTestingConfig config;
 
   @Inject
-  private DruidClusterAdminClient druidClusterAdminClient;
-
-  @Inject
-  ServerDiscoveryFactory factory;
-
-  @Inject
-  DruidNodeDiscoveryProvider druidNodeDiscovery;
+  private AbstractDruidClusterAdminClient druidClusterAdminClient;
 
   @Inject
   CoordinatorResourceTestClient coordinatorClient;
@@ -102,8 +97,13 @@ public class ITHighAvailabilityTest
     String previousOverlordLeader = null;
     // fetch current leaders, make sure queries work, then swap leaders and do it again
     do {
+      LOG.info("%dth round of leader testing.", runCount);
+
       String coordinatorLeader = getLeader("coordinator");
+      LOG.info("Coordinator Leader previous[%s], current[%s]", previousCoordinatorLeader, coordinatorLeader);
+
       String overlordLeader = getLeader("indexer");
+      LOG.info("Overlord Leader previous[%s], current[%s]", previousOverlordLeader, overlordLeader);
 
       // we expect leadership swap to happen
       Assert.assertNotEquals(previousCoordinatorLeader, coordinatorLeader);
@@ -118,9 +118,18 @@ public class ITHighAvailabilityTest
           overlordLeader,
           coordinatorLeader
       );
-      queryHelper.testQueriesFromString(queries);
+
+      RetryUtils.retry(
+          () -> {
+            queryHelper.testQueriesFromString(queries);
+            return true;
+          },
+          (Throwable th) -> true,
+          10
+      );
 
       swapLeadersAndWait(coordinatorLeader, overlordLeader);
+      LOG.info("Leaders swapped.");
     } while (runCount++ < NUM_LEADERSHIP_SWAPS);
   }
 
@@ -130,22 +139,18 @@ public class ITHighAvailabilityTest
     ITRetryUtil.retryUntil(
         () -> {
           try {
-            List<DruidNodeDiscovery> disco = ImmutableList.of(
-                druidNodeDiscovery.getForNodeRole(NodeRole.COORDINATOR),
-                druidNodeDiscovery.getForNodeRole(NodeRole.OVERLORD),
-                druidNodeDiscovery.getForNodeRole(NodeRole.HISTORICAL),
-                druidNodeDiscovery.getForNodeRole(NodeRole.MIDDLE_MANAGER),
-                druidNodeDiscovery.getForNodeRole(NodeRole.INDEXER),
-                druidNodeDiscovery.getForNodeRole(NodeRole.BROKER),
-                druidNodeDiscovery.getForNodeRole(NodeRole.ROUTER)
-            );
-
-            int servicesDiscovered = 0;
-            for (DruidNodeDiscovery nodeRole : disco) {
-              Collection<DiscoveryDruidNode> nodes = nodeRole.getAllNodes();
-              servicesDiscovered += testSelfDiscovery(nodes);
+            Map<String, List<ClusterResource.Node>> clusterNodes = getClusterNodes();
+            if (clusterNodes.get(NodeRole.COORDINATOR.getJsonName()).size() < 2 ||
+                clusterNodes.get(NodeRole.OVERLORD.getJsonName()).size() < 2 ||
+                clusterNodes.get(NodeRole.BROKER.getJsonName()).size() < 1 ||
+                clusterNodes.get(NodeRole.ROUTER.getJsonName()).size() < 1) {
+              return false;
             }
-            return servicesDiscovered > 5;
+
+            List<ClusterResource.Node> allNodes = new ArrayList<>();
+            clusterNodes.values().forEach((nodes) -> allNodes.addAll(nodes));
+
+            return allNodes.size() == testSelfDiscovery(allNodes);
           }
           catch (Throwable t) {
             return false;
@@ -161,12 +166,15 @@ public class ITHighAvailabilityTest
   @Test
   public void testCustomDiscovery()
   {
+    if (config.getDruidDeploymentEnvType() == DruidTestModule.DruidDeploymentEnvType.K8S) {
+      // Custom NodeRole is not deployed in k8s environment just yet
+      return;
+    }
+
     ITRetryUtil.retryUntil(
         () -> {
           try {
-            DruidNodeDiscovery customDisco =
-                druidNodeDiscovery.getForNodeRole(new NodeRole(CliCustomNodeRole.SERVICE_NAME));
-            int count = testSelfDiscovery(customDisco.getAllNodes());
+            int count = testSelfDiscovery(getClusterNodes(CliCustomNodeRole.SERVICE_NAME));
             return count > 0;
           }
           catch (Throwable t) {
@@ -180,16 +188,19 @@ public class ITHighAvailabilityTest
     );
   }
 
-  private int testSelfDiscovery(Collection<DiscoveryDruidNode> nodes)
+  private int testSelfDiscovery(Collection<ClusterResource.Node> nodes)
       throws MalformedURLException, ExecutionException, InterruptedException
   {
     int count = 0;
 
-    for (DiscoveryDruidNode node : nodes) {
+    for (ClusterResource.Node node : nodes) {
+      String host = config.getDruidDeploymentEnvType() == DruidTestModule.DruidDeploymentEnvType.UNKNOWN ?
+                    node.getHost() : config.getDruidClusterHost();
+
       final String location = StringUtils.format(
           "http://%s:%s/status/selfDiscovered",
-          config.isDocker() ? config.getDockerHost() : node.getDruidNode().getHost(),
-          node.getDruidNode().getPlaintextPort()
+          host,
+          node.getPlaintextPort()
       );
       LOG.info("testing self discovery %s", location);
       StatusResponseHolder response = httpClient.go(
@@ -229,6 +240,23 @@ public class ITHighAvailabilityTest
   private String getLeader(String service)
   {
     try {
+      return RetryUtils.retry(
+          () -> tryGetLeader(service),
+          (Throwable t) -> true,
+          5
+      );
+    }
+    catch (RuntimeException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private String tryGetLeader(String service)
+  {
+    try {
       StatusResponseHolder response = httpClient.go(
           new Request(
               HttpMethod.GET,
@@ -250,6 +278,77 @@ public class ITHighAvailabilityTest
         );
       }
       return response.getContent();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Map<String, List<ClusterResource.Node>> getClusterNodes()
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format(
+                  "%s/druid/coordinator/v1/cluster",
+                  config.getRouterUrl()
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching cluster nodes from[%s] status[%s] content[%s]",
+            config.getRouterUrl(),
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Map<String, List<ClusterResource.Node>>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private List<ClusterResource.Node> getClusterNodes(String nodeRole)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format(
+                  "%s/druid/coordinator/v1/cluster/%s",
+                  config.getRouterUrl(),
+                  nodeRole
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching cluster nodes from[%s] status[%s] content[%s]",
+            config.getRouterUrl(),
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<List<ClusterResource.Node>>()
+          {
+          }
+      );
     }
     catch (Exception e) {
       throw new RuntimeException(e);

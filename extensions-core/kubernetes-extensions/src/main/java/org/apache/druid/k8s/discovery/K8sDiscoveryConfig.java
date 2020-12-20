@@ -84,18 +84,11 @@ public class K8sDiscoveryConfig
     this.podNameEnvKey = podNameEnvKey == null ? "POD_NAME" : podNameEnvKey;
     this.podNamespaceEnvKey = podNamespaceEnvKey == null ? "POD_NAMESPACE" : podNamespaceEnvKey;
 
-    if (coordinatorLeaderElectionConfigMapNamespace == null) {
-      LOGGER.warn("IF coordinator pods run in multiple namespaces, then you MUST provide coordinatorLeaderElectionConfigMapNamespace");
-    }
     this.coordinatorLeaderElectionConfigMapNamespace = coordinatorLeaderElectionConfigMapNamespace;
-
-    if (overlordLeaderElectionConfigMapNamespace == null) {
-      LOGGER.warn("IF overlord pods run in multiple namespaces, then you MUST provide overlordLeaderElectionConfigMapNamespace");
-    }
     this.overlordLeaderElectionConfigMapNamespace = overlordLeaderElectionConfigMapNamespace;
 
     this.leaseDuration = leaseDuration == null ? Duration.millis(60000) : leaseDuration;
-    this.renewDeadline = renewDeadline == null ? Duration.millis(17000) : renewDeadline;
+    this.renewDeadline = renewDeadline == null ? Duration.millis(47000) : renewDeadline;
     this.retryPeriod = retryPeriod == null ? Duration.millis(5000) : retryPeriod;
   }
 

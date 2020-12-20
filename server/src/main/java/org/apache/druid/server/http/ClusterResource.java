@@ -117,7 +117,7 @@ public class ClusterResource
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  private static class Node
+  public static class Node
   {
     private final String host;
     private final String service;
@@ -125,7 +125,12 @@ public class ClusterResource
     private final Integer tlsPort;
 
     @JsonCreator
-    public Node(String host, String service, Integer plaintextPort, Integer tlsPort)
+    public Node(
+        @JsonProperty("host") String host,
+        @JsonProperty("service") String service,
+        @JsonProperty("plaintextPort") Integer plaintextPort,
+        @JsonProperty("tlsPort") Integer tlsPort
+    )
     {
       this.host = host;
       this.service = service;

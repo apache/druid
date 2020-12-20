@@ -1,0 +1,407 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# For all pods, make sure that service port matches internal port. ITHighAvailabilityTest config assumes that the
+# service is reachable at localhost:DiscoveryDruidNode.getDruidNode().getPlaintextPort()
+#
+apiVersion: "druid.apache.org/v1alpha1"
+kind: "Druid"
+metadata:
+  name: tiny-cluster
+spec:
+  image: druid/cluster:v1
+  # Optionally specify image for all nodes. Can be specify on nodes also
+  # imagePullSecrets:
+  # - name: tutu
+  startScript: /druid.sh
+  podLabels:
+    environment: stage
+    release: alpha
+  podAnnotations:
+    dummy: k8s_extn_needs_atleast_one_annotation
+  securityContext:
+    fsGroup: 0
+    runAsUser: 0
+    runAsGroup: 0
+  containerSecurityContext:
+    privileged: true
+  services:
+    - spec:
+        type: ClusterIP
+        clusterIP: None
+  commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  jvm.options: |-
+    -server
+    -XX:MaxDirectMemorySize=10240g
+    -Duser.timezone=UTC
+    -Dfile.encoding=UTF-8
+    -Dlog4j.debug
+    -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+  log4j.config: |-
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <Configuration status="WARN">
+        <Appenders>
+            <Console name="Console" target="SYSTEM_OUT">
+                <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+            </Console>
+        </Appenders>
+        <Loggers>
+            <Root level="info">
+                <AppenderRef ref="Console"/>
+            </Root>
+        </Loggers>
+    </Configuration>
+  common.runtime.properties: |
+
+    #
+    # Zookeeper-less Druid Cluster
+    #
+    druid.zk.service.enabled=false
+    druid.discovery.type=k8s
+    druid.discovery.k8s.clusterIdentifier=druid-it
+    druid.discovery.k8s.retryPeriod=PT1S
+    druid.serverview.type=http
+    druid.coordinator.loadqueuepeon.type=http
+    druid.indexer.runner.type=httpRemote
+
+    # Metadata Store
+    druid.metadata.storage.type=postgresql
+    druid.metadata.storage.connector.connectURI=jdbc:postgresql://postgres:5432/druid
+    druid.metadata.storage.connector.user=druid
+    druid.metadata.storage.connector.password=druid
+    druid.metadata.storage.connector.createTables=true
+
+    # Deep Storage
+    druid.storage.type=local
+    druid.storage.storageDirectory=/druid/data/deepstorage
+
+    #
+    # Extensions
+    #
+    druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "postgresql-metadata-storage", "druid-kubernetes-extensions"]
+
+    #
+    # Service discovery
+    #
+    druid.selectors.indexing.serviceName=druid/overlord
+    druid.selectors.coordinator.serviceName=druid/coordinator
+
+    druid.indexer.logs.type=file
+    druid.indexer.logs.directory=/druid/data/task-logs
+    druid.indexer.task.baseDir=/druid/data/task-base
+
+    druid.lookup.enableLookupSyncOnStartup=false
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: DRUID_SET_HOST
+      value: "0"
+
+
+  nodes:
+    brokers:
+      # Optionally specify for running broker as Deployment
+      # kind: Deployment
+      nodeType: "broker"
+      # Optionally specify for broker nodes
+      # imagePullSecrets:
+      # - name: tutu
+      druid.port: 30100
+      readinessProbe:
+        httpGet:
+          path: /status/health
+          port: 30100
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: broker-service-port
+                nodePort: 30100
+                port: 30100
+                protocol: TCP
+                targetPort: 30100
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-brokers
+          metadata:
+            name: broker-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/query/broker"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/broker
+
+        # HTTP server threads
+        druid.broker.http.numConnections=5
+        druid.server.http.numThreads=40
+
+        # Processing threads and buffers
+        druid.processing.buffer.sizeBytes=25000000
+        druid.processing.numThreads=1
+        druid.sql.enable=true
+      extra.jvm.options: |-
+        -Xmx512m
+        -Xms512m
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: REPLACE_VOLUMES/tmp
+      resources:
+        requests:
+          memory: "800Mi"
+        limits:
+          memory: "800Mi"
+
+    coordinator1:
+      # Optionally specify for running coordinator as Deployment
+      # kind: Deployment
+      nodeType: "coordinator"
+      druid.port: 30200
+      readinessProbe:
+        httpGet:
+          path: /status/health
+          port: 30200
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: coordinator-service-port
+                nodePort: 30200
+                port: 30200
+                protocol: TCP
+                targetPort: 30200
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-coordinators
+          metadata:
+            name: coordinator1-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/coordinator-overlord"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/coordinator
+
+        # HTTP server threads
+        druid.coordinator.startDelay=PT30S
+        druid.coordinator.period=PT30S
+
+      extra.jvm.options: |-
+        -Xmx800m
+        -Xms800m
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: REPLACE_VOLUMES/tmp
+      resources:
+        requests:
+          memory: "1G"
+        limits:
+          memory: "1G"
+
+    coordinator2:
+      # Optionally specify for running coordinator as Deployment
+      # kind: Deployment
+      nodeType: "coordinator"
+      druid.port: 30201
+      readinessProbe:
+        httpGet:
+          path: /status/health
+          port: 30201
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: coordinator-service-port
+                nodePort: 30201
+                port: 30201
+                protocol: TCP
+                targetPort: 30201
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-coordinators
+          metadata:
+            name: coordinator2-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/coordinator-overlord"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/coordinator
+
+        # HTTP server threads
+        druid.coordinator.startDelay=PT30S
+        druid.coordinator.period=PT30S
+
+      extra.jvm.options: |-
+        -Xmx800m
+        -Xms800m
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: REPLACE_VOLUMES/tmp
+      resources:
+        requests:
+          memory: "1G"
+        limits:
+          memory: "1G"
+
+    overlord1:
+      # Optionally specify for running coordinator as Deployment
+      # kind: Deployment
+      nodeType: "overlord"
+      druid.port: 30210
+      readinessProbe:
+        httpGet:
+          path: /status/health
+          port: 30210
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: overlord-service-port
+                nodePort: 30210
+                port: 30210
+                protocol: TCP
+                targetPort: 30210
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-overlords
+          metadata:
+            name: overlord1-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/coordinator-overlord"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/overlord
+        druid.indexer.queue.startDelay=PT30S
+      extra.jvm.options: |-
+        -Xmx800m
+        -Xms800m
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: REPLACE_VOLUMES/tmp
+      resources:
+        requests:
+          memory: "1G"
+        limits:
+          memory: "1G"
+    overlord2:
+      # Optionally specify for running coordinator as Deployment
+      # kind: Deployment
+      nodeType: "overlord"
+      druid.port: 30211
+      readinessProbe:
+        httpGet:
+          path: /status/health
+          port: 30211
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: overlord-service-port
+                nodePort: 30211
+                port: 30211
+                protocol: TCP
+                targetPort: 30211
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-overlords
+          metadata:
+            name: overlord2-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/coordinator-overlord"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/overlord
+        druid.indexer.queue.startDelay=PT30S
+      extra.jvm.options: |-
+        -Xmx800m
+        -Xms800m
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: REPLACE_VOLUMES/tmp
+      resources:
+        requests:
+          memory: "1G"
+        limits:
+          memory: "1G"
+    routers:
+      nodeType: "router"
+      druid.port: 30400
+      readinessProbe:
+        httpGet:
+          path: /status/health
+          port: 30400
+      services:
+        - spec:
+            type: NodePort
+            ports:
+              - name: router-service-port
+                nodePort: 30400
+                port: 30400
+                protocol: TCP
+                targetPort: 30400
+          selector:
+            nodeSpecUniqueStr: druid-tiny-cluster-routers
+          metadata:
+            name: router-%s-service
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/query/router"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/router
+
+        # HTTP proxy
+        druid.router.http.numConnections=50
+        druid.router.http.readTimeout=PT5M
+        druid.router.http.numMaxThreads=100
+        druid.server.http.numThreads=100
+
+        # Service discovery
+        druid.router.defaultBrokerServiceName=druid/broker
+        druid.router.coordinatorServiceName=druid/coordinator
+
+        # Management proxy to coordinator / overlord: required for unified web console.
+        druid.router.managementProxy.enabled=true

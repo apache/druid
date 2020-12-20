@@ -104,7 +104,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public void testQueriesFromFile(String url, String filePath) throws Exception
   {
-    LOG.info("Starting query tests for [%s]", filePath);
+    LOG.debug("Starting query tests for [%s]", filePath);
     List<QueryResultType> queries =
         jsonMapper.readValue(
             TestQueryHelper.class.getResourceAsStream(filePath),
@@ -118,7 +118,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public void testQueriesFromString(String url, String str) throws Exception
   {
-    LOG.info("Starting query tests using\n%s", str);
+    LOG.debug("Starting query tests using\n%s", str);
     List<QueryResultType> queries =
         jsonMapper.readValue(
             str,
@@ -131,11 +131,11 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   private void testQueries(String url, List<QueryResultType> queries) throws Exception
   {
-    LOG.info("Running queries, url [%s]", url);
+    LOG.debug("Running queries, url [%s]", url);
 
     boolean failed = false;
     for (QueryResultType queryWithResult : queries) {
-      LOG.info("Running Query %s", queryWithResult.getQuery());
+      LOG.debug("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
       if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
                                               queryWithResult.getFieldsToTest()
@@ -148,7 +148,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
         );
         failed = true;
       } else {
-        LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
+        LOG.debug("Results Verified for Query %s", queryWithResult.getQuery());
       }
     }
 

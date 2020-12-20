@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  ports:
+    - port: 5432
+      name: postgres
+  clusterIP: None
+  selector:
+    app: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  serviceName: postgres
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        app: postgres
+      labels:
+        app: postgres
+    spec:
+      volumes:
+        - name: data-volume
+          emptyDir: {}
+      containers:
+      - image: postgres:latest
+        name: postgres
+        env:
+          - name: POSTGRES_DB
+            value: druid
+          - name: POSTGRES_USER
+            value: druid
+          - name: POSTGRES_PASSWORD
+            value: druid
+        volumeMounts:
+          - mountPath: /druid/data
+            name: data-volume

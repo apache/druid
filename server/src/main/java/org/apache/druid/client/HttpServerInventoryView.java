@@ -166,6 +166,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               public void nodeViewInitialized()
               {
                 if (!initialized.getAndSet(true)) {
+                  log.info("nodeViewInitialized!");
                   executor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
                 }
               }
@@ -324,6 +325,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   //segmentViewInitialized on all registered segment callbacks.
   private void serverInventoryInitialized()
   {
+    log.info("Check if we can call SegmentCallback.segmentViewInitialized() for all callbacks");
     long start = System.currentTimeMillis();
     long serverSyncWaitTimeout = config.getServerTimeout() + 2 * ChangeRequestHttpSyncer.HTTP_TIMEOUT_EXTRA_MS;
 
