@@ -19,7 +19,14 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This is a historical occasion that this enum is different from {@link
@@ -31,33 +38,88 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * These abstractions can probably be merged when Druid updates to Jackson 2.9 that supports JsonAliases, see
  * see https://github.com/apache/druid/issues/7152.
  */
-public enum NodeRole
+public class NodeRole
 {
-  COORDINATOR("coordinator"),
-  HISTORICAL("historical"),
-  BROKER("broker"),
-  OVERLORD("overlord"),
-  PEON("peon"),
-  ROUTER("router"),
-  MIDDLE_MANAGER("middleManager"),
-  INDEXER("indexer");
+  public static final NodeRole COORDINATOR = new NodeRole("COORDINATOR", "coordinator");
+  public static final NodeRole HISTORICAL = new NodeRole("HISTORICAL", "historical");
+  public static final NodeRole BROKER = new NodeRole("BROKER", "broker");
+  public static final NodeRole OVERLORD = new NodeRole("OVERLORD", "overlord");
+  public static final NodeRole PEON = new NodeRole("PEON", "peon");
+  public static final NodeRole ROUTER = new NodeRole("ROUTER", "router");
+  public static final NodeRole MIDDLE_MANAGER = new NodeRole("MIDDLE_MANAGER", "middleManager");
+  public static final NodeRole INDEXER = new NodeRole("INDEXER", "indexer");
 
+  private static final NodeRole[] BUILT_IN = new NodeRole[]{
+      COORDINATOR,
+      HISTORICAL,
+      BROKER,
+      OVERLORD,
+      PEON,
+      ROUTER,
+      MIDDLE_MANAGER,
+      INDEXER
+  };
+
+  private static final Map<String, NodeRole> BUILT_IN_LOOKUP =
+      Arrays.stream(BUILT_IN).collect(Collectors.toMap(NodeRole::getJsonName, Function.identity()));
+
+  private final String name;
   private final String jsonName;
 
-  NodeRole(String jsonName)
+  public NodeRole(String jsonName)
   {
-    this.jsonName = jsonName;
+    this(jsonName, jsonName);
   }
 
   /**
-   * Lowercase for backward compatibility, as a part of the {@link DiscoveryDruidNode}'s JSON format.
-   *
-   * Don't need to define {@link com.fasterxml.jackson.annotation.JsonCreator} because for enum types {@link JsonValue}
-   * serves for both serialization and deserialization, see the Javadoc comment of {@link JsonValue}.
+   * for built-in roles, to preserve backwards compatibility when this was an enum
    */
+  private NodeRole(String name, String jsonName)
+  {
+    this.name = name;
+    this.jsonName = jsonName;
+  }
+
   @JsonValue
   public String getJsonName()
   {
     return jsonName;
+  }
+
+  @JsonCreator
+  public static NodeRole fromJsonName(String jsonName)
+  {
+    return BUILT_IN_LOOKUP.getOrDefault(jsonName, new NodeRole(jsonName));
+  }
+
+  @Override
+  public String toString()
+  {
+    // for built-in roles, to preserve backwards compatibility when this was an enum
+    return name;
+  }
+
+  public static NodeRole[] values()
+  {
+    return BUILT_IN;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NodeRole nodeRole = (NodeRole) o;
+    return name.equals(nodeRole.name) && jsonName.equals(nodeRole.jsonName);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, jsonName);
   }
 }

@@ -17,28 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.tests.security;
+package org.apache.druid.cli;
 
-import com.google.inject.Inject;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.tests.TestNGGroup;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.Assert;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import io.airlift.airline.Cli;
 
-@Test(groups = TestNGGroup.SECURITY)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITCoordinatorOverlordProxyAuthTest
+public class CustomNodeRoleCommandCreator implements CliCommandCreator
 {
-  @Inject
-  CoordinatorResourceTestClient coordinatorClient;
-  
-  @Test
-  public void testProxyAuth()
+  @Override
+  public void addCommands(Cli.CliBuilder builder)
   {
-    HttpResponseStatus responseStatus = coordinatorClient.getProxiedOverlordScalingResponseStatus();
-    Assert.assertEquals(responseStatus, HttpResponseStatus.OK);
+    builder.withGroup("server").withCommands(CliCustomNodeRole.class);
   }
 }
