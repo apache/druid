@@ -50,7 +50,7 @@
     "%%STREAM_PROPERTIES_KEY%%": %%STREAM_PROPERTIES_VALUE%%,
     "taskCount": 2,
     "replicas": 1,
-    "taskDuration": "PT5M",
+    "taskDuration": "PT30S",
     "%%USE_EARLIEST_KEY%%": true,
     "inputFormat" : %%INPUT_FORMAT%%
   }
