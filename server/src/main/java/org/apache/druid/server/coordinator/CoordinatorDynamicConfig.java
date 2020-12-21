@@ -486,10 +486,6 @@ public class CoordinatorDynamicConfig
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
-      Preconditions.checkArgument(
-          percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100,
-          "percentOfSegmentsToConsiderPerMove should be between 1 and 100!"
-      );
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
