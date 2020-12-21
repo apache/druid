@@ -44,8 +44,11 @@ import java.util.Set;
  */
 public class RunRules implements CoordinatorDuty
 {
-  // enum to indicate what rules that RunRules is set to execute.
-  // LOAD_RULE_ONLY means if Rule is not a LoadRule, to skip running it. A special case for primary replicant loader.
+
+  /**
+   * enum to indicate what rules that RunRules is set to execute.
+   * LOAD_RULE_ONLY means if Rule is not a LoadRule, to skip running it. A special case for primary replicant loader.
+   */
   public enum RunRulesMode
   {
     LOAD_RULE_ONLY,

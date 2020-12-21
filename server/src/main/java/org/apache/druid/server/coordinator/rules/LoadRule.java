@@ -54,10 +54,12 @@ import java.util.stream.Collectors;
  */
 public abstract class LoadRule implements Rule
 {
-  // enum to indicate what LoadRule should execute.
-  // PRIMARY_ONLY means only load primary replicants.
-  // REPLICA_ONLY means only load non-primary replicants
-  // ALL means to load any replicants regarles of primary status
+  /**
+   * enum to indicate what LoadRule should execute.
+   * PRIMARY_ONLY means only load primary replicants.
+   * REPLICA_ONLY means only load non-primary replicants
+   * ALL means to load any replicants regardless of primary status
+   */
   public enum LoadRuleMode
   {
     PRIMARY_ONLY,

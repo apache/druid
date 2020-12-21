@@ -288,7 +288,7 @@ This configuration can make sense if you have a large cluster where coordination
 
 By enabling it, you enable a dedicated scheduled event loop on the coordinator for loading primary replicants. The general coordinator event loop will do all of its same jobs as before except for loading of primary replicants. Now, you may find that primary replicants are loaded faster, resulting in used segments being available for client query in more timely manner than before.
 
-Enabling this comes at as cost. The coordinator will now have to maintain another snapshot of the cluster state. Also, primary replicant loading will now be running in parallel to other Coordinator tasks which could result in more cpu use.
+Enabling this comes at a cost. The coordinator will now have to maintain another snapshot of the cluster state. Also, primary replicant loading will now be running in parallel to other Coordinator tasks which could result in more cpu use.
 
 ### Overlord
 
