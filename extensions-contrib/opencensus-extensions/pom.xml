@@ -35,10 +35,6 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <properties>
-    <protobuf.version>3.2.0</protobuf.version>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>io.opencensus</groupId>
