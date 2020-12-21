@@ -510,7 +510,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     // Each task duration is 30 secs. Hence, one task will be able to consume all data from the stream.
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
-        () -> (    indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0),
+        () -> (indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0),
         "Waiting for Task Completion"
     );
 
