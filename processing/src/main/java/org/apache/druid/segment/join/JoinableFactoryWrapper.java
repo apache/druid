@@ -129,6 +129,9 @@ public class JoinableFactoryWrapper
 
     final CacheKeyBuilder keyBuilder;
     keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
+    if (dataSourceAnalysis.getJoinBaseFilter().isPresent()) {
+      keyBuilder.appendCacheable(dataSourceAnalysis.getJoinBaseFilter().get());
+    }
     for (PreJoinableClause clause : clauses) {
       Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
       if (!bytes.isPresent()) {

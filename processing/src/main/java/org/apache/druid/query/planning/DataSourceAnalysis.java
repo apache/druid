@@ -29,9 +29,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -84,14 +82,14 @@ public class DataSourceAnalysis
   @Nullable
   private final Query<?> baseQuery;
   @Nullable
-  private final Filter joinBaseFilter;
+  private final DimFilter joinBaseFilter;
   private final List<PreJoinableClause> preJoinableClauses;
 
   private DataSourceAnalysis(
       DataSource dataSource,
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
-      @Nullable Filter joinBaseFilter,
+      @Nullable DimFilter joinBaseFilter,
       List<PreJoinableClause> preJoinableClauses
   )
   {
@@ -128,7 +126,7 @@ public class DataSourceAnalysis
     }
 
     if (current instanceof JoinDataSource) {
-      final Pair<Pair<DataSource, Filter>, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
+      final Pair<Pair<DataSource, DimFilter>, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
       return new DataSourceAnalysis(dataSource, flattened.lhs.lhs, baseQuery, flattened.lhs.rhs, flattened.rhs);
     } else {
       return new DataSourceAnalysis(dataSource, current, baseQuery, null, Collections.emptyList());
@@ -141,7 +139,7 @@ public class DataSourceAnalysis
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static Pair<Pair<DataSource, Filter>, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  private static Pair<Pair<DataSource, DimFilter>, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
   {
     DataSource current = dataSource;
     DimFilter currentDimFilter = null;
@@ -165,7 +163,7 @@ public class DataSourceAnalysis
     // going-up order. So reverse them.
     Collections.reverse(preJoinableClauses);
 
-    return Pair.of(Pair.of(current, Filters.toFilter(currentDimFilter)), preJoinableClauses);
+    return Pair.of(Pair.of(current, currentDimFilter), preJoinableClauses);
   }
 
   /**
@@ -224,10 +222,10 @@ public class DataSourceAnalysis
   }
 
   /**
-   * If the original data source is a join data source and there is a filter on the base table data source,
-   * that filter is returned here
+   * If the original data source is a join data source and there is a DimFilter on the base table data source,
+   * that DimFilter is returned here
    */
-  public Optional<Filter> getJoinBaseFilter()
+  public Optional<DimFilter> getJoinBaseFilter()
   {
     return Optional.ofNullable(joinBaseFilter);
   }

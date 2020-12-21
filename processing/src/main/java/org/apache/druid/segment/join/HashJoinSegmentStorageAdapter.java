@@ -37,7 +37,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
@@ -48,7 +47,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -261,15 +259,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     // We merge the filter on base table specified by the user and filter on the base table that is pushed from
     // the join
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
-    Filter newBaseFilter = joinFilterSplit.getBaseTableFilter().isPresent()
-                           ? Filters.and(Arrays.asList(baseFilter, joinFilterSplit.getBaseTableFilter().get()))
-                           : baseFilter;
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
 
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        newBaseFilter,
+        joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
         interval,
         VirtualColumns.create(preJoinVirtualColumns),
         gran,
