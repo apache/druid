@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -488,8 +489,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
               name -> new LongSumAggregatorFactory(name, "count")
           ),
         StringUtils.format(
-            "dataSource[%s] consumed [%,d] events",
+            "dataSource[%s] consumed [%,d] events, expected [%,d]",
             generatedTestConfig.getFullDatasourceName(),
+            this.queryHelper.countRows(
+                generatedTestConfig.getFullDatasourceName(),
+                Intervals.ETERNITY,
+                name -> new LongSumAggregatorFactory(name, "count")
+            ),
             numWritten
         )
     );
@@ -499,22 +505,18 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
                                                 .apply(getResourceAsString(QUERIES_FILE));
     // this query will probably be answered from the indexing tasks but possibly from 2 historical segments / 2 indexing
     this.queryHelper.testQueriesFromString(querySpec);
-    LOG.info("Shutting down supervisor");
-    indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
-    // Clear supervisor ID to not shutdown again.
-    generatedTestConfig.setSupervisorId(null);
-    // wait for all indexing tasks to finish
+
+    // All data written to stream within 10 secs.
+    // Each task duration is 30 secs. Hence, one task will be able to consume all data from the stream.
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getUncompletedTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() == 0),
-        "Waiting for Tasks Completion"
+        () -> (indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0),
+        "Waiting for Task Completion"
     );
+
     // wait for segments to be handed off
-    ITRetryUtil.retryUntil(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(generatedTestConfig.getFullDatasourceName()),
-        true,
-        10000,
-        30,
         "Real-time generated segments loaded"
     );
 
@@ -531,7 +533,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     if (generatedTestConfig.getSupervisorId() != null) {
       try {
-        indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
+        LOG.info("Terminating supervisor");
+        indexer.terminateSupervisor(generatedTestConfig.getSupervisorId());
+        // Shutdown all tasks of supervisor
+        List<TaskResponseObject> runningTasks = indexer.getUncompletedTasksForDataSource(generatedTestConfig.getFullDatasourceName());
+        for (TaskResponseObject task : runningTasks) {
+          indexer.shutdownTask(task.getId());
+        }
       }
       catch (Exception e) {
         // Best effort cleanup as the supervisor may have already been cleanup
