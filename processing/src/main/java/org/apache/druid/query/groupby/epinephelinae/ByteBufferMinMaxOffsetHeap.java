@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.Optional;
 
 /**
  * ByteBuffer-based implementation of the min-max heap developed by Atkinson, et al.
@@ -62,7 +63,10 @@ public class ByteBufferMinMaxOffsetHeap
   public ByteBufferMinMaxOffsetHeap copy()
   {
     LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater updater =
-        heapIndexUpdater.copy();
+        Optional
+            .ofNullable(heapIndexUpdater)
+            .map(LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater::copy)
+            .orElse(null);
 
     // deep copy buf
     ByteBuffer buffer = ByteBuffer.allocateDirect(buf.capacity());

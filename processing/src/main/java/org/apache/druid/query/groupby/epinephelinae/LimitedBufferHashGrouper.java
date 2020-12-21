@@ -336,6 +336,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   private CloseableIterator<Entry<KeyType>> makeHeapIterator()
   {
     final int initialHeapSize = offsetHeap.getHeapSize();
+    // Make a copy of the heap since next() below mutates it
     ByteBufferMinMaxOffsetHeap newHeap = offsetHeap.copy();
 
     return new CloseableIterator<Entry<KeyType>>()

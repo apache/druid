@@ -197,7 +197,7 @@ public class ByteBufferMinMaxOffsetHeapTest
   {
     int limit = 100;
 
-    IntList values = new IntArrayList(new int[] {
+    IntList values = new IntArrayList(new int[]{
         1, 20, 1000, 2, 3, 30, 40, 10, 11, 12, 13, 300, 400, 500, 600
     });
 
@@ -230,7 +230,7 @@ public class ByteBufferMinMaxOffsetHeapTest
   {
     int limit = 100;
 
-    IntList values = new IntArrayList(new int[] {
+    IntList values = new IntArrayList(new int[]{
         1, 20, 1000, 2, 3, 30, 40, 10, 11, 12, 13, 300, 400, 500, 600, 4, 5,
         6, 7, 8, 9, 4, 5, 200, 250
     });
@@ -259,5 +259,37 @@ public class ByteBufferMinMaxOffsetHeapTest
     Assert.assertTrue(heap.isIntact());
 
     Assert.assertEquals(values, actual);
+  }
+
+
+  @Test
+  public void testCopy()
+  {
+    int limit = 100;
+    
+    IntList values = new IntArrayList(new int[]{
+        1, 20, 1000, 2, 3, 30, 40, 10, 11, 12, 13, 300, 400, 500, 600
+    });
+
+    ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
+
+    for (Integer value : values) {
+      heap.addOffset(value);
+      Assert.assertTrue(heap.isIntact());
+    }
+
+    // make copy:
+    ByteBufferMinMaxOffsetHeap heapCopy = heap.copy();
+
+    // verify that original an copy are the same:
+    Assert.assertEquals(heap.getHeapSize(), heapCopy.getHeapSize());
+    for (int i = 0; i < heap.getHeapSize(); i++) {
+      Assert.assertEquals(heap.getAt(i), heapCopy.getAt(i));
+    }
+
+    // modifying the copy does not affect the original:
+    heapCopy.removeOffset(12);
+    Assert.assertEquals(heap.getHeapSize(), heapCopy.getHeapSize() + 1);
   }
 }

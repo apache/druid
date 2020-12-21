@@ -12132,7 +12132,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         ).setLimitSpec(
                             new DefaultLimitSpec(
-                                ImmutableList.<OrderByColumnSpec>of(),
+                                ImmutableList.of(),
                               100)
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
