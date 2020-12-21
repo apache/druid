@@ -47,7 +47,7 @@ public class RunRules implements CoordinatorDuty
 
   /**
    * enum to indicate what rules that RunRules is set to execute.
-   * LOAD_RULE_ONLY means if Rule is not a LoadRule, to skip running it. A special case for primary replicant loader.
+   * LOAD_RULE_ONLY means if Rule is not a LoadRule, to skip running it. It is a special case for the dedicated primary replicant loader.
    */
   public enum RunRulesMode
   {

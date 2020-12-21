@@ -37,8 +37,8 @@ import java.util.SortedSet;
 public class SegmentReplicantLookup
 {
   /**
-   * Create the SegmentReplicantLookup object from a provided {@link DruidCluster}. This method is synchronized because
-   * we don't want any issues with it being called by multiple UpdateCoordinatorStateAndPrepareCluster duties.
+   * Create the SegmentReplicantLookup object from a provided {@link DruidCluster}. Lookups are created for both
+   * loaded and loading segments.
    *
    * @param cluster {@link DruidCluster} to base the lookup off of
    * @return SegmentReplicantLookup
