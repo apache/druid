@@ -21,9 +21,10 @@ DRUID_SERVICE=coordinator
 DRUID_LOG_PATH=/shared/logs/coordinator.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -Xms128m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx64m -Xms64m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006
 
 # Druid configs
+druid_host=druid-coordinator
 druid_metadata_storage_type=mysql
 druid_metadata_storage_connector_connectURI=jdbc:mysql://druid-metadata-storage/druid
 druid_metadata_storage_connector_user=druid
@@ -32,7 +33,11 @@ druid_coordinator_startDelay=PT5S
 druid_manager_lookups_hostUpdateTimeout=PT30S
 druid_manager_lookups_period=10000
 druid_manager_lookups_threadPoolSize=2
+druid_manager_config_pollDuration=PT10S
+druid_manager_rules_pollDuration=PT10S
+druid_manager_segments_pollDuration=PT2S
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/coordinator
 druid_auth_unsecuredPaths=["/druid/coordinator/v1/loadqueue"]
 druid_server_https_crlPath=/tls/revocations.crl
 druid_coordinator_period_indexingPeriod=PT180000S
+druid_coordinator_period=PT1S

@@ -230,7 +230,7 @@ Note that each worker task processes a single input split. You can control the a
 
 #### Size-based Split Hint Spec
 
-The size-based split hint spec is respected by all splittable input sources except for the HTTP input source.
+The size-based split hint spec is respected by all splittable input sources except for the HTTP input source and SQL input source.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -1137,7 +1137,7 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 The HTTP input source is to support reading files directly
 from remote sites via HTTP.
 The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read only one file.
+where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
 Sample specs:
 
@@ -1266,7 +1266,7 @@ Sample spec:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes if `baseDir` is specified|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
 
@@ -1342,6 +1342,7 @@ Only rows where `page` = `Druid` will be returned.
 
 The SQL input source is used to read data directly from RDBMS.
 The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
+This input source does not support Split Hint Spec.
 Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 Please refer to the Recommended practices section below before using this input source.
 
@@ -1571,7 +1572,7 @@ A sample local Firehose spec is shown below:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information.|yes|
 |baseDir|directory to search recursively for files to be ingested. |yes|
 
 <a name="http-firehose"></a>

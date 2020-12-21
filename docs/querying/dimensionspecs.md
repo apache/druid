@@ -71,7 +71,7 @@ Please refer to the [Output Types](#output-types) section for more details.
 
 ### Filtered DimensionSpecs
 
-These are only useful for multi-value dimensions. If you have a row in Apache Druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
+These are only useful for multi-value dimensions. If you have a row in Apache Druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.md) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
 
 It happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.md) for more details.
 Then groupBy/topN processing pipeline "explodes" all multi-value dimensions resulting 3 rows for "v1", "v2" and "v3" each.
@@ -96,7 +96,7 @@ Following filtered dimension spec retains only the values starting with the same
 { "type" : "prefixFiltered", "delegate" : <dimensionSpec>, "prefix": <prefix string> }
 ```
 
-For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
+For more details and examples, see [multi-value dimensions](multi-value-dimensions.md).
 
 ### Lookup DimensionSpecs
 
@@ -201,7 +201,7 @@ Returns the dimension value unchanged if the regular expression matches, otherwi
 
 ### Search query extraction function
 
-Returns the dimension value unchanged if the given [`SearchQuerySpec`](../querying/searchquery.html#searchqueryspec)
+Returns the dimension value unchanged if the given [`SearchQuerySpec`](../querying/searchquery.md#searchqueryspec)
 matches, otherwise returns null.
 
 ```json
@@ -254,7 +254,7 @@ For a regular dimension, it assumes the string is formatted in
 * `format` : date time format for the resulting dimension value, in [Joda Time DateTimeFormat](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or null to use the default ISO8601 format.
 * `locale` : locale (language and country) to use, given as a [IETF BCP 47 language tag](http://www.oracle.com/technetwork/java/javase/java8locales-2095355.html#util-text), e.g. `en-US`, `en-GB`, `fr-FR`, `fr-CA`, etc.
 * `timeZone` : time zone to use in [IANA tz database format](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones), e.g. `Europe/Berlin` (this can possibly be different than the aggregation time-zone)
-* `granularity` : [granularity](granularities.html) to apply before formatting, or omit to not apply any granularity.
+* `granularity` : [granularity](granularities.md) to apply before formatting, or omit to not apply any granularity.
 * `asMillis` : boolean value, set to true to treat input strings as millis rather than ISO8601 strings. Additionally, if `format` is null or not specified, output will be in millis rather than ISO8601.
 
 ```json
@@ -371,7 +371,7 @@ be treated as missing.
 It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
 
 A property of `injective` can override the lookup's own sense of whether or not it is
-[injective](lookups.html#query-execution). If left unspecified, Druid will use the registered cluster-wide lookup
+[injective](lookups.md#query-execution). If left unspecified, Druid will use the registered cluster-wide lookup
 configuration.
 
 A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).

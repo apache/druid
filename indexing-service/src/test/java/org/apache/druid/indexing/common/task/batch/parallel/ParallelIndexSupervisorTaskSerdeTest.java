@@ -92,25 +92,6 @@ public class ParallelIndexSupervisorTaskSerdeTest
   }
 
   @Test
-  public void forceGuaranteedRollupWithMissingIntervals()
-  {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "forceGuaranteedRollup is set but intervals is missing in granularitySpec"
-    );
-
-    Integer numShards = 2;
-    new ParallelIndexSupervisorTaskBuilder()
-        .ingestionSpec(
-            new ParallelIndexIngestionSpecBuilder()
-                .forceGuaranteedRollup(true)
-                .partitionsSpec(new HashedPartitionsSpec(null, numShards, null))
-                .build()
-        )
-        .build();
-  }
-
-  @Test
   public void forceGuaranteedRollupWithHashPartitionsMissingNumShards()
   {
     Integer numShards = null;

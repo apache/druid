@@ -24,10 +24,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.curator.test.TestingCluster;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.DynamicConfigProvider;
+import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.druid.segment.TestHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -43,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -580,6 +584,33 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
     Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+  }
+
+  @Test
+  public void testAddConsumerPropertiesFromConfig()
+  {
+    DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+        ImmutableMap.of("kafka.prop.2", "value.2", KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY, "pwd2")
+    );
+
+    Properties properties = new Properties();
+
+    Map<String, Object> consumerProperties = ImmutableMap.of(
+        KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY, "pwd1",
+        "kafka.prop.1", "value.1",
+        "druid.dynamic.config.provider", OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
+    );
+
+    KafkaRecordSupplier.addConsumerPropertiesFromConfig(
+        properties,
+        OBJECT_MAPPER,
+        consumerProperties
+    );
+
+    Assert.assertEquals(3, properties.size());
+    Assert.assertEquals("value.1", properties.getProperty("kafka.prop.1"));
+    Assert.assertEquals("value.2", properties.getProperty("kafka.prop.2"));
+    Assert.assertEquals("pwd2", properties.getProperty(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY));
   }
 
   private void insertData() throws ExecutionException, InterruptedException

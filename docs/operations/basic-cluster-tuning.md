@@ -423,7 +423,7 @@ Additionally, for large JVM heaps, here are a few Garbage Collection efficiency 
 
 ### Use UTC timezone
 
-We recommend using UTC timezone for all your events and across your hosts, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
+We recommend using UTC timezone for all your events and across your hosts, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.md#period-granularities)
 
 ### System configuration
 

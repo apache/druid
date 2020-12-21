@@ -17,7 +17,6 @@
  */
 
 import { Code, Intent, Switch, Tooltip } from '@blueprintjs/core';
-import axios from 'axios';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
@@ -29,7 +28,7 @@ import { Loader } from '../../components';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
-import { AppToaster } from '../../singletons/toaster';
+import { Api, AppToaster } from '../../singletons';
 import {
   BasicQueryExplanation,
   ColumnMetadata,
@@ -225,7 +224,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     });
 
     const queryRunner = new QueryRunner((payload, isSql, cancelToken) => {
-      return axios.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+      return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
     });
 
     this.queryManager = new QueryManager({
@@ -482,7 +481,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             runeMode={runeMode}
             columnMetadata={columnMetadataState.data}
           />
-          <div className="control-bar">
+          <div className="query-control-bar">
             <RunButton
               onEditContext={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}

@@ -491,7 +491,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           );
         }
 
-        if (!determineLockGranularityandTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
+        if (!determineLockGranularityAndTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 

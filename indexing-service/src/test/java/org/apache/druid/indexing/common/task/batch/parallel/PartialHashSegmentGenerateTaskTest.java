@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -33,10 +34,13 @@ import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 public class PartialHashSegmentGenerateTaskTest
 {
@@ -47,6 +51,9 @@ public class PartialHashSegmentGenerateTaskTest
       new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
       ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
   );
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private PartialHashSegmentGenerateTask target;
 
@@ -101,5 +108,63 @@ public class PartialHashSegmentGenerateTaskTest
     for (Interval interval : intervals) {
       Assert.assertEquals(expectedNumBuckets, partitionAnalysis.getBucketAnalysis(interval).intValue());
     }
+  }
+
+  @Test
+  public void testCreateHashPartitionAnalysisFromPartitionsSpecWithNumShardsMap()
+  {
+    final List<Interval> intervals = ImmutableList.of(
+        Intervals.of("2020-01-01/2020-01-02"),
+        Intervals.of("2020-01-02/2020-01-03"),
+        Intervals.of("2020-01-03/2020-01-04")
+    );
+    final Map<Interval, Integer> intervalToNumShards = ImmutableMap.of(
+        Intervals.of("2020-01-01/2020-01-02"),
+        1,
+        Intervals.of("2020-01-02/2020-01-03"),
+        2,
+        Intervals.of("2020-01-03/2020-01-04"),
+        3
+    );
+    final HashPartitionAnalysis partitionAnalysis = PartialHashSegmentGenerateTask
+        .createHashPartitionAnalysisFromPartitionsSpec(
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.NONE,
+                intervals
+            ),
+            new HashedPartitionsSpec(null, null, null),
+            intervalToNumShards
+        );
+    Assert.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
+    for (Interval interval : intervals) {
+      Assert.assertEquals(
+          intervalToNumShards.get(interval).intValue(),
+          partitionAnalysis.getBucketAnalysis(interval).intValue()
+      );
+    }
+  }
+
+  @Test
+  public void requiresGranularitySpecInputIntervals()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Missing intervals in granularitySpec");
+
+    new PartialHashSegmentGenerateTask(
+        ParallelIndexTestingFactory.AUTOMATIC_ID,
+        ParallelIndexTestingFactory.GROUP_ID,
+        ParallelIndexTestingFactory.TASK_RESOURCE,
+        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.NUM_ATTEMPTS,
+        ParallelIndexTestingFactory.createIngestionSpec(
+            new LocalInputSource(new File("baseDir"), "filer"),
+            new JsonInputFormat(null, null, null),
+            new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
+            ParallelIndexTestingFactory.createDataSchema(null)
+        ),
+        ParallelIndexTestingFactory.CONTEXT,
+        null
+    );
   }
 }
