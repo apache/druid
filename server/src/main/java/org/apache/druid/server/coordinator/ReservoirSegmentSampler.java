@@ -71,6 +71,9 @@ final class ReservoirSegmentSampler
       // calculatedSegmentLimit
       if (totalSegments != 0) {
         calculatedSegmentLimit = (int) Math.ceil((double) totalSegments * (percentOfSegmentsToConsider / 100.0));
+      } else {
+        log.warn("Unable to calculate limit on segments to consider because ServerHolder collection indicates"
+                 + " zero segments existing in the cluster.");
       }
     }
 
