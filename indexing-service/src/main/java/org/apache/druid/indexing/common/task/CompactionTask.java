@@ -312,7 +312,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
-    return determineLockGranularityandTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
+    return determineLockGranularityAndTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
   }
 
   @Override

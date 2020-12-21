@@ -143,42 +143,52 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
 
     try {
       LOG.info("Starting CoordinatorBasicAuthorizerMetadataStorageUpdater");
-      for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
-        Authorizer authorizer = entry.getValue();
-        if (authorizer instanceof BasicRoleBasedAuthorizer) {
-          BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
-          BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
-          String authorizerName = entry.getKey();
-          authorizerNames.add(authorizerName);
+      BasicAuthUtils.maybeInitialize(
+          () -> {
+            for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
+              Authorizer authorizer = entry.getValue();
+              if (authorizer instanceof BasicRoleBasedAuthorizer) {
+                BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
+                BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
+                String authorizerName = entry.getKey();
+                authorizerNames.add(authorizerName);
 
-          byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
-          Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
-              objectMapper,
-              userMapBytes
-          );
-          cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
+                byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
+                Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+                    objectMapper,
+                    userMapBytes
+                );
+                cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
 
-          byte[] groupMappingMapBytes = getCurrentGroupMappingMapBytes(authorizerName);
-          Map<String, BasicAuthorizerGroupMapping> groupMappingMap = BasicAuthUtils.deserializeAuthorizerGroupMappingMap(
-              objectMapper,
-              groupMappingMapBytes
-          );
-          cachedGroupMappingMaps.put(authorizerName, new BasicAuthorizerGroupMappingMapBundle(groupMappingMap, groupMappingMapBytes));
+                byte[] groupMappingMapBytes = getCurrentGroupMappingMapBytes(authorizerName);
+                Map<String, BasicAuthorizerGroupMapping> groupMappingMap = BasicAuthUtils.deserializeAuthorizerGroupMappingMap(
+                    objectMapper,
+                    groupMappingMapBytes
+                );
+                cachedGroupMappingMaps.put(
+                    authorizerName,
+                    new BasicAuthorizerGroupMappingMapBundle(
+                        groupMappingMap,
+                        groupMappingMapBytes
+                    )
+                );
 
-          byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
-          Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
-              objectMapper,
-              roleMapBytes
-          );
-          cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
+                byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
+                Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+                    objectMapper,
+                    roleMapBytes
+                );
+                cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
 
-          initSuperUsersAndGroupMapping(authorizerName, userMap, roleMap, groupMappingMap,
-                                        dbConfig.getInitialAdminUser(),
-                                        dbConfig.getInitialAdminRole(),
-                                        dbConfig.getInitialAdminGroupMapping()
-          );
-        }
-      }
+                initSuperUsersAndGroupMapping(authorizerName, userMap, roleMap, groupMappingMap,
+                                              dbConfig.getInitialAdminUser(),
+                                              dbConfig.getInitialAdminRole(),
+                                              dbConfig.getInitialAdminGroupMapping()
+                );
+              }
+            }
+            return true;
+          });
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,

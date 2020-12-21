@@ -307,6 +307,7 @@ jobs:
 
     # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
     # Integration tests Java Runtime version is set by the JVM_RUNTIME env property (set env key to -Djvm.runtime=<JVM_RUNTIME_VERSION>)
+    # Integration tests will either use MiddleManagers or Indexers
     # (Currently integration tests only support running with jvm runtime 8 and 11)
     # START - Integration tests for Compile with Java 8 and Run with Java 8
     - &integration_batch_index
@@ -314,9 +315,9 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services
         - docker
-      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: &run_integration_test
-        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} ${MAVEN_SKIP}
+        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} ${MAVEN_SKIP}
       after_failure: &integration_test_diags
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
@@ -326,51 +327,75 @@ jobs:
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
 
+    - <<: *integration_batch_index
+      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+
     - &integration_input_format
       name: "(Compile=openjdk8, Run=openjdk8) input format integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_input_format
+      name: "(Compile=openjdk8, Run=openjdk8) input format integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_input_source
       name: "(Compile=openjdk8, Run=openjdk8) input source integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_input_source
+      name: "(Compile=openjdk8, Run=openjdk8) input source integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_perfect_rollup_parallel_batch_index
+      name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_kafka_index
+      name: "(Compile=openjdk8, Run=openjdk8) kafka index, transactional kafka index integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=kafka-index,kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_kafka_index_slow
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test slow"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=kafka-index-slow' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=kafka-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_kafka_index_slow
+      name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test slow with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=kafka-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_kafka_transactional_index
       name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -378,23 +403,31 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test slow"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index-slow' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - <<: *integration_kafka_transactional_index_slow
+      name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test slow with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+
     - &integration_kafka_format_tests
-        name: "(Compile=openjdk8, Run=openjdk8) Kafka index integration test with various formats"
-        jdk: openjdk8
-        services: *integration_test_services
-        env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8'
-        script: *run_integration_test
-        after_failure: *integration_test_diags
+      name: "(Compile=openjdk8, Run=openjdk8) Kafka index integration test with various formats"
+      jdk: openjdk8
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
+    - <<: *integration_kafka_format_tests
+      name: "(Compile=openjdk8, Run=openjdk8) Kafka index integration test with various formats with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -402,7 +435,7 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) query retry integration test for missing segments"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -410,7 +443,7 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) security integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -418,7 +451,7 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) realtime index integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -426,84 +459,122 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) append ingestion integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_append_ingestion
+      name: "(Compile=openjdk8, Run=openjdk8) append ingestion integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk8) compaction integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - <<: *integration_compaction_tests
+      name: "(Compile=openjdk8, Run=openjdk8) compaction integration test with Indexer"
+      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+
     - &integration_tests
-      name: "(Compile=openjdk8, Run=openjdk8) other integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) other integration tests"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
+
+    - <<: *integration_tests
+      name: "(Compile=openjdk8, Run=openjdk8) other integration tests with Indexer"
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+
+    - <<: *integration_tests
+      name: "(Compile=openjdk8, Run=openjdk8) leadership and high availability integration tests"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
     # START - Integration tests for Compile with Java 8 and Run with Java 11
     - <<: *integration_batch_index
       name: "(Compile=openjdk8, Run=openjdk11) batch index integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_input_format
       name: "(Compile=openjdk8, Run=openjdk11) input format integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_input_source
       name: "(Compile=openjdk8, Run=openjdk11) input source integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk11) perfect rollup parallel batch index integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk11) query integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk11) query retry integration test for missing segments"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_security
       name: "(Compile=openjdk8, Run=openjdk11) security integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk11) realtime index integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_append_ingestion
       name: "(Compile=openjdk8, Run=openjdk11) append ingestion integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk11) compaction integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk11) other integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+
+    - <<: *integration_tests
+      name: "(Compile=openjdk8, Run=openjdk11) leadership and high availability integration tests"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
+    - &integration_batch_index_k8s
+      name: "(Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test"
+      jdk: openjdk8
+      services: &integration_test_services_k8s
+        - docker
+      env: CONFIG_FILE='k8s_run_config_file.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest'
+      before_script: integration-tests/script/build_run_k8s_cluster.sh
+      script: &run_integration_test_k8s
+        - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP}
+      after_script: integration-tests/script/stop_k8s_cluster.sh
+      after_failure: &integration_test_diags_k8s
+        - for v in broker middlemanager router coordinator historical ; do
+          echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
+          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0;
+          done
     - name: "security vulnerabilities"
       stage: cron
       install: skip

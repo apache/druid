@@ -21,8 +21,11 @@ package org.apache.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.Iterables;
+import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 
@@ -33,7 +36,29 @@ import java.util.Set;
 })
 public interface ServerSelectorStrategy
 {
-  QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment);
+  @Nullable
+  default <T> QueryableDruidServer pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment)
+  {
+    return Iterables.getOnlyElement(pick(query, servers, segment, 1), null);
+  }
 
-  List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick);
+  default <T> List<QueryableDruidServer> pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
+      int numServersToPick)
+  {
+    return pick(servers, segment, numServersToPick);
+  }
+
+  @Deprecated
+  @Nullable
+  default QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  {
+    return pick(null, servers, segment);
+  }
+
+  @Deprecated
+  default List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
+  {
+    return pick(null, servers, segment, numServersToPick);
+  }
+
 }
