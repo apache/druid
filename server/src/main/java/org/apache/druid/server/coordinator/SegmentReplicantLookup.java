@@ -43,7 +43,7 @@ public class SegmentReplicantLookup
    * @param cluster {@link DruidCluster} to base the lookup off of
    * @return SegmentReplicantLookup
    */
-  public synchronized static SegmentReplicantLookup make(DruidCluster cluster)
+  public static SegmentReplicantLookup make(DruidCluster cluster)
   {
     final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
     final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();
