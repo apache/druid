@@ -374,7 +374,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       DataSource right,
       String rightPrefix,
       String condition,
-      JoinType joinType
+      JoinType joinType,
+      DimFilter filter
   )
   {
     return JoinDataSource.create(
@@ -383,8 +384,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         rightPrefix,
         condition,
         joinType,
+        filter,
         CalciteTests.createExprMacroTable()
     );
+  }
+
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType
+  )
+  {
+    return join(left, right, rightPrefix, condition, joinType, null);
   }
 
   public static String equalsCondition(DruidExpression left, DruidExpression right)

@@ -120,6 +120,19 @@ public class Filtration
     );
   }
 
+  public Filtration pullIntervals()
+  {
+    return transform(
+        this,
+        ImmutableList.of(
+            CombineAndSimplifyBounds.instance(),
+            MoveTimeFiltersToIntervals.instance(),
+            MoveMarkerFiltersToIntervals.instance(),
+            ValidateNoMarkerFiltersRemain.instance()
+        )
+    );
+  }
+
   /**
    * Optimize a Filtration containing only a DimFilter, avoiding pulling out intervals.
    *

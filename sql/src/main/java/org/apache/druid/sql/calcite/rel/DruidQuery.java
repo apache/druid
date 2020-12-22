@@ -42,13 +42,16 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
@@ -81,6 +84,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -648,6 +652,54 @@ public class DruidQuery
     return VirtualColumns.create(columns);
   }
 
+  private DimFilter andFilter(@Nullable DimFilter left, @Nullable DimFilter right)
+  {
+    if (left == null) {
+      return right;
+    }
+    if (right == null) {
+      return left;
+    }
+    return new AndDimFilter(Arrays.asList(left, right));
+  }
+
+  /**
+   * Returns a pair of DataSource and Filtration object created on the query filter. In case the, data source is
+   * a join datasource with a inner or left join, the datasource may be altered and left filter of join datasource may
+   * be rid of time filters
+   */
+  private Pair<DataSource, Filtration> getFiltration()
+  {
+    if (!(dataSource instanceof JoinDataSource)) {
+      return Pair.of(dataSource, toFiltration(filter));
+    }
+    JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+    if (joinDataSource.getJoinType().isRighty()) {
+      return Pair.of(dataSource, toFiltration(filter));
+    }
+
+    // If the join is left or inner, we can pull the intervals up to the query. This is done
+    // so that broker can prune the segments to query.
+    Filtration leftFiltration = Filtration.create(joinDataSource.getLeftFilter()).pullIntervals();
+    // Adds the intervals from the join left filter to query filtration
+    Filtration queryFiltration = Filtration.create(filter, leftFiltration.getIntervals())
+                                           .optimize(virtualColumnRegistry.getFullRowSignature());
+    JoinDataSource newDataSource = JoinDataSource.create(
+        joinDataSource.getLeft(),
+        joinDataSource.getRight(),
+        joinDataSource.getRightPrefix(),
+        joinDataSource.getConditionAnalysis(),
+        joinDataSource.getJoinType(),
+        leftFiltration.getDimFilter()
+    );
+    return Pair.of(newDataSource, queryFiltration);
+  }
+
+  private Filtration toFiltration(DimFilter filter)
+  {
+    return Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+  }
+
   public DataSource getDataSource()
   {
     return dataSource;
@@ -793,7 +845,9 @@ public class DruidQuery
       return null;
     }
 
-    final Filtration filtration = Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+    final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration();
+    final DataSource newDataSource = dataSourceFiltrationPair.lhs;
+    final Filtration filtration = dataSourceFiltrationPair.rhs;
 
     final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
     if (sorting != null && sorting.getProjection() != null) {
@@ -801,7 +855,7 @@ public class DruidQuery
     }
 
     return new TimeseriesQuery(
-        dataSource,
+        newDataSource,
         filtration.getQuerySegmentSpec(),
         descending,
         getVirtualColumns(false),
@@ -872,7 +926,9 @@ public class DruidQuery
       return null;
     }
 
-    final Filtration filtration = Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+    final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration();
+    final DataSource newDataSource = dataSourceFiltrationPair.lhs;
+    final Filtration filtration = dataSourceFiltrationPair.rhs;
 
     final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
     if (sorting.getProjection() != null) {
@@ -880,7 +936,7 @@ public class DruidQuery
     }
 
     return new TopNQuery(
-        dataSource,
+        newDataSource,
         getVirtualColumns(true),
         dimensionSpec,
         topNMetricSpec,
@@ -911,7 +967,9 @@ public class DruidQuery
       return null;
     }
 
-    final Filtration filtration = Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+    final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration();
+    final DataSource newDataSource = dataSourceFiltrationPair.lhs;
+    final Filtration filtration = dataSourceFiltrationPair.rhs;
 
     final DimFilterHavingSpec havingSpec;
     if (grouping.getHavingFilter() != null) {
@@ -930,7 +988,7 @@ public class DruidQuery
     }
 
     return new GroupByQuery(
-        dataSource,
+        newDataSource,
         filtration.getQuerySegmentSpec(),
         getVirtualColumns(true),
         filtration.getDimFilter(),
@@ -963,7 +1021,10 @@ public class DruidQuery
       throw new ISE("Cannot convert to Scan query without any columns.");
     }
 
-    final Filtration filtration = Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+    final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration();
+    final DataSource newDataSource = dataSourceFiltrationPair.lhs;
+    final Filtration filtration = dataSourceFiltrationPair.rhs;
+
     final ScanQuery.Order order;
     long scanOffset = 0L;
     long scanLimit = 0L;
@@ -1008,7 +1069,7 @@ public class DruidQuery
     }
 
     return new ScanQuery(
-        dataSource,
+        newDataSource,
         filtration.getQuerySegmentSpec(),
         getVirtualColumns(true),
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,

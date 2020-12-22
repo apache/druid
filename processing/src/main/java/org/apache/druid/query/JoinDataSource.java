@@ -119,10 +119,11 @@ public class JoinDataSource implements DataSource
       final DataSource right,
       final String rightPrefix,
       final JoinConditionAnalysis conditionAnalysis,
-      final JoinType joinType
+      final JoinType joinType,
+      final DimFilter leftFilter
   )
   {
-    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, null);
+    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
   }
 
   /**

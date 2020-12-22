@@ -85,7 +85,6 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
-import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -13227,15 +13226,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .builder()
                         .setDataSource(
                             join(
-                                new QueryDataSource(
-                                    newScanQueryBuilder()
-                                        .dataSource(CalciteTests.DATASOURCE1)
-                                        .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                        .columns("dim1")
-                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                        .context(queryContext)
-                                        .build()
-                                ),
+                                new TableDataSource(CalciteTests.DATASOURCE1),
                                 new QueryDataSource(
                                     newScanQueryBuilder()
                                         .dataSource(CalciteTests.DATASOURCE1)
@@ -13254,7 +13245,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setGranularity(Granularities.ALL)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setInterval(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                         .setDimFilter(selector("dim1", "def", null))
                         .setDimensions(
                             dimensions(
@@ -16037,24 +16028,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
-                        new QueryDataSource(
-                            newScanQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(
-                                    querySegmentSpec(
-                                        Intervals.utc(
-                                            DateTimes.of("1999-01-01").getMillis(),
-                                            JodaUtils.MAX_INSTANT
-                                        )
-                                    )
-                                )
-                                .filters(new SelectorDimFilter("dim1", "10.1", null))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
-                                .columns(ImmutableList.of("__time", "v0"))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(queryContext)
-                                .build()
-                        ),
+                        new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
@@ -16074,14 +16048,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.v0")),
-                        JoinType.LEFT
+                        equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.v0")),
+                        JoinType.LEFT,
+                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
-                .columns("__time", "_v0")
-                .filters(new SelectorDimFilter("v0", "10.1", null))
+                .intervals(querySegmentSpec(
+                    Intervals.utc(
+                        DateTimes.of("1999-01-01").getMillis(),
+                        JodaUtils.MAX_INSTANT
+                    )
+                ))
+                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -16106,17 +16085,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
-                        new QueryDataSource(
-                            newScanQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .filters(new SelectorDimFilter("dim1", "10.1", null))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
-                                .columns(ImmutableList.of("__time", "v0"))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(queryContext)
-                                .build()
-                        ),
+                        new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
@@ -16128,14 +16097,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
-                        JoinType.LEFT
+                        equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.LEFT,
+                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
-                .columns("__time", "_v0")
-                .filters(new SelectorDimFilter("v0", "10.1", null))
+                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -16160,17 +16129,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
-                        new QueryDataSource(
-                            newScanQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .filters(new SelectorDimFilter("dim1", "10.1", null))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
-                                .columns(ImmutableList.of("__time", "v0"))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(queryContext)
-                                .build()
-                        ),
+                        new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
@@ -16182,13 +16141,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
-                        JoinType.LEFT
+                        equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.LEFT,
+                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
-                .columns("__time", "_v0")
+                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -16213,17 +16173,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
-                        new QueryDataSource(
-                            newScanQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .filters(new SelectorDimFilter("dim1", "10.1", null))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
-                                .columns(ImmutableList.of("__time", "v0"))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(queryContext)
-                                .build()
-                        ),
+                        new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
@@ -16235,14 +16185,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
-                        JoinType.INNER
+                        equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.INNER,
+                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
-                .columns("__time", "_v0")
-                .filters(new NotDimFilter(new SelectorDimFilter("v0", null, null)))
+                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -16267,17 +16217,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
-                        new QueryDataSource(
-                            newScanQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .filters(new SelectorDimFilter("dim1", "10.1", null))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
-                                .columns(ImmutableList.of("__time", "v0"))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(queryContext)
-                                .build()
-                        ),
+                        new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
@@ -16289,13 +16229,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
-                        JoinType.INNER
+                        equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.INNER,
+                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
-                .columns("__time", "_v0")
+                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -16709,6 +16650,31 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ).build()
     );
   }
+
+  @Test
+  public void testExplainCorrelatedQuery()
+  {
+
+  }
+
+  @Test
+  public void testExplainJoinWithLeftScan()
+  {
+
+  }
+
+  @Test
+  public void testCorrelatedQuery()
+  {
+
+  }
+
+  @Test
+  public void testJoinTableLookupWithFilter()
+  {
+
+  }
+
 
   /**
    * This is a provider of query contexts that should be used by join tests.

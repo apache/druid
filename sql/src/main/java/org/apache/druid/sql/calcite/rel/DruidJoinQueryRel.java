@@ -39,6 +39,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -155,6 +156,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 
     if (computeLeftRequiresSubquery(leftDruidRel)) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
+      if (leftFilter != null) {
+        throw new ISE("Filter on left table is supposed to be null if left child is a query source");
+      }
     } else {
       leftDataSource = leftQuery.getDataSource();
     }
@@ -325,7 +329,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return planner.getCostFactory().makeCost(cost, 0, 0);
   }
 
-  private static JoinType toDruidJoinType(JoinRelType calciteJoinType)
+  public static JoinType toDruidJoinType(JoinRelType calciteJoinType)
   {
     switch (calciteJoinType) {
       case LEFT:
