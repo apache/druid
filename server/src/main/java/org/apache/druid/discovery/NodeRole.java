@@ -101,7 +101,7 @@ public class NodeRole
 
   public static NodeRole[] values()
   {
-    return BUILT_IN;
+    return Arrays.copyOf(BUILT_IN, BUILT_IN.length);
   }
 
   @Override

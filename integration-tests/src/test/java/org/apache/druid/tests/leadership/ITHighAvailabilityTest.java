@@ -47,6 +47,7 @@ import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -88,6 +89,15 @@ public class ITHighAvailabilityTest
   @Inject
   @TestClient
   HttpClient httpClient;
+
+  @BeforeTest
+  public void setup()
+  {
+    druidClusterAdminClient.waitUntilCoordinatorReady();
+    druidClusterAdminClient.waitUntilCoordinatorTwoReady();
+    druidClusterAdminClient.waitUntilBrokerReady();
+    druidClusterAdminClient.waitUntilRouterReady();
+  }
 
   @Test
   public void testLeadershipChanges() throws Exception
