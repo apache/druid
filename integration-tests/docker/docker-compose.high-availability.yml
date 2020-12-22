@@ -57,6 +57,7 @@ services:
       - druid_manager_segments_pollDuration=PT10S
       - druid_coordinator_period=PT10S
     depends_on:
+      - druid-coordinator
       - druid-metadata-storage
       - druid-zookeeper-kafka
 

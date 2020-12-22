@@ -41,13 +41,13 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.DruidClusterAdminClient;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -56,6 +56,7 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 @Test(groups = TestNGGroup.HIGH_AVAILABILTY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -90,15 +91,6 @@ public class ITHighAvailabilityTest
   @TestClient
   HttpClient httpClient;
 
-  @BeforeTest
-  public void setup()
-  {
-    druidClusterAdminClient.waitUntilCoordinatorReady();
-    druidClusterAdminClient.waitUntilCoordinatorTwoReady();
-    druidClusterAdminClient.waitUntilBrokerReady();
-    druidClusterAdminClient.waitUntilRouterReady();
-  }
-
   @Test
   public void testLeadershipChanges() throws Exception
   {
@@ -130,32 +122,49 @@ public class ITHighAvailabilityTest
   }
 
   @Test
-  public void testDiscoveryAndSelfDiscovery() throws InterruptedException, ExecutionException, MalformedURLException
+  public void testDiscoveryAndSelfDiscovery()
   {
-    List<DruidNodeDiscovery> disco = ImmutableList.of(
-        druidNodeDiscovery.getForNodeRole(NodeRole.COORDINATOR),
-        druidNodeDiscovery.getForNodeRole(NodeRole.OVERLORD),
-        druidNodeDiscovery.getForNodeRole(NodeRole.HISTORICAL),
-        druidNodeDiscovery.getForNodeRole(NodeRole.MIDDLE_MANAGER),
-        druidNodeDiscovery.getForNodeRole(NodeRole.INDEXER),
-        druidNodeDiscovery.getForNodeRole(NodeRole.BROKER),
-        druidNodeDiscovery.getForNodeRole(NodeRole.ROUTER)
-    );
+    ITRetryUtil.retryUntil(
+        () -> {
+          List<DruidNodeDiscovery> disco = ImmutableList.of(
+              druidNodeDiscovery.getForNodeRole(NodeRole.COORDINATOR),
+              druidNodeDiscovery.getForNodeRole(NodeRole.OVERLORD),
+              druidNodeDiscovery.getForNodeRole(NodeRole.HISTORICAL),
+              druidNodeDiscovery.getForNodeRole(NodeRole.MIDDLE_MANAGER),
+              druidNodeDiscovery.getForNodeRole(NodeRole.INDEXER),
+              druidNodeDiscovery.getForNodeRole(NodeRole.BROKER),
+              druidNodeDiscovery.getForNodeRole(NodeRole.ROUTER)
+          );
 
-    int servicesDiscovered = 0;
-    for (DruidNodeDiscovery nodeRole : disco) {
-      Collection<DiscoveryDruidNode> nodes = nodeRole.getAllNodes();
-      servicesDiscovered += testSelfDiscovery(nodes);
-    }
-    Assert.assertTrue(servicesDiscovered > 0);
+          int servicesDiscovered = 0;
+          for (DruidNodeDiscovery nodeRole : disco) {
+            Collection<DiscoveryDruidNode> nodes = nodeRole.getAllNodes();
+            servicesDiscovered += testSelfDiscovery(nodes);
+          }
+          return servicesDiscovered > 5;
+        },
+        true,
+        TimeUnit.SECONDS.toMillis(5),
+        60,
+        "Standard services discovered"
+    );
   }
 
   @Test
-  public void testCustomDiscovery() throws InterruptedException, ExecutionException, MalformedURLException
+  public void testCustomDiscovery()
   {
-    DruidNodeDiscovery customDisco = druidNodeDiscovery.getForNodeRole(new NodeRole(CliCustomNodeRole.SERVICE_NAME));
-    int count = testSelfDiscovery(customDisco.getAllNodes());
-    Assert.assertTrue(count > 0);
+    ITRetryUtil.retryUntil(
+        () -> {
+          DruidNodeDiscovery customDisco =
+              druidNodeDiscovery.getForNodeRole(new NodeRole(CliCustomNodeRole.SERVICE_NAME));
+          int count = testSelfDiscovery(customDisco.getAllNodes());
+          return count > 0;
+        },
+        true,
+        TimeUnit.SECONDS.toMillis(5),
+        60,
+        "Custom service discovered"
+    );
   }
 
   private int testSelfDiscovery(Collection<DiscoveryDruidNode> nodes)
@@ -174,6 +183,7 @@ public class ITHighAvailabilityTest
           new Request(HttpMethod.GET, new URL(location)),
           StatusResponseHandler.getInstance()
       ).get();
+      LOG.info("%s responded with %s", location, response.getStatus().getCode());
       Assert.assertEquals(response.getStatus(), HttpResponseStatus.OK);
       count++;
     }
@@ -268,7 +278,6 @@ public class ITHighAvailabilityTest
     working = StringUtils.replace(working, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return working;
   }
-
 
   private static boolean isCoordinatorOneLeader(IntegrationTestingConfig config, String coordinatorLeader)
   {
