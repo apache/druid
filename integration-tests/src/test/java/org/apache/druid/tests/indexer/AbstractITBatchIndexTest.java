@@ -236,12 +236,29 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath
   ) throws IOException
   {
+    doIndexTestSqlTest(
+        dataSource,
+        indexTaskFilePath,
+        Function.identity(),
+        queryFilePath
+    );
+  }
+
+  void doIndexTestSqlTest(
+      String dataSource,
+      String indexTaskFilePath,
+      Function<String, String> taskSpecTransform,
+      String queryFilePath
+  ) throws IOException
+  {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
-    final String taskSpec = StringUtils.replace(
+    String taskSpec = StringUtils.replace(
         getResourceAsString(indexTaskFilePath),
         "%%DATASOURCE%%",
         fullDatasourceName
     );
+
+    taskSpec = taskSpecTransform.apply(taskSpec);
 
     submitTaskAndWait(taskSpec, fullDatasourceName, false, true, true);
     try {

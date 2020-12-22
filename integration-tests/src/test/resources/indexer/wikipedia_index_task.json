@@ -79,7 +79,9 @@
         },
         "tuningConfig": {
             "type": "index",
-            "maxRowsPerSegment": 3
+            "maxRowsPerSegment": 3,
+            "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
+            "maxAggregateSegmentIntervalShardsPermitted": %%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%
         }
     }
 }

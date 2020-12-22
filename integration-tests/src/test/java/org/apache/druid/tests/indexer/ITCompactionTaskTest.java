@@ -100,7 +100,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
           fullDatasourceName
       );
 
-
       queryHelper.testQueriesFromString(queryResponseTemplate);
       compactData();
 
@@ -114,6 +113,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVALS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
+    taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
@@ -128,6 +129,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     final String template = getResourceAsString(COMPACTION_TASK);
     String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
+    taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVALS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
+    taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
 
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for compaction task %s", taskID);

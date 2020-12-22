@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -30,6 +31,7 @@ import org.testng.annotations.Test;
 
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
@@ -53,9 +55,31 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_PAUSED);
+
+      final Function<String, String> transform = spec -> {
+        try {
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
+          transform,
           INDEX_QUERIES_RESOURCE,
           false,
           false,

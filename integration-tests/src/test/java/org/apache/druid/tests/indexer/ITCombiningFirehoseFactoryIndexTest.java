@@ -49,11 +49,22 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
     ) {
       final Function<String, String> combiningFirehoseSpecTransform = spec -> {
         try {
-          return StringUtils.replace(
+          spec = StringUtils.replace(
               spec,
               "%%COMBINING_DATASOURCE%%",
               INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          return spec;
         }
         catch (Exception e) {
           throw new RuntimeException(e);
