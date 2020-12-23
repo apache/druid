@@ -198,57 +198,24 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   public void testIteratorIsReusable()
   {
     final int limit = 100;
-    final int keyBase = 100000;
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 12120, 2, limit);
+    final LimitedBufferHashGrouper<Integer> grouper =
+        makeGrouper(columnSelectorFactory, 12120, 3, limit);
     final int numRows = 1000;
 
+    // just populate the grouper with some sample data to test reusability of its iterator...
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
-    for (int i = 0; i < numRows; i++) {
-      Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
-    }
-
-    // With minimum buffer size, after the first swap, every new key added will result in a swap
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(224, grouper.getGrowthCount());
-      Assert.assertEquals(104, grouper.getSize());
-      Assert.assertEquals(209, grouper.getBuckets());
-      Assert.assertEquals(104, grouper.getMaxSize());
-    } else {
-      Assert.assertEquals(899, grouper.getGrowthCount());
-      Assert.assertEquals(101, grouper.getSize());
-      Assert.assertEquals(202, grouper.getBuckets());
-      Assert.assertEquals(101, grouper.getMaxSize());
-    }
-    Assert.assertEquals(100, grouper.getLimit());
-
-    // Aggregate slightly different row
-    // Since these keys are smaller, they will evict the previous 100 top entries
-    // First 100 of these new rows will be the expected results.
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(474, grouper.getGrowthCount());
-      Assert.assertEquals(104, grouper.getSize());
-      Assert.assertEquals(209, grouper.getBuckets());
-      Assert.assertEquals(104, grouper.getMaxSize());
-    } else {
-      Assert.assertEquals(1899, grouper.getGrowthCount());
-      Assert.assertEquals(101, grouper.getSize());
-      Assert.assertEquals(202, grouper.getBuckets());
-      Assert.assertEquals(101, grouper.getMaxSize());
-    }
-    Assert.assertEquals(100, grouper.getLimit());
 
     final List<Grouper.Entry<Integer>> expected = new ArrayList<>();
     for (int i = 0; i < limit; i++) {
-      expected.add(new Grouper.Entry<>(i, new Object[]{11L, 1L}));
+      expected.add(new Grouper.Entry<>(i, new Object[]{10L, 1L}));
     }
 
+    // the iterator call should be reusable... just call it repeatedly a few times to validate:
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
-    // the iterator call should be reusable... just call it a couple more times to make sure:
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
   }
