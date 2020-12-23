@@ -2092,7 +2092,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(999)
         ),
         DruidExpression.fromExpression("decimal_byte_format(999)"),
-        "999B"
+        "999 B"
     );
     testHelper.testExpression(
         SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
@@ -2100,7 +2100,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(1024)
         ),
         DruidExpression.fromExpression("decimal_byte_format(1024)"),
-        "1.02KB"
+        "1.02 KB"
     );
     testHelper.testExpression(
         SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
@@ -2108,7 +2108,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(Long.MAX_VALUE)
         ),
         DruidExpression.fromExpression("decimal_byte_format(9223372036854775807)"),
-        "9.22EB"
+        "9.22 EB"
     );
 
     /**
@@ -2125,7 +2125,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("p")
         ),
         DruidExpression.fromExpression("decimal_byte_format(\"b\",\"p\")"),
-        "25B"
+        "25 B"
     );
 
     /**
@@ -2139,7 +2139,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(0)
         ),
         DruidExpression.fromExpression("decimal_byte_format(45678,0)"),
-        "46KB"
+        "46 KB"
     );
     testHelper.testExpression(
         SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
@@ -2149,7 +2149,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(1)
         ),
         DruidExpression.fromExpression("decimal_byte_format(45678,1)"),
-        "45.7KB"
+        "45.7 KB"
     );
     testHelper.testExpression(
         SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
@@ -2159,7 +2159,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(2)
         ),
         DruidExpression.fromExpression("decimal_byte_format(45678,2)"),
-        "45.68KB"
+        "45.68 KB"
     );
     testHelper.testExpression(
         SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
@@ -2169,7 +2169,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(3)
         ),
         DruidExpression.fromExpression("decimal_byte_format(45678,3)"),
-        "45.678KB"
+        "45.678 KB"
     );
   }
 }
