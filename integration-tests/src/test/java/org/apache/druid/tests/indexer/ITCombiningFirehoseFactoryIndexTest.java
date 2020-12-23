@@ -54,6 +54,15 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
               "%%COMBINING_DATASOURCE%%",
               INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()
           );
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      final Function<String, String> nonCombiningFirehoseSpecTransform = spec -> {
+        try {
           spec = StringUtils.replace(
               spec,
               "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
@@ -70,9 +79,11 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           throw new RuntimeException(e);
         }
       };
+
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
+          nonCombiningFirehoseSpecTransform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,
