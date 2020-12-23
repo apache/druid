@@ -29,8 +29,8 @@ characters).
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they
 are used as a dimension being grouped by. See the section on multi-value columns in
-[segments](../design/segments.html#multi-value-columns) for internal representation details. Examples in this document
-are in the form of [native Druid queries](querying.html). Refer to the [Druid SQL documentation](sql.html) for details
+[segments](../design/segments.md#multi-value-columns) for internal representation details. Examples in this document
+are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql.md) for details
 about using multi-value string dimensions in SQL.
 
 ## Querying multi-value dimensions
@@ -47,7 +47,7 @@ called `tags`.
 
 ### Filtering
 
-All query types, as well as [filtered aggregators](aggregations.html#filtered-aggregator), can filter on multi-value
+All query types, as well as [filtered aggregators](aggregations.md#filtered-aggregator), can filter on multi-value
 dimensions. Filters follow these rules on multi-value dimensions:
 
 - Value filters (like "selector", "bound", and "in") match a row if any of the values of a multi-value dimension match
@@ -115,12 +115,12 @@ from matching rows will be used to generate one group per value. This can be tho
 `UNNEST` operator used on an `ARRAY` type that many SQL dialects support. This means it's possible for a query to return
 more groups than there are rows. For example, a topN on the dimension `tags` with filter `"t1" AND "t3"` would match
 only row1, and generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
-your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
+your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
 improve performance.
 
 ### Example: GroupBy query with no filtering
 
-See [GroupBy querying](groupbyquery.html) for details.
+See [GroupBy querying](groupbyquery.md) for details.
 
 ```json
 {
@@ -208,7 +208,7 @@ notice how original rows are "exploded" into multiple rows and merged.
 
 ### Example: GroupBy query with a selector query filter
 
-See [query filters](filters.html) for details of selector query filter.
+See [query filters](filters.md) for details of selector query filter.
 
 ```json
 {
@@ -293,7 +293,7 @@ the multiple values matches the query filter.
 To solve the problem above and to get only rows for "t3" returned, you would have to use a "filtered dimension spec" as
 in the query below.
 
-See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.html#filtered-dimensionspecs) for details.
+See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.md#filtered-dimensionspecs) for details.
 
 ```json
 {
@@ -344,6 +344,6 @@ returns the following result.
 ]
 ```
 
-Note that, for groupBy queries, you could get similar result with a [having spec](having.html) but using a filtered
+Note that, for groupBy queries, you could get similar result with a [having spec](having.md) but using a filtered
 dimensionSpec is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.

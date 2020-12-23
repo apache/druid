@@ -93,6 +93,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.extraction.SearchQuerySpecDimExtractionFn;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
@@ -9555,6 +9556,92 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "ql_alias_sum",
             2400L,
             "qf_alias_sum",
+            24000.0
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    TestHelper.assertExpectedObjects(expectedResults, results, "numerics");
+  }
+
+  @Test
+  public void testGroupByNestedWithInnerQueryOutputNullNumerics()
+  {
+    cannotVectorize();
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
+    // Following extractionFn will generate null value for one kind of quality
+    ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(new ContainsSearchQuerySpec("1200", false));
+    GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("quality", "alias"),
+            new ExtractionDimensionSpec("qualityLong", "ql_alias", ValueType.LONG, extractionFn),
+            new ExtractionDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT, extractionFn),
+            new ExtractionDimensionSpec("qualityDouble", "qd_alias", ValueType.DOUBLE, extractionFn)
+        )
+        .setDimFilter(
+            new InDimFilter(
+                "quality",
+                Arrays.asList("entertainment", "business"),
+                null
+            )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    GroupByQuery outerQuery = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT),
+            new DefaultDimensionSpec("qd_alias", "qualdouble", ValueType.DOUBLE)
+        )
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("ql_alias_sum", "ql_alias"),
+            new DoubleSumAggregatorFactory("qf_alias_sum", "qf_alias"),
+            new DoubleSumAggregatorFactory("qd_alias_sum", "qd_alias")
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            outerQuery,
+            "2011-04-01",
+            "quallong",
+            NullHandling.defaultLongValue(),
+            "qualfloat",
+            NullHandling.defaultFloatValue(),
+            "qualdouble",
+            NullHandling.defaultDoubleValue(),
+            "ql_alias_sum",
+            NullHandling.defaultLongValue(),
+            "qf_alias_sum",
+            NullHandling.defaultFloatValue(),
+            "qd_alias_sum",
+            NullHandling.defaultDoubleValue()
+        ),
+        makeRow(
+            outerQuery,
+            "2011-04-01",
+            "quallong",
+            1200L,
+            "qualfloat",
+            12000.0,
+            "qualdouble",
+            12000.0,
+            "ql_alias_sum",
+            2400L,
+            "qf_alias_sum",
+            24000.0,
+            "qd_alias_sum",
             24000.0
         )
     );

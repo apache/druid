@@ -84,7 +84,7 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 
 ### Import metadata
 
-After initializing the tables, please refer to the [import commands](../operations/export-metadata.html#importing-metadata) for your target database.
+After initializing the tables, please refer to the [import commands](../operations/export-metadata.md#importing-metadata) for your target database.
 
 ### Restart cluster
 

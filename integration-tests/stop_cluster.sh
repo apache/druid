@@ -16,22 +16,32 @@
 
 set -e
 
+. $(dirname "$0")/script/docker_compose_args.sh
+
+DOCKERDIR=$(dirname "$0")/docker
+
 # Skip stopping docker if flag set (For use during development)
 if [ -n "$DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER" == true ]
-  then
-    exit 0
-  fi
+then
+  exit 0
+fi
 
-for node in druid-historical druid-historical-for-query-retry-test druid-coordinator druid-overlord druid-router druid-router-permissive-tls druid-router-no-client-auth-tls druid-router-custom-check-tls druid-broker druid-middlemanager druid-indexer druid-zookeeper-kafka druid-metadata-storage druid-it-hadoop;
-do
-  CONTAINER="$(docker ps -aq -f name=${node})"
 
-  if [ ! -z "$CONTAINER" ]
-  then
-    docker stop $node
-    docker rm $node
-  fi
-done
+# stop hadoop container if it exists (can't use docker-compose down because it shares network)
+HADOOP_CONTAINER="$(docker ps -aq -f name=druid-it-hadoop)"
+if [ ! -z "$HADOOP_CONTAINER" ]
+then
+  docker stop druid-it-hadoop
+  docker rm druid-it-hadoop
+fi
+
+# bring down using the same compose args we started with
+if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
+then
+  docker-compose $(getComposeArgs) down
+else
+  OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose $(getComposeArgs) down
+fi
 
 if [ ! -z "$(docker network ls -q -f name=druid-it-net)" ]
 then

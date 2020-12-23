@@ -30,7 +30,7 @@ Because there is some per-segment memory and processing overhead, it can sometim
 Please check [Segment size optimization](../operations/segment-optimization.md) for details.
 
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine.
+the [single-machine quickstart](index.md) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 

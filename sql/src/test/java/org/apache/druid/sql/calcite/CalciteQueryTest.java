@@ -12159,23 +12159,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     List<Object[]> resultList;
     if (NullHandling.sqlCompatible()) {
       resultList = ImmutableList.of(
-          new Object[]{NULL_STRING, 2L, 0L, "INDIVIDUAL"},
-          new Object[]{"", 1L, 0L, "INDIVIDUAL"},
-          new Object[]{"a", 2L, 0L, "INDIVIDUAL"},
-          new Object[]{"abc", 1L, 0L, "INDIVIDUAL"},
+          new Object[]{NULL_STRING, 2L, 0L, NULL_STRING},
+          new Object[]{"", 1L, 0L, ""},
+          new Object[]{"a", 2L, 0L, "a"},
+          new Object[]{"abc", 1L, 0L, "abc"},
           new Object[]{NULL_STRING, 6L, 1L, "ALL"}
       );
     } else {
       resultList = ImmutableList.of(
-          new Object[]{"", 3L, 0L, "INDIVIDUAL"},
-          new Object[]{"a", 2L, 0L, "INDIVIDUAL"},
-          new Object[]{"abc", 1L, 0L, "INDIVIDUAL"},
+          new Object[]{"", 3L, 0L, ""},
+          new Object[]{"a", 2L, 0L, "a"},
+          new Object[]{"abc", 1L, 0L, "abc"},
           new Object[]{NULL_STRING, 6L, 1L, "ALL"}
       );
     }
     testQuery(
         "SELECT dim2, SUM(cnt), GROUPING(dim2), \n"
-        + "CASE WHEN GROUPING(dim2) = 1 THEN 'ALL' ELSE 'INDIVIDUAL' END\n"
+        + "CASE WHEN GROUPING(dim2) = 1 THEN 'ALL' ELSE dim2 END\n"
         + "FROM druid.foo\n"
         + "GROUP BY GROUPING SETS ( (dim2), () )",
         ImmutableList.of(
@@ -12200,7 +12200,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setPostAggregatorSpecs(Collections.singletonList(new ExpressionPostAggregator(
                             "p0",
-                            "case_searched((\"a1\" == 1),'ALL','INDIVIDUAL')",
+                            "case_searched((\"a1\" == 1),'ALL',\"d0\")",
                             null,
                             ExprMacroTable.nil()
                         )))

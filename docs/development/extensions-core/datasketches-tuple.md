@@ -49,7 +49,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |type|This String should always be "arrayOfDoublesSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field.|yes|
-|nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable.html) for details. |no, defaults to 16384|
+|nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable) for details. |no, defaults to 16384|
 |numberOfValues|Number of values associated with each distinct key. |no, defaults to 1|
 |metricColumns|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
 
@@ -118,7 +118,7 @@ Returns a list of variance values from a given ArrayOfDoublesSketch. The result 
 
 #### Quantiles sketch from a column
 
-Returns a quantiles DoublesSketch constructed from a given column of values from a given ArrayOfDoublesSketch using optional parameter k that determines the accuracy and size of the quantiles sketch. See [Quantiles Sketch Module](datasketches-quantiles.html)
+Returns a quantiles DoublesSketch constructed from a given column of values from a given ArrayOfDoublesSketch using optional parameter k that determines the accuracy and size of the quantiles sketch. See [Quantiles Sketch Module](datasketches-quantiles.md)
 
 * The column number is 1-based and is optional (the default is 1).
 * The parameter k is optional (the default is defined in the sketch library).
@@ -151,7 +151,7 @@ Returns a result of a specified set operation on the given array of sketches. Su
 
 #### Student's t-test
 
-Performs Student's t-test and returns a list of p-values given two instances of ArrayOfDoublesSketch. The result will be N double values, where N is the number of double values kept in the sketch per key. See [t-test documentation](http://commons.apache.org/proper/commons-math/javadocs/api-3.4/org/apache/commons/math3/stat/inference/TTest.html).
+Performs Student's t-test and returns a list of p-values given two instances of ArrayOfDoublesSketch. The result will be N double values, where N is the number of double values kept in the sketch per key. See [t-test documentation](http://commons.apache.org/proper/commons-math/javadocs/api-3.4/org/apache/commons/math3/stat/inference/TTest).
 
 ```json
 {

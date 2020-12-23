@@ -66,7 +66,7 @@ public class OverlordResourceTestClient
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.indexer = config.getIndexerUrl();
+    this.indexer = config.getOverlordUrl();
   }
 
   private String getIndexerURL()
@@ -306,14 +306,14 @@ public class OverlordResourceTestClient
     }
   }
 
-  public void shutdownSupervisor(String id)
+  public void terminateSupervisor(String id)
   {
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
               HttpMethod.POST,
               new URL(StringUtils.format(
-                  "%ssupervisor/%s/shutdown",
+                  "%ssupervisor/%s/terminate",
                   getIndexerURL(),
                   StringUtils.urlEncode(id)
               ))
@@ -322,12 +322,40 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while shutting down supervisor, response [%s %s]",
+            "Error while terminating supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
         );
       }
-      LOG.info("Shutdown supervisor with id[%s]", id);
+      LOG.info("Terminate supervisor with id[%s]", id);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void shutdownTask(String id)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.POST,
+              new URL(StringUtils.format(
+                  "%stask/%s/shutdown",
+                      getIndexerURL(),
+                  StringUtils.urlEncode(id)
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while shutdown task, response [%s %s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      LOG.info("Shutdown task with id[%s]", id);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

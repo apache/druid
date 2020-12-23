@@ -27,7 +27,7 @@ sidebar_label: "Deleting data"
 This tutorial demonstrates how to delete existing data.
 
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine.
+the [single-machine quickstart](index.md) and have it running on your local machine.
 
 ## Load initial data
 
@@ -39,7 +39,7 @@ Let's load this initial data:
 bin/post-index-task --file quickstart/tutorial/deletion-index.json --url http://localhost:8081
 ```
 
-When the load finishes, open [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser.
+When the load finishes, open [http://localhost:8888/unified-console.md#datasources](http://localhost:8888/unified-console.html#datasources) in a browser.
 
 ## How to permanently delete data
 

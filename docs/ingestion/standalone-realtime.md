@@ -24,7 +24,7 @@ title: "Realtime Process"
 
 Older versions of Apache Druid supported a standalone 'Realtime' process to query and index 'stream pull'
 modes of real-time ingestion. These processes would periodically build segments for the data they had collected over
-some span of time and then set up hand-off to [Historical](../design/historical.html) servers.
+some span of time and then set up hand-off to [Historical](../design/historical.md) servers.
 
 This processes could be invoked by
 
@@ -40,5 +40,5 @@ suffered from limitations which made it not possible to achieve exactly once ing
 The extensions `druid-kafka-eight`, `druid-kafka-eight-simpleConsumer`, `druid-rabbitmq`, and `druid-rocketmq` were also
 removed at this time, since they were built to operate on the realtime nodes.
 
-Please consider using the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html) or
+Please consider using the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or
 [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md) for stream pull ingestion instead.

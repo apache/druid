@@ -484,6 +484,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       final String taskType = task.isPresent() ? task.get().getType() : null;
       final TaskStatus taskStatus = taskRunner.getStatus(taskId);
+
       if (taskStatus != null) {
         return new TaskStatusResponse(
             taskId,

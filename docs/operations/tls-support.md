@@ -78,7 +78,7 @@ The following table contains non-mandatory advanced configuration options, use c
 ## Internal communication over TLS
 
 Whenever possible Druid processes will use HTTPS to talk to each other. To enable this communication Druid's HttpClient needs to
-be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) that is able
+be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext) that is able
 to validate the Server Certificates, otherwise communication will fail.
 
 Since, there are various ways to configure SSLContext, by default, Druid looks for an instance of SSLContext Guice binding
