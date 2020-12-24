@@ -123,14 +123,14 @@ public class ITWikipediaQueryTest
         getQueryBuilder().build()
     ).get();
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), followUp.getStatus().getCode());
+    Assert.assertEquals(followUp.getStatus().getCode(), HttpResponseStatus.OK.getCode());
 
     StatusResponseHolder andAnother = queryClient.queryAsync(
         queryHelper.getQueryURL(config.getBrokerUrl()),
         getQueryBuilder().build()
     ).get();
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), andAnother.getStatus().getCode());
+    Assert.assertEquals(andAnother.getStatus().getCode(), HttpResponseStatus.OK.getCode());
   }
 
   @Test

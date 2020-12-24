@@ -391,8 +391,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     for (DataSegment compactedSegment : foundCompactedSegments) {
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
-                          SecondaryPartitionType.LINEAR
+      Assert.assertEquals(
+          compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
+          SecondaryPartitionType.LINEAR
       );
     }
   }
