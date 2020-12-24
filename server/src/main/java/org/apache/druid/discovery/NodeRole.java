@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
  * strings. As such, this class tries to mimic the interface provided by the previous enum.
  *
  * Built in node roles define a {@link #name} that is distinct from {@link #jsonName}, and is the previous value
- * which would be used occur the enum was used in a 'toString' context. Custom node roles allow extension to participate
+ * which would occur when the enum was used in a 'toString' context. Custom node roles allow extension to participate
  * in announcement and discovery, but are limited to only using {@link #jsonName} for both toString and JSON serde.
  *
  * The historical context of why the enum was different from {@link org.apache.druid.server.coordination.ServerType}
