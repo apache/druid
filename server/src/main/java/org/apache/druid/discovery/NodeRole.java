@@ -29,13 +29,22 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * This is a historical occasion that this enum is different from {@link
- * org.apache.druid.server.coordination.ServerType} (also called "node type" in various places) because they are
- * essentially the same abstraction, but merging them could only increase the complexity and drop the code safety,
- * because they name the same types differently ("peon" - "indexer-executor" and "middleManager" - "realtime") and both
- * expose them via JSON APIs.
+ * Defines the 'role' of a Druid service, utilized to strongly type announcement and service discovery.
  *
- * These abstractions can probably be merged when Druid updates to Jackson 2.9 that supports JsonAliases, see
+ * Originally, this was an enum to add type safety for discovery and announcment purposes, but was expanded
+ * into a class to allow for extensibility while retaining the type safety of using defined types instead of raw
+ * strings. As such, this class tries to mimic the interface provided by the previous enum.
+ *
+ * Built in node roles define a {@link #name} that is distinct from {@link #jsonName}, and is the previous value
+ * which would be used occur the enum was used in a 'toString' context. Custom node roles allow extension to participate
+ * in announcement and discovery, but are limited to only using {@link #jsonName} for both toString and JSON serde.
+ *
+ * The historical context of why the enum was different from {@link org.apache.druid.server.coordination.ServerType}
+ * (also called "node type" in various places) is because while they are essentially the same abstraction, merging them
+ * could only increase the complexity and drop the code safety, because they name the same types differently
+ * ("peon" - "indexer-executor" and "middleManager" - "realtime") and both expose them via JSON APIs.
+ *
+ * These abstractions can all potentially be merged when Druid updates to Jackson 2.9 that supports JsonAliases,
  * see https://github.com/apache/druid/issues/7152.
  */
 public class NodeRole
@@ -63,16 +72,33 @@ public class NodeRole
   private static final Map<String, NodeRole> BUILT_IN_LOOKUP =
       Arrays.stream(BUILT_IN).collect(Collectors.toMap(NodeRole::getJsonName, Function.identity()));
 
+  /**
+   * For built-in roles, to preserve backwards compatibility when this was an enum, this provides compatibility for
+   * usages of the enum name as a string, (e.g. allcaps 'COORDINATOR'), which is used by system tables for displaying
+   * node role, and by curator discovery for the discovery path of a node role (the actual payload at the zk location
+   * uses {@link #jsonName})
+   */
   private final String name;
+
+  /**
+   * JSON serialized value for {@link NodeRole}
+   */
   private final String jsonName;
 
+  /**
+   * Create a custom node role. Known Druid node roles should ALWAYS use the built-in static node roles:
+   * ({@link #COORDINATOR}, {@link #OVERLORD}, {@link #ROUTER}, {@link #BROKER}{@link #INDEXER},
+   * {@link #MIDDLE_MANAGER}, {@link #HISTORICAL}) instead of constructing a new instance.
+   */
   public NodeRole(String jsonName)
   {
     this(jsonName, jsonName);
   }
 
   /**
-   * for built-in roles, to preserve backwards compatibility when this was an enum
+   * for built-in roles, to preserve backwards compatibility when this was an enum, allow built-in node roles to specify
+   * the 'name' which is used by 'toString' to be separate from the jsonName, which is the value which the node role
+   * will be serialized as and deserialized from
    */
   private NodeRole(String name, String jsonName)
   {
@@ -99,6 +125,9 @@ public class NodeRole
     return name;
   }
 
+  /**
+   * built-in node roles
+   */
   public static NodeRole[] values()
   {
     return Arrays.copyOf(BUILT_IN, BUILT_IN.length);
