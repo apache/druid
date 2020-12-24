@@ -148,7 +148,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    throw new UOE("DoubleLastAggregatorFactory is not supported during ingestion for rollup");
+    return new GenericLastAggregateCombiner<SerializablePair<Long, Double>>(){};
   }
 
   @Override

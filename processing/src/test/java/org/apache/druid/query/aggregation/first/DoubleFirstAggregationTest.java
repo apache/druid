@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.first;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -194,6 +195,40 @@ public class DoubleFirstAggregationTest extends InitializedNullHandlingTest
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String doubleSpecJson = "{\"type\":\"doubleFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
     Assert.assertEquals(doubleFirstAggFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+  }
+
+  @Test
+  public void testDoubleFirstAggregateCombiner()
+  {
+    AggregateCombiner doubleFirstAggregateCombiner = combiningAggFactory.makeAggregateCombiner();
+
+    SerializablePair[] inputPairs = {
+        new SerializablePair<>(5L, 134.3d),
+        new SerializablePair<>(4L, 1232.212d),
+        new SerializablePair<>(3L, 18d),
+        new SerializablePair<>(6L, 233.5232d)
+    };
+    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(inputPairs);
+    doubleFirstAggregateCombiner.reset(columnSelector);
+    Assert.assertEquals(inputPairs[0], doubleFirstAggregateCombiner.getObject());
+
+    // inputPairs[1] has lower time value, it should be the first
+    columnSelector.increment();
+    doubleFirstAggregateCombiner.fold(columnSelector);
+    Assert.assertEquals(inputPairs[1], doubleFirstAggregateCombiner.getObject());
+
+    // inputPairs[2] has lower time value, it should be the first
+    columnSelector.increment();
+    doubleFirstAggregateCombiner.fold(columnSelector);
+    Assert.assertEquals(inputPairs[2], doubleFirstAggregateCombiner.getObject());
+
+    // inputPairs[3] has the max time value, it should NOT be the first
+    columnSelector.increment();
+    doubleFirstAggregateCombiner.fold(columnSelector);
+    Assert.assertEquals(inputPairs[2], doubleFirstAggregateCombiner.getObject());
+
+    doubleFirstAggregateCombiner.reset(columnSelector);
+    Assert.assertEquals(inputPairs[3], doubleFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(
