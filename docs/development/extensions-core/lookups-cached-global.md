@@ -48,9 +48,9 @@ Globally cached lookups can be specified as part of the [cluster wide config for
        "namespaceParseSpec": {
          "format": "csv",
          "columns": [
-           "key",
-           "value"
-         ]
+             "[\"key\"",
+             "\"value\"]"
+      ]
        },
        "pollPeriod": "PT5M"
      },
@@ -186,7 +186,10 @@ The remapping values for each globally cached lookup can be specified by a JSON 
   "uri": "s3://bucket/some/key/prefix/renames-0003.gz",
   "namespaceParseSpec":{
     "format":"csv",
-    "columns":["key","value"]
+    "columns":[
+        "[\"key\"",
+        "\"value\"]"
+      ]
   },
   "pollPeriod":"PT5M"
 }
@@ -199,7 +202,10 @@ The remapping values for each globally cached lookup can be specified by a JSON 
   "fileRegex":"renames-[0-9]*\\.gz",
   "namespaceParseSpec":{
     "format":"csv",
-    "columns":["key","value"]
+    "columns":[
+        "[\"key\"",
+        "\"value\"]"
+      ]
   },
   "pollPeriod":"PT5M"
 }
