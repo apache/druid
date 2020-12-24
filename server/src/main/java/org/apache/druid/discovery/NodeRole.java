@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 /**
  * Defines the 'role' of a Druid service, utilized to strongly type announcement and service discovery.
  *
- * Originally, this was an enum to add type safety for discovery and announcment purposes, but was expanded
+ * Originally, this was an enum to add type safety for discovery and announcement purposes, but was expanded
  * into a class to allow for extensibility while retaining the type safety of using defined types instead of raw
  * strings. As such, this class tries to mimic the interface provided by the previous enum.
  *
