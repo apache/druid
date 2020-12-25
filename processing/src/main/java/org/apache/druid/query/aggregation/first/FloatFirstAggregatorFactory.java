@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatSerde;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -147,7 +148,9 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new GenericFirstAggregateCombiner<SerializablePair<Long, Float>>(){};
+    return new GenericFirstAggregateCombiner<SerializablePair<Long, Float>>()
+    {
+    };
   }
 
   @Override
@@ -270,10 +273,18 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getComplexTypeName()
+  {
+    return SerializablePairLongFloatSerde.TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link SerializablePair<Long, Float>}
+   */
+  @Override
   public ValueType getType()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return ValueType.FLOAT;
+    return ValueType.COMPLEX;
   }
 
   @Override

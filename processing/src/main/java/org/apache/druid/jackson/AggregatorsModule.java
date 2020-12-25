@@ -38,6 +38,9 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
@@ -80,7 +83,10 @@ public class AggregatorsModule extends SimpleModule
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
     ComplexMetrics.registerSerde("preComputedHyperUnique", new PreComputedHyperUniquesSerde());
-    ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
+    ComplexMetrics.registerSerde(SerializablePairLongStringSerde.TYPE_NAME, new SerializablePairLongStringSerde());
+    ComplexMetrics.registerSerde(SerializablePairLongDoubleSerde.TYPE_NAME, new SerializablePairLongDoubleSerde());
+    ComplexMetrics.registerSerde(SerializablePairLongFloatSerde.TYPE_NAME, new SerializablePairLongFloatSerde());
+    ComplexMetrics.registerSerde(SerializablePairLongLongSerde.TYPE_NAME, new SerializablePairLongLongSerde());
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);

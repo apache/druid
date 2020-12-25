@@ -28,15 +28,14 @@ import javax.annotation.Nullable;
 import java.lang.reflect.ParameterizedType;
 
 /**
- * This class is marked as abstract to prevent instantiation of this class
+ * This class is marked as abstract to prevent instantiation of this type directly,
  * because it relyes on type reflection to get the right class object of generic type
  *
- * To use it, just create an instance as below
+ * use it as follow:
  * AggregateCombiner combiner = new GenericFirstAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){};
  *
  */
-abstract public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>>
-    extends ObjectAggregateCombiner<T>
+public abstract class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
 {
   private T lastValue;
 

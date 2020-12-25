@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -36,16 +36,15 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * The SerializablePairLongStringSerde serializes a Long-String pair (SerializablePairLongString).
- * The serialization structure is: Long:Integer:String
+ * The class serializes a Long-Long pair (SerializablePair<Long, Long>).
+ * The serialization structure is: Long:Long
  * <p>
- * The class is used on first/last String aggregators to store the time and the first/last string.
- * Long:Integer:String -> Timestamp:StringSize:StringData
+ * The class is used on first/last Long aggregators to store the time and the first/last Long.
+ * Long:Long -> Timestamp:Long
  */
-public class SerializablePairLongStringSerde extends ComplexMetricSerde
+public class SerializablePairLongLongSerde extends ComplexMetricSerde
 {
-
-  public static final String TYPE_NAME = "serializablePairLongString";
+  public static final String TYPE_NAME = "serializablePairLongLong";
 
   @Override
   public String getTypeName()
@@ -56,12 +55,14 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor getExtractor()
   {
+    SerializablePair<Long, Long> pair = new SerializablePair<>(null, null);
+    final Class<SerializablePair<Long, Long>> pairClass = (Class<SerializablePair<Long, Long>>) pair.getClass();
     return new ComplexMetricExtractor()
     {
       @Override
-      public Class<SerializablePairLongString> extractedClass()
+      public Class<SerializablePair<Long, Long>> extractedClass()
       {
-        return SerializablePairLongString.class;
+        return pairClass;
       }
 
       @Override
@@ -82,57 +83,38 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongString>()
+    SerializablePair<Long, Long> pair = new SerializablePair<>(null, null);
+    final Class<SerializablePair<Long, Long>> pairClass = (Class<SerializablePair<Long, Long>>) pair.getClass();
+
+    return new ObjectStrategy<SerializablePair<Long, Long>>()
     {
       @Override
-      public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
+      public int compare(@Nullable SerializablePair<Long, Long> o1, @Nullable SerializablePair<Long, Long> o2)
       {
-        return StringFirstAggregatorFactory.VALUE_COMPARATOR.compare(o1, o2);
+        return Longs.compare(o1.lhs, o2.lhs);
       }
 
       @Override
-      public Class<? extends SerializablePairLongString> getClazz()
+      public Class<SerializablePair<Long, Long>> getClazz()
       {
-        return SerializablePairLongString.class;
+        return pairClass;
       }
 
       @Override
-      public SerializablePairLongString fromByteBuffer(ByteBuffer buffer, int numBytes)
+      public SerializablePair<Long, Long> fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-
         long lhs = readOnlyBuffer.getLong();
-        int stringSize = readOnlyBuffer.getInt();
-
-        String lastString = null;
-        if (stringSize > 0) {
-          byte[] stringBytes = new byte[stringSize];
-          readOnlyBuffer.get(stringBytes, 0, stringSize);
-          lastString = StringUtils.fromUtf8(stringBytes);
-        }
-
-        return new SerializablePairLongString(lhs, lastString);
+        long rhs = readOnlyBuffer.getLong();
+        return new SerializablePair<Long, Long>(lhs, rhs);
       }
 
       @Override
-      public byte[] toBytes(SerializablePairLongString val)
+      public byte[] toBytes(SerializablePair<Long, Long> val)
       {
-        String rhsString = val.rhs;
-        ByteBuffer bbuf;
-
-        if (rhsString != null) {
-          byte[] rhsBytes = StringUtils.toUtf8(rhsString);
-          bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + rhsBytes.length);
-          bbuf.putLong(val.lhs);
-          bbuf.putInt(Long.BYTES, rhsBytes.length);
-          bbuf.position(Long.BYTES + Integer.BYTES);
-          bbuf.put(rhsBytes);
-        } else {
-          bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
-          bbuf.putLong(val.lhs);
-          bbuf.putInt(Long.BYTES, 0);
-        }
-
+        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Long.BYTES);
+        bbuf.putLong(val.lhs);
+        bbuf.putLong(val.rhs);
         return bbuf.array();
       }
     };

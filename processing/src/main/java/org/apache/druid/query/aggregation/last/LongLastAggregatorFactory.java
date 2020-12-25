@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongLongSerde;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -266,10 +267,18 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getComplexTypeName()
+  {
+    return SerializablePairLongLongSerde.TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link SerializablePair<Long, Float>}
+   */
+  @Override
   public ValueType getType()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return ValueType.LONG;
+    return ValueType.COMPLEX;
   }
 
   @Override

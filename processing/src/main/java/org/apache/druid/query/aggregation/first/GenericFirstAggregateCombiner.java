@@ -28,14 +28,16 @@ import javax.annotation.Nullable;
 import java.lang.reflect.ParameterizedType;
 
 /**
- * This class is marked as abstract to prevent usage of direct type instantiation.
- * To use it, just create an instance as below
+ * This class is used for FIRST aggregator
+ *
+ * It's marked as abstract to prevent instantiation of this type directly.
+ * it must be used it as follow:
  *
  * AggregateCombiner combiner = new GenericFirstAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){
  * };
  *
  */
-abstract public class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
+public abstract class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
 {
   private T firstValue;
 

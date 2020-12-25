@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleSerde;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -272,10 +272,18 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getComplexTypeName()
+  {
+    return SerializablePairLongDoubleSerde.TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link SerializablePair<Long, Double>}
+   */
+  @Override
   public ValueType getType()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
+    return ValueType.COMPLEX;
   }
 
   @Override
