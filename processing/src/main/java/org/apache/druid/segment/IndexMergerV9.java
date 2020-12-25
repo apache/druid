@@ -977,16 +977,20 @@ public class IndexMergerV9 implements IndexMerger
     log.debug("base outDir: " + outDir);
 
     try {
+      int tierCounter = 0;
       while (true) {
+        log.info("Merging %d phases, tiers finished processed so far: %d.", currentPhases.size(), tierCounter);
         for (List<IndexableAdapter> phase : currentPhases) {
           File phaseOutDir;
           if (currentPhases.size() == 1) {
             // use the given outDir on the final merge phase
             phaseOutDir = outDir;
+            log.info("Performing final merge phase.");
           } else {
             phaseOutDir = FileUtils.createTempDir();
             tempDirs.add(phaseOutDir);
           }
+          log.info("Merging phase with %d indexes.", phase.size());
           log.debug("phase outDir: " + phaseOutDir);
 
           File phaseOutput = merge(
@@ -1012,6 +1016,7 @@ public class IndexMergerV9 implements IndexMerger
           }
           currentPhases = getMergePhases(qIndexAdapters, maxColumnsToMerge);
           currentOutputs = new ArrayList<>();
+          tierCounter += 1;
         }
       }
     }
@@ -1035,7 +1040,7 @@ public class IndexMergerV9 implements IndexMerger
     // always merge at least two segments regardless of column limit
     if (indexes.size() <= 2) {
       if (getIndexColumnCount(indexes) > maxColumnsToMerge) {
-        log.warn("index pair has more columns than maxColumnsToMerge [%d].", maxColumnsToMerge);
+        log.info("index pair has more columns than maxColumnsToMerge [%d].", maxColumnsToMerge);
       }
       toMerge.add(indexes);
     } else {
@@ -1044,7 +1049,7 @@ public class IndexMergerV9 implements IndexMerger
       for (IndexableAdapter index : indexes) {
         int indexColumnCount = getIndexColumnCount(index);
         if (indexColumnCount > maxColumnsToMerge) {
-          log.warn("index has more columns [%d] than maxColumnsToMerge [%d]!", indexColumnCount, maxColumnsToMerge);
+          log.info("index has more columns [%d] than maxColumnsToMerge [%d]!", indexColumnCount, maxColumnsToMerge);
         }
 
         // always merge at least two segments regardless of column limit
