@@ -40,6 +40,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
@@ -156,6 +157,7 @@ public class CliPeon extends GuiceRunnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String serverType = "indexer-executor";
 
+  private boolean isZkEnabled = true;
 
   /**
    * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
@@ -166,12 +168,18 @@ public class CliPeon extends GuiceRunnable
 
   private static final Logger log = new Logger(CliPeon.class);
 
-  @Inject
   private Properties properties;
 
   public CliPeon()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
+    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -235,7 +243,10 @@ public class CliPeon extends GuiceRunnable
               binder.bind(SegmentManager.class).in(LazySingleton.class);
               binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
               Jerseys.addResource(binder, HistoricalResource.class);
-              LifecycleModule.register(binder, ZkCoordinator.class);
+
+              if (isZkEnabled) {
+                LifecycleModule.register(binder, ZkCoordinator.class);
+              }
             }
           }
 

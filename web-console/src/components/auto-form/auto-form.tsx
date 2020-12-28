@@ -25,6 +25,7 @@ import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
+import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput, Suggestion } from '../suggestible-input/suggestible-input';
 
@@ -82,7 +83,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   static REQUIRED_INTENT = Intent.PRIMARY;
 
   static makeLabelName(label: string): string {
-    let newLabel = label
+    const parts = label.split('.');
+    let newLabel = parts[parts.length - 1]
       .split(/(?=[A-Z])/)
       .join(' ')
       .toLowerCase()
@@ -203,17 +205,17 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderNumberInput(field: Field<T>): JSX.Element {
     const { model, large, onFinalize } = this.props;
 
-    let modelValue = deepGet(model as any, field.name);
-    if (typeof modelValue !== 'number') modelValue = field.defaultValue;
+    const modelValue = deepGet(model as any, field.name);
     return (
-      <NumericInput
+      <NumericInputWithDefault
         value={modelValue}
+        defaultValue={field.defaultValue}
         onValueChange={(valueAsNumber: number, valueAsString: string) => {
-          if (valueAsString === '' || isNaN(valueAsNumber)) return;
-          this.fieldChange(
-            field,
-            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
-          );
+          let newValue: number | undefined;
+          if (valueAsString !== '' && !isNaN(valueAsNumber)) {
+            newValue = valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber;
+          }
+          this.fieldChange(field, newValue);
         }}
         onBlur={e => {
           if (e.target.value === '') {

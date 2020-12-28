@@ -73,7 +73,7 @@ if (consoleConfig.baseURL) {
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  apiConfig.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  apiConfig.headers[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
   Object.assign(apiConfig.headers, consoleConfig.customHeaders);

@@ -48,9 +48,9 @@ Globally cached lookups can be specified as part of the [cluster wide config for
        "namespaceParseSpec": {
          "format": "csv",
          "columns": [
-           "key",
-           "value"
-         ]
+             "[\"key\"",
+             "\"value\"]"
+      ]
        },
        "pollPeriod": "PT5M"
      },
@@ -86,7 +86,7 @@ The parameters are as follows
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`0` (do not wait)|
-|`injective`|If the underlying map is [injective](../../querying/lookups.html#query-execution) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
+|`injective`|If the underlying map is [injective](../../querying/lookups.md#query-execution) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the processes using lookups should be monitored for repeated failures.
 
@@ -95,7 +95,7 @@ Proper functionality of globally cached lookups requires the following extension
 
 ## Example configuration
 
-In a simple case where only one [tier](../../querying/lookups.html#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration JSON looks similar to the following:
+In a simple case where only one [tier](../../querying/lookups.md#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration JSON looks similar to the following:
 
 ```json
 {
@@ -186,7 +186,10 @@ The remapping values for each globally cached lookup can be specified by a JSON 
   "uri": "s3://bucket/some/key/prefix/renames-0003.gz",
   "namespaceParseSpec":{
     "format":"csv",
-    "columns":["key","value"]
+    "columns":[
+        "[\"key\"",
+        "\"value\"]"
+      ]
   },
   "pollPeriod":"PT5M"
 }
@@ -199,7 +202,10 @@ The remapping values for each globally cached lookup can be specified by a JSON 
   "fileRegex":"renames-[0-9]*\\.gz",
   "namespaceParseSpec":{
     "format":"csv",
-    "columns":["key","value"]
+    "columns":[
+        "[\"key\"",
+        "\"value\"]"
+      ]
   },
   "pollPeriod":"PT5M"
 }

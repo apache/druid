@@ -67,3 +67,4 @@ druid_auth_basic_common_maxSyncRetries=20
 druid_indexer_logs_directory=/shared/tasklogs
 druid_sql_enable=true
 druid_extensions_hadoopDependenciesDir=/shared/hadoop-dependencies
+druid_request_logging_type=slf4j

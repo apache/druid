@@ -329,7 +329,7 @@ and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.
 Consider using the [input format](#input-format) instead for these types of ingestion.
 
 This section lists all default and core extension parsers.
-For community extension parsers, please see our [community extensions list](../development/extensions.html#community-extensions).
+For community extension parsers, please see our [community extensions list](../development/extensions.md#community-extensions).
 
 ### String Parser
 
@@ -423,7 +423,7 @@ the set of ingested dimensions, if missing the discovered fields will make up th
 
 `timeAndDims` parse spec must specify which fields will be extracted as dimensions through the `dimensionSpec`.
 
-[All column types](https://orc.apache.org/docs/types.html) are supported, with the exception of `union` types. Columns of
+[All column types](https://orc.apache.org/docs/types.md) are supported, with the exception of `union` types. Columns of
  `list` type, if filled with primitives, may be used as a multi-value dimension, or specific elements can be extracted with
 `flattenSpec` expressions. Likewise, primitive fields may be extracted from `map` and `struct` types in the same manner.
 Auto field discovery will automatically create a string dimension for every (non-timestamp) primitive or `list` of
@@ -658,7 +658,7 @@ JSON path expressions for all supported types.
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
 a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined
-[format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) is required.
+[format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat) is required.
 
 #### Parquet Hadoop Parser vs Parquet Avro Hadoop Parser
 
@@ -808,7 +808,7 @@ Note that the `int96` Parquet value type is not supported with this parser.
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
 a format should not be supplied. When the format is UTF8 (String), either `auto` or
-an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) is required.
+an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat) is required.
 
 #### Example
 

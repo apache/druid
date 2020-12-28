@@ -19,13 +19,14 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, Field } from '../components';
+import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import {
   deepDelete,
   deepGet,
   deepMove,
   deepSet,
+  deepSetIfUnset,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -225,6 +226,22 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
   }
 }
 
+export function getIssueWithSpec(spec: IngestionSpec): string | undefined {
+  if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
+    return 'missing spec.dataSchema.dataSource';
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.timestampSpec')) {
+    return 'missing spec.dataSchema.timestampSpec';
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.dimensionsSpec')) {
+    return 'missing spec.dataSchema.dimensionsSpec';
+  }
+
+  return;
+}
+
 // --------------
 
 export interface DataSchema {
@@ -290,11 +307,9 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
     deepGet(spec, 'spec.tuningConfig.type');
 
   if (!specType) return spec as IngestionSpec;
-  if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
-  if (!deepGet(spec, 'spec.ioConfig.type')) spec = deepSet(spec, 'spec.ioConfig.type', specType);
-  if (!deepGet(spec, 'spec.tuningConfig.type')) {
-    spec = deepSet(spec, 'spec.tuningConfig.type', specType);
-  }
+  spec = deepSetIfUnset(spec, 'type', specType);
+  spec = deepSetIfUnset(spec, 'spec.ioConfig.type', specType);
+  spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
   return spec as IngestionSpec;
 }
 
@@ -1235,7 +1250,7 @@ function basenameFromFilename(filename: string): string | undefined {
 export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
   const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
-  return deepSet(spec, 'spec.dataSchema.dataSource', possibleName);
+  return deepSetIfUnset(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
 export function guessDataSourceName(spec: IngestionSpec): string | undefined {
@@ -1340,57 +1355,81 @@ export interface PartitionsSpec {
   assumeGrouped?: boolean;
 }
 
-export function adjustTuningConfig(tuningConfig: TuningConfig) {
-  const tuningConfigType = deepGet(tuningConfig, 'type');
-  if (tuningConfigType !== 'index_parallel') return tuningConfig;
+export function adjustForceGuaranteedRollup(spec: IngestionSpec) {
+  if (getSpecType(spec) !== 'index_parallel') return spec;
 
-  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type') || 'dynamic';
+  const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
-    tuningConfig = deepDelete(tuningConfig, 'forceGuaranteedRollup');
+    spec = deepDelete(spec, 'spec.tuningConfig.forceGuaranteedRollup');
   } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
-    tuningConfig = deepSet(tuningConfig, 'forceGuaranteedRollup', true);
+    spec = deepSet(spec, 'spec.tuningConfig.forceGuaranteedRollup', true);
   }
 
-  return tuningConfig;
+  return spec;
 }
 
-export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
-  if (tuningConfig.type !== 'index_parallel') return false;
-
-  switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
-    case 'hashed':
-      if (!intervals) return true;
-      return (
-        Boolean(deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment')) &&
-        Boolean(deepGet(tuningConfig, 'partitionsSpec.numShards'))
-      );
-
-    case 'single_dim':
-      if (!intervals) return true;
-      if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
-      const hasTargetRowsPerSegment = Boolean(
-        deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment'),
-      );
-      const hasMaxRowsPerSegment = Boolean(
-        deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment'),
-      );
-      if (hasTargetRowsPerSegment === hasMaxRowsPerSegment) {
-        return true;
-      }
-  }
-
-  return false;
+export function invalidPartitionConfig(spec: IngestionSpec): boolean {
+  return (
+    // Bad primary partitioning, or...
+    !deepGet(spec, 'spec.dataSchema.granularitySpec.segmentGranularity') ||
+    // Bad secondary partitioning
+    Boolean(AutoForm.issueWithModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined)))
+  );
 }
 
-export function getPartitionRelatedTuningSpecFormFields(
-  specType: IngestionType,
+export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
+  {
+    name: 'spec.dataSchema.granularitySpec.segmentGranularity',
+    label: 'Segment granularity',
+    type: 'string',
+    suggestions: ['hour', 'day', 'week', 'month', 'year'],
+    required: true,
+    info: (
+      <>
+        The granularity to create time chunks at. Multiple segments can be created per time chunk.
+        For example, with 'DAY' segmentGranularity, the events of the same day fall into the same
+        time chunk which can be optionally further partitioned into multiple segments based on other
+        configurations and input size.
+      </>
+    ),
+  },
+  {
+    name: 'spec.dataSchema.granularitySpec.intervals',
+    label: 'Time intervals',
+    type: 'string-array',
+    placeholder: '(auto determine)',
+    defined: s => getSpecType(s) === 'index_parallel',
+    info: (
+      <>
+        <p>
+          A list of intervals describing what time chunks of segments should be created. This list
+          will be broken up and rounded-off based on the segmentGranularity.
+        </p>
+        <p>
+          If not provided, batch ingestion tasks will generally determine which time chunks to
+          output based on what timestamps are found in the input data.
+        </p>
+        <p>
+          If specified, batch ingestion tasks may be able to skip a determining-partitions phase,
+          which can result in faster ingestion. Batch ingestion tasks may also be able to request
+          all their locks up-front instead of one by one. Batch ingestion tasks will throw away any
+          records with timestamps outside of the specified intervals.
+        </p>
+      </>
+    ),
+  },
+];
+
+export function getSecondaryPartitionRelatedFormFields(
+  spec: IngestionSpec,
   dimensionSuggestions: string[] | undefined,
-): Field<TuningConfig>[] {
+): Field<IngestionSpec>[] {
+  const specType = getSpecType(spec);
   switch (specType) {
     case 'index_parallel':
       return [
         {
-          name: 'partitionsSpec.type',
+          name: 'spec.tuningConfig.partitionsSpec.type',
           label: 'Partitioning type',
           type: 'string',
           required: true,
@@ -1402,38 +1441,46 @@ export function getPartitionRelatedTuningSpecFormFields(
               single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
-          adjustment: (t: TuningConfig) => {
-            if (!Array.isArray(dimensionSuggestions) || !dimensionSuggestions.length) return t;
-            return deepSet(t, 'partitionsSpec.partitionDimension', dimensionSuggestions[0]);
+          adjustment: s => {
+            if (
+              deepGet(s, 'spec.tuningConfig.partitionsSpec.type') !== 'single_dim' ||
+              !Array.isArray(dimensionSuggestions) ||
+              !dimensionSuggestions.length
+            ) {
+              return s;
+            }
+
+            return deepSet(
+              s,
+              'spec.tuningConfig.partitionsSpec.partitionDimension',
+              dimensionSuggestions[0],
+            );
           },
         },
         // partitionsSpec type: dynamic
         {
-          name: 'partitionsSpec.maxRowsPerSegment',
-          label: 'Max rows per segment',
+          name: 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
           info: <>Determines how many rows are in each segment.</>,
         },
         {
-          name: 'partitionsSpec.maxTotalRows',
-          label: 'Max total rows',
+          name: 'spec.tuningConfig.partitionsSpec.maxTotalRows',
           type: 'number',
           defaultValue: 20000000,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
           info: <>Total number of rows in segments waiting for being pushed.</>,
         },
         // partitionsSpec type: hashed
         {
-          name: 'partitionsSpec.targetRowsPerSegment',
-          label: 'Target rows per segment',
+          name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           type: 'number',
           zeroMeansUndefined: true,
           defaultValue: 5000000,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
-            !deepGet(t, 'partitionsSpec.numShards'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.numShards'),
           info: (
             <>
               <p>
@@ -1449,14 +1496,13 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.numShards',
-          label: 'Num shards',
+          name: 'spec.tuningConfig.partitionsSpec.numShards',
           type: 'number',
           zeroMeansUndefined: true,
           hideInMore: true,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'hashed' &&
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
           info: (
             <>
               <p>
@@ -1472,19 +1518,17 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.partitionDimensions',
-          label: 'Partition dimensions',
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimensions',
           type: 'string-array',
           placeholder: '(all dimensions)',
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed',
           info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
         },
         // partitionsSpec type: single_dim
         {
-          name: 'partitionsSpec.partitionDimension',
-          label: 'Partition dimension',
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimension',
           type: 'string',
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
           required: true,
           suggestions: dimensionSuggestions,
           info: (
@@ -1501,16 +1545,15 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.targetRowsPerSegment',
-          label: 'Target rows per segment',
+          name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
-            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
-          required: (t: TuningConfig) =>
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
-            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
+          required: s =>
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           info: (
             <p>
               Target number of rows to include in a partition, should be a number that targets
@@ -1519,24 +1562,23 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionsSpec.maxRowsPerSegment',
-          label: 'Max rows per segment',
+          name: 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment',
           type: 'number',
           zeroMeansUndefined: true,
-          defined: (t: TuningConfig) =>
-            deepGet(t, 'partitionsSpec.type') === 'single_dim' &&
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment'),
-          required: (t: TuningConfig) =>
-            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
-            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
+          defined: s =>
+            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
+          required: s =>
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           info: <p>Maximum number of rows to include in a partition.</p>,
         },
         {
-          name: 'partitionsSpec.assumeGrouped',
-          label: 'Assume grouped',
+          name: 'spec.tuningConfig.partitionsSpec.assumeGrouped',
           type: 'boolean',
           defaultValue: false,
-          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          hideInMore: true,
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
           info: (
             <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will
@@ -1550,13 +1592,13 @@ export function getPartitionRelatedTuningSpecFormFields(
     case 'kinesis':
       return [
         {
-          name: 'maxRowsPerSegment',
+          name: 'spec.tuningConfig.maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
           info: <>Determines how many rows are in each segment.</>,
         },
         {
-          name: 'maxTotalRows',
+          name: 'spec.tuningConfig.maxTotalRows',
           type: 'number',
           defaultValue: 20000000,
           info: <>Total number of rows in segments waiting for being pushed.</>,
@@ -1567,13 +1609,13 @@ export function getPartitionRelatedTuningSpecFormFields(
   throw new Error(`unknown spec type ${specType}`);
 }
 
-const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
+const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
-    name: 'maxNumConcurrentSubTasks',
+    name: 'spec.tuningConfig.maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,
     min: 1,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -1585,41 +1627,41 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxRetry',
+    name: 'spec.tuningConfig.maxRetry',
     type: 'number',
     defaultValue: 3,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
   {
-    name: 'taskStatusCheckPeriodMs',
+    name: 'spec.tuningConfig.taskStatusCheckPeriodMs',
     type: 'number',
     defaultValue: 1000,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
   {
-    name: 'totalNumMergeTasks',
+    name: 'spec.tuningConfig.totalNumMergeTasks',
     type: 'number',
     defaultValue: 10,
     min: 1,
-    defined: (t: TuningConfig) =>
+    defined: s =>
       Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+        s.type === 'index_parallel' &&
+          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
-    name: 'maxNumSegmentsToMerge',
+    name: 'spec.tuningConfig.maxNumSegmentsToMerge',
     type: 'number',
     defaultValue: 100,
-    defined: (t: TuningConfig) =>
+    defined: s =>
       Boolean(
-        t.type === 'index_parallel' &&
-          oneOf(deepGet(t, 'partitionsSpec.type'), 'hashed', 'single_dim'),
+        s.type === 'index_parallel' &&
+          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: (
       <>
@@ -1628,22 +1670,22 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxRowsInMemory',
+    name: 'spec.tuningConfig.maxRowsInMemory',
     type: 'number',
     defaultValue: 1000000,
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'maxBytesInMemory',
+    name: 'spec.tuningConfig.maxBytesInMemory',
     type: 'number',
     placeholder: 'Default: 1/6 of max JVM memory',
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
-    name: 'resetOffsetAutomatically',
+    name: 'spec.tuningConfig.resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1652,10 +1694,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'skipSequenceNumberAvailabilityCheck',
+    name: 'spec.tuningConfig.skipSequenceNumberAvailabilityCheck',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     info: (
       <>
         Whether to enable checking if the current sequence number is still available in a particular
@@ -1665,17 +1707,17 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'intermediatePersistPeriod',
+    name: 'spec.tuningConfig.intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
-    name: 'intermediateHandoffPeriod',
+    name: 'spec.tuningConfig.intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1685,7 +1727,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxPendingPersists',
+    name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
     hideInMore: true,
     info: (
@@ -1697,7 +1739,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'pushTimeout',
+    name: 'spec.tuningConfig.pushTimeout',
     type: 'number',
     defaultValue: 0,
     hideInMore: true,
@@ -1708,15 +1750,15 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'handoffConditionTimeout',
+    name: 'spec.tuningConfig.handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
-    name: 'indexSpec.bitmap.type',
+    name: 'spec.tuningConfig.indexSpec.bitmap.type',
     label: 'Index bitmap type',
     type: 'string',
     defaultValue: 'roaring',
@@ -1725,7 +1767,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Compression format for bitmap indexes.</>,
   },
   {
-    name: 'indexSpec.dimensionCompression',
+    name: 'spec.tuningConfig.indexSpec.dimensionCompression',
     label: 'Index dimension compression',
     type: 'string',
     defaultValue: 'lz4',
@@ -1734,7 +1776,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Compression format for dimension columns.</>,
   },
   {
-    name: 'indexSpec.metricCompression',
+    name: 'spec.tuningConfig.indexSpec.metricCompression',
     label: 'Index metric compression',
     type: 'string',
     defaultValue: 'lz4',
@@ -1743,7 +1785,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Compression format for primitive type metric columns.</>,
   },
   {
-    name: 'indexSpec.longEncoding',
+    name: 'spec.tuningConfig.indexSpec.longEncoding',
     label: 'Index long encoding',
     type: 'string',
     defaultValue: 'longs',
@@ -1759,43 +1801,79 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'chatHandlerTimeout',
+    name: 'spec.tuningConfig.splitHintSpec.maxSplitSize',
+    type: 'number',
+    defaultValue: 1073741824,
+    min: 1000000,
+    defined: s =>
+      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputFormat.type') !== 'http',
+    hideInMore: true,
+    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    info: (
+      <>
+        Maximum number of bytes of input files to process in a single subtask. If a single file is
+        larger than this number, it will be processed by itself in a single subtask (Files are never
+        split across tasks yet).
+      </>
+    ),
+  },
+  {
+    name: 'spec.tuningConfig.splitHintSpec.maxNumFiles',
+    type: 'number',
+    defaultValue: 1000,
+    min: 1,
+    defined: s => s.type === 'index_parallel',
+    hideInMore: true,
+    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    info: (
+      <>
+        Maximum number of input files to process in a single subtask. This limit is to avoid task
+        failures when the ingestion spec is too long. There are two known limits on the max size of
+        serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+        <Code>jute.maxbuffer</Code>) and the max packet size in MySQL (
+        <Code>max_allowed_packet</Code>). These can make ingestion tasks fail if the serialized
+        ingestion spec size hits one of them.
+      </>
+    ),
+  },
+  {
+    name: 'spec.tuningConfig.chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
-    name: 'chatHandlerNumRetries',
+    name: 'spec.tuningConfig.chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
-    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: s => s.type === 'index_parallel',
     hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
-    name: 'workerThreads',
+    name: 'spec.tuningConfig.workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
   },
   {
-    name: 'chatThreads',
+    name: 'spec.tuningConfig.chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
-    name: 'chatRetries',
+    name: 'spec.tuningConfig.chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1805,17 +1883,17 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'httpTimeout',
+    name: 'spec.tuningConfig.httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
-    name: 'shutdownTimeout',
+    name: 'spec.tuningConfig.shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: (t: TuningConfig) => oneOf(t.type, 'kafka', 'kinesis'),
+    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1824,10 +1902,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'offsetFetchPeriod',
+    name: 'spec.tuningConfig.offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    defined: (t: TuningConfig) => t.type === 'kafka',
+    defined: s => s.type === 'kafka',
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -1836,10 +1914,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'recordBufferSize',
+    name: 'spec.tuningConfig.recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -1848,10 +1926,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'recordBufferOfferTimeout',
+    name: 'spec.tuningConfig.recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1861,11 +1939,11 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'recordBufferFullWait',
+    name: 'spec.tuningConfig.recordBufferFullWait',
     hideInMore: true,
     type: 'number',
     defaultValue: 5000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -1874,10 +1952,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'fetchSequenceNumberTimeout',
+    name: 'spec.tuningConfig.fetchSequenceNumberTimeout',
     type: 'number',
     defaultValue: 60000,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1889,10 +1967,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'fetchThreads',
+    name: 'spec.tuningConfig.fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1902,10 +1980,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxRecordsPerPoll',
+    name: 'spec.tuningConfig.maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1915,10 +1993,10 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'repartitionTransitionDuration',
+    name: 'spec.tuningConfig.repartitionTransitionDuration',
     type: 'duration',
     defaultValue: 'PT2M',
-    defined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: s => s.type === 'kinesis',
     hideInMore: true,
     info: (
       <>
@@ -1939,8 +2017,8 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   },
 ];
 
-export function getTuningSpecFormFields() {
-  return TUNING_CONFIG_FORM_FIELDS;
+export function getTuningFormFields() {
+  return TUNING_FORM_FIELDS;
 }
 
 export interface IndexSpec {
@@ -2006,7 +2084,8 @@ export function issueWithSampleData(sampleData: string[]): JSX.Element | undefin
   return;
 }
 
-export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+export function fillInputFormatIfNeeded(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+  if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
@@ -2115,6 +2194,7 @@ export function updateSchemaWithSample(
   headerAndRows: HeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
+  forcePartitionInitialization = false,
 ): IngestionSpec {
   const typeHints = getTypeHintsFromSpec(spec);
 
@@ -2142,6 +2222,19 @@ export function updateSchemaWithSample(
   } else {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'none');
     newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
+  }
+
+  if (
+    getSpecType(newSpec) === 'index_parallel' &&
+    (!deepGet(newSpec, 'spec.tuningConfig.partitionsSpec') || forcePartitionInitialization)
+  ) {
+    newSpec = adjustForceGuaranteedRollup(
+      deepSet(
+        newSpec,
+        'spec.tuningConfig.partitionsSpec',
+        rollup ? { type: 'hashed' } : { type: 'dynamic' },
+      ),
+    );
   }
 
   newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);

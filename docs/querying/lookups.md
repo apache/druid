@@ -56,7 +56,7 @@ Other lookup types are available as extensions, including:
 Query Syntax
 ------------
 
-In [Druid SQL](sql.html), lookups can be queried using the [`LOOKUP` function](sql.md#string-functions), for example:
+In [Druid SQL](sql.md), lookups can be queried using the [`LOOKUP` function](sql.md#string-functions), for example:
 
 ```sql
 SELECT
@@ -78,7 +78,7 @@ FROM
 GROUP BY 1
 ```
 
-In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.html).
+In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.md).
 
 Query Execution
 ---------------
