@@ -17,28 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.tests.security;
+package org.apache.druid.indexer;
 
-import com.google.inject.Inject;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.tests.TestNGGroup;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.Assert;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
 
-@Test(groups = TestNGGroup.SECURITY)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITCoordinatorOverlordProxyAuthTest
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class TaskLocationTest
 {
-  @Inject
-  CoordinatorResourceTestClient coordinatorClient;
-  
   @Test
-  public void testProxyAuth()
+  public void testEqualsAndHashCode()
   {
-    HttpResponseStatus responseStatus = coordinatorClient.getProxiedOverlordScalingResponseStatus();
-    Assert.assertEquals(responseStatus, HttpResponseStatus.OK);
+    EqualsVerifier.forClass(TaskLocation.class).usingGetClass().verify();
   }
 }
