@@ -30,7 +30,7 @@ public class ITRetryUtil
 
   private static final Logger LOG = new Logger(ITRetryUtil.class);
 
-  public static final int DEFAULT_RETRY_COUNT = 120; // 10 minutes
+  public static final int DEFAULT_RETRY_COUNT = 240; // 20 minutes
 
   public static final long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(5);
 
