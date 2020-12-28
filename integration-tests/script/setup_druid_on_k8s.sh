@@ -42,13 +42,11 @@ $KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
 sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
 $KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
 
-# Wait 4 * 15 seconds to launch pods.
-#count=0
-#JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until sudo /usr/local/bin/kubectl -n default get pods -lapp=travis-example -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 4;if [ $count -eq 15 ];then break 2 ;else let "count++";fi;echo $i;echo "waiting for travis-example deployment to be available"; sudo /usr/local/bin/kubectl get pods -n default; done
+# Wait a bit
 sleep 120
 
 ## Debug And FastFail
 
-sudo /usr/local/bin/kubectl get pod
-sudo /usr/local/bin/kubectl get svc
+$KUBECTL get pod
+$KUBECTL get svc
 

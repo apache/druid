@@ -22,7 +22,6 @@ export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
 export MINIKUBE_HOME=$HOME
 export KUBECONFIG=$HOME/.kube/config
-export KUBECTL="sudo /usr/local/bin/kubectl"
 
 sudo apt install -y conntrack
 
