@@ -29,7 +29,6 @@ Accumulation requires that the two numbers have the same scale, but does not req
 
 Compressed big decimal is an absolute number based complex type based on big decimal in Java. This supports all the functionalities supported by Java Big Decimal.  Java Big Decimal is not mutable in order to avoid big garbage collection issues.   Compressed big decimal is needed to mutate the value in the accumulator.
 
-
 #### Main enhancements provided by this extension:
 1. Functionality: Mutating Big decimal type with greater precision 
 2. Accuracy: Provides greater level of accuracy in decimal arithmetic
