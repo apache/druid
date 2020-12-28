@@ -516,6 +516,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       {
         return "";
       }
+
+      @Override
+      public boolean isDocker()
+      {
+        return false;
+      }
     };
   }
 }

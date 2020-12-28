@@ -299,6 +299,21 @@
             <classifier>osx-x86_64</classifier>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-servlet</artifactId>
+            <version>${guice.version}</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -370,6 +385,7 @@
                 <start.hadoop.docker>false</start.hadoop.docker>
                 <docker.run.skip>false</docker.run.skip>
                 <docker.build.skip>false</docker.build.skip>
+                <docker.build.hadoop>false</docker.build.hadoop>
                 <it.indexer>middleManager</it.indexer>
                 <override.config.path />
                 <resource.file.dir.path />
@@ -391,6 +407,7 @@
                                 <phase>pre-integration-test</phase>
                                 <configuration>
                                     <environmentVariables>
+                                        <DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER>${docker.build.hadoop}</DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER>
                                         <DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>${start.hadoop.docker}</DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>
                                         <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                         <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>

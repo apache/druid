@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -162,4 +163,12 @@ public interface IntegrationTestingConfig
   String getHadoopGcsCredentialsPath();
 
   String getStreamEndpoint();
+
+  boolean isDocker();
+
+  @Nullable
+  default String getDockerHost()
+  {
+    return null;
+  }
 }

@@ -57,6 +57,7 @@ services:
       - druid_manager_segments_pollDuration=PT10S
       - druid_coordinator_period=PT10S
     depends_on:
+      - druid-coordinator
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
@@ -112,6 +113,35 @@ services:
       - druid-overlord
       - druid-overlord-two
       - druid-broker
+
+  druid-custom-node-role:
+    image: druid/cluster
+    container_name: druid-custom-node-role
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.90
+    ports:
+      - 50011:50011
+      - 9301:9301
+      - 9501:9501
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - DRUID_SERVICE=custom-node-role
+      - DRUID_LOG_PATH=/shared/logs/custom-node-role.log
+      - SERVICE_DRUID_JAVA_OPTS=-server -Xmx32m -Xms32m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5011
+      - druid_host=druid-custom-node-role
+      - druid_auth_basic_common_cacheDirectory=/tmp/authCache/custom_node_role
+      - druid_server_https_crlPath=/tls/revocations.crl
+    env_file:
+      - ./environment-configs/common
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-coordinator
+      - druid-coordinator-two
 
 networks:
   druid-it-net:
