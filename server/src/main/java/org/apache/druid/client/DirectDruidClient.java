@@ -79,7 +79,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -100,7 +99,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final String host;
   private final ServiceEmitter emitter;
 
-  private final AtomicInteger openConnections;
+  private final DirectDruidClientMetrics clientMetrics;
   private final boolean isSmile;
   private final ScheduledExecutorService queryCancellationExecutor;
 
@@ -140,13 +139,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.emitter = emitter;
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
-    this.openConnections = new AtomicInteger();
+    this.clientMetrics = new DirectDruidClientMetrics();
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
   public int getNumOpenConnections()
   {
-    return openConnections.get();
+    return clientMetrics.getOpenConnections();
+  }
+  
+  public DirectDruidClientMetrics getMetrics()
+  {
+    return clientMetrics;
   }
 
   @Override
@@ -230,6 +234,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           trafficCopRef.set(trafficCop);
           checkQueryTimeout();
+          clientMetrics.recordResponse(response.getStatus());
           checkTotalBytesLimit(response.getContent().readableBytes());
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
@@ -470,7 +475,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       queryWatcher.registerQueryFuture(query, future);
 
-      openConnections.getAndIncrement();
+      clientMetrics.openConnection();
       Futures.addCallback(
           future,
           new FutureCallback<InputStream>()
@@ -478,13 +483,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             @Override
             public void onSuccess(InputStream result)
             {
-              openConnections.getAndDecrement();
+              clientMetrics.closeConnection();
             }
 
             @Override
             public void onFailure(Throwable t)
             {
-              openConnections.getAndDecrement();
+              clientMetrics.closeConnection();
               if (future.isCancelled()) {
                 cancelQuery(query, cancelUrl);
               }
