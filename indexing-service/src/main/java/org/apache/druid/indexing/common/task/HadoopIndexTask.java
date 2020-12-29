@@ -41,8 +41,6 @@ import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.TaskMetricsGetter;
 import org.apache.druid.indexer.TaskMetricsUtils;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
@@ -370,7 +368,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       // Only enforce maxSegmentIntervalsPermitted if we dynamically discover populated intervals via mapreduce
       // Abort task if number of intervals is greater than limit specified in TuningConfig.
-      if (determineIntervals
+      if (indexerSchema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)
           && indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get().size()
              > indexerSchema.getTuningConfig().getMaxSegmentIntervalsPermitted()) {
 
@@ -380,6 +378,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                    + indexerSchema.getTuningConfig().getMaxSegmentIntervalsPermitted()
                    + "], as specified in TuningConfig.";
         log.error(errorMsg);
+
+        // Change state to completed to gracefulShutdown does not try to shutdown a Hadoop job that isn't running
+        ingestionState = IngestionState.COMPLETED;
+
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -388,9 +391,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       // Only enforce maxAggregateSegmentIntervalShardsPermitted if we are going to dynamically determine partition
       // counts via MapReduce.
-      if (indexerSchema.getTuningConfig().getPartitionsSpec() instanceof SingleDimensionPartitionsSpec
-          || (indexerSchema.getTuningConfig().getPartitionsSpec() instanceof HashedPartitionsSpec
-              && ((HashedPartitionsSpec) indexerSchema.getTuningConfig().getPartitionsSpec()).getNumShards() == null)) {
+      if (indexerSchema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)) {
         // Gather the aggregate number of shards in the intervals being indexed
         int aggregateBuckets = 0;
         for (List<HadoopyShardSpec> specList : indexerSchema.getTuningConfig().getShardSpecs().values()) {
@@ -406,6 +407,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                      + indexerSchema.getTuningConfig().getMaxAggregateSegmentIntervalShardsPermitted()
                      + "], as specified in the tuning config";
           log.error(errorMsg);
+
+          // Change state to completed to gracefulShutdown does not try to shutdown a Hadoop job that isn't running
+          ingestionState = IngestionState.COMPLETED;
+
+          toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
           return TaskStatus.failure(
               getId(),
               errorMsg

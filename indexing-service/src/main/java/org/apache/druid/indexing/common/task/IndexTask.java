@@ -485,6 +485,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                      + tuningConfig.getMaxSegmentIntervalsPermitted()
                      + "], as specified in TuningConfig.";
           log.error(errorMsg);
+          toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
           return TaskStatus.failure(
               getId(),
               errorMsg
@@ -528,6 +529,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                      + tuningConfig.getMaxAggregateSegmentIntervalShardsPermitted()
                      + "], as specified in the tuning config";
           log.error(errorMsg);
+          toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
           return TaskStatus.failure(
               getId(),
               errorMsg

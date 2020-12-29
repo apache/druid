@@ -61,6 +61,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   private static final String BATCH_DATASOURCE = "batchLegacyHadoop";
 
   private static final String INDEX_TASK = "/hadoop/wikipedia_hadoop_index_task.json";
+  private static final String INDEX_TASK_NULL_INTERVALS = "/hadoop/wikipedia_hadoop_index_task_null_intervals.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_hadoop_index_test";
 
@@ -81,14 +82,6 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         {new SingleDimensionPartitionsSpec(1000, null, null, true)},
 
         //{new HashedPartitionsSpec(null, 3, null)} // this results in a bug where the segments have 0 rows
-    };
-  }
-
-  @DataProvider
-  public static Object[][] failureResourcesMaxZero()
-  {
-    return new Object[][]{
-        {Integer.MAX_VALUE, 0}
     };
   }
 
@@ -198,219 +191,227 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
     }
   }
 
+  /**
+   * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses hashed partitioning
+   * and null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
+   * maxAggregateSegmentIntervalShardsPermitted.
+   *
+   * @param resourceArray DataProvider used to parameterize tuningConfig values
+   * @throws Exception
+   */
   @Test(dataProvider = "failureResourcesZeroMaxThenMaxZero")
   public void testHashedPartitioningNullIntervalsIndexFailure(int[] resourceArray) throws Exception
   {
     String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
-    String reindexDatasource = REINDEX_DATASOURCE + "_" + UUID.randomUUID();
 
-    try (
-        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
-    ) {
-      final Function<String, String> specPathsTransform = spec -> {
-        try {
-          String path = "/batch_index/json";
-          spec = StringUtils.replace(
-              spec,
-              "%%INPUT_PATHS%%",
-              path
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString(new HashedPartitionsSpec(3, null, null))
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
-              jsonMapper.writeValueAsString(resourceArray[0])
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
-              jsonMapper.writeValueAsString(resourceArray[1])
-          );
+    final Function<String, String> specPathsTransform = spec -> {
+      try {
+        String path = "/batch_index/json";
+        spec = StringUtils.replace(
+            spec,
+            "%%INPUT_PATHS%%",
+            path
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(new HashedPartitionsSpec(3, null, null))
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[0])
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[1])
+        );
 
-          return spec;
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      };
+        return spec;
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
 
-      doIndexTest(
-          indexDatasource,
-          INDEX_TASK,
-          specPathsTransform,
-          INDEX_QUERIES_RESOURCE,
-          false,
-          false,
-          false,
-          false
-      );
-    }
+    doIndexTest(
+        indexDatasource,
+        INDEX_TASK_NULL_INTERVALS,
+        specPathsTransform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        false,
+        false,
+        false
+    );
   }
 
-  @Test(dataProvider = "failureResourcesMaxZero")
+  /**
+   * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses hashed partitioning
+   * and non-null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
+   * maxAggregateSegmentIntervalShardsPermitted.
+   *
+   * @param resourceArray DataProvider used to parameterize tuningConfig values
+   * @throws Exception
+   */
+  @Test(dataProvider = "failureResourcesZeroMaxThenMaxZero")
   public void testHashedPartitioningNonNullIntervalsIndexFailure(int[] resourceArray) throws Exception
   {
     String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
-    String reindexDatasource = REINDEX_DATASOURCE + "_" + UUID.randomUUID();
 
-    try (
-        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
-    ) {
-      final Function<String, String> specPathsTransform = spec -> {
-        try {
-          String path = "/batch_index/json";
-          spec = StringUtils.replace(
-              spec,
-              "%%INPUT_PATHS%%",
-              path
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString(new HashedPartitionsSpec(3, null, null))
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
-              jsonMapper.writeValueAsString(resourceArray[0])
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
-              jsonMapper.writeValueAsString(resourceArray[1])
-          );
+    final Function<String, String> specPathsTransform = spec -> {
+      try {
+        String path = "/batch_index/json";
+        spec = StringUtils.replace(
+            spec,
+            "%%INPUT_PATHS%%",
+            path
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(new HashedPartitionsSpec(3, null, null))
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[0])
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[1])
+        );
 
-          return spec;
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      };
+        return spec;
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
 
-      doIndexTest(
-          indexDatasource,
-          INDEX_TASK,
-          specPathsTransform,
-          INDEX_QUERIES_RESOURCE,
-          false,
-          false,
-          false,
-          false
-      );
-    }
+    doIndexTest(
+        indexDatasource,
+        INDEX_TASK,
+        specPathsTransform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        false,
+        false,
+        false
+    );
   }
 
+  /**
+   * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses single dimension partitioning
+   * and null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
+   * maxAggregateSegmentIntervalShardsPermitted.
+   *
+   * @param resourceArray DataProvider used to parameterize tuningConfig values
+   * @throws Exception
+   */
   @Test(dataProvider = "failureResourcesZeroMaxThenMaxZero")
-  public void testSingleDimPartitioningNullIntervalsIndexFailure() throws Exception
+  public void testSingleDimPartitioningNullIntervalsIndexFailure(int[] resourceArray) throws Exception
   {
     String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
-    String reindexDatasource = REINDEX_DATASOURCE + "_" + UUID.randomUUID();
 
-    try (
-        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
-    ) {
-      final Function<String, String> specPathsTransform = spec -> {
-        try {
-          String path = "/batch_index/json";
-          spec = StringUtils.replace(
-              spec,
-              "%%INPUT_PATHS%%",
-              path
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString(new SingleDimensionPartitionsSpec(null, null, "page", false))
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
-              jsonMapper.writeValueAsString(0)
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
-              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
-          );
+    final Function<String, String> specPathsTransform = spec -> {
+      try {
+        String path = "/batch_index/json";
+        spec = StringUtils.replace(
+            spec,
+            "%%INPUT_PATHS%%",
+            path
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(new SingleDimensionPartitionsSpec(1, null, "page", false))
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[0])
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[1])
+        );
 
-          return spec;
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      };
+        return spec;
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
 
-      doIndexTest(
-          indexDatasource,
-          INDEX_TASK,
-          specPathsTransform,
-          INDEX_QUERIES_RESOURCE,
-          false,
-          false,
-          false,
-          false
-      );
-    }
+    doIndexTest(
+        indexDatasource,
+        INDEX_TASK_NULL_INTERVALS,
+        specPathsTransform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        false,
+        false,
+        false
+    );
   }
 
-  @Test(dataProvider = "failureResourcesMaxZero")
-  public void testSingleDimPartitioningNonNullIntervalsIndexFailure() throws Exception
+  /**
+   * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses single dimension partitioning
+   * and non-null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
+   * maxAggregateSegmentIntervalShardsPermitted.
+   *
+   * @param resourceArray DataProvider used to parameterize tuningConfig values
+   * @throws Exception
+   */
+  @Test(dataProvider = "failureResourcesZeroMaxThenMaxZero")
+  public void testSingleDimPartitioningNonNullIntervalsIndexFailure(int[] resourceArray) throws Exception
   {
     String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
-    String reindexDatasource = REINDEX_DATASOURCE + "_" + UUID.randomUUID();
 
-    try (
-        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
-    ) {
-      final Function<String, String> specPathsTransform = spec -> {
-        try {
-          String path = "/batch_index/json";
-          spec = StringUtils.replace(
-              spec,
-              "%%INPUT_PATHS%%",
-              path
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString(new SingleDimensionPartitionsSpec(null, null, "page", false))
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
-              jsonMapper.writeValueAsString(0)
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
-              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
-          );
+    final Function<String, String> specPathsTransform = spec -> {
+      try {
+        String path = "/batch_index/json";
+        spec = StringUtils.replace(
+            spec,
+            "%%INPUT_PATHS%%",
+            path
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(new SingleDimensionPartitionsSpec(1, null, "page", false))
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[0])
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            jsonMapper.writeValueAsString(resourceArray[1])
+        );
 
-          return spec;
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      };
+        return spec;
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
 
-      doIndexTest(
-          indexDatasource,
-          INDEX_TASK,
-          specPathsTransform,
-          INDEX_QUERIES_RESOURCE,
-          false,
-          false,
-          false,
-          false
-      );
-    }
+    doIndexTest(
+        indexDatasource,
+        INDEX_TASK,
+        specPathsTransform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        false,
+        false,
+        false
+    );
   }
 }
