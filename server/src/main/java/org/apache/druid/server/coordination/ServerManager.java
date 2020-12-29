@@ -57,6 +57,7 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
@@ -300,10 +301,15 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
+    StorageAdapter storageAdapter = segment.asStorageAdapter();
+    long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+    long segmentMinTime = storageAdapter.getMinTime().getMillis();
+    Interval actualDataInterval = new Interval(segmentMinTime, segmentMaxTime);
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
         cacheKeyPrefix,
         segmentDescriptor,
+        actualDataInterval,
         objectMapper,
         cache,
         toolChest,
