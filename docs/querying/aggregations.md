@@ -422,7 +422,7 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
     "type" : "selector",
     "dimension" : <dimension>,
     "value" : <dimension value>
-  }
+  },
   "aggregator" : <aggregation>
 }
 ```
