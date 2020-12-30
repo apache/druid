@@ -153,6 +153,7 @@ public class AppenderatorPlumber implements Plumber
   {
     final SegmentIdWithShardSpec identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
     if (identifier == null) {
+      metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
       return Plumber.THROWAWAY;
     }
 
