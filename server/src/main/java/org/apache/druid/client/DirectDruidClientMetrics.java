@@ -22,7 +22,7 @@ package org.apache.druid.client;
 import org.apache.druid.java.util.common.Pair;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DirectDruidClientMetrics
@@ -31,7 +31,7 @@ public class DirectDruidClientMetrics
 
   private final AtomicInteger openConnections;
 
-  private final ConcurrentLinkedQueue<Pair<Long, HttpResponseStatus>> responseHistory;
+  private final ConcurrentLinkedDeque<Pair<Long, HttpResponseStatus>> responseHistory;
 
   private final AtomicInteger errorCount;
 
@@ -45,7 +45,7 @@ public class DirectDruidClientMetrics
     this.openConnections = new AtomicInteger();
     this.errorCount = new AtomicInteger();
     this.historySize = new AtomicInteger();
-    this.responseHistory = new ConcurrentLinkedQueue<>();
+    this.responseHistory = new ConcurrentLinkedDeque<>();
   }
 
   public int openConnection()
@@ -74,7 +74,7 @@ public class DirectDruidClientMetrics
     return ((double) errorCount.get()) / ((double) size);
   }
 
-  public ConcurrentLinkedQueue<Pair<Long, HttpResponseStatus>> getResponseHistory()
+  public ConcurrentLinkedDeque<Pair<Long, HttpResponseStatus>> getResponseHistory()
   {
     return responseHistory;
   }
