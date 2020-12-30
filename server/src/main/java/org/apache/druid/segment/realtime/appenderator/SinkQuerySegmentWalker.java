@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -234,7 +235,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         StorageAdapter storageAdapter = segmentAndCloseable.lhs.asStorageAdapter();
                         long segmentMinTime = storageAdapter.getMinTime().getMillis();
                         long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
-                        Interval actualDataInterval = new Interval(segmentMinTime, segmentMaxTime);
+                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime);
                         runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
                             cacheKeyPrefix,
