@@ -113,4 +113,18 @@ public class JavaScriptDimFilterTest
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, new JavaScriptConfig(false));
     Assert.assertEquals(javaScriptDimFilter.getRequiredColumns(), Sets.newHashSet("dim"));
   }
+
+  @Test
+  public void testPredicateFactoryApplyObject()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter(
+            "dim",
+            "function(id) { return ['123', '456'].includes(id); }",
+            null,
+            JavaScriptConfig.getEnabledInstance()
+    );
+    Assert.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("123"));
+    Assert.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("456"));
+    Assert.assertFalse(javaScriptDimFilter.getPredicateFactory().applyObject("789"));
+  }
 }

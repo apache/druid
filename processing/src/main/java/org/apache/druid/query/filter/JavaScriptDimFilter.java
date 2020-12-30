@@ -155,7 +155,8 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
    * script compilation.
    */
   @EnsuresNonNull("predicateFactory")
-  private JavaScriptPredicateFactory getPredicateFactory()
+  @VisibleForTesting
+  JavaScriptPredicateFactory getPredicateFactory()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid
     // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
@@ -221,8 +222,14 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
 
   public static class JavaScriptPredicateFactory implements DruidPredicateFactory
   {
+    // Javascript Function(like arr.includes) will return org.mozilla.javascript.NativeBoolean, It will
+    // always treat as true at Context.toBoolean, even if it is false. this function will convert it to
+    // java.lang.Boolean to fix this mistake.
+    private static final String BOOL_CONV_SCRIPT = "function(input) { return input == true; }";
+
     final ScriptableObject scope;
     final Function fnApply;
+    final Function boolConvApply;
     final String script;
     final ExtractionFn extractionFn;
 
@@ -238,6 +245,7 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
         scope = cx.initStandardObjects();
 
         fnApply = cx.compileFunction(scope, script, "script", 1, null);
+        boolConvApply = cx.compileFunction(scope, BOOL_CONV_SCRIPT, "script", 1, null);
       }
       finally {
         Context.exit();
@@ -327,7 +335,8 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
       if (extractionFn != null) {
         input = extractionFn.apply(input);
       }
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new Object[]{input}));
+      Object fnResult = fnApply.call(cx, scope, scope, new Object[]{input});
+      return Context.toBoolean(boolConvApply.call(cx, scope, scope, new Object[] {fnResult}));
     }
 
     @Override
