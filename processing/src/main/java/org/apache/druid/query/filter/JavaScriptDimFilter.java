@@ -36,6 +36,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
@@ -222,14 +223,8 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
 
   public static class JavaScriptPredicateFactory implements DruidPredicateFactory
   {
-    // Javascript Function(like arr.includes) will return org.mozilla.javascript.NativeBoolean, It will
-    // always treat as true at Context.toBoolean, even if it is false. this function will convert it to
-    // java.lang.Boolean to fix this mistake.
-    private static final String BOOL_CONV_SCRIPT = "function(input) { return input == true; }";
-
     final ScriptableObject scope;
     final Function fnApply;
-    final Function boolConvApply;
     final String script;
     final ExtractionFn extractionFn;
 
@@ -245,7 +240,6 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
         scope = cx.initStandardObjects();
 
         fnApply = cx.compileFunction(scope, script, "script", 1, null);
-        boolConvApply = cx.compileFunction(scope, BOOL_CONV_SCRIPT, "script", 1, null);
       }
       finally {
         Context.exit();
@@ -336,7 +330,13 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
         input = extractionFn.apply(input);
       }
       Object fnResult = fnApply.call(cx, scope, scope, new Object[]{input});
-      return Context.toBoolean(boolConvApply.call(cx, scope, scope, new Object[] {fnResult}));
+      if (fnResult instanceof ScriptableObject) {
+        // Direct return js function result (like arr.includes) will return org.mozilla.javascript.NativeBoolean,
+        // Context.toBoolean always treat it as true, even if it is false. Convert it to java.lang.Boolean first to fix this mistake.
+        return Context.toBoolean(((ScriptableObject) fnResult).getDefaultValue(ScriptRuntime.BooleanClass));
+      } else {
+        return Context.toBoolean(fnResult);
+      }
     }
 
     @Override

@@ -117,6 +117,7 @@ public class JavaScriptDimFilterTest
   @Test
   public void testPredicateFactoryApplyObject()
   {
+    // test for return org.mozilla.javascript.NativeBoolean
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter(
             "dim",
             "function(id) { return ['123', '456'].includes(id); }",
@@ -126,5 +127,34 @@ public class JavaScriptDimFilterTest
     Assert.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("123"));
     Assert.assertTrue(javaScriptDimFilter.getPredicateFactory().applyObject("456"));
     Assert.assertFalse(javaScriptDimFilter.getPredicateFactory().applyObject("789"));
+
+    // test for return java.lang.Boolean
+    JavaScriptDimFilter javaScriptDimFilter1 = new JavaScriptDimFilter(
+            "dim",
+            "function(id) { return ['123', '456'].includes(id) == true; }",
+            null,
+            JavaScriptConfig.getEnabledInstance()
+    );
+    Assert.assertTrue(javaScriptDimFilter1.getPredicateFactory().applyObject("123"));
+    Assert.assertTrue(javaScriptDimFilter1.getPredicateFactory().applyObject("456"));
+    Assert.assertFalse(javaScriptDimFilter1.getPredicateFactory().applyObject("789"));
+
+    // test for return other type
+    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter(
+            "dim",
+            "function(id) { return 'word'; }",
+            null,
+            JavaScriptConfig.getEnabledInstance()
+    );
+    Assert.assertTrue(javaScriptDimFilter2.getPredicateFactory().applyObject("123"));
+
+    // test for return null
+    JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter(
+            "dim",
+            "function(id) { return null; }",
+            null,
+            JavaScriptConfig.getEnabledInstance()
+    );
+    Assert.assertFalse(javaScriptDimFilter3.getPredicateFactory().applyObject("123"));
   }
 }
