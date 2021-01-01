@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
@@ -253,7 +254,8 @@ public class WorkerTaskManager
           {
             submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 

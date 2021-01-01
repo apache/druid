@@ -21,7 +21,7 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
 
@@ -92,7 +92,7 @@ public class TaskStatus
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
                   .add("id", id)
                   .add("status", status)
                   .add("duration", duration)

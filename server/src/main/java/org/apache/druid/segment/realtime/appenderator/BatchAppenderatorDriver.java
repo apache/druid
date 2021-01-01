@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -139,9 +140,10 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Set<SegmentIdWithShardSpec> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames);
 
-    final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transform(
+    final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transformAsync(
         pushInBackground(null, requestedSegmentIdsForSequences, false),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::dropInBackground
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::dropInBackground,
+        MoreExecutors.directExecutor()
     );
 
     final SegmentsAndCommitMetadata segmentsAndCommitMetadata =

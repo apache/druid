@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
@@ -1108,13 +1108,13 @@ public class TaskLockbox
     @Override
     public int hashCode()
     {
-      return Objects.hashCode(taskLock, taskIds);
+      return java.util.Objects.hash(taskLock, taskIds);
     }
 
     @Override
     public String toString()
     {
-      return Objects.toStringHelper(this)
+      return MoreObjects.toStringHelper(this)
                     .add("taskLock", taskLock)
                     .add("taskIds", taskIds)
                     .toString();
