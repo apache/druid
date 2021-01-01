@@ -323,7 +323,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     // handoff would timeout, resulting in exception
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg()
-                            .contains("java.util.concurrent.TimeoutException: Timeout waiting for task."));
+        .contains("java.util.concurrent.TimeoutException: Waited 100 milliseconds"));
   }
 
   @Test(timeout = 60_000L)
