@@ -44,6 +44,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
@@ -329,6 +330,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     {
       return false;
     }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // No URI to validate
+      setValidated();
+    }
   }
 
   private static class MockInputSource extends AbstractInputSource
@@ -364,6 +372,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     {
       return false;
     }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // No URI to validate
+      setValidated();
+    }
   }
 
   private static class MockFirehoseFactory implements FirehoseFactory
@@ -394,6 +409,12 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
         }
       };
+    }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // Nothing to validate for Mock Firehose
     }
   }
 
@@ -742,7 +763,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -824,7 +845,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1251,7 +1272,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1360,7 +1381,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
             new IndexTuningConfig(
                 null,
                 10000,

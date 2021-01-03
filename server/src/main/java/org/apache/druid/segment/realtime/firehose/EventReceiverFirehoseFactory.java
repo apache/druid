@@ -37,6 +37,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.DateTimes;
@@ -654,5 +655,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
             .build();
       }
     }
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // No URI to validate
   }
 }

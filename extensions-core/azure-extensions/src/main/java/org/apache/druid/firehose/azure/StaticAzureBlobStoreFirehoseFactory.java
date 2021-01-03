@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +41,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * This class is heavily inspired by the StaticS3FirehoseFactory class in the org.apache.druid.firehose.s3 package
@@ -163,5 +165,11 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    securityConfig.validateURIAccess(blobs.stream().map(blob -> blob.toURI()).collect(Collectors.toList()));
   }
 }

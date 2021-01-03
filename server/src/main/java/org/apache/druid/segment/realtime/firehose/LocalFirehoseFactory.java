@@ -28,6 +28,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.utils.CompressionUtils;
 
@@ -108,5 +109,12 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
     final File baseDir = newFile.getParentFile();
     final String filter = newFile.getName();
     return new LocalFirehoseFactory(baseDir, filter, parser);
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    securityConfig.validateFileAccess(baseDir);
+    setValidated();
   }
 }

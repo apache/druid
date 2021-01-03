@@ -51,4 +51,10 @@ public class NoopFirehoseFactory implements FiniteFirehoseFactory
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // No URI to validate
+  }
 }

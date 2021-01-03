@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -67,6 +68,7 @@ public class FirehoseFactoryToInputSourceAdaptorTest extends InitializedNullHand
         firehoseFactory,
         inputRowParser
     );
+    inputSourceAdaptor.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
     final InputSourceReader reader = inputSourceAdaptor.reader(
         new InputRowSchema(
             inputRowParser.getParseSpec().getTimestampSpec(),
@@ -154,6 +156,12 @@ public class FirehoseFactoryToInputSourceAdaptorTest extends InitializedNullHand
     public FiniteFirehoseFactory withSplit(InputSplit split)
     {
       return null;
+    }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // No URI to validate
     }
   }
 }

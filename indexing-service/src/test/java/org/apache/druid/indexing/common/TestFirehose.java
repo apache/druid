@@ -23,6 +23,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
@@ -44,6 +45,12 @@ public class TestFirehose implements Firehose
     public Firehose connect(InputRowParser parser, File temporaryDirectory) throws ParseException
     {
       return new TestFirehose(parser, waitForClose, Collections.emptyList());
+    }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // Nothing to Validate
     }
   }
 

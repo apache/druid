@@ -101,7 +101,6 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       hdfsInputSourceBuilder = HdfsInputSource.builder()
                                               .paths(PATH)
-                                              .inputSourceSecurityConfig(InputSourceSecurityConfig.ALLOW_ALL)
                                               .configuration(CONFIGURATION);
     }
 
@@ -167,7 +166,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
       Wrapper(HdfsInputSource.Builder hdfsInputSourceBuilder)
       {
-        this.inputSource = hdfsInputSourceBuilder.inputSourceSecurityConfig(InputSourceSecurityConfig.ALLOW_ALL).build();
+        this.inputSource = hdfsInputSourceBuilder.build();
       }
     }
   }
@@ -214,7 +213,6 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       target = HdfsInputSource.builder()
                               .paths(dfsCluster.getURI() + PATH + "*")
                               .configuration(CONFIGURATION)
-                              .inputSourceSecurityConfig(InputSourceSecurityConfig.ALLOW_ALL)
                               .build();
     }
 
@@ -305,33 +303,37 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testDenyAllPaths() throws Exception
+    public void testDenyAllPaths()
     {
       HdfsInputSource.builder()
                      .paths(dfsCluster.getURI() + PATH + "*")
                      .configuration(CONFIGURATION)
-                     .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.emptyList(), null))
-                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1));
+                     .build()
+                     .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.emptyList(), null));
     }
 
     @Test
-    public void testAllowPath() throws Exception
+    public void testAllowPath()
     {
       HdfsInputSource.builder()
                      .paths(dfsCluster.getURI() + PATH + "*")
                      .configuration(CONFIGURATION)
-                     .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null))
-                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1));
+                     .build()
+                     .validateAllowDenyPrefixList(
+                         new InputSourceSecurityConfig(
+                             Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)),
+                             null
+                         ));
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testDenyPathsRelativeToAllowPaths() throws Exception
+    public void testDenyPathsRelativeToAllowPaths()
     {
       HdfsInputSource.builder()
                      .paths(dfsCluster.getURI() + PATH + "/../../test2")
                      .configuration(CONFIGURATION)
-                     .inputSourceSecurityConfig(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null))
-                     .build().createSplits(null, new MaxSizeSplitHintSpec(null, 1));
+                     .build()
+                     .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null));
     }
   }
 

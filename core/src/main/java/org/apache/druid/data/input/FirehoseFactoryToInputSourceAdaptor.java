@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.FirehoseToInputSourceReaderAdaptor;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 
 import javax.annotation.Nullable;
@@ -100,5 +101,12 @@ public class FirehoseFactoryToInputSourceAdaptor extends AbstractInputSource imp
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     return new FirehoseToInputSourceReaderAdaptor(firehoseFactory, inputRowParser, temporaryDirectory);
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    firehoseFactory.validateAllowDenyPrefixList(securityConfig);
+    setValidated();
   }
 }

@@ -30,6 +30,7 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -54,7 +55,8 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   public IndexTaskSamplerSpec(
       @JsonProperty("spec") final IndexTask.IndexIngestionSpec ingestionSpec,
       @JsonProperty("samplerConfig") @Nullable final SamplerConfig samplerConfig,
-      @JacksonInject InputSourceSampler inputSourceSampler
+      @JacksonInject InputSourceSampler inputSourceSampler,
+      @JacksonInject InputSourceSecurityConfig securityConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(ingestionSpec, "[spec] is required").getDataSchema();
@@ -88,6 +90,7 @@ public class IndexTaskSamplerSpec implements SamplerSpec
 
     this.samplerConfig = samplerConfig;
     this.inputSourceSampler = inputSourceSampler;
+    this.inputSource.validateAllowDenyPrefixList(securityConfig);
   }
 
   @Override

@@ -1968,9 +1968,10 @@ public class IndexTaskTest extends IngestionTestBase
           ),
           new IndexIOConfig(
               null,
-              new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, baseDir, "druid*"),
+              new LocalInputSource(baseDir, "druid*"),
               inputFormat,
-              appendToExisting
+              appendToExisting,
+              InputSourceSecurityConfig.ALLOW_ALL
           ),
           tuningConfig
       );
@@ -2002,7 +2003,8 @@ public class IndexTaskTest extends IngestionTestBase
                   "druid*",
                   null
               ),
-              appendToExisting
+              appendToExisting,
+              InputSourceSecurityConfig.ALLOW_ALL
           ),
           tuningConfig
       );

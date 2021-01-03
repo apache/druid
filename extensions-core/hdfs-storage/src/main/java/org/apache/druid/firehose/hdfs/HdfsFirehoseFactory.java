@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.guice.Hdfs;
@@ -39,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Path>
 {
@@ -125,5 +127,17 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
     return "HdfsFirehoseFactory{" +
            "inputPaths=" + inputPaths +
            '}';
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    try {
+      Collection<Path> paths = HdfsInputSource.getPaths(inputPaths, conf);
+      securityConfig.validateURIAccess(paths.stream().map(path -> path.toUri()).collect(Collectors.toList()));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -35,6 +35,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
@@ -66,11 +67,13 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
   @Nullable
   protected final SeekableStreamSupervisorTuningConfig tuningConfig;
   protected final SamplerConfig samplerConfig;
+  private final InputSourceSecurityConfig securityConfig;
 
   public SeekableStreamSamplerSpec(
       final SeekableStreamSupervisorSpec ingestionSpec,
       @Nullable final SamplerConfig samplerConfig,
-      final InputSourceSampler inputSourceSampler
+      final InputSourceSampler inputSourceSampler,
+      final InputSourceSecurityConfig securityConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(ingestionSpec, "[spec] is required").getDataSchema();
@@ -78,6 +81,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     this.tuningConfig = ingestionSpec.getTuningConfig();
     this.samplerConfig = samplerConfig == null ? SamplerConfig.empty() : samplerConfig;
     this.inputSourceSampler = inputSourceSampler;
+    this.securityConfig = securityConfig;
   }
 
   @Override
@@ -102,7 +106,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           "[spec.ioConfig.inputFormat] is required"
       );
     }
-
+    inputSource.validateAllowDenyPrefixList(securityConfig);
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
 
@@ -144,6 +148,12 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     public FiniteFirehoseFactory withSplit(InputSplit split)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // No URI to validate
     }
   }
 

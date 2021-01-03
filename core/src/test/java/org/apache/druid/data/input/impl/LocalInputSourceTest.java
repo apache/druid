@@ -61,7 +61,6 @@ public class LocalInputSourceTest
         InputSourceSecurityConfig.ALLOW_ALL
     ));
     final LocalInputSource source = new LocalInputSource(
-        InputSourceSecurityConfig.ALLOW_ALL,
         new File("myFile").getAbsoluteFile(),
         "myFilter"
     );
@@ -76,11 +75,6 @@ public class LocalInputSourceTest
     EqualsVerifier.forClass(LocalInputSource.class)
                   .usingGetClass()
                   .withNonnullFields("files")
-                  .withPrefabValues(
-                      InputSourceSecurityConfig.class,
-                      InputSourceSecurityConfig.ALLOW_ALL,
-                      new InputSourceSecurityConfig(Collections.emptyList(), null)
-                  )
                   .verify();
   }
 
@@ -90,7 +84,7 @@ public class LocalInputSourceTest
     final long fileSize = 15;
     final HumanReadableBytes maxSplitSize = new HumanReadableBytes(50L);
     final Set<File> files = mockFiles(10, fileSize);
-    final LocalInputSource inputSource = new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, null, null, files);
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     final List<InputSplit<List<File>>> splits = inputSource
         .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize, null))
         .collect(Collectors.toList());
@@ -107,7 +101,7 @@ public class LocalInputSourceTest
     final long fileSize = 13;
     final HumanReadableBytes maxSplitSize = new HumanReadableBytes(40L);
     final Set<File> files = mockFiles(10, fileSize);
-    final LocalInputSource inputSource = new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, null, null, files);
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     Assert.assertEquals(
         4,
         inputSource.estimateNumSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize, null))
@@ -138,7 +132,6 @@ public class LocalInputSourceTest
     expectedFiles.addAll(files);
     File.createTempFile("local-input-source", ".filtered", baseDir);
     Iterator<File> fileIterator = new LocalInputSource(
-        InputSourceSecurityConfig.ALLOW_ALL,
         baseDir,
         "*.data",
         files
@@ -160,7 +153,6 @@ public class LocalInputSourceTest
       filesInBaseDir.add(file);
     }
     Iterator<File> fileIterator = new LocalInputSource(
-        InputSourceSecurityConfig.ALLOW_ALL,
         baseDir,
         "*",
         null
@@ -182,7 +174,6 @@ public class LocalInputSourceTest
       filesInBaseDir.add(file);
     }
     Iterator<File> fileIterator = new LocalInputSource(
-        InputSourceSecurityConfig.ALLOW_ALL,
         null,
         null,
         filesInBaseDir
@@ -196,7 +187,7 @@ public class LocalInputSourceTest
   {
     final Set<File> files = new HashSet<>(mockFiles(10, 5));
     files.addAll(mockFiles(10, 0));
-    final LocalInputSource inputSource = new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, null, null, files);
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     List<File> iteratedFiles = Lists.newArrayList(inputSource.getFileIterator());
     Assert.assertTrue(iteratedFiles.stream().allMatch(file -> file.length() > 0));
   }
@@ -219,10 +210,10 @@ public class LocalInputSourceTest
     final File denyDir = new File("deny/dir");
     System.out.println(denyDir.toURI());
     new LocalInputSource(
-        new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI())),
         denyDir,
         "filter",
         null
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI()))
     );
   }
 
@@ -232,10 +223,10 @@ public class LocalInputSourceTest
     final File denyDir = new File("deny/dir");
     System.out.println(denyDir.toURI());
     new LocalInputSource(
-        new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI())),
         denyDir,
         "filter",
         Collections.singleton(new File("deny/dir/file"))
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI()))
     );
   }
 
@@ -244,10 +235,10 @@ public class LocalInputSourceTest
   {
     final File denyDir = new File("deny/dir");
     new LocalInputSource(
-        new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI())),
         denyDir,
         "filter",
         Collections.singleton(new File("deny/dir/file"))
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI()))
     );
   }
 
@@ -256,10 +247,10 @@ public class LocalInputSourceTest
   {
     final File denyDir = new File("anydir");
     new LocalInputSource(
-        new InputSourceSecurityConfig(Collections.emptyList(), null),
         denyDir,
         "filter",
         Collections.singleton(new File("anydir"))
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.emptyList(), null)
     );
   }
 
@@ -268,10 +259,10 @@ public class LocalInputSourceTest
   {
     final File allow = new File("allow/dir");
     new LocalInputSource(
-        new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null),
         allow,
         "filter",
         Collections.singleton(new File("allow/dir"))
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null)
     );
   }
 
@@ -280,10 +271,10 @@ public class LocalInputSourceTest
   {
     final File allow = new File("allow/dir");
     new LocalInputSource(
-        new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null),
         allow,
         "filter",
         Collections.singleton(new File("allow/dir/subDir"))
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null)
     );
   }
 
@@ -292,10 +283,10 @@ public class LocalInputSourceTest
   {
     final File allow = new File("allow/dir");
     new LocalInputSource(
-        new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null),
         null,
         null,
         Collections.singleton(new File("allow/dir/../../dir2/"))
+    ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null)
     );
   }
 }

@@ -75,4 +75,11 @@ public class InlineInputSource extends AbstractInputSource
         temporaryDirectory
     );
   }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // Nothing to validate as data is already inline.
+    setValidated();
+  }
 }

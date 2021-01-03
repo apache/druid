@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
@@ -156,5 +157,11 @@ public class CombiningFirehoseFactory implements FiniteFirehoseFactory<InputRowP
     {
       currentFirehose.close();
     }
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    delegateFactoryList.forEach(delegate -> delegate.validateAllowDenyPrefixList(securityConfig));
   }
 }

@@ -19,12 +19,14 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 
 import javax.annotation.Nullable;
@@ -40,16 +42,17 @@ public class ParallelIndexIOConfig extends IndexIOConfig
       @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
       @JsonProperty("inputSource") @Nullable InputSource inputSource,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+      @JacksonInject InputSourceSecurityConfig securityConfig
   )
   {
-    super(firehoseFactory, inputSource, inputFormat, appendToExisting);
+    super(firehoseFactory, inputSource, inputFormat, appendToExisting, securityConfig);
   }
 
   // old constructor for backward compatibility
   @Deprecated
-  public ParallelIndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+  public ParallelIndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, InputSourceSecurityConfig securityConfig)
   {
-    this(firehoseFactory, null, null, appendToExisting);
+    this(firehoseFactory, null, null, appendToExisting, securityConfig);
   }
 }

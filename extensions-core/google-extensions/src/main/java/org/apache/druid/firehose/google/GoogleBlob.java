@@ -21,7 +21,9 @@ package org.apache.druid.firehose.google;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.StringUtils;
 
+import java.net.URI;
 import java.util.Objects;
 
 public class GoogleBlob
@@ -77,5 +79,10 @@ public class GoogleBlob
   public int hashCode()
   {
     return Objects.hash(bucket, path);
+  }
+
+  public URI toURI()
+  {
+    return URI.create(StringUtils.format("gs://%s/%s", bucket, path));
   }
 }

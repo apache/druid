@@ -196,9 +196,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           null,
-          new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, inputDir, filter),
+          new LocalInputSource(inputDir, filter),
           inputFormat,
-          appendToExisting
+          appendToExisting,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
@@ -216,7 +217,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           new LocalFirehoseFactory(inputDir, filter, null),
-          appendToExisting
+          appendToExisting,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
       //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(

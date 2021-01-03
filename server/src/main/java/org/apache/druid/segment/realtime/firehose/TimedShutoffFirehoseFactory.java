@@ -26,6 +26,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CloseableUtils;
@@ -134,5 +135,11 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   public DateTime getShutoffTime()
   {
     return shutoffTime;
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    delegateFactory.validateAllowDenyPrefixList(securityConfig);
   }
 }

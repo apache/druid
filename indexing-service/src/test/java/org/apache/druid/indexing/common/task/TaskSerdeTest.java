@@ -246,7 +246,8 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, new File("lol"), "rofl"), new NoopInputFormat(), true),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true,
+                              InputSourceSecurityConfig.ALLOW_ALL),
             new IndexTuningConfig(
                 null,
                 null,
@@ -328,7 +329,8 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(InputSourceSecurityConfig.ALLOW_ALL, new File("lol"), "rofl"), new NoopInputFormat(), true),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true,
+                              InputSourceSecurityConfig.ALLOW_ALL),
             new IndexTuningConfig(
                 null,
                 null,

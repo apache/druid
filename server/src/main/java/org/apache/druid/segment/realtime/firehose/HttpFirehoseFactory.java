@@ -26,6 +26,7 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.HttpEntity;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -170,5 +171,12 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
         getHttpAuthenticationUsername(),
         httpAuthenticationPasswordProvider
     );
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    securityConfig.validateURIAccess(uris);
+    setValidated();
   }
 }

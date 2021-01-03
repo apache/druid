@@ -129,4 +129,10 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
   {
     return Objects.hash(delegates);
   }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    delegates.forEach(delegate -> delegate.validateAllowDenyPrefixList(securityConfig));
+  }
 }

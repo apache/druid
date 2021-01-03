@@ -30,6 +30,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -219,7 +220,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask = builder
@@ -265,7 +267,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask = builder
@@ -341,7 +344,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask1 = builder
@@ -413,7 +417,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask = builder
@@ -506,7 +511,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     // day segmentGranularity
@@ -555,7 +561,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask = builder
@@ -596,7 +603,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask = builder
@@ -648,7 +656,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask compactionTask = builder
@@ -758,7 +767,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     segmentLoaderFactory,
                     RETRY_POLICY_FACTORY
                 ),
-                false
+                false,
+                InputSourceSecurityConfig.ALLOW_ALL
+
             ),
             IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
         ),

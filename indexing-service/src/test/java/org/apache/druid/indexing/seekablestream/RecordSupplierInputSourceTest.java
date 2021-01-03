@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -71,6 +72,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   {
     final RandomCsvSupplier supplier = new RandomCsvSupplier();
     final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false);
+    inputSource.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());

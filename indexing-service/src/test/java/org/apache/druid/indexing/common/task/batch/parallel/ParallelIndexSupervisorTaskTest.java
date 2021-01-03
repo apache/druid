@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -190,7 +191,8 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new InlineInputSource("test"),
           new JsonInputFormat(null, null, null),
-          appendToExisting
+          appendToExisting,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
       final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
           null,

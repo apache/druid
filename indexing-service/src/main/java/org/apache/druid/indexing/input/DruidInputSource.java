@@ -38,6 +38,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicy;
@@ -473,5 +474,12 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
     long retval = input + (long) jitter;
     return retval < 0 ? 0 : retval;
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // No URI to validate
+    setValidated();
   }
 }

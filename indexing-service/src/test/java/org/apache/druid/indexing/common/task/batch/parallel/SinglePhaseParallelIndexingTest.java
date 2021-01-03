@@ -468,7 +468,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               null,
               new SettableSplittableLocalInputSource(inputDir, "test_*", splittableInputSource),
               DEFAULT_INPUT_FORMAT,
-              appendToExisting
+              appendToExisting,
+              InputSourceSecurityConfig.ALLOW_ALL
           ),
           tuningConfig
       );
@@ -496,7 +497,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           ),
           new ParallelIndexIOConfig(
               new LocalFirehoseFactory(inputDir, "test_*", null),
-              appendToExisting
+              appendToExisting,
+              InputSourceSecurityConfig.ALLOW_ALL
           ),
           tuningConfig
       );
@@ -523,7 +525,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         @JsonProperty("splittableInputSource") boolean splittableInputSource
     )
     {
-      super(InputSourceSecurityConfig.ALLOW_ALL, baseDir, filter);
+      super(baseDir, filter);
       this.splittableInputSource = splittableInputSource;
     }
 

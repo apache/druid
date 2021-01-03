@@ -33,6 +33,7 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -196,7 +197,8 @@ public class ClientCompactionTaskQuerySerdeTest
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
         new SegmentLoaderFactory(null, mapper),
-        new RetryPolicyFactory(new RetryPolicyConfig())
+        new RetryPolicyFactory(new RetryPolicyConfig()),
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final CompactionTask task = builder
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
@@ -316,6 +318,7 @@ public class ClientCompactionTaskQuerySerdeTest
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
                   binder.bind(IndexingServiceClient.class).toInstance(new NoopIndexingServiceClient());
+                  binder.bind(InputSourceSecurityConfig.class).toInstance(InputSourceSecurityConfig.ALLOW_ALL);
                 }
             )
         )

@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -47,22 +46,17 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
-  private final InputSourceSecurityConfig config;
-
   @JsonCreator
   public HttpInputSource(
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
-      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
-      @JacksonInject InputSourceSecurityConfig config
+      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider
   )
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
-    config.validateURIAccess(uris);
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
-    this.config = config;
   }
 
   @JsonProperty
@@ -103,8 +97,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     return new HttpInputSource(
         Collections.singletonList(split.get()),
         httpAuthenticationUsername,
-        httpAuthenticationPasswordProvider,
-        config
+        httpAuthenticationPasswordProvider
     );
   }
 
@@ -152,5 +145,12 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   public boolean needsFormat()
   {
     return true;
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    securityConfig.validateURIAccess(uris);
+    setValidated();
   }
 }

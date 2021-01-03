@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -154,6 +155,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final RetryPolicyFactory retryPolicyFactory;
 
   @JsonIgnore
+  private final InputSourceSecurityConfig securityConfig;
+
+  @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
       (taskObject, config) -> {
         final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
@@ -176,7 +180,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory
+      @JacksonInject RetryPolicyFactory retryPolicyFactory,
+      @JacksonInject InputSourceSecurityConfig securityConfig
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
@@ -207,6 +212,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
+    this.securityConfig = securityConfig;
   }
 
   @VisibleForTesting
@@ -350,7 +356,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         segmentGranularity,
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        securityConfig
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -458,7 +465,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final Granularity segmentGranularity,
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
-      final RetryPolicyFactory retryPolicyFactory
+      final RetryPolicyFactory retryPolicyFactory,
+      final InputSourceSecurityConfig securityConfig
   ) throws IOException, SegmentLoadingException
   {
     NonnullPair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
@@ -535,7 +543,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                     interval,
                     coordinatorClient,
                     segmentLoaderFactory,
-                    retryPolicyFactory
+                    retryPolicyFactory,
+                    securityConfig
                 ),
                 compactionTuningConfig
             )
@@ -562,7 +571,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                   segmentProvider.interval,
                   coordinatorClient,
                   segmentLoaderFactory,
-                  retryPolicyFactory
+                  retryPolicyFactory,
+                  securityConfig
               ),
               compactionTuningConfig
           )
@@ -576,7 +586,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       Interval interval,
       CoordinatorClient coordinatorClient,
       SegmentLoaderFactory segmentLoaderFactory,
-      RetryPolicyFactory retryPolicyFactory
+      RetryPolicyFactory retryPolicyFactory,
+      InputSourceSecurityConfig securityConfig
   )
   {
     return new ParallelIndexIOConfig(
@@ -594,7 +605,8 @@ public class CompactionTask extends AbstractBatchIndexTask
             retryPolicyFactory
         ),
         null,
-        false
+        false,
+        securityConfig
     );
   }
 
@@ -882,6 +894,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final String dataSource;
     private final SegmentLoaderFactory segmentLoaderFactory;
     private final RetryPolicyFactory retryPolicyFactory;
+    private final InputSourceSecurityConfig securityConfig;
 
     private CompactionIOConfig ioConfig;
     @Nullable
@@ -898,12 +911,14 @@ public class CompactionTask extends AbstractBatchIndexTask
     public Builder(
         String dataSource,
         SegmentLoaderFactory segmentLoaderFactory,
-        RetryPolicyFactory retryPolicyFactory
+        RetryPolicyFactory retryPolicyFactory,
+        InputSourceSecurityConfig securityConfig
     )
     {
       this.dataSource = dataSource;
       this.segmentLoaderFactory = segmentLoaderFactory;
       this.retryPolicyFactory = retryPolicyFactory;
+      this.securityConfig = securityConfig;
     }
 
     public Builder interval(Interval interval)
@@ -968,7 +983,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           tuningConfig,
           context,
           segmentLoaderFactory,
-          retryPolicyFactory
+          retryPolicyFactory,
+          securityConfig
       );
     }
   }

@@ -21,8 +21,10 @@ package org.apache.druid.firehose.azure;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.validation.constraints.NotNull;
+import java.net.URI;
 import java.util.Objects;
 
 /**
@@ -89,5 +91,10 @@ public class AzureBlob
   public int hashCode()
   {
     return Objects.hash(container, path);
+  }
+
+  public URI toURI()
+  {
+    return URI.create(StringUtils.format("azure://%s/%s", container, path));
   }
 }

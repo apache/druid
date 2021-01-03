@@ -27,6 +27,7 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 
 import javax.annotation.Nullable;
@@ -102,5 +103,11 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
   public FiniteFirehoseFactory<StringInputRowParser, String> withSplit(InputSplit<String> split)
   {
     return new InlineFirehoseFactory(split.get());
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // No URI to validate
   }
 }

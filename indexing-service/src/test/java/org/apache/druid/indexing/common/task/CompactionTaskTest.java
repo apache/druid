@@ -43,6 +43,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -272,6 +273,7 @@ public class CompactionTaskTest
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                   binder.bind(IndexingServiceClient.class).toInstance(INDEXING_SERVICE_CLIENT);
+                  binder.bind(InputSourceSecurityConfig.class).toInstance(InputSourceSecurityConfig.ALLOW_ALL);
                 }
             )
         )
@@ -360,7 +362,8 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final CompactionTask task = builder
         .inputSpec(
@@ -381,7 +384,8 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final CompactionTask task = builder
         .segments(SEGMENTS)
@@ -400,7 +404,8 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask task = builder
@@ -480,7 +485,8 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask expectedFromJson = builder
@@ -576,7 +582,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -644,7 +651,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -713,7 +721,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -782,7 +791,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -843,7 +853,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     ingestionSpecs.sort(
@@ -884,7 +895,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -918,7 +930,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -958,7 +971,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
   }
 
@@ -981,7 +995,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
   }
 
@@ -994,7 +1009,8 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final CompactionTask task = builder
@@ -1015,7 +1031,8 @@ public class CompactionTaskTest
         new PeriodGranularity(Period.months(3), null, null),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1050,7 +1067,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 

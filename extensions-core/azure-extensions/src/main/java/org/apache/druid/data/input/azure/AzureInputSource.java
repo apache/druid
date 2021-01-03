@@ -28,7 +28,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
@@ -59,7 +58,6 @@ public class AzureInputSource extends CloudObjectInputSource
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private final AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
   private final AzureInputDataConfig inputDataConfig;
-  private final InputSourceSecurityConfig securityConfig;
 
   @JsonCreator
   public AzureInputSource(
@@ -68,13 +66,12 @@ public class AzureInputSource extends CloudObjectInputSource
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       @JacksonInject AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
       @JacksonInject AzureInputDataConfig inputDataConfig,
-      @JacksonInject InputSourceSecurityConfig securityConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
-    super(SCHEME, uris, prefixes, objects, securityConfig);
+    super(SCHEME, uris, prefixes, objects);
     this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
@@ -86,7 +83,6 @@ public class AzureInputSource extends CloudObjectInputSource
         azureCloudBlobToLocationConverter,
         "AzureCloudBlobToLocationConverter"
     );
-    this.securityConfig = securityConfig;
   }
 
   @Override
@@ -98,7 +94,6 @@ public class AzureInputSource extends CloudObjectInputSource
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
         inputDataConfig,
-        securityConfig,
         null,
         null,
         split.get()
@@ -139,8 +134,7 @@ public class AzureInputSource extends CloudObjectInputSource
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
-        inputDataConfig,
-        securityConfig
+        inputDataConfig
     );
   }
 
@@ -161,8 +155,7 @@ public class AzureInputSource extends CloudObjectInputSource
            entityFactory.equals(that.entityFactory) &&
            azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
            azureCloudBlobToLocationConverter.equals(that.azureCloudBlobToLocationConverter) &&
-           inputDataConfig.equals(that.inputDataConfig) &&
-           securityConfig.equals(that.securityConfig);
+           inputDataConfig.equals(that.inputDataConfig);
   }
 
   @Override

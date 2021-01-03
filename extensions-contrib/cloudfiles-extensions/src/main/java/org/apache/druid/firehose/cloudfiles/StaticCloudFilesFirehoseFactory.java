@@ -25,8 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.cloudfiles.CloudFilesByteSource;
 import org.apache.druid.storage.cloudfiles.CloudFilesObjectApiProxy;
@@ -36,10 +38,12 @@ import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<CloudFilesBlob>
 {
@@ -159,4 +163,21 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
         getMaxFetchRetry()
     );
   }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    securityConfig.validateURIAccess(blobs.stream()
+                                          .map(blob -> URI.create(
+                                              StringUtils.format(
+                                                  "%s/%s",
+                                                  cloudFilesApi.getCDNApi(blob.getRegion())
+                                                               .get(blob.getContainer())
+                                                               .getUri(),
+                                                  blob.getPath()
+                                              )))
+                                          .collect(Collectors.toList()));
+    setValidated();
+  }
+
 }

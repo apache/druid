@@ -29,7 +29,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
@@ -54,22 +53,19 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 
   private final GoogleStorage storage;
   private final GoogleInputDataConfig inputDataConfig;
-  private final InputSourceSecurityConfig securityConfig;
 
   @JsonCreator
   public GoogleCloudStorageInputSource(
       @JacksonInject GoogleStorage storage,
       @JacksonInject GoogleInputDataConfig inputDataConfig,
-      @JacksonInject InputSourceSecurityConfig securityConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
-    super(SCHEME, uris, prefixes, objects, securityConfig);
+    super(SCHEME, uris, prefixes, objects);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
-    this.securityConfig = securityConfig;
   }
 
   @Override
@@ -116,7 +112,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
   @Override
   public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new GoogleCloudStorageInputSource(storage, inputDataConfig, securityConfig, null, null, split.get());
+    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get());
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)

@@ -65,7 +65,6 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
 
   private final List<String> inputPaths;
   private final Configuration configuration;
-  private final InputSourceSecurityConfig securityConfig;
 
   // Although the javadocs for SplittableInputSource say to avoid caching splits to reduce memory, HdfsInputSource
   // *does* cache the splits for the following reasons:
@@ -80,14 +79,12 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   @JsonCreator
   public HdfsInputSource(
       @JsonProperty(PROP_PATHS) Object inputPaths,
-      @JacksonInject @Hdfs Configuration configuration,
-      @JacksonInject InputSourceSecurityConfig securityConfig
+      @JacksonInject @Hdfs Configuration configuration
   )
   {
     this.inputPaths = coerceInputPathsToList(inputPaths, PROP_PATHS);
     this.configuration = configuration;
     this.cachedPaths = null;
-    this.securityConfig = securityConfig;
   }
 
   public static List<String> coerceInputPathsToList(Object inputPaths, String propertyName)
@@ -206,7 +203,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   public SplittableInputSource<List<Path>> withSplit(InputSplit<List<Path>> split)
   {
     List<String> paths = split.get().stream().map(path -> path.toString()).collect(Collectors.toList());
-    return new HdfsInputSource(paths, configuration, securityConfig);
+    return new HdfsInputSource(paths, configuration);
   }
 
   @Override
@@ -219,9 +216,20 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   {
     if (cachedPaths == null) {
       Collection<Path> paths = Preconditions.checkNotNull(getPaths(inputPaths, configuration), "paths");
-      paths.forEach(path -> securityConfig.validateURIAccess(path.toUri()));
       cachedPaths = ImmutableList.copyOf(paths);
     }
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    try {
+      cachePathsIfNeeded();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    securityConfig.validateURIAccess(cachedPaths.stream().map(path -> path.toUri()).collect(Collectors.toList()));
   }
 
   static Builder builder()
@@ -233,7 +241,6 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   {
     private Object paths;
     private Configuration configuration;
-    private InputSourceSecurityConfig config;
 
     private Builder()
     {
@@ -251,15 +258,9 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
       return this;
     }
 
-    Builder inputSourceSecurityConfig(InputSourceSecurityConfig config)
-    {
-      this.config = config;
-      return this;
-    }
-
     HdfsInputSource build()
     {
-      return new HdfsInputSource(paths, configuration, config);
+      return new HdfsInputSource(paths, configuration);
     }
   }
 }

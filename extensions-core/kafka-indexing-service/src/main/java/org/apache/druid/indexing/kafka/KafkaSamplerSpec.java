@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
@@ -42,10 +43,11 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
       @JsonProperty("spec") final KafkaSupervisorSpec ingestionSpec,
       @JsonProperty("samplerConfig") @Nullable final SamplerConfig samplerConfig,
       @JacksonInject InputSourceSampler inputSourceSampler,
-      @JacksonInject ObjectMapper objectMapper
+      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject InputSourceSecurityConfig securityConfig
   )
   {
-    super(ingestionSpec, samplerConfig, inputSourceSampler);
+    super(ingestionSpec, samplerConfig, inputSourceSampler, securityConfig);
 
     this.objectMapper = objectMapper;
   }

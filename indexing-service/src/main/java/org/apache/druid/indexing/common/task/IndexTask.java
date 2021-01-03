@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -40,6 +41,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
@@ -1030,13 +1032,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final InputSource inputSource;
     private final InputFormat inputFormat;
     private final boolean appendToExisting;
+    private final InputSourceSecurityConfig securityConfig;
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+        @JacksonInject InputSourceSecurityConfig securityConfig
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1045,17 +1049,21 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (firehoseFactory != null && inputFormat != null) {
         throw new IAE("Cannot use firehose and inputFormat together. Try using inputSource instead of firehose.");
       }
+      if (inputSource != null) {
+        inputSource.validateAllowDenyPrefixList(securityConfig);
+      }
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
+      this.securityConfig = securityConfig;
     }
 
     // old constructor for backward compatibility
     @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, InputSourceSecurityConfig securityConfig)
     {
-      this(firehoseFactory, null, null, appendToExisting);
+      this(firehoseFactory, null, null, appendToExisting, securityConfig);
     }
 
     @Nullable
@@ -1090,10 +1098,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public InputSource getNonNullInputSource(@Nullable InputRowParser inputRowParser)
     {
       if (inputSource == null) {
-        return new FirehoseFactoryToInputSourceAdaptor(
+        InputSource inputSource = new FirehoseFactoryToInputSourceAdaptor(
             (FiniteFirehoseFactory) firehoseFactory,
             inputRowParser
         );
+        inputSource.validateAllowDenyPrefixList(securityConfig);
+        return inputSource;
       } else {
         return inputSource;
       }

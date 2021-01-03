@@ -26,6 +26,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.joda.time.Interval;
 
 import java.io.File;
@@ -77,4 +78,9 @@ public class ClippedFirehoseFactory implements FirehoseFactory
     );
   }
 
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    delegate.validateAllowDenyPrefixList(securityConfig);
+  }
 }

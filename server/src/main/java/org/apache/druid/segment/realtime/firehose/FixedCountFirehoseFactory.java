@@ -26,6 +26,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -89,5 +90,11 @@ public class FixedCountFirehoseFactory implements FirehoseFactory
         delegateFirehose.close();
       }
     };
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    delegate.validateAllowDenyPrefixList(securityConfig);
   }
 }

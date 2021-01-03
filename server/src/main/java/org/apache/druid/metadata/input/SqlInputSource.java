@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
@@ -147,5 +148,12 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
   public int hashCode()
   {
     return Objects.hash(sqls, sqlFirehoseDatabaseConnector, foldCase);
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // No URI to validate
+    setValidated();
   }
 }

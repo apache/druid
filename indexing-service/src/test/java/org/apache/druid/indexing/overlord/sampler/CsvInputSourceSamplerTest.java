@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -59,6 +60,7 @@ public class CsvInputSourceSamplerTest
         "Michael,Jackson,,Male"
     );
     final InputSource inputSource = new InlineInputSource(String.join("\n", strCsvRows));
+    inputSource.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
     final InputFormat inputFormat = new CsvInputFormat(null, null, null, true, 0);
     final InputSourceSampler inputSourceSampler = new InputSourceSampler();
 

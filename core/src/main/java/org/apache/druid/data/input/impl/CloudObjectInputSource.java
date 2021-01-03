@@ -44,21 +44,19 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+  private final String scheme;
 
   public CloudObjectInputSource(
       String scheme,
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
-      @Nullable List<CloudObjectLocation> objects,
-      InputSourceSecurityConfig securityConfig
+      @Nullable List<CloudObjectLocation> objects
   )
   {
+    this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
-    securityConfig.validateURIAccess(uris);
-    securityConfig.validateURIAccess(prefixes);
-    securityConfig.validateCloudLocationAccess(objects, scheme);
 
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
@@ -170,13 +168,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     CloudObjectInputSource that = (CloudObjectInputSource) o;
     return Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
-           Objects.equals(objects, that.objects);
+           Objects.equals(objects, that.objects) &&
+           Objects.equals(scheme, that.scheme);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, objects);
+    return Objects.hash(uris, prefixes, objects, scheme);
   }
 
   private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException
@@ -184,5 +183,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     if (clause) {
       throw new IllegalArgumentException("exactly one of either uris or prefixes or objects must be specified");
     }
+  }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    securityConfig.validateURIAccess(uris);
+    securityConfig.validateURIAccess(prefixes);
+    securityConfig.validateCloudLocationAccess(objects, scheme);
+    setValidated();
   }
 }

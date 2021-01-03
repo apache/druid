@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -524,6 +525,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       this.maxConnectionResets = maxConnectionResets;
       this.sleepMillis = sleepMillis;
       this.baseDir = baseDir;
+      validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
     }
 
     @Override
@@ -597,6 +599,13 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     public FiniteFirehoseFactory<StringInputRowParser, File> withSplit(InputSplit<File> split)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // Nothing to validate
+      setValidated();
     }
 
     private class TestInputStream extends InputStream

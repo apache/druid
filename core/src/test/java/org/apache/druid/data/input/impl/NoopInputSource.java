@@ -56,4 +56,10 @@ public class NoopInputSource implements InputSource
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // no-op
+  }
 }

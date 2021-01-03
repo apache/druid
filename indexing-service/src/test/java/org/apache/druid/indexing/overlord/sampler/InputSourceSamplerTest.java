@@ -35,6 +35,7 @@ import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -1222,11 +1223,18 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         // exclude the last line to form a legal json block
         STR_JSON_ROWS.stream().limit(STR_JSON_ROWS.size() - 1).collect(Collectors.joining())
     );
-
-    SamplerResponse response = inputSourceSampler.sample(new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
-                                                         createInputFormat(),
-                                                         dataSchema,
-                                                         new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/));
+    RecordSupplierInputSource inputSource = new RecordSupplierInputSource(
+        "topicName",
+        new TestRecordSupplier(jsonBlockList),
+        true
+    );
+    inputSource.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
+    SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        createInputFormat(),
+        dataSchema,
+        new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/)
+    );
 
     //
     // the 1st json block contains STR_JSON_ROWS.size() lines, and 2nd json block contains STR_JSON_ROWS.size()-1 lines
@@ -1387,11 +1395,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
   private InputSource createInputSource(List<String> rows, DataSchema dataSchema)
   {
+    InputSource inputSource;
     final String data = String.join("\n", rows);
     if (useInputFormatApi) {
-      return new InlineInputSource(data);
+      inputSource = new InlineInputSource(data);
     } else {
-      return new FirehoseFactoryToInputSourceAdaptor(
+      inputSource = new FirehoseFactoryToInputSourceAdaptor(
           new InlineFirehoseFactory(data),
           createInputRowParser(
               dataSchema == null ? new TimestampSpec(null, null, null) : dataSchema.getTimestampSpec(),
@@ -1399,6 +1408,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
           )
       );
     }
+    inputSource.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
+    return inputSource;
   }
 
   private String getUnparseableTimestampString()

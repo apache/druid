@@ -232,6 +232,13 @@ public class CombiningInputSourceTest
     }
 
     @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // Nothing to do
+      setValidated();
+    }
+
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {
@@ -308,6 +315,13 @@ public class CombiningInputSourceTest
     public int hashCode()
     {
       return Objects.hash(uris);
+    }
+
+    @Override
+    public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+    {
+      // Nothing to do
+      setValidated();
     }
   }
 }

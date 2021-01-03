@@ -33,7 +33,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.aliyun.OssInputDataConfig;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
@@ -55,7 +54,6 @@ public class OssInputSource extends CloudObjectInputSource
   @JsonProperty("properties")
   private final OssClientConfig inputSourceConfig;
   private final OssInputDataConfig inputDataConfig;
-  private final InputSourceSecurityConfig securityConfig;
 
   /**
    * Constructor for OssInputSource
@@ -73,14 +71,13 @@ public class OssInputSource extends CloudObjectInputSource
   public OssInputSource(
       @JacksonInject OSS client,
       @JacksonInject OssInputDataConfig inputDataConfig,
-      @JacksonInject InputSourceSecurityConfig securityConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
-    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, securityConfig);
+    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "inputDataConfig");
     Preconditions.checkNotNull(client, "client");
     this.inputSourceConfig = inputSourceConfig;
@@ -93,7 +90,6 @@ public class OssInputSource extends CloudObjectInputSource
           }
         }
     );
-    this.securityConfig = securityConfig;
   }
 
 
@@ -131,7 +127,6 @@ public class OssInputSource extends CloudObjectInputSource
     return new OssInputSource(
         clientSupplier.get(),
         inputDataConfig,
-        securityConfig,
         null,
         null,
         split.get(),

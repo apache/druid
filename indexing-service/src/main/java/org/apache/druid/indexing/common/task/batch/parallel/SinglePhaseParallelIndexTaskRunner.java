@@ -24,6 +24,7 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 
@@ -119,7 +120,8 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
                 firehoseFactory,
                 inputSource,
                 ingestionSchema.getIOConfig().getInputFormat(),
-                ingestionSchema.getIOConfig().isAppendToExisting()
+                ingestionSchema.getIOConfig().isAppendToExisting(),
+                InputSourceSecurityConfig.ALLOW_ALL
             ),
             ingestionSchema.getTuningConfig()
         ),

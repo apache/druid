@@ -30,6 +30,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.prefetch.CacheManager;
 import org.apache.druid.data.input.impl.prefetch.FetchConfig;
 import org.apache.druid.data.input.impl.prefetch.Fetcher;
@@ -277,4 +278,10 @@ public abstract class PrefetchSqlFirehoseFactory<T>
   protected abstract InputStream openObjectStream(T object, File filename) throws IOException;
 
   protected abstract Collection<T> initObjects();
+
+  @Override
+  public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
+  {
+    // No URI to validate
+  }
 }

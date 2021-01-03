@@ -26,6 +26,7 @@ import org.apache.curator.test.TestingCluster;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -157,7 +158,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         supervisorSpec,
         new SamplerConfig(5, null),
         new InputSourceSampler(),
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     SamplerResponse response = samplerSpec.sample();
