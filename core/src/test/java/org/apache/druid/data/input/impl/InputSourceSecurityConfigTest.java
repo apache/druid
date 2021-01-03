@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,6 +51,24 @@ public class InputSourceSecurityConfigTest
         "gs://allowed-bucket/allowed-path")), null);
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path")));
     Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path/subsirectory")));
+
+    Assert.assertFalse(config.isURIAllowed(URI.create("gs://allowed-bucket/deny-path")));
+    Assert.assertFalse(config.isURIAllowed(URI.create("gs://deny-bucket/allow-path")));
+    Assert.assertFalse(config.isURIAllowed(URI.create("gs://allow-bucket/allow-path/../deny-path")));
+
+    Assert.assertFalse(config.isURIAllowed(URI.create("s3://allow-bucket/allow-path")));
+  }
+
+  @Test
+  public void testMultiAllowList()
+  {
+    InputSourceSecurityConfig config = new InputSourceSecurityConfig(ImmutableList.of(URI.create(
+        "gs://allowed-bucket/allowed-path1"), URI.create(
+        "gs://allowed-bucket/allowed-path2")), null);
+    Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path1")));
+    Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path1/subsirectory")));
+    Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path2")));
+    Assert.assertTrue(config.isURIAllowed(URI.create("gs://allowed-bucket/allowed-path2/subsirectory")));
 
     Assert.assertFalse(config.isURIAllowed(URI.create("gs://allowed-bucket/deny-path")));
     Assert.assertFalse(config.isURIAllowed(URI.create("gs://deny-bucket/allow-path")));

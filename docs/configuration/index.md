@@ -1363,6 +1363,12 @@ You can optionally configure following additional configs to restrict druid inge
 |`druid.ingestion.uri.allowPrefixList`|List of URIs|Allowed uris from which ingestion will be allowed. Only one of allowPrefixList or denyPrefixList can be set.|empty list|
 |`druid.ingestion.uri.denyPrefixList`|List of URIs|Blacklisted uris from which ingestion will NOT be allowed. Only one of allowPrefixList or denyPrefixList can be set. |empty list|
 
+`allowPrefixList` and `denyPrefixList` only apply to following ingestion sources - local disk, http, s3, gcs, azure, cloudfiles.  
+
+Using `allowPrefixList` offers more higher security than `denyPrefixList`.
+Prefix matching works by matching prefix of the URI isntead of exact path boundaries.
+e.g.  `http://example.com/f` will match `http://example.com/foo` and `http://example.com/f/b` both.
+
 
 #### Query Configurations
 

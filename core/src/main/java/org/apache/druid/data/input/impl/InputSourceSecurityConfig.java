@@ -34,7 +34,7 @@ import java.util.Objects;
 public class InputSourceSecurityConfig
 {
 
-  public static InputSourceSecurityConfig ALLOW_ALL = new InputSourceSecurityConfig(null, null);
+  public static final InputSourceSecurityConfig ALLOW_ALL = new InputSourceSecurityConfig(null, null);
   @JsonProperty
   private final List<URI> allowPrefixList;
   @JsonProperty
@@ -68,7 +68,9 @@ public class InputSourceSecurityConfig
   {
     URI toMatch = uri.normalize();
     for (URI prefix : domains) {
-      return toMatch.toString().startsWith(prefix.toString());
+      if (toMatch.toString().startsWith(prefix.toString())) {
+        return true;
+      }
     }
     return false;
   }
