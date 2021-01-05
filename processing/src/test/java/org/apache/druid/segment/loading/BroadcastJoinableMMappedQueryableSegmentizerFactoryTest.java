@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -119,7 +120,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
         null,
         persistedSegmentRoot.getTotalSpace()
     );
-    final Segment loaded = factory.factorize(dataSegment, persistedSegmentRoot, false);
+    final Segment loaded = factory.factorize(dataSegment, persistedSegmentRoot, false, CommonCallback.NOOP);
 
     final BroadcastSegmentIndexedTable table = (BroadcastSegmentIndexedTable) loaded.as(IndexedTable.class);
     Assert.assertNotNull(table);

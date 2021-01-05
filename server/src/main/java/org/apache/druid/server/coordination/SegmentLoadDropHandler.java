@@ -271,7 +271,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     try {
       loaded = segmentManager.loadSegment(segment,
               lazy,
-              () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
       );
     }
     catch (Exception e) {

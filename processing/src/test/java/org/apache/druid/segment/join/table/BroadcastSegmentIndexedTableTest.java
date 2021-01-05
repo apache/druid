@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -137,7 +138,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         null,
         segment.getTotalSpace()
     );
-    backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false);
+    backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false, CommonCallback.NOOP);
 
     columnNames = ImmutableList.<String>builder().add(ColumnHolder.TIME_COLUMN_NAME)
                                                  .addAll(backingSegment.asQueryableIndex().getColumnNames()).build();

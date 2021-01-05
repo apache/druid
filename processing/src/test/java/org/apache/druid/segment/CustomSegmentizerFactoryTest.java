@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.Intervals;
@@ -126,10 +127,10 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   private static class CustomSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir, boolean lazy) throws SegmentLoadingException
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException
     {
       try {
-        return new QueryableIndexSegment(INDEX_IO.loadIndex(parentDir, lazy), segment.getId());
+        return new QueryableIndexSegment(INDEX_IO.loadIndex(parentDir, lazy, loadFailed), segment.getId());
       }
       catch (IOException e) {
         throw new SegmentLoadingException(e, "%s", e.getMessage());
