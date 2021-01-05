@@ -27,4 +27,20 @@ describe('snitch dialog', () => {
     render(snitchDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
+
+  it('matches snapshot with history', () => {
+    const snitchDialog = (
+      <SnitchDialog
+        title="Be snitchin"
+        onSave={() => {}}
+        onClose={() => {}}
+        historyRecords={[
+          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+        ]}
+      />
+    );
+    render(snitchDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
 });

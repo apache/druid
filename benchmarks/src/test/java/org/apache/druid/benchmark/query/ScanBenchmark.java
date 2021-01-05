@@ -22,9 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
@@ -67,6 +64,9 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -133,7 +133,7 @@ public class ScanBenchmark
   private List<QueryableIndex> qIndexes;
 
   private QueryRunnerFactory factory;
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private Druids.ScanQueryBuilder queryBuilder;
   private ScanQuery query;
   private File tmpDir;
@@ -155,7 +155,7 @@ public class ScanBenchmark
   {
     // queries for the basic schema
     final Map<String, Druids.ScanQueryBuilder> basicQueries = new LinkedHashMap<>();
-    final BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    final GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
 
     final List<String> queryTypes = ImmutableList.of("A", "B", "C", "D");
     for (final String eachType : queryTypes) {
@@ -165,7 +165,7 @@ public class ScanBenchmark
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
 
-  private static Druids.ScanQueryBuilder makeQuery(final String name, final BenchmarkSchemaInfo basicSchema)
+  private static Druids.ScanQueryBuilder makeQuery(final String name, final GeneratorSchemaInfo basicSchema)
   {
     switch (name) {
       case "A":
@@ -182,7 +182,7 @@ public class ScanBenchmark
   }
 
   /* Just get everything */
-  private static Druids.ScanQueryBuilder basicA(final BenchmarkSchemaInfo basicSchema)
+  private static Druids.ScanQueryBuilder basicA(final GeneratorSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec =
         new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -193,7 +193,7 @@ public class ScanBenchmark
                  .order(ordering);
   }
 
-  private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
+  private static Druids.ScanQueryBuilder basicB(final GeneratorSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec =
         new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -214,7 +214,7 @@ public class ScanBenchmark
                  .order(ordering);
   }
 
-  private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
+  private static Druids.ScanQueryBuilder basicC(final GeneratorSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec =
         new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -227,7 +227,7 @@ public class ScanBenchmark
                  .order(ordering);
   }
 
-  private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
+  private static Druids.ScanQueryBuilder basicD(final GeneratorSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
         Collections.singletonList(basicSchema.getDataInterval())
@@ -257,7 +257,7 @@ public class ScanBenchmark
     String schemaName = schemaQuery[0];
     String queryName = schemaQuery[1];
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
     queryBuilder = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
     queryBuilder.limit(limit);
     query = queryBuilder.build();
@@ -265,7 +265,7 @@ public class ScanBenchmark
     incIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      DataGenerator gen = new DataGenerator(
           schemaInfo.getColumnSchemas(),
           System.currentTimeMillis(),
           schemaInfo.getDataInterval(),
@@ -321,7 +321,6 @@ public class ScanBenchmark
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
   }

@@ -22,19 +22,24 @@ title: "Web console"
   ~ under the License.
   -->
 
+Druid include a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. Users can also run SQL and native Druid queries in the console.
 
 The Druid Console is hosted by the [Router](../design/router.md) process.
 
-In addition, the following cluster settings must be enabled:
+The following cluster settings must be enabled, as they are by default:
 
-- the Router's [management proxy](../design/router.html#enabling-the-management-proxy) must be enabled.
+- the Router's [management proxy](../design/router.md#enabling-the-management-proxy) must be enabled.
 - the Broker processes in the cluster must have [Druid SQL](../querying/sql.md) enabled.
 
-After enabling Druid SQL on the Brokers and deploying a Router with the management proxy enabled, the Druid console can be accessed at:
+The Druid console can be accessed at:
 
 ```
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
+
+> It is important to note that any Druid console user will have, effectively, the same file permissions as the user under which Druid runs. One way these permissions are surfaced is in the file browser dialog. The dialog
+will show console users the files that the underlying user has permissions to. In general, avoid running Druid as 
+root user. Consider creating a dedicated user account for running Druid.
 
 Below is a description of the high-level features and functionality of the Druid Console
 
@@ -42,9 +47,9 @@ Below is a description of the high-level features and functionality of the Druid
 
 The home view provides a high level overview of the cluster.
 Each card is clickable and links to the appropriate view.
-The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
+The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.md#legacy-consoles) should you need them.
 
-![home-view](../assets/web-console-01-home-view.png)
+![home-view](../assets/web-console-01-home-view.png "home view")
 
 ## Data loader
 

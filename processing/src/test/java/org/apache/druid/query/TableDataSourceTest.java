@@ -36,6 +36,7 @@ public class TableDataSourceTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private final TableDataSource fooDataSource = new TableDataSource("foo");
+  private final TableDataSource barDataSource = new TableDataSource("bar");
 
   @Test
   public void test_getTableNames()
@@ -52,7 +53,8 @@ public class TableDataSourceTest
   @Test
   public void test_isCacheable()
   {
-    Assert.assertTrue(fooDataSource.isCacheable());
+    Assert.assertTrue(fooDataSource.isCacheable(true));
+    Assert.assertTrue(fooDataSource.isCacheable(false));
   }
 
   @Test
@@ -85,24 +87,11 @@ public class TableDataSourceTest
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(TableDataSource.class).withNonnullFields("name").verify();
+    EqualsVerifier.forClass(TableDataSource.class).usingGetClass().withNonnullFields("name").verify();
   }
 
   @Test
-  public void test_equals_legacy()
-  {
-    final LegacyDataSource legacyFoo = new LegacyDataSource("foo");
-    final LegacyDataSource legacyBar = new LegacyDataSource("bar");
-
-    Assert.assertEquals(legacyFoo, fooDataSource);
-    Assert.assertEquals(fooDataSource, legacyFoo);
-
-    Assert.assertNotEquals(legacyBar, fooDataSource);
-    Assert.assertNotEquals(fooDataSource, legacyBar);
-  }
-
-  @Test
-  public void test_serde() throws Exception
+  public void test_serde_roundTrip() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final TableDataSource deserialized = (TableDataSource) jsonMapper.readValue(
@@ -111,5 +100,40 @@ public class TableDataSourceTest
     );
 
     Assert.assertEquals(fooDataSource, deserialized);
+    Assert.assertNotEquals(barDataSource, deserialized);
+  }
+
+  @Test
+  public void test_deserialize_fromObject() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final TableDataSource deserialized = (TableDataSource) jsonMapper.readValue(
+        "{\"type\":\"table\",\"name\":\"foo\"}",
+        DataSource.class
+    );
+
+    Assert.assertEquals(fooDataSource, deserialized);
+    Assert.assertNotEquals(barDataSource, deserialized);
+  }
+
+  @Test
+  public void test_deserialize_fromString() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final TableDataSource deserialized = (TableDataSource) jsonMapper.readValue(
+        "\"foo\"",
+        DataSource.class
+    );
+
+    Assert.assertEquals(fooDataSource, deserialized);
+    Assert.assertNotEquals(barDataSource, deserialized);
+  }
+
+  @Test
+  public void test_serialize() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final String s = jsonMapper.writeValueAsString(fooDataSource);
+    Assert.assertEquals("{\"type\":\"table\",\"name\":\"foo\"}", s);
   }
 }

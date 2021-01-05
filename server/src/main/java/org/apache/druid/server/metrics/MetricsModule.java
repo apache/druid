@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -106,9 +108,10 @@ public class MetricsModule implements Module
 
     return new MonitorScheduler(
         config.get(),
-        Execs.scheduledSingleThreaded("MonitorScheduler-%s"),
+        CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("MonitorSchedulerThread").build(),
         emitter,
-        monitors
+        monitors,
+        Execs.multiThreaded(64, "MonitorThread-%d")
     );
   }
 

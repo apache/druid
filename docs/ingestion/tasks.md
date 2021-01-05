@@ -250,7 +250,7 @@ Note that the overshadow relation holds only for the same time chunk and the sam
 These overshadowed segments are not considered in query processing to filter out stale data.
 
 Each segment has a _major_ version and a _minor_ version. The major version is
-represented as a timestamp in the format of [`"yyyy-MM-dd'T'hh:mm:ss"`](https://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)
+represented as a timestamp in the format of [`"yyyy-MM-dd'T'hh:mm:ss"`](https://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat)
 while the minor version is an integer number. These major and minor versions
 are used to determine the overshadow relation between segments as seen below. 
 
@@ -268,7 +268,7 @@ Here are some examples.
 
 ## Locking
 
-If you are running two or more [druid tasks](./tasks.html) which generate segments for the same data source and the same time chunk,
+If you are running two or more [druid tasks](./tasks.md) which generate segments for the same data source and the same time chunk,
 the generated segments could potentially overshadow each other, which could lead to incorrect query results.
 
 To avoid this problem, tasks will attempt to get locks prior to creating any segment in Druid.
@@ -297,7 +297,7 @@ Also, the segment locking is supported by only native indexing tasks and Kafka/K
 Hadoop indexing tasks and `index_realtime` tasks (used by [Tranquility](tranquility.md)) don't support it yet.
 
 `forceTimeChunkLock` in the task context is only applied to individual tasks.
-If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.html#overlord-operations).
+If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.md#overlord-operations).
 
 Lock requests can conflict with each other if two or more tasks try to get locks for the overlapped time chunks of the same data source.
 Note that the lock conflict can happen between different locks types.
@@ -348,7 +348,7 @@ The task context is used for various individual task configuration. The followin
 |property|default|description|
 |--------|-------|-----------|
 |taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
-|forceTimeChunkLock|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.html#overlord-operations). See [Locking](#locking) for more details.|
+|forceTimeChunkLock|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
 |priority|Different based on task types. See [Priority](#priority).|Task priority|
 
 > When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
@@ -395,59 +395,3 @@ Compaction tasks merge all segments of the given interval. See the documentation
 
 Kill tasks delete all metadata about certain segments and removes them from deep storage.
 See the documentation on [deleting data](../ingestion/data-management.md#delete) for details.
-
-### `append`
-
-Append tasks append a list of segments together into a single segment (one after the other). The grammar is:
-
-```json
-{
-    "type": "append",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    "segments": <JSON list of DataSegment objects to append>,
-    "aggregations": <optional list of aggregators>,
-    "context": <task context>
-}
-```
-
-### `merge`
-
-Merge tasks merge a list of segments together. Any common timestamps are merged.
-If rollup is disabled as part of ingestion, common timestamps are not merged and rows are reordered by their timestamp.
-
-> The [`compact`](#compact) task is often a better choice than the `merge` task.
-
-The grammar is:
-
-```json
-{
-    "type": "merge",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    "aggregations": <list of aggregators>,
-    "rollup": <whether or not to rollup data during a merge>,
-    "segments": <JSON list of DataSegment objects to merge>,
-    "context": <task context>
-}
-```
-
-### `same_interval_merge`
-
-Same Interval Merge task is a shortcut of merge task, all segments in the interval are going to be merged.
-
-> The [`compact`](#compact) task is often a better choice than the `same_interval_merge` task.
-
-The grammar is:
-
-```json
-{
-    "type": "same_interval_merge",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    "aggregations": <list of aggregators>,
-    "rollup": <whether or not to rollup data during a merge>,
-    "interval": <DataSegment objects in this interval are going to be merged>,
-    "context": <task context>
-}
-```

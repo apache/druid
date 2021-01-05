@@ -118,6 +118,7 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
             "  ],",
             "  \"postAggregations\": [",
             "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimateAndBounds\", \"name\": \"estimateAndBounds\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, \"numStdDevs\": 2},",
             "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
             "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
             "      \"type\": \"arrayOfDoublesSketchSetOp\",",
@@ -139,7 +140,9 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
             "      \"operation\": \"NOT\",",
             "      \"nominalEntries\": 1024,",
             "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
-            "    }}",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToString\", \"name\": \"summary\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToVariances\", \"name\": \"variances\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"
@@ -148,19 +151,34 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals("non_existing_sketch", 0, (double) row.get(1), 0);
     Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("non_existing_sketch", 0, (double) row.get(1), 0);
     Assert.assertEquals("estimate", 40.0, (double) row.get(2), 0);
-    Assert.assertEquals("union", 40.0, (double) row.get(4), 0);
-    Assert.assertEquals("intersection", 40.0, (double) row.get(5), 0);
-    Assert.assertEquals("anotb", 0, (double) row.get(6), 0);
+    Assert.assertArrayEquals("estimateAndBounds", new double[]{40.0, 40.0, 40.0}, (double[]) row.get(3), 0);
+    Assert.assertEquals("union", 40.0, (double) row.get(5), 0);
+    Assert.assertEquals("intersection", 40.0, (double) row.get(6), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(7), 0);
+    Assert.assertArrayEquals("variances", new double[]{0.0}, (double[]) row.get(9), 0);
 
-    Object obj = row.get(3); // quantiles-sketch
+    Object obj = row.get(4); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
     Assert.assertEquals(1.0, ds.getMinValue(), 0);
     Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+
+    final String expectedSummary = "### HeapArrayOfDoublesCompactSketch SUMMARY: \n"
+                                   + "   Estimate                : 40.0\n"
+                                   + "   Upper Bound, 95% conf   : 40.0\n"
+                                   + "   Lower Bound, 95% conf   : 40.0\n"
+                                   + "   Theta (double)          : 1.0\n"
+                                   + "   Theta (long)            : 9223372036854775807\n"
+                                   + "   EstMode?                : false\n"
+                                   + "   Empty?                  : false\n"
+                                   + "   Retained Entries        : 40\n"
+                                   + "   Seed Hash               : 93cc | 37836\n"
+                                   + "### END SKETCH SUMMARY\n";
+    Assert.assertEquals("summary", expectedSummary, row.get(8));
   }
 
   @Test

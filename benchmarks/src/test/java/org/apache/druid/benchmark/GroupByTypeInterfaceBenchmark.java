@@ -23,9 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
@@ -43,7 +40,6 @@ import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -70,6 +66,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -144,7 +143,7 @@ public class GroupByTypeInterfaceBenchmark
 
   private QueryRunnerFactory<ResultRow, GroupByQuery> factory;
 
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private GroupByQuery stringQuery;
   private GroupByQuery longFloatQuery;
   private GroupByQuery floatQuery;
@@ -172,7 +171,7 @@ public class GroupByTypeInterfaceBenchmark
   {
     // queries for the basic schema
     Map<String, GroupByQuery> basicQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
 
     { // basic.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -277,13 +276,13 @@ public class GroupByTypeInterfaceBenchmark
 
     String schemaName = "basic";
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
     stringQuery = SCHEMA_QUERY_MAP.get(schemaName).get("string");
     longFloatQuery = SCHEMA_QUERY_MAP.get(schemaName).get("longFloat");
     longQuery = SCHEMA_QUERY_MAP.get(schemaName).get("long");
     floatQuery = SCHEMA_QUERY_MAP.get(schemaName).get("float");
 
-    final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
+    final DataGenerator dataGenerator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED + 1,
         schemaInfo.getDataInterval(),
@@ -399,7 +398,6 @@ public class GroupByTypeInterfaceBenchmark
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            QueryConfig::new,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -417,7 +415,6 @@ public class GroupByTypeInterfaceBenchmark
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();

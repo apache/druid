@@ -142,6 +142,9 @@ public class JoinTestHelper
         }
       };
 
+  public static final String INDEXED_TABLE_VERSION = DateTimes.nowUtc().toString();
+  public static final byte[] INDEXED_TABLE_CACHE_KEY = new byte[] {1, 2, 3};
+
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
     return new RowAdapter<Map<String, Object>>()
@@ -255,7 +258,23 @@ public class JoinTestHelper
             rows,
             createMapRowAdapter(COUNTRIES_SIGNATURE),
             COUNTRIES_SIGNATURE,
-            ImmutableSet.of("countryNumber", "countryIsoCode")
+            ImmutableSet.of("countryNumber", "countryIsoCode"),
+            INDEXED_TABLE_VERSION
+        )
+    );
+  }
+
+  public static RowBasedIndexedTable<Map<String, Object>> createCountriesIndexedTableWithCacheKey() throws IOException
+  {
+    return withRowsFromResource(
+        "/wikipedia/countries.json",
+        rows -> new RowBasedIndexedTable<>(
+            rows,
+            createMapRowAdapter(COUNTRIES_SIGNATURE),
+            COUNTRIES_SIGNATURE,
+            ImmutableSet.of("countryNumber", "countryIsoCode"),
+            INDEXED_TABLE_VERSION,
+            INDEXED_TABLE_CACHE_KEY
         )
     );
   }
@@ -268,7 +287,8 @@ public class JoinTestHelper
             rows,
             createMapRowAdapter(REGIONS_SIGNATURE),
             REGIONS_SIGNATURE,
-            ImmutableSet.of("regionIsoCode", "countryIsoCode")
+            ImmutableSet.of("regionIsoCode", "countryIsoCode"),
+            INDEXED_TABLE_VERSION
         )
     );
   }

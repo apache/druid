@@ -26,12 +26,12 @@ import com.google.inject.name.Names;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -48,6 +48,7 @@ public class KinesisIndexTaskSerdeTest
 {
   private static final DataSchema DATA_SCHEMA = new DataSchema("dataSource", null, null, null, null, null, null, null);
   private static final KinesisIndexTaskTuningConfig TUNING_CONFIG = new KinesisIndexTaskTuningConfig(
+      null,
       null,
       null,
       null,
@@ -115,10 +116,6 @@ public class KinesisIndexTaskSerdeTest
         DATA_SCHEMA,
         TUNING_CONFIG,
         IO_CONFIG,
-        null,
-        null,
-        null,
-        null,
         null,
         null
     );

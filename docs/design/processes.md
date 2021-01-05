@@ -78,7 +78,7 @@ caller. End users typically query Brokers rather than querying Historicals or Mi
 Overlords, and Coordinators. They are optional since you can also simply contact the Druid Brokers, Overlords, and
 Coordinators directly.
 
-The Router also runs the [Druid Console](../operations/management-uis.html#druid-console), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+The Router also runs the [Druid Console](../operations/druid-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
 ### Data server
 
@@ -134,7 +134,7 @@ In clusters with very high segment counts, it can make sense to separate the Coo
 
 The Coordinator and Overlord processes can be run as a single combined process by setting the `druid.coordinator.asOverlord.enabled` property.
 
-Please see [Coordinator Configuration: Operation](../configuration/index.html#coordinator-operation) for details.
+Please see [Coordinator Configuration: Operation](../configuration/index.md#coordinator-operation) for details.
 
 ### Historicals and MiddleManagers
 

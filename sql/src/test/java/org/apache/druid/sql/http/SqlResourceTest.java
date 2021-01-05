@@ -38,9 +38,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.QueryScheduler;
@@ -242,6 +245,23 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(true);
   }
 
+
+  @Test
+  public void testCountStarExtendedCharacters() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery("SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'", null, false, null, null)
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 1)
+        ),
+        rows
+    );
+    checkSqlRequestLog(true);
+  }
+
   @Test
   public void testTimestampsInResponse() throws Exception
   {
@@ -300,6 +320,31 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of("__time", "1999-12-31T16:00:00.000-08:00", "t2", "1999-12-31T00:00:00.000-08:00")
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testTimestampsInResponseWithNulls() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT MAX(__time) as t1, MAX(__time) FILTER(WHERE dim1 = 'non_existing') as t2 FROM druid.foo",
+            ResultFormat.OBJECT,
+            false,
+            null,
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z") // t2 represents Long.MIN converted to a timestamp
+        ) :
+        ImmutableList.of(
+            Maps.transformValues(ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""), (val) -> "".equals(val) ? null : val)
         ),
         rows
     );
@@ -718,6 +763,22 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testUnsupportedQueryThrowsException() throws Exception
+  {
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of());
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
+    Assert.assertEquals(exception.getErrorClass(), QueryUnsupportedException.class.getName());
+  }
+
+  @Test
   public void testTooManyRequests() throws Exception
   {
     final int numQueries = 3;
@@ -765,6 +826,25 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(2, success);
     Assert.assertEquals(1, limited);
     Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
+  }
+
+  @Test
+  public void testQueryTimeoutException() throws Exception
+  {
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1);
+    final QueryException timeoutException = doPost(
+        new SqlQuery(
+            "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
+            ResultFormat.OBJECT,
+            false,
+            queryContext,
+            null
+        )
+    ).lhs;
+    Assert.assertNotNull(timeoutException);
+    Assert.assertEquals(timeoutException.getErrorCode(), QueryTimeoutException.ERROR_CODE);
+    Assert.assertEquals(timeoutException.getErrorClass(), QueryTimeoutException.class.getName());
+
   }
 
   @SuppressWarnings("unchecked")

@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -118,7 +119,8 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "longAny", value = LongAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatAny", value = FloatAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleAny", value = DoubleAnyAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "grouping", value = GroupingAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

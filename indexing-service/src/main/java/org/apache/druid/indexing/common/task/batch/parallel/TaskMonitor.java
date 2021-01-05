@@ -54,7 +54,7 @@ public class TaskMonitor<T extends Task>
 {
   private static final Logger log = new Logger(TaskMonitor.class);
 
-  private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded(("task-monitor-%d"));
+  private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded("task-monitor-%d");
 
   /**
    * A map of subTaskSpecId to {@link MonitorEntry}. This map stores the state of running {@link SubTaskSpec}s. This is
@@ -277,13 +277,13 @@ public class TaskMonitor<T extends Task>
   {
     T task = spec.newSubTask(numAttempts);
     try {
-      indexingServiceClient.runTask(task);
+      indexingServiceClient.runTask(task.getId(), task);
     }
     catch (Exception e) {
       if (isUnknownTypeIdException(e)) {
         log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
         task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
-        indexingServiceClient.runTask(task);
+        indexingServiceClient.runTask(task.getId(), task);
       } else {
         throw e;
       }

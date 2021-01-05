@@ -26,9 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
@@ -41,13 +38,14 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -84,6 +82,9 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -161,7 +162,7 @@ public class GroupByBenchmark
 
   private QueryRunnerFactory<ResultRow, GroupByQuery> factory;
 
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private GroupByQuery query;
 
   private ExecutorService executorService;
@@ -192,7 +193,7 @@ public class GroupByBenchmark
   {
     // queries for the basic schema
     Map<String, GroupByQuery> basicQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
 
     { // basic.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -324,7 +325,7 @@ public class GroupByBenchmark
     // simple one column schema, for testing performance difference between querying on numeric values as Strings and
     // directly as longs
     Map<String, GroupByQuery> simpleQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo simpleSchema = BenchmarkSchemas.SCHEMA_MAP.get("simple");
+    GeneratorSchemaInfo simpleSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("simple");
 
     { // simple.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(simpleSchema.getDataInterval()));
@@ -351,7 +352,7 @@ public class GroupByBenchmark
 
 
     Map<String, GroupByQuery> simpleLongQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo simpleLongSchema = BenchmarkSchemas.SCHEMA_MAP.get("simpleLong");
+    GeneratorSchemaInfo simpleLongSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("simpleLong");
     { // simpleLong.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(simpleLongSchema.getDataInterval()));
       List<AggregatorFactory> queryAggs = new ArrayList<>();
@@ -377,7 +378,7 @@ public class GroupByBenchmark
 
 
     Map<String, GroupByQuery> simpleFloatQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo simpleFloatSchema = BenchmarkSchemas.SCHEMA_MAP.get("simpleFloat");
+    GeneratorSchemaInfo simpleFloatSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("simpleFloat");
     { // simpleFloat.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(simpleFloatSchema.getDataInterval()));
       List<AggregatorFactory> queryAggs = new ArrayList<>();
@@ -402,7 +403,7 @@ public class GroupByBenchmark
     // simple one column schema, for testing performance difference between querying on numeric values as Strings and
     // directly as longs
     Map<String, GroupByQuery> nullQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo nullSchema = BenchmarkSchemas.SCHEMA_MAP.get("nulls");
+    GeneratorSchemaInfo nullSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("nulls");
 
     { // simple-null
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(nullSchema.getDataInterval()));
@@ -443,10 +444,10 @@ public class GroupByBenchmark
     String schemaName = schemaQuery[0];
     String queryName = schemaQuery[1];
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
     query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
 
-    final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
+    final DataGenerator dataGenerator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED + 1,
         schemaInfo.getDataInterval(),
@@ -562,7 +563,6 @@ public class GroupByBenchmark
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            QueryConfig::new,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -586,7 +586,6 @@ public class GroupByBenchmark
                 .withRollup(withRollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
@@ -685,6 +684,28 @@ public class GroupByBenchmark
     blackhole.consume(results);
   }
 
+  /**
+   * Measure the time to produce the first ResultRow unlike {@link #queryMultiQueryableIndexX} measures total query
+   * processing time. This measure is useful since the Broker can start merging as soon as the first result is returned.
+   */
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexTTFR(Blackhole blackhole) throws IOException
+  {
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Yielder<ResultRow> yielder = Yielders.each(queryResult);
+    yielder.close();
+  }
+
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -704,6 +725,32 @@ public class GroupByBenchmark
     Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
     List<ResultRow> results = queryResult.toList();
     blackhole.consume(results);
+  }
+
+  /**
+   * Measure the time to produce the first ResultRow unlike {@link #queryMultiQueryableIndexWithSpilling} measures
+   * total query processing time. This measure is useful since the Broker can start merging as soon as the first
+   * result is returned.
+   */
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexWithSpillingTTFR(Blackhole blackhole) throws IOException
+  {
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    final GroupByQuery spillingQuery = query.withOverriddenContext(
+        ImmutableMap.of("bufferGrouperMaxSize", 4000)
+    );
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
+    Yielder<ResultRow> yielder = Yielders.each(queryResult);
+    yielder.close();
   }
 
   @Benchmark

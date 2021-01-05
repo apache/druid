@@ -71,14 +71,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     this.config = config;
     this.tablesConfigSupplier = tablesConfigSupplier;
-    this.shouldRetry = new Predicate<Throwable>()
-    {
-      @Override
-      public boolean apply(Throwable e)
-      {
-        return isTransientException(e);
-      }
-    };
+    this.shouldRetry = this::isTransientException;
   }
 
   /**
@@ -90,7 +83,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return String representing the SQL type
    */
-  protected String getPayloadType()
+  public String getPayloadType()
   {
     return PAYLOAD_TYPE;
   }
@@ -100,7 +93,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return the collation for the character set
    */
-  protected String getCollation()
+  public String getCollation()
   {
     return COLLATION;
   }
@@ -114,7 +107,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return String representing the SQL type and auto-increment statement
    */
-  protected abstract String getSerialType();
+  public abstract String getSerialType();
 
   /**
    * Returns the value that should be passed to statement.setFetchSize to ensure results
@@ -122,7 +115,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return optimal fetch size to stream results back
    */
-  protected abstract int getStreamingFetchSize();
+  public abstract int getStreamingFetchSize();
 
   /**
    * @return the string that should be used to quote string fields

@@ -29,19 +29,19 @@ sidebar_label: "Load from Apache Kafka"
 This tutorial demonstrates how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
-the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
+the [quickstart](index.md) using the `micro-quickstart` single-machine configuration and have it
 running on your local machine. You don't need to have loaded any data yet.
 
 ## Download and start Kafka
 
 [Apache Kafka](http://kafka.apache.org/) is a high throughput message bus that works well with
-Druid.  For this tutorial, we will use Kafka 2.1.0. To download Kafka, issue the following
+Druid.  For this tutorial, we will use Kafka 2.7.0. To download Kafka, issue the following
 commands in your terminal:
 
 ```bash
-curl -O https://archive.apache.org/dist/kafka/2.1.0/kafka_2.12-2.1.0.tgz
-tar -xzf kafka_2.12-2.1.0.tgz
-cd kafka_2.12-2.1.0
+curl -O https://archive.apache.org/dist/kafka/2.7.0/kafka_2.13-2.7.0.tgz
+tar -xzf kafka_2.13-2.7.0.tgz
+cd kafka_2.13-2.7.0
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -53,7 +53,7 @@ Start a Kafka broker by running the following command in a new terminal:
 Run this command to create a Kafka topic called *wikipedia*, to which we'll send data:
 
 ```bash
-./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic wikipedia
+./bin/kafka-topics.sh --create --topic wikipedia --bootstrap-server localhost:9092
 ```     
 
 ## Load data into Kafka
@@ -128,7 +128,7 @@ Click `Next: Tune` to go to the tuning step.
 ![Data loader tune](../assets/tutorial-kafka-data-loader-07.png "Data loader tune")
 
 In the `Tune` step is it *very important* to set `Use earliest offset` to `True` since we want to consume the data from the start of the stream.
-There are no other changes that need to be made hear, so click `Next: Publish` to go to the `Publish` step.
+There are no other changes that need to be made here, so click `Next: Publish` to go to the `Publish` step.
 
 ![Data loader publish](../assets/tutorial-kafka-data-loader-08.png "Data loader publish")
 
@@ -254,7 +254,7 @@ If the supervisor was successfully created, you will get a response containing t
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.md).
 
-You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.html#tasks](http://localhost:8888/unified-console.html#tasks).
+You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
 
 ## Querying your data
 

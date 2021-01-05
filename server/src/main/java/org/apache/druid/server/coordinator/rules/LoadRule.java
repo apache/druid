@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator.rules;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -30,6 +32,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -88,6 +91,32 @@ public abstract class LoadRule implements Rule
       currentReplicants.clear();
       strategyCache.clear();
     }
+  }
+
+  @Override
+  public boolean canLoadSegments()
+  {
+    return true;
+  }
+
+  @Override
+  public void updateUnderReplicated(
+      Map<String, Object2LongMap<String>> underReplicatedPerTier,
+      SegmentReplicantLookup segmentReplicantLookup,
+      DataSegment segment
+  )
+  {
+    getTieredReplicants().forEach((final String tier, final Integer ruleReplicants) -> {
+      int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
+      Object2LongMap<String> underReplicationPerDataSource = underReplicatedPerTier.computeIfAbsent(
+          tier,
+          ignored -> new Object2LongOpenHashMap<>()
+      );
+      ((Object2LongOpenHashMap<String>) underReplicationPerDataSource).addTo(
+          segment.getDataSource(),
+          Math.max(ruleReplicants - currentReplicants, 0)
+      );
+    });
   }
 
   /**

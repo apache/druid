@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KafkaAdminClient;
 import org.apache.druid.testing.utils.KafkaEventWriter;
+import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
@@ -37,7 +38,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   @Override
   StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config)
   {
-    return new KafkaAdminClient(config.getKafkaHost());
+    return new KafkaAdminClient(config);
   }
 
   @Override
@@ -59,6 +60,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
     final Properties consumerProperties = new Properties();
     consumerProperties.putAll(consumerConfigs);
     consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
+    KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
     return spec -> {
       try {
         spec = StringUtils.replace(

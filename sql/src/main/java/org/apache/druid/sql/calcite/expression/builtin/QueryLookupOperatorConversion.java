@@ -40,7 +40,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LOOKUP")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
 

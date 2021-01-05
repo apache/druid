@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -54,7 +53,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -221,7 +219,7 @@ public class Expressions
     final RexInputRef ref = (RexInputRef) rexNode;
     final String columnName = rowSignature.getColumnName(ref.getIndex());
     if (columnName == null) {
-      throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
+      throw new ISE("Expression referred to nonexistent index[%d]", ref.getIndex());
     }
 
     return DruidExpression.fromColumn(columnName);
@@ -470,7 +468,7 @@ public class Expressions
         final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             druidExpression,
-            operand.getType().getSqlTypeName()
+            operand.getType()
         );
 
         equalFilter = new SelectorDimFilter(
@@ -490,7 +488,7 @@ public class Expressions
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "WTF?! Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -525,7 +523,7 @@ public class Expressions
             flippedKind = SqlKind.GREATER_THAN_OR_EQUAL;
             break;
           default:
-            throw new ISE("WTF?! Kind[%s] not expected here", kind);
+            throw new ISE("Kind[%s] not expected here", kind);
         }
       } else {
         flippedKind = kind;
@@ -559,7 +557,7 @@ public class Expressions
         VirtualColumn virtualLhs = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             lhsExpression,
-            lhs.getType().getSqlTypeName()
+            lhs.getType()
         );
 
         column = virtualLhs.getOutputName();
@@ -607,7 +605,7 @@ public class Expressions
       }
 
       // Numeric lhs needs a numeric comparison.
-      final StringComparator comparator = Calcites.getStringComparatorForSqlTypeName(lhs.getType().getSqlTypeName());
+      final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
       final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
       final DimFilter filter;
 
@@ -632,7 +630,7 @@ public class Expressions
           filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
           break;
         default:
-          throw new IllegalStateException("WTF?! Shouldn't have got here...");
+          throw new IllegalStateException("Shouldn't have got here");
       }
 
       return filter;
@@ -664,21 +662,6 @@ public class Expressions
     return druidExpression != null
            ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
            : null;
-  }
-
-  public static ExprType exprTypeForValueType(final ValueType valueType)
-  {
-    switch (valueType) {
-      case LONG:
-        return ExprType.LONG;
-      case FLOAT:
-      case DOUBLE:
-        return ExprType.DOUBLE;
-      case STRING:
-        return ExprType.STRING;
-      default:
-        throw new ISE("No ExprType for valueType[%s]", valueType);
-    }
   }
 
   /**
@@ -770,7 +753,7 @@ public class Expressions
       case LESS_THAN_OR_EQUAL:
         return Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       default:
-        throw new IllegalStateException("WTF?! Shouldn't have got here...");
+        throw new IllegalStateException("Shouldn't have got here");
     }
   }
 }

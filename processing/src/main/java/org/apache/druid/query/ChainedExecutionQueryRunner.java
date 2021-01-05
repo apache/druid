@@ -27,7 +27,9 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -100,7 +102,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           public Iterator<T> make()
           {
             // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
-            ListenableFuture<List<Iterable<T>>> futures = Futures.allAsList(
+            List<ListenableFuture<Iterable<T>>> futures =
                 Lists.newArrayList(
                     Iterables.transform(
                         queryables,
@@ -123,13 +125,16 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 
                                     List<T> retVal = result.toList();
                                     if (retVal == null) {
-                                      throw new ISE("Got a null list of results! WTF?!");
+                                      throw new ISE("Got a null list of results");
                                     }
 
                                     return retVal;
                                   }
                                   catch (QueryInterruptedException e) {
                                     throw new RuntimeException(e);
+                                  }
+                                  catch (QueryTimeoutException e) {
+                                    throw e;
                                   }
                                   catch (Exception e) {
                                     log.noStackTrace().error(e, "Exception with one of the sequences!");
@@ -141,22 +146,23 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                           );
                         }
                     )
-                )
-            );
+                );
 
-            queryWatcher.registerQueryFuture(query, futures);
+            ListenableFuture<List<Iterable<T>>> future = Futures.allAsList(futures);
+            queryWatcher.registerQueryFuture(query, future);
 
             try {
               return new MergeIterable<>(
                   ordering.nullsFirst(),
                   QueryContexts.hasTimeout(query) ?
-                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      futures.get()
+                      future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                      future.get()
               ).iterator();
             }
             catch (InterruptedException e) {
               log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              futures.cancel(true);
+              //Note: canceling combinedFuture first so that it can complete with INTERRUPTED as its final state. See ChainedExecutionQueryRunnerTest.testQueryTimeout()
+              GuavaUtils.cancelAll(true, future, futures);
               throw new QueryInterruptedException(e);
             }
             catch (CancellationException e) {
@@ -164,10 +170,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (TimeoutException e) {
               log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              futures.cancel(true);
-              throw new QueryInterruptedException(e);
+              GuavaUtils.cancelAll(true, future, futures);
+              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
             }
             catch (ExecutionException e) {
+              GuavaUtils.cancelAll(true, future, futures);
               Throwables.propagateIfPossible(e.getCause());
               throw new RuntimeException(e.getCause());
             }

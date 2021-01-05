@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
+import { SqlLiteral } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { queryDruidSql, QueryManager } from '../../utils';
-import { ColumnMetadata } from '../../utils/column-metadata';
+import { useQueryManager } from '../../hooks';
+import { ColumnMetadata, queryDruidSql } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './datasource-columns-table.scss';
 
-interface TableRow {
-  columnName: string;
-  columnType: string;
+export interface DatasourceColumnsTableRow {
+  COLUMN_NAME: string;
+  DATA_TYPE: string;
 }
 
 export interface DatasourceColumnsTableProps {
@@ -35,79 +36,43 @@ export interface DatasourceColumnsTableProps {
   downloadFilename?: string;
 }
 
-export interface DatasourceColumnsTableState {
-  columns?: TableRow[];
-  loading: boolean;
-  error?: string;
-}
+export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable(
+  props: DatasourceColumnsTableProps,
+) {
+  const [columnsState] = useQueryManager<string, DatasourceColumnsTableRow[]>({
+    processQuery: async (datasourceId: string) => {
+      return await queryDruidSql<ColumnMetadata>({
+        query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = ${SqlLiteral.create(datasourceId)}`,
+      });
+    },
+    initQuery: props.datasourceId,
+  });
 
-export class DatasourceColumnsTable extends React.PureComponent<
-  DatasourceColumnsTableProps,
-  DatasourceColumnsTableState
-> {
-  private datasourceColumnsQueryManager: QueryManager<null, TableRow[]>;
-
-  constructor(props: DatasourceColumnsTableProps, context: any) {
-    super(props, context);
-    this.state = {
-      loading: true,
-    };
-
-    this.datasourceColumnsQueryManager = new QueryManager({
-      processQuery: async () => {
-        const { datasourceId } = this.props;
-
-        const resp = await queryDruidSql<ColumnMetadata>({
-          query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '${datasourceId}'`,
-        });
-
-        return resp.map(object => {
-          return { columnName: object.COLUMN_NAME, columnType: object.DATA_TYPE };
-        });
-      },
-      onStateChange: ({ result, error, loading }) => {
-        this.setState({ columns: result, error, loading });
-      },
-    });
-  }
-
-  componentDidMount(): void {
-    this.datasourceColumnsQueryManager.runQuery(null);
-  }
-
-  renderTable(error?: string) {
-    const { columns } = this.state;
-
+  function renderTable() {
     return (
       <ReactTable
-        data={columns || []}
+        data={columnsState.data || []}
         defaultPageSize={20}
         filterable
         columns={[
           {
             Header: 'Column name',
-            accessor: 'columnName',
+            accessor: 'COLUMN_NAME',
           },
           {
             Header: 'Data type',
-            accessor: 'columnType',
+            accessor: 'DATA_TYPE',
           },
         ]}
-        noDataText={error ? error : 'No column data found'}
+        noDataText={columnsState.getErrorMessage() || 'No column data found'}
       />
     );
   }
 
-  render(): JSX.Element {
-    const { loading, error } = this.state;
-    this.renderTable(error);
-    return (
-      <div className="datasource-columns-table">
-        <div className="main-area">
-          {loading ? <Loader loadingText="" loading /> : this.renderTable()}
-        </div>
-      </div>
-    );
-  }
-}
+  return (
+    <div className="datasource-columns-table">
+      <div className="main-area">{columnsState.loading ? <Loader /> : renderTable()}</div>
+    </div>
+  );
+});

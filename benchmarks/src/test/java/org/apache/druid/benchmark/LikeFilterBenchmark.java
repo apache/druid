@@ -35,6 +35,7 @@ import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -166,7 +167,7 @@ public class LikeFilterBenchmark
       }
 
       @Override
-      public boolean hasMultipleValues(final String dimension)
+      public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
       {
         throw new UnsupportedOperationException();
       }

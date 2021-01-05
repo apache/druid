@@ -53,12 +53,6 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    return true;
-  }
-
-  @Override
   @JsonIgnore
   public int getPartitionNum()
   {
@@ -66,7 +60,13 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  public int getNumCorePartitions()
+  {
+    return 0;
+  }
+
+  @Override
+  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
@@ -81,12 +81,6 @@ public class NoneShardSpec implements ShardSpec
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
     return true;
-  }
-
-  @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    return other == NoneShardSpec.class;
   }
 
   @Override

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -47,6 +48,7 @@ import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
@@ -54,6 +56,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -215,13 +218,19 @@ public class ITBasicAuthConfigurationTest
     );
 
     final List<Map<String, Object>> adminServerSegments = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE),
+        fillSegementServersTemplate(
+            config,
+            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
+        ),
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
     final List<Map<String, Object>> adminServers = getServersWithoutCurrentSize(
         jsonMapper.readValue(
-            TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE),
+            fillServersTemplate(
+                config,
+                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
+            ),
             SYS_SCHEMA_RESULTS_TYPE_REFERENCE
         )
     );
@@ -291,8 +300,8 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                     .collect(Collectors.toList())
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
 
     // as user that can read auth_test and STATE
@@ -317,7 +326,8 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments.stream()
-                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains("auth_test"))
+                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains(
+                               "auth_test"))
                            .collect(Collectors.toList())
     );
 
@@ -326,8 +336,8 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                     .collect(Collectors.toList())
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
 
     // as user that can only read STATE
@@ -471,10 +481,76 @@ public class ITBasicAuthConfigurationTest
     testOptionsRequests(adminClient);
   }
 
+  @Test
+  public void testInvalidAuthNames()
+  {
+    String invalidName = "invalid%2Fname";
+    HttpClient adminClient = new CredentialedHttpClient(
+        new BasicCredentials("admin", "priest"),
+        httpClient
+    );
+
+    HttpUtil.makeRequestWithExpectedStatus(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authentication/listen/%s",
+            config.getCoordinatorUrl(),
+            invalidName
+        ),
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR
+    );
+
+    HttpUtil.makeRequestWithExpectedStatus(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/listen/users/%s",
+            config.getCoordinatorUrl(),
+            invalidName
+        ),
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR
+    );
+
+    HttpUtil.makeRequestWithExpectedStatus(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/listen/groupMappings/%s",
+            config.getCoordinatorUrl(),
+            invalidName
+        ),
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  @Test
+  public void testMaliciousUser()
+  {
+    String maliciousUsername = "<script>alert('hello')</script>";
+    HttpClient maliciousClient = new CredentialedHttpClient(
+        new BasicCredentials(maliciousUsername, "noPass"),
+        httpClient
+    );
+    StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
+        maliciousClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/status",
+        null,
+        HttpResponseStatus.UNAUTHORIZED
+    );
+    String responseContent = responseHolder.getContent();
+    Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
+    Assert.assertFalse(responseContent.contains(maliciousUsername));
+  }
+
   private void testOptionsRequests(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getOverlordUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
@@ -522,7 +598,7 @@ public class ITBasicAuthConfigurationTest
     catch (AvaticaSqlException ase) {
       Assert.assertEquals(
           ase.getErrorMessage(),
-          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed username[admin]."
+          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed."
       );
       return;
     }
@@ -533,7 +609,7 @@ public class ITBasicAuthConfigurationTest
   private void checkNodeAccess(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getOverlordUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
@@ -542,7 +618,7 @@ public class ITBasicAuthConfigurationTest
   private void checkLoadStatus(HttpClient httpClient) throws Exception
   {
     checkLoadStatusSingle(httpClient, config.getCoordinatorUrl());
-    checkLoadStatusSingle(httpClient, config.getIndexerUrl());
+    checkLoadStatusSingle(httpClient, config.getOverlordUrl());
     checkLoadStatusSingle(httpClient, config.getBrokerUrl());
     checkLoadStatusSingle(httpClient, config.getHistoricalUrl());
     checkLoadStatusSingle(httpClient, config.getRouterUrl());
@@ -725,5 +801,19 @@ public class ITBasicAuthConfigurationTest
           return newServer;
         }
     );
+  }
+
+  private static String fillSegementServersTemplate(IntegrationTestingConfig config, String template)
+  {
+    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
+    return json;
+  }
+
+  private static String fillServersTemplate(IntegrationTestingConfig config, String template)
+  {
+    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
+    json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
+    json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
+    return json;
   }
 }

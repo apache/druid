@@ -28,10 +28,10 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.LegacySinglePhaseSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
@@ -63,7 +63,7 @@ import java.util.Map;
     // for backward compatibility
     @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
     @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
-    @Type(name = PartialHashSegmentMergeTask.TYPE, value = PartialHashSegmentMergeTask.class),
+    @Type(name = PartialDimensionCardinalityTask.TYPE, value = PartialDimensionCardinalityTask.class),
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
@@ -147,6 +147,11 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
+   * @return true if this Task type is queryable, such as streaming ingestion tasks
+   */
+  boolean supportsQueries();
+
+  /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
    * extra classpath should be prepended, this should return null or the empty string.
    */
@@ -155,8 +160,11 @@ public interface Task
   /**
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
-   * coordinator. If this method throws an exception, the task should be considered a failure.
-   * <p/>
+   * Overlord. If this method throws an exception, the task should be considered a failure.
+   *
+   * This method will not necessarily be executed before {@link #run(TaskToolbox)}, since this task readiness check
+   * may be done on a different machine from the one that actually runs the task.
+   *
    * This method must be idempotent, as it may be run multiple times per task.
    *
    * @param taskActionClient action client for this task (not the full toolbox)

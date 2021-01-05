@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -43,11 +43,12 @@ import java.util.stream.Collectors;
 /**
  * Segment allocator which allocates new segments locally per request.
  */
-class LocalSegmentAllocator implements SegmentAllocator
+class LocalSegmentAllocator implements SegmentAllocatorForBatch
 {
   private final SegmentAllocator internalAllocator;
+  private final SequenceNameFunction sequenceNameFunction;
 
-  LocalSegmentAllocator(TaskToolbox toolbox, String dataSource, GranularitySpec granularitySpec) throws IOException
+  LocalSegmentAllocator(TaskToolbox toolbox, String taskId, String dataSource, GranularitySpec granularitySpec) throws IOException
   {
     final Map<Interval, String> intervalToVersion = toolbox
         .getTaskActionClient()
@@ -77,9 +78,10 @@ class LocalSegmentAllocator implements SegmentAllocator
           dataSource,
           interval,
           version,
-          new NumberedShardSpec(partitionId, 0)
+          new BuildingNumberedShardSpec(partitionId)
       );
     };
+    sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);
   }
 
   @Nullable
@@ -92,5 +94,11 @@ class LocalSegmentAllocator implements SegmentAllocator
   ) throws IOException
   {
     return internalAllocator.allocate(row, sequenceName, previousSegmentId, skipSegmentLineageCheck);
+  }
+
+  @Override
+  public SequenceNameFunction getSequenceNameFunction()
+  {
+    return sequenceNameFunction;
   }
 }

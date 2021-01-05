@@ -27,12 +27,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.curator.test.TestingCluster;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -50,9 +53,6 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersTotals;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -74,7 +74,6 @@ import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
@@ -104,12 +103,16 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -117,6 +120,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
@@ -344,6 +348,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             INPUT_FORMAT
         )
     );
+    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -900,12 +905,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> normalReplicaFuture = runTask(normalReplica);
     // Simulating one replica is slower than the other
-    final ListenableFuture<TaskStatus> staleReplicaFuture = ListenableFutures.transformAsync(
+    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transform(
         taskExec.submit(() -> {
           Thread.sleep(1000);
           return staleReplica;
         }),
-        this::runTask
+        (AsyncFunction<Task, TaskStatus>) this::runTask
     );
 
     while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
@@ -1352,12 +1357,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<String, Object> unparseableEvents = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [Unable to parse value[notanumber] for field[met1],]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float,]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long,]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [Unable to parse value[notanumber] for field[met1]]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long]",
             "Unable to parse row [unparseable2]",
             "Unable to parse row [unparseable]",
-            "Encountered row with timestamp that cannot be represented as a long: [MapBasedInputRow{timestamp=246140482-04-24T15:36:27.903Z, event={timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}]"
+            "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
         )
     );
 
@@ -2325,6 +2330,47 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @Test(timeout = 60_000L)
+  public void testRunUnTransactionMode() throws Exception
+  {
+    Map<String, Object> configs = kafkaServer.consumerProperties();
+    configs.put("isolation.level", "read_uncommitted");
+    final KafkaIndexTask task = createTask(
+            null,
+            new KafkaIndexTaskIOConfig(
+                    0,
+                    "sequence0",
+                    new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
+                    new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L)),
+                    configs,
+                    KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+                    true,
+                    null,
+                    null,
+                    INPUT_FORMAT
+            )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Insert 2 records initially
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (ProducerRecord<byte[], byte[]> record : Iterables.limit(records, 2)) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.flush();
+      kafkaProducer.abortTransaction();
+    }
+
+    while (countEvents(task) != 2) {
+      Thread.sleep(25);
+    }
+
+    Assert.assertEquals(2, countEvents(task));
+  }
+
+  @Test(timeout = 60_000L)
   public void testCanStartFromLaterThanEarliestOffset() throws Exception
   {
     final String baseSequenceName = "sequence0";
@@ -2492,6 +2538,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   ) throws JsonProcessingException
   {
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
+        null,
         1000,
         null,
         maxRowsPerSegment,
@@ -2527,11 +2574,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         tuningConfig,
         ioConfig,
         context,
-        null,
-        null,
-        rowIngestionMetersFactory,
-        OBJECT_MAPPER,
-        appenderatorsManager
+        OBJECT_MAPPER
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
@@ -2701,7 +2744,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         this::makeTimeseriesAndScanConglomerate,
         Execs.directExecutor(), // queryExecutorService
         NoopJoinableFactory.INSTANCE,
-        EasyMock.createMock(MonitorScheduler.class),
+        () -> EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
@@ -2714,7 +2757,94 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        testUtils.getRowIngestionMetersFactory(),
+        new TestAppenderatorsManager(),
+        new NoopIndexingServiceClient(),
+        null,
+        null,
         null
+    );
+  }
+
+  @Test(timeout = 60_000L)
+  public void testMultipleLinesJSONText() throws Exception
+  {
+    reportParseExceptions = false;
+    maxParseExceptions = 1000;
+    maxSavedParseExceptions = 2;
+
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+
+      //multiple objects in one Kafka record will yield 2 rows in druid
+      String wellformed = toJsonString(true, "2049", "d2", "y", "10", "22.0", "2.0") +
+                     toJsonString(true, "2049", "d3", "y", "10", "23.0", "3.0");
+
+      //multiple objects in one Kafka record but some objects are in ill-formed format
+      //as a result, the whole ProducerRecord will be discarded
+      String illformed = "{\"timestamp\":2049, \"dim1\": \"d4\", \"dim2\":\"x\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"2.0\" }" +
+                     "{\"timestamp\":2049, \"dim1\": \"d5\", \"dim2\":\"y\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":invalidFormat }" +
+                     "{\"timestamp\":2049, \"dim1\": \"d6\", \"dim2\":\"z\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"3.0\" }";
+
+      ProducerRecord[] producerRecords = new ProducerRecord[]{
+          // pretty formatted
+          new ProducerRecord<>(topic, 0, null, jb(true, "2049", "d1", "y", "10", "20.0", "1.0")),
+          //well-formed
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
+          //ill-formed
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(illformed)),
+          //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
+          new ProducerRecord<>(topic, 0, null, jb(true, "2049", "d7", "y", "10", "20.0", "1.0"))
+      };
+      for (ProducerRecord<byte[], byte[]> record : producerRecords) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.commitTransaction();
+    }
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 4L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    // 4 records processed, 3 success, 1 failed
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            // 4 rows at last in druid
+            sdd("2049/P1D", 0, ImmutableList.of("d1", "d2", "d3", "d7"))
+        ),
+        publishedDescriptors()
+    );
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 4L))),
+        newDataSchemaMetadata()
     );
   }
 }

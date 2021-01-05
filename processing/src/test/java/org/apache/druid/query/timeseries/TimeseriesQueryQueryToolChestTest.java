@@ -56,6 +56,7 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryQueryToolChestTest
 {
+  private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
 
   @BeforeClass
@@ -364,7 +365,7 @@ public class TimeseriesQueryQueryToolChestTest
   }
 
   @Test
-  public void testResultArraySignature()
+  public void testResultArraySignatureWithoutTimestampResultField()
   {
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()
@@ -382,7 +383,34 @@ public class TimeseriesQueryQueryToolChestTest
                     .add("rows", ValueType.LONG)
                     .add("index", ValueType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", null)
+                    .add("const", ValueType.LONG)
+                    .build(),
+        TOOL_CHEST.resultArraySignature(query)
+    );
+  }
+
+  @Test
+  public void testResultArraySignatureWithTimestampResultField()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .descending(descending)
+              .granularity(Granularities.HOUR)
+              .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+              .postAggregators(QueryRunnerTestHelper.CONSTANT)
+              .context(ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add(TIMESTAMP_RESULT_FIELD_NAME, ValueType.LONG)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", ValueType.LONG)
                     .build(),
         TOOL_CHEST.resultArraySignature(query)
     );

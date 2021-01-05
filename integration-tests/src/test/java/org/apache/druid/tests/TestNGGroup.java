@@ -27,6 +27,10 @@ public class TestNGGroup
 {
   public static final String BATCH_INDEX = "batch-index";
 
+  public static final String INPUT_FORMAT = "input-format";
+
+  public static final String INPUT_SOURCE = "input-source";
+
   public static final String KAFKA_INDEX = "kafka-index";
 
   public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
@@ -37,7 +41,9 @@ public class TestNGGroup
 
   public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
 
-  public static final String OTHER_INDEX = "other-index";
+  public static final String COMPACTION = "compaction";
+
+  public static final String APPEND_INGESTION = "append-ingestion";
 
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
 
@@ -45,6 +51,10 @@ public class TestNGGroup
    * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
    */
   public static final String QUERY = "query";
+
+  public static final String QUERY_RETRY = "query-retry";
+
+  public static final String CLI_INDEXER = "cli-indexer";
 
   public static final String REALTIME_INDEX = "realtime-index";
 
@@ -75,6 +85,13 @@ public class TestNGGroup
    * See integration-tests/docker/environment-configs/override-examples/azures for env vars to provide.
    */
   public static final String AZURE_DEEP_STORAGE = "azure-deep-storage";
+
+  /**
+   * This group is not part of CI. To run this group, azure configs/credentials for your oss must be provided in a file.
+   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
+   * See integration-tests/docker/environment-configs/override-examples/oss for env vars to provide.
+   */
+  public static final String ALIYUN_OSS_DEEP_STORAGE = "aliyun-oss-deep-storage";
 
   /**
    * This group is not part of CI. To run this group, hadoop configs must be provided in a file. The path of the file
@@ -127,4 +144,6 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
+
+  public static final String HIGH_AVAILABILTY = "high-availability";
 }

@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -90,6 +91,15 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
       );
     }
     throw new ISE("Unknown value type: " + val.getClass());
+  }
+
+  /**
+   * actual type is {@link Quantiles}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

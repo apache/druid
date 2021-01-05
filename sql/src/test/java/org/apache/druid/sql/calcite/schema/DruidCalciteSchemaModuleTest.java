@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -38,7 +39,10 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -84,6 +88,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   private ObjectMapper objectMapper;
   @Mock
   private LookupReferencesManager lookupReferencesManager;
+  @Mock
+  private SegmentManager segmentManager;
 
   private DruidCalciteSchemaModule target;
   private Injector injector;
@@ -99,11 +105,13 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
         binder -> {
           binder.bind(QueryLifecycleFactory.class).toInstance(queryLifecycleFactory);
           binder.bind(TimelineServerView.class).toInstance(serverView);
+          binder.bind(JoinableFactory.class).toInstance(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()));
           binder.bind(PlannerConfig.class).toInstance(plannerConfig);
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
           binder.bind(InventoryView.class).toInstance(serverInventoryView);
+          binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
                 .toInstance(coordinatorDruidLeaderClient);

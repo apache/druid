@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.19.0-SNAPSHOT</version>
+        <version>0.21.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -192,10 +192,6 @@
             <artifactId>error_prone_annotations</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-utils</artifactId>
-        </dependency>
-        <dependency>
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
         </dependency>
@@ -218,6 +214,10 @@
             <groupId>org.apache.datasketches</groupId>
             <artifactId>datasketches-memory</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.thisptr</groupId>
+            <artifactId>jackson-jq</artifactId>
         </dependency>
 
         <!-- Tests -->
@@ -280,6 +280,12 @@
         <dependency>
             <groupId>com.github.stefanbirkner</groupId>
             <artifactId>system-rules</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

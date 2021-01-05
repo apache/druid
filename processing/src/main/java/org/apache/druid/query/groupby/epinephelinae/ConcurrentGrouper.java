@@ -28,11 +28,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.AbstractPrioritizedCallable;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -339,8 +341,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private List<CloseableIterator<Entry<KeyType>>> parallelSortAndGetGroupersIterator()
   {
     // The number of groupers is same with the number of processing threads in the executor
-    final ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(
-        groupers.stream()
+    final List<ListenableFuture<CloseableIterator<Entry<KeyType>>>> futures = groupers.stream()
                 .map(grouper ->
                          executor.submit(
                              new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(priority)
@@ -353,21 +354,24 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                              }
                          )
                 )
-                .collect(Collectors.toList())
+                .collect(Collectors.toList()
     );
 
+    ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
     try {
       final long timeout = queryTimeoutAt - System.currentTimeMillis();
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
-    catch (InterruptedException | TimeoutException e) {
-      future.cancel(true);
+    catch (InterruptedException | CancellationException e) {
+      GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
-    catch (CancellationException e) {
-      throw new QueryInterruptedException(e);
+    catch (TimeoutException e) {
+      GuavaUtils.cancelAll(true, future, futures);
+      throw new QueryTimeoutException();
     }
     catch (ExecutionException e) {
+      GuavaUtils.cancelAll(true, future, futures);
       throw new RuntimeException(e.getCause());
     }
   }

@@ -31,19 +31,17 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.hamcrest.CoreMatchers;
 import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,7 +55,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerFailureTest
@@ -111,7 +108,6 @@ public class GroupByQueryRunnerFailureTest
         new GroupByStrategyV2(
             DEFAULT_PROCESSING_CONFIG,
             configSupplier,
-            Suppliers.ofInstance(new QueryConfig()),
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
             mapper,
@@ -184,8 +180,7 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 60_000L)
   public void testNotEnoughMergeBuffersOnQueryable()
   {
-    expectedException.expect(QueryInterruptedException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
+    expectedException.expect(QueryTimeoutException.class);
     expectedException.expectMessage("Cannot acquire enough merge buffers");
 
     final GroupByQuery query = GroupByQuery
@@ -280,5 +275,41 @@ public class GroupByQueryRunnerFailureTest
         holder.forEach(ReferenceCountingResourceHolder::close);
       }
     }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testTimeoutExceptionOnQueryable()
+  {
+    expectedException.expect(QueryTimeoutException.class);
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+          @Override
+          public String getDefaultStrategy()
+          {
+            return "v2";
+          }
+
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return true;
+          }
+        }
+    );
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query);
   }
 }

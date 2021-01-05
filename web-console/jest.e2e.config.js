@@ -19,7 +19,7 @@
 const common = require('./jest.common.config');
 
 module.exports = Object.assign(common, {
-  "setupFilesAfterEnv": [
-    "<rootDir>e2e-tests/util/setup.ts"
+  "testMatch": [
+    "**/?(*.)+(spec).ts?(x)"
   ]
 });

@@ -28,7 +28,7 @@ instance of a Druid [Overlord](../design/overlord.md). Please refer to our [Hado
 comparisons between Hadoop-based, native batch (simple), and native batch (parallel) ingestion.
 
 To run a Hadoop-based ingestion task, write an ingestion spec as specified below. Then POST it to the
-[`/druid/indexer/v1/task`](../operations/api-reference.html#tasks) endpoint on the Overlord, or use the
+[`/druid/indexer/v1/task`](../operations/api-reference.md#tasks) endpoint on the Overlord, or use the
 `bin/post-index-task` script included with Druid.
 
 ## Tutorial
@@ -111,7 +111,7 @@ A sample task is shown below:
 |hadoopDependencyCoordinates|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|no|
 |classpathPrefix|Classpath that will be prepended for the Peon process.|no|
 
-Also note that Druid automatically computes the classpath for Hadoop job containers that run in the Hadoop cluster. But in case of conflicts between Hadoop and Druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.html#extensions).
+Also note that Druid automatically computes the classpath for Hadoop job containers that run in the Hadoop cluster. But in case of conflicts between Hadoop and Druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.md#extensions).
 
 ## `dataSchema`
 
@@ -150,7 +150,7 @@ For example, using the static input paths:
 
 You can also read from cloud storage such as AWS S3 or Google Cloud Storage.
 To do so, you need to install the necessary library under Druid's classpath in _all MiddleManager or Indexer processes_.
-For S3, you can run the below command to install the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
+For S3, you can run the below command to install the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/).
 
 ```bash
 java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
@@ -159,7 +159,7 @@ cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${H
 
 Once you install the Hadoop AWS module in all MiddleManager and Indexer processes, you can put
 your S3 paths in the inputSpec with the below job properties.
-For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
+For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/).
 
 ```
 "paths" : "s3a://billy-bucket/the/data/is/here/data.gz,s3a://billy-bucket/the/data/is/here/moredata.gz,s3a://billy-bucket/the/data/is/here/evenmoredata.gz"
@@ -179,7 +179,7 @@ under `${DRUID_HOME}/hadoop-dependencies` in _all MiddleManager or Indexer proce
 Once you install the GCS Connector jar in all MiddleManager and Indexer processes, you can put
 your Google Cloud Storage paths in the inputSpec with the below job properties.
 For more configurations, see the [instructions to configure Hadoop](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop),
-[GCS core default](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/conf/gcs-core-default.xml)
+[GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)
 and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
 
 ```
@@ -329,12 +329,12 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
 |indexSpec|Object|Tune how data is indexed. See [`indexSpec`](index.md#indexspec) on the main ingestion page for more information.|no|
-|indexSpecForIntermediatePersists|defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [`indexSpec`](index.md#indexspec) for possible values.|no (default = same as indexSpec)|
+|indexSpecForIntermediatePersists|Object|defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [`indexSpec`](index.md#indexspec) for possible values.|no (default = same as indexSpec)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and CPU usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Hash-based partitioning always uses an extendable shardSpec. For single-dimension partitioning, this option should be set to true to use an extendable shardSpec. For partitioning, please check [Partitioning specification](#partitionsspec). This option can be useful when you need to append more data to existing dataSource.|no (default = false)|
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
-|logParseExceptions|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
-|maxParseExceptions|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overrides `ignoreInvalidRows` if `maxParseExceptions` is defined.|unlimited|no|
+|logParseExceptions|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|no(default = false)|
+|maxParseExceptions|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overrides `ignoreInvalidRows` if `maxParseExceptions` is defined.|no(default = unlimited)|
 |useYarnRMJobStatusFallback|Boolean|If the Hadoop jobs created by the indexing task are unable to retrieve their completion status from the JobHistory server, and this parameter is true, the indexing task will try to fetch the application status from `http://<yarn-rm-address>/ws/v1/cluster/apps/<application-id>`, where `<yarn-rm-address>` is the value of `yarn.resourcemanager.webapp.address` in your Hadoop configuration. This flag is intended as a fallback for cases where an indexing task's jobs succeed, but the JobHistory server is unavailable, causing the indexing task to fail because it cannot determine the job statuses.|no (default = true)|
 
 ### `jobProperties`
@@ -387,7 +387,18 @@ The configuration options are:
 |maxRowsPerSegment|Deprecated. Renamed to `targetRowsPerSegment`. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or `numShards`|
 |numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or `maxRowsPerSegment`|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `targetRowsPerSegment` is set.|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
 
+##### Hash partition function
+
+In hash partitioning, the partition function is used to compute hash of partition dimensions. The partition dimension
+values are first serialized into a byte array as a whole, and then the partition function is applied to compute hash of
+the byte array.
+Druid currently supports only one partition function.
+
+|name|description|
+|----|-----------|
+|`murmur3_32_abs`|Applies an absolute value function to the result of [`murmur3_32`](https://guava.dev/releases/16.0/api/docs/com/google/common/hash/Hashing.html#murmur3_32()).|
 
 ### Single-dimension range partitioning
 
@@ -427,7 +438,7 @@ If you are having dependency problems with your version of Hadoop and the versio
 If your cluster is running on Amazon Web Services, you can use Elastic MapReduce (EMR) to index data
 from S3. To do this:
 
-- Create a persistent, [long-running cluster](http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-longrunning-transient.html).
+- Create a persistent, [long-running cluster](http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-longrunning-transient).
 - When creating your cluster, enter the following configuration. If you're using the wizard, this
 should be in advanced mode under "Edit software settings":
 

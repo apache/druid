@@ -71,7 +71,7 @@ enables the Historicals to do their own local result merging and puts less strai
 
 Task executor processes such as the Peon or the experimental Indexer only support segment-level caching. Segment-level 
 caching is controlled by the query context parameters `useCache` and `populateCache` 
-and [runtime properties](../configuration/index.html) `druid.realtime.cache.*`.
+and [runtime properties](../configuration/index.md) `druid.realtime.cache.*`.
 
 Larger production clusters should enable segment-level cache population on task execution processes only 
 (not on Brokers) to avoid having to use Brokers to merge all query results. Enabling cache population on the 

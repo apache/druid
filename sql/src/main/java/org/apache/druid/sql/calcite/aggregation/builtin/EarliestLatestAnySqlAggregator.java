@@ -21,16 +21,19 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -85,6 +88,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleFirstAggregatorFactory(name, fieldName);
           case STRING:
+          case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, maxStringBytes);
           default:
             throw new ISE("Cannot build EARLIEST aggregatorFactory for type[%s]", type);
@@ -104,6 +108,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleLastAggregatorFactory(name, fieldName);
           case STRING:
+          case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, maxStringBytes);
           default:
             throw new ISE("Cannot build LATEST aggregatorFactory for type[%s]", type);
@@ -185,16 +190,16 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     if (args.get(0).isDirectColumnAccess()) {
       fieldName = args.get(0).getDirectColumn();
     } else {
-      final SqlTypeName sqlTypeName = rexNodes.get(0).getType().getSqlTypeName();
+      final RelDataType dataType = rexNodes.get(0).getType();
       final VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, args.get(0), sqlTypeName);
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, args.get(0), dataType);
       fieldName = virtualColumn.getOutputName();
     }
 
     // Second arg must be a literal, if it exists (the type signature below requires it).
     final int maxBytes = rexNodes.size() > 1 ? RexLiteral.intValue(rexNodes.get(1)) : -1;
 
-    final ValueType outputType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
+    final ValueType outputType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
     if (outputType == null) {
       throw new ISE(
           "Cannot translate output sqlTypeName[%s] to Druid type for aggregator[%s]",
@@ -219,22 +224,48 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     );
   }
 
+  static class EarliestLatestReturnTypeInference implements SqlReturnTypeInference
+  {
+    private final int ordinal;
+
+    public EarliestLatestReturnTypeInference(int ordinal)
+    {
+      this.ordinal = ordinal;
+    }
+
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
+    {
+      RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
+      // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
+      if (!SqlTypeUtil.isNumeric(type) &&
+          !SqlTypeUtil.isString(type)) {
+        return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
+      } else {
+        return type;
+      }
+    }
+  }
+
   private static class EarliestLatestSqlAggFunction extends SqlAggFunction
   {
+    private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
+        new EarliestLatestReturnTypeInference(0);
+
     EarliestLatestSqlAggFunction(AggregatorType aggregatorType)
     {
       super(
           aggregatorType.name(),
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0,
+          EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
               OperandTypes.NUMERIC,
               OperandTypes.BOOLEAN,
               OperandTypes.sequence(
                   "'" + aggregatorType.name() + "(expr, maxBytesPerString)'\n",
-                  OperandTypes.STRING,
+                  OperandTypes.ANY,
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
               )
           ),

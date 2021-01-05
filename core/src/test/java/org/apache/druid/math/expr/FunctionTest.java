@@ -20,13 +20,19 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Locale;
+import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
@@ -35,13 +41,23 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    builder.put("x", "foo");
-    builder.put("y", 2);
-    builder.put("z", 3.1);
-    builder.put("a", new String[] {"foo", "bar", "baz", "foobar"});
-    builder.put("b", new Long[] {1L, 2L, 3L, 4L, 5L});
-    builder.put("c", new Double[] {3.1, 4.2, 5.3});
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+        .put("x", "foo")
+        .put("y", 2)
+        .put("z", 3.1)
+        .put("d", 34.56D)
+        .put("maxLong", Long.MAX_VALUE)
+        .put("minLong", Long.MIN_VALUE)
+        .put("f", 12.34F)
+        .put("nan", Double.NaN)
+        .put("inf", Double.POSITIVE_INFINITY)
+        .put("-inf", Double.NEGATIVE_INFINITY)
+        .put("o", 0)
+        .put("od", 0D)
+        .put("of", 0F)
+        .put("a", new String[] {"foo", "bar", "baz", "foobar"})
+        .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
+        .put("c", new Double[] {3.1, 4.2, 5.3});
     bindings = Parser.withMap(builder.build());
   }
 
@@ -146,9 +162,23 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("lpad(x, 5, 'ab')", "abfoo");
     assertExpr("lpad(x, 4, 'ab')", "afoo");
     assertExpr("lpad(x, 2, 'ab')", "fo");
-    assertArrayExpr("lpad(x, 0, 'ab')", null);
-    assertArrayExpr("lpad(x, 5, null)", null);
-    assertArrayExpr("lpad(null, 5, x)", null);
+    assertExpr("lpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
+    assertExpr("lpad(null, 5, 'ab')", null);
+    assertExpr("lpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
+    assertExpr("lpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
+    assertExpr("lpad('', 3, '*')", NullHandling.replaceWithDefault() ? null : "***");
+    assertExpr("lpad(x, 2, null)", null);
+    assertExpr("lpad(a, 4, '*')", "[foo");
+    assertExpr("lpad(a, 2, '*')", "[f");
+    assertExpr("lpad(a, 2, '')", NullHandling.replaceWithDefault() ? null : "[f");
+    assertExpr("lpad(b, 4, '*')", "[1, ");
+    assertExpr("lpad(b, 2, '')", NullHandling.replaceWithDefault() ? null : "[1");
+    assertExpr("lpad(b, 2, null)", null);
+    assertExpr("lpad(x, 5, x)", "fofoo");
+    assertExpr("lpad(x, 5, y)", "22foo");
+    assertExpr("lpad(x, 5, z)", "3.foo");
+    assertExpr("lpad(y, 5, x)", "foof2");
+    assertExpr("lpad(z, 5, y)", "223.1");
   }
 
   @Test
@@ -157,9 +187,22 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("rpad(x, 5, 'ab')", "fooab");
     assertExpr("rpad(x, 4, 'ab')", "fooa");
     assertExpr("rpad(x, 2, 'ab')", "fo");
-    assertArrayExpr("rpad(x, 0, 'ab')", null);
-    assertArrayExpr("rpad(x, 5, null)", null);
-    assertArrayExpr("rpad(null, 5, x)", null);
+    assertExpr("rpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
+    assertExpr("rpad(null, 5, 'ab')", null);
+    assertExpr("rpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
+    assertExpr("rpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
+    assertExpr("rpad('', 3, '*')", NullHandling.replaceWithDefault() ? null : "***");
+    assertExpr("rpad(x, 2, null)", null);
+    assertExpr("rpad(a, 2, '*')", "[f");
+    assertExpr("rpad(a, 2, '')", NullHandling.replaceWithDefault() ? null : "[f");
+    assertExpr("rpad(b, 4, '*')", "[1, ");
+    assertExpr("rpad(b, 2, '')", NullHandling.replaceWithDefault() ? null : "[1");
+    assertExpr("rpad(b, 2, null)", null);
+    assertExpr("rpad(x, 5, x)", "foofo");
+    assertExpr("rpad(x, 5, y)", "foo22");
+    assertExpr("rpad(x, 5, z)", "foo3.");
+    assertExpr("rpad(y, 5, x)", "2foof");
+    assertExpr("rpad(z, 5, y)", "3.122");
   }
 
   @Test
@@ -294,11 +337,138 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testRoundWithNonNumericValuesShouldReturn0()
+  {
+    assertExpr("round(nan)", 0D);
+    assertExpr("round(nan, 5)", 0D);
+    //CHECKSTYLE.OFF: Regexp
+    assertExpr("round(inf)", Double.MAX_VALUE);
+    assertExpr("round(inf, 4)", Double.MAX_VALUE);
+    assertExpr("round(-inf)", -1 * Double.MAX_VALUE);
+    assertExpr("round(-inf, 3)", -1 * Double.MAX_VALUE);
+    assertExpr("round(-inf, -5)", -1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
+
+    // Calculations that result in non numeric numbers
+    assertExpr("round(0/od)", 0D);
+    assertExpr("round(od/od)", 0D);
+    //CHECKSTYLE.OFF: Regexp
+    assertExpr("round(1/od)", Double.MAX_VALUE);
+    assertExpr("round(-1/od)", -1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
+
+    assertExpr("round(0/of)", 0D);
+    assertExpr("round(of/of)", 0D);
+    //CHECKSTYLE.OFF: Regexp
+    assertExpr("round(1/of)", Double.MAX_VALUE);
+    assertExpr("round(-1/of)", -1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
+  }
+
+  @Test
+  public void testRoundWithLong()
+  {
+    assertExpr("round(y)", 2L);
+    assertExpr("round(y, 2)", 2L);
+    assertExpr("round(y, -1)", 0L);
+  }
+
+  @Test
+  public void testRoundWithDouble()
+  {
+    assertExpr("round(d)", 35D);
+    assertExpr("round(d, 2)", 34.56D);
+    assertExpr("round(d, y)", 34.56D);
+    assertExpr("round(d, 1)", 34.6D);
+    assertExpr("round(d, -1)", 30D);
+  }
+
+  @Test
+  public void testRoundWithFloat()
+  {
+    assertExpr("round(f)", 12D);
+    assertExpr("round(f, 2)", 12.34D);
+    assertExpr("round(f, y)", 12.34D);
+    assertExpr("round(f, 1)", 12.3D);
+    assertExpr("round(f, -1)", 10D);
+  }
+
+  @Test
+  public void testRoundWithExtremeNumbers()
+  {
+    assertExpr("round(maxLong)", BigDecimal.valueOf(Long.MAX_VALUE).setScale(0, RoundingMode.HALF_UP).longValue());
+    assertExpr("round(minLong)", BigDecimal.valueOf(Long.MIN_VALUE).setScale(0, RoundingMode.HALF_UP).longValue());
+    // overflow
+    assertExpr("round(maxLong + 1, 1)", BigDecimal.valueOf(Long.MIN_VALUE).setScale(1, RoundingMode.HALF_UP).longValue());
+    // underflow
+    assertExpr("round(minLong - 1, -2)", BigDecimal.valueOf(Long.MAX_VALUE).setScale(-2, RoundingMode.HALF_UP).longValue());
+
+    assertExpr("round(CAST(maxLong, 'DOUBLE') + 1, 1)", BigDecimal.valueOf(((double) Long.MAX_VALUE) + 1).setScale(1, RoundingMode.HALF_UP).doubleValue());
+    assertExpr("round(CAST(minLong, 'DOUBLE') - 1, -2)", BigDecimal.valueOf(((double) Long.MIN_VALUE) - 1).setScale(-2, RoundingMode.HALF_UP).doubleValue());
+  }
+
+  @Test
+  public void testRoundWithInvalidFirstArgument()
+  {
+    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
+        Pair.of("b", "LONG_ARRAY"),
+        Pair.of("x", "STRING"),
+        Pair.of("c", "DOUBLE_ARRAY"),
+        Pair.of("a", "STRING_ARRAY")
+
+    );
+    for (Pair<String, String> argAndType : invalidArguments) {
+      try {
+        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+        Assert.fail("Did not throw IllegalArgumentException");
+      }
+      catch (IllegalArgumentException e) {
+        Assert.assertEquals(
+            String.format(
+                Locale.ENGLISH,
+                "The first argument to the function[round] should be integer or double type but got the type: %s",
+                argAndType.rhs
+            ),
+            e.getMessage()
+        );
+      }
+    }
+  }
+
+  @Test
+  public void testRoundWithInvalidSecondArgument()
+  {
+    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
+        Pair.of("1.2", "DOUBLE"),
+        Pair.of("x", "STRING"),
+        Pair.of("a", "STRING_ARRAY"),
+        Pair.of("c", "DOUBLE_ARRAY")
+
+    );
+    for (Pair<String, String> argAndType : invalidArguments) {
+      try {
+        assertExpr(String.format(Locale.ENGLISH, "round(d, %s)", argAndType.lhs), null);
+        Assert.fail("Did not throw IllegalArgumentException");
+      }
+      catch (IllegalArgumentException e) {
+        Assert.assertEquals(
+            String.format(
+                Locale.ENGLISH,
+                "The second argument to the function[round] should be integer type but got the type: %s",
+                argAndType.rhs
+            ),
+            e.getMessage()
+        );
+      }
+    }
+  }
+
+  @Test
   public void testGreatest()
   {
     // Same types
     assertExpr("greatest(y, 0)", 2L);
-    assertExpr("greatest(34.0, z, 5.0, 767.0", 767.0);
+    assertExpr("greatest(34.0, z, 5.0, 767.0)", 767.0);
     assertExpr("greatest('B', x, 'A')", "foo");
 
     // Different types
@@ -326,7 +496,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     // Same types
     assertExpr("least(y, 0)", 0L);
-    assertExpr("least(34.0, z, 5.0, 767.0", 3.1);
+    assertExpr("least(34.0, z, 5.0, 767.0)", 3.1);
     assertExpr("least('B', x, 'A')", "A");
 
     // Different types

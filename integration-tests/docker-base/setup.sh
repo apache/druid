@@ -46,11 +46,11 @@ rm /tmp/$ZK_TAR.tar.gz
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
-KAFKA_VERSION=2.5.0
-wget -q -O /tmp/kafka_2.12-$KAFKA_VERSION.tgz "https://apache.org/dist/kafka/$KAFKA_VERSION/kafka_2.12-$KAFKA_VERSION.tgz"
-tar -xzf /tmp/kafka_2.12-$KAFKA_VERSION.tgz -C /usr/local
-ln -s /usr/local/kafka_2.12-$KAFKA_VERSION /usr/local/kafka
-rm /tmp/kafka_2.12-$KAFKA_VERSION.tgz
+KAFKA_VERSION=2.7.0
+wget -q -O /tmp/kafka_2.13-$KAFKA_VERSION.tgz "https://apache.org/dist/kafka/$KAFKA_VERSION/kafka_2.13-$KAFKA_VERSION.tgz"
+tar -xzf /tmp/kafka_2.13-$KAFKA_VERSION.tgz -C /usr/local
+ln -s /usr/local/kafka_2.13-$KAFKA_VERSION /usr/local/kafka
+rm /tmp/kafka_2.13-$KAFKA_VERSION.tgz
 
 # Druid system user
 adduser --system --group --no-create-home druid \

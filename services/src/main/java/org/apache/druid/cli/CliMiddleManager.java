@@ -21,6 +21,7 @@ package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -31,6 +32,7 @@ import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
@@ -47,7 +49,6 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
@@ -55,16 +56,20 @@ import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
+import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.indexing.worker.WorkerTaskMonitor;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.indexing.worker.http.ShuffleResource;
 import org.apache.druid.indexing.worker.http.TaskManagementResource;
 import org.apache.druid.indexing.worker.http.WorkerResource;
+import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -72,6 +77,7 @@ import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.Properties;
 
 /**
  *
@@ -84,9 +90,17 @@ public class CliMiddleManager extends ServerRunnable
 {
   private static final Logger log = new Logger(CliMiddleManager.class);
 
+  private boolean isZkEnabled = true;
+
   public CliMiddleManager()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -115,7 +129,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>() {})
                   .toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
-            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
+            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.task.rowIngestionMeters.type",
@@ -130,7 +144,7 @@ public class CliMiddleManager extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
-            bindWorkerManagementClasses(binder);
+            bindWorkerManagementClasses(binder, isZkEnabled);
 
             binder.bind(JettyServerInitializer.class)
                   .to(MiddleManagerJettyServerInitializer.class)
@@ -139,8 +153,6 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(AppenderatorsManager.class)
                   .to(DummyForInjectionAppenderatorsManager.class)
                   .in(LazySingleton.class);
-
-            Jerseys.addResource(binder, ShuffleResource.class);
 
             LifecycleModule.register(binder, Server.class);
 
@@ -182,19 +194,27 @@ public class CliMiddleManager extends ServerRunnable
             );
           }
         },
+        new ShuffleModule(),
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
+        new InputSourceModule(),
         new LookupSerdeModule()
     );
   }
 
-  public static void bindWorkerManagementClasses(Binder binder)
+  public static void bindWorkerManagementClasses(Binder binder, boolean isZkEnabled)
   {
-    binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
-    binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-    LifecycleModule.register(binder, WorkerTaskMonitor.class);
+    if (isZkEnabled) {
+      binder.bind(WorkerTaskManager.class).to(WorkerTaskMonitor.class);
+      binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+      binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+      LifecycleModule.register(binder, WorkerTaskMonitor.class);
+    } else {
+      binder.bind(WorkerTaskManager.class).in(ManageLifecycle.class);
+    }
+
     Jerseys.addResource(binder, WorkerResource.class);
     Jerseys.addResource(binder, TaskManagementResource.class);
   }

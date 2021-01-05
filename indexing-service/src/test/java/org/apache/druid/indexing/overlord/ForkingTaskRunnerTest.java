@@ -22,8 +22,15 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.server.log.StartupLoggingConfig;
+import org.assertj.core.util.Lists;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
 
 public class ForkingTaskRunnerTest
 {
@@ -120,5 +127,30 @@ public class ForkingTaskRunnerTest
         ImmutableList.copyOf(strings),
         ImmutableList.copyOf(new QuotableWhiteSpaceSplitter(Joiner.on(" ").join(strings)))
     );
+  }
+
+  @Test
+  public void testMaskedIterator()
+  {
+    Pair<List<String>, String> originalAndExpectedCommand = new Pair<>(
+        Lists.list(
+            "java -cp",
+            "/path/to/somewhere:some-jars.jar",
+            "/some===file",
+            "/asecretFileNa=me", // this should not be masked but there is not way to know this not a property and probably this is an unrealistic scenario anyways
+            "-Dsome.property=random",
+            "-Dsome.otherproperty = random=random",
+            "-Dsome.somesecret = secretvalue",
+            "-Dsome.somesecret=secretvalue",
+            "-Dsome.somepassword = secret=value",
+            "-Dsome.some=notasecret",
+            "-Dsome.otherSecret= =asfdhkj352872598====fasdlkjfa="
+            ),
+        "java -cp /path/to/somewhere:some-jars.jar /some===file /asecretFileNa=<masked> -Dsome.property=random -Dsome.otherproperty = random=random " +
+            "-Dsome.somesecret =<masked> -Dsome.somesecret=<masked> -Dsome.somepassword =<masked> -Dsome.some=notasecret -Dsome.otherSecret=<masked>"
+    );
+    StartupLoggingConfig startupLoggingConfig = new StartupLoggingConfig();
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(new ForkingTaskRunnerConfig(), null, new WorkerConfig(), null, null, null, null, startupLoggingConfig);
+    Assert.assertEquals(originalAndExpectedCommand.rhs, forkingTaskRunner.getMaskedCommand(startupLoggingConfig.getMaskProperties(), originalAndExpectedCommand.lhs));
   }
 }

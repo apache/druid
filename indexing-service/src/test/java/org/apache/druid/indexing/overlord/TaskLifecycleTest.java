@@ -33,6 +33,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -68,7 +69,6 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -123,12 +123,11 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
@@ -138,6 +137,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -172,20 +172,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
-public class TaskLifecycleTest
+public class TaskLifecycleTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
-  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY;
 
   static {
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
     INDEX_MERGER_V9 = TEST_UTILS.getTestIndexMergerV9();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
-    ROW_INGESTION_METERS_FACTORY = TEST_UTILS.getRowIngestionMetersFactory();
   }
 
   private static final String HEAP_TASK_STORAGE = "HeapMemoryTaskStorage";
@@ -250,7 +248,6 @@ public class TaskLifecycleTest
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
-  private AppenderatorsManager appenderatorsManager;
   private DruidNode druidNode = new DruidNode("dummy", "dummy", false, 10000, null, true, false);
   private TaskLocation taskLocation = TaskLocation.create(
       druidNode.getHost(),
@@ -574,12 +571,20 @@ public class TaskLifecycleTest
       TestIndexerMetadataStorageCoordinator mdc
   ) throws IOException
   {
+    return setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, new TestAppenderatorsManager());
+  }
+
+  private TaskToolboxFactory setUpTaskToolboxFactory(
+      DataSegmentPusher dataSegmentPusher,
+      SegmentHandoffNotifierFactory handoffNotifierFactory,
+      TestIndexerMetadataStorageCoordinator mdc,
+      AppenderatorsManager appenderatorsManager
+  ) throws IOException
+  {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
     Preconditions.checkNotNull(monitorScheduler);
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
-
-    appenderatorsManager = new TestAppenderatorsManager();
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
     tac = new LocalTaskActionClientFactory(
@@ -595,15 +600,6 @@ public class TaskLifecycleTest
     );
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null);
-
-    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return new ArrayList<>();
-      }
-    };
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -665,7 +661,7 @@ public class TaskLifecycleTest
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         Execs.directExecutor(), // query executor service
         NoopJoinableFactory.INSTANCE,
-        monitorScheduler, // monitor scheduler
+        () -> monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(null, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
@@ -678,6 +674,14 @@ public class TaskLifecycleTest
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
         new NoopTestTaskReportFileWriter(),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        TEST_UTILS.getRowIngestionMetersFactory(),
+        appenderatorsManager,
+        new NoopIndexingServiceClient(),
+        null,
+        null,
         null
     );
   }
@@ -742,6 +746,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -762,11 +767,7 @@ public class TaskLifecycleTest
                 null
             )
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        appenderatorsManager
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -826,6 +827,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -846,10 +848,6 @@ public class TaskLifecycleTest
                 null
             )
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
         null
     );
 
@@ -1255,6 +1253,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1275,11 +1274,7 @@ public class TaskLifecycleTest
                 null
             )
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        appenderatorsManager
+        null
     );
 
     final long startTime = System.currentTimeMillis();
@@ -1342,6 +1337,10 @@ public class TaskLifecycleTest
         () -> queryRunnerFactoryConglomerate
     );
 
+    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, unifiedIndexerAppenderatorsManager);
+    taskRunner = setUpThreadPoolTaskRunner(tb);
+    taskQueue = setUpTaskQueue(taskStorage, taskRunner);
+
     final Task indexTask = new IndexTask(
         null,
         null,
@@ -1362,6 +1361,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1382,11 +1382,7 @@ public class TaskLifecycleTest
                 null
             )
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        unifiedIndexerAppenderatorsManager
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -1476,6 +1472,7 @@ public class TaskLifecycleTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
         null,
         new Period("P1Y"),

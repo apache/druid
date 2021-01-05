@@ -331,7 +331,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           if (intervals.equals(ImmutableList.of(testCase.interval))) {
             return ImmutableSet.copyOf(testCase.segments);
           } else {
-            throw new IllegalArgumentException("WTF");
+            throw new IllegalArgumentException("BAD");
           }
         }
 

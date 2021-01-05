@@ -606,9 +606,16 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3t3", "count", 4L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t5t5", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t4t4", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7t7", "count", 2L)
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
+            "1970",
+            "texpr",
+            NullHandling.emptyToNullIfNeeded(""),
+            "count",
+            2L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t2", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto-self");

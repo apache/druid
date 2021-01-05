@@ -47,8 +47,7 @@ public class GroupByQueryEngineV2Test
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(true)
                                                                   .setDictionaryValuesSorted(true)
-                                                                  .setDictionaryValuesUnique(true)
-                                                                  .setIsComplete(true);
+                                                                  .setDictionaryValuesUnique(true);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
     Assert.assertTrue(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
@@ -63,8 +62,7 @@ public class GroupByQueryEngineV2Test
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(false)
                                                                   .setDictionaryValuesSorted(false)
-                                                                  .setDictionaryValuesUnique(true)
-                                                                  .setIsComplete(true);
+                                                                  .setDictionaryValuesUnique(true);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
     Assert.assertFalse(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
@@ -79,8 +77,7 @@ public class GroupByQueryEngineV2Test
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(false)
                                                                   .setDictionaryValuesSorted(false)
-                                                                  .setDictionaryValuesUnique(false)
-                                                                  .setIsComplete(true);
+                                                                  .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
     Assert.assertFalse(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
@@ -95,8 +92,7 @@ public class GroupByQueryEngineV2Test
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(true)
                                                                   .setDictionaryValuesSorted(false)
-                                                                  .setDictionaryValuesUnique(false)
-                                                                  .setIsComplete(true);
+                                                                  .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
     Assert.assertFalse(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
@@ -111,8 +107,7 @@ public class GroupByQueryEngineV2Test
                                                                       .setHasMultipleValues(false)
                                                                       .setDictionaryEncoded(false)
                                                                       .setDictionaryValuesSorted(false)
-                                                                      .setDictionaryValuesUnique(false)
-                                                                      .setIsComplete(true);
+                                                                      .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).anyTimes();
     EasyMock.replay(factory);
     Assert.assertTrue(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
@@ -131,8 +126,7 @@ public class GroupByQueryEngineV2Test
                                                                       .setHasMultipleValues(false)
                                                                       .setDictionaryEncoded(false)
                                                                       .setDictionaryValuesSorted(false)
-                                                                      .setDictionaryValuesUnique(false)
-                                                                      .setIsComplete(true);
+                                                                      .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
     Assert.assertTrue(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));

@@ -47,7 +47,6 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -870,37 +869,6 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testCannotAddToExistingSingleDimensionShardSpecs() throws Exception
-  {
-    final Task task = NoopTask.create();
-
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
-        ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
-                       .shardSpec(new SingleDimensionShardSpec("foo", null, "bar", 0))
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
-                       .shardSpec(new SingleDimensionShardSpec("foo", "bar", null, 1))
-                       .size(0)
-                       .build()
-        )
-    );
-
-    taskActionTestKit.getTaskLockbox().add(task);
-
-    final SegmentIdWithShardSpec id1 = allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, "s1", null);
-
-    Assert.assertNull(id1);
-  }
-
-  @Test
   public void testWithPartialShardSpecAndOvershadowingSegments() throws IOException
   {
     final Task task = NoopTask.create();
@@ -914,14 +882,18 @@ public class SegmentAllocateActionTest
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new HashBasedNumberedShardSpec(0, 2, ImmutableList.of("dim1"), objectMapper))
+                       .shardSpec(
+                           new HashBasedNumberedShardSpec(0, 2, 0, 2, ImmutableList.of("dim1"), null, objectMapper)
+                       )
                        .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new HashBasedNumberedShardSpec(1, 2, ImmutableList.of("dim1"), objectMapper))
+                       .shardSpec(
+                           new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), null, objectMapper)
+                       )
                        .size(0)
                        .build()
         )
@@ -935,7 +907,7 @@ public class SegmentAllocateActionTest
         "seq",
         null,
         true,
-        new HashBasedNumberedPartialShardSpec(ImmutableList.of("dim1"), 2),
+        new HashBasedNumberedPartialShardSpec(ImmutableList.of("dim1"), 1, 2, null),
         lockGranularity
     );
     final SegmentIdWithShardSpec segmentIdentifier = action.perform(task, taskActionTestKit.getTaskActionToolbox());
@@ -946,7 +918,7 @@ public class SegmentAllocateActionTest
 
     Assert.assertTrue(shardSpec instanceof HashBasedNumberedShardSpec);
     final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) shardSpec;
-    Assert.assertEquals(2, hashBasedNumberedShardSpec.getPartitions());
+    Assert.assertEquals(2, hashBasedNumberedShardSpec.getNumCorePartitions());
     Assert.assertEquals(ImmutableList.of("dim1"), hashBasedNumberedShardSpec.getPartitionDimensions());
   }
 
@@ -1029,10 +1001,7 @@ public class SegmentAllocateActionTest
 
     if (expected.getShardSpec().getClass() == NumberedShardSpec.class
         && actual.getShardSpec().getClass() == NumberedShardSpec.class) {
-      Assert.assertEquals(
-          ((NumberedShardSpec) expected.getShardSpec()).getPartitions(),
-          ((NumberedShardSpec) actual.getShardSpec()).getPartitions()
-      );
+      Assert.assertEquals(expected.getShardSpec().getNumCorePartitions(), actual.getShardSpec().getNumCorePartitions());
     } else if (expected.getShardSpec().getClass() == LinearShardSpec.class
                && actual.getShardSpec().getClass() == LinearShardSpec.class) {
       // do nothing

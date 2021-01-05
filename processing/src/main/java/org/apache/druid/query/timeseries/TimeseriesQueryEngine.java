@@ -20,8 +20,6 @@
 package org.apache.druid.query.timeseries;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -33,7 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -43,6 +41,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -59,7 +58,6 @@ import java.util.Objects;
  */
 public class TimeseriesQueryEngine
 {
-  private final Supplier<QueryConfig> queryConfigSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
 
   /**
@@ -68,17 +66,14 @@ public class TimeseriesQueryEngine
   @VisibleForTesting
   public TimeseriesQueryEngine()
   {
-    this.queryConfigSupplier = Suppliers.ofInstance(new QueryConfig());
     this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));
   }
 
   @Inject
   public TimeseriesQueryEngine(
-      final Supplier<QueryConfig> queryConfigSupplier,
       final @Global NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    this.queryConfigSupplier = queryConfigSupplier;
     this.bufferPool = bufferPool;
   }
 
@@ -94,21 +89,21 @@ public class TimeseriesQueryEngine
       );
     }
 
-    final QueryConfig queryConfigToUse = queryConfigSupplier.get().withOverrides(query);
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
-    final boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
-        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
-        && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
+    final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+        query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+        && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
+        && adapter.canVectorize(filter, query.getVirtualColumns(), descending)
     );
 
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, queryConfigToUse, adapter, filter, interval, gran, descending);
+      result = processVectorized(query, adapter, filter, interval, gran, descending);
     } else {
       result = processNonVectorized(query, adapter, filter, interval, gran, descending);
     }
@@ -123,7 +118,6 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
-      final QueryConfig queryConfig,
       final StorageAdapter adapter,
       @Nullable final Filter filter,
       final Interval queryInterval,
@@ -139,7 +133,7 @@ public class TimeseriesQueryEngine
         queryInterval,
         query.getVirtualColumns(),
         descending,
-        queryConfig.getVectorSize(),
+        QueryContexts.getVectorSize(query),
         null
     );
 

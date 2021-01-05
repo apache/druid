@@ -43,8 +43,11 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.plumber.Committers;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
@@ -58,7 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class AppenderatorTest
+public class AppenderatorTest extends InitializedNullHandlingTest
 {
   private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
       si("2000/2001", "A", 0),
@@ -177,15 +180,15 @@ public class AppenderatorTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138 + 1 byte when null handling is enabled
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
-          138 + nullHandlingOverhead,
+          182 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          138 + nullHandlingOverhead,
+          182 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       appenderator.close();
@@ -220,12 +223,12 @@ public class AppenderatorTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
-      Assert.assertEquals(138 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(182 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          276 + 2 * nullHandlingOverhead,
+          364 + 2 * nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
@@ -265,13 +268,13 @@ public class AppenderatorTest
       //we still calculate the size even when ignoring it to make persist decision
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
-          138 + nullHandlingOverhead,
+          182 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          276 + 2 * nullHandlingOverhead,
+          364 + 2 * nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
       );
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
@@ -476,6 +479,23 @@ public class AppenderatorTest
 
       appenderator.close();
       Assert.assertEquals(0, appenderator.getTotalRowCount());
+    }
+  }
+
+  @Test
+  public void testVerifyRowIngestionMetrics() throws Exception
+  {
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    try (final AppenderatorTester tester = new AppenderatorTester(5, 1000L, null, false, rowIngestionMeters)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", "invalid_met"), Committers.nilSupplier());
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Committers.nilSupplier());
+
+      Assert.assertEquals(1, rowIngestionMeters.getProcessed());
+      Assert.assertEquals(1, rowIngestionMeters.getProcessedWithError());
+      Assert.assertEquals(0, rowIngestionMeters.getUnparseable());
+      Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
     }
   }
 
@@ -791,7 +811,7 @@ public class AppenderatorTest
     );
   }
 
-  static InputRow ir(String ts, String dim, long met)
+  static InputRow ir(String ts, String dim, Object met)
   {
     return new MapBasedInputRow(
         DateTimes.of(ts).getMillis(),
@@ -843,7 +863,7 @@ public class AppenderatorTest
           } else if (a instanceof DataSegment && b instanceof DataSegment) {
             return ((DataSegment) a).getId().compareTo(((DataSegment) b).getId());
           } else {
-            throw new IllegalStateException("WTF??");
+            throw new IllegalStateException("BAD");
           }
         }
     );

@@ -16,16 +16,19 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
+
 .filter-table {
   .rt-th {
     &.filtered {
-      background: rgba(201, 128, 22, 0.2);
+      background: rgba($druid-brand, 0.2);
     }
   }
 
   .rt-td {
     &.filtered {
-      background: rgba(201, 128, 22, 0.05);
+      background: rgba($druid-brand, 0.06);
     }
   }
 }

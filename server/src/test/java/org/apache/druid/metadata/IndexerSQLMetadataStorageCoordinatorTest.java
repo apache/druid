@@ -44,6 +44,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,6 +61,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -278,6 +281,50 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals(
         ImmutableList.of(defaultSegment.getId().toString(), defaultSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
+  }
+
+  @Test
+  public void testAnnounceHistoricalSegments() throws IOException
+  {
+    Set<DataSegment> segments = new HashSet<>();
+    for (int i = 0; i < 105; i++) {
+      segments.add(
+          new DataSegment(
+              "fooDataSource",
+              Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(i),
+              9,
+              100
+          )
+      );
+    }
+
+    coordinator.announceHistoricalSegments(segments);
+    for (DataSegment segment : segments) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getId().toString()
+          )
+      );
+    }
+
+    List<String> segmentIds = segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList());
+    segmentIds.sort(Comparator.naturalOrder());
+    Assert.assertEquals(
+        segmentIds,
         retrieveUsedSegmentIds()
     );
 
@@ -1032,7 +1079,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testAllocatePendingSegmentsForHashBasedNumberedShardSpec() throws IOException
   {
-    final PartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(null, 5);
+    final PartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(null, 2, 5, null);
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
 
@@ -1048,7 +1095,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(0, shardSpec.getPartitionNum());
-    Assert.assertEquals(5, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getNumCorePartitions());
+    Assert.assertEquals(5, shardSpec.getNumBuckets());
 
     coordinator.announceHistoricalSegments(
         Collections.singleton(
@@ -1078,7 +1126,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(1, shardSpec.getPartitionNum());
-    Assert.assertEquals(5, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getNumCorePartitions());
+    Assert.assertEquals(5, shardSpec.getNumBuckets());
 
     coordinator.announceHistoricalSegments(
         Collections.singleton(
@@ -1101,13 +1150,59 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq3",
         null,
         interval,
-        new HashBasedNumberedPartialShardSpec(null, 3),
+        new HashBasedNumberedPartialShardSpec(null, 2, 3, null),
         "version",
         true
     );
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(2, shardSpec.getPartitionNum());
-    Assert.assertEquals(3, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getNumCorePartitions());
+    Assert.assertEquals(3, shardSpec.getNumBuckets());
+  }
+
+  @Test
+  public void testAddNumberedShardSpecAfterSingleDimensionsShardSpecWithUnknownCorePartitionSize() throws IOException
+  {
+    final String datasource = "datasource";
+    final Interval interval = Intervals.of("2020-01-01/P1D");
+    final String version = "version";
+    final List<String> dimensions = ImmutableList.of("dim");
+    final List<String> metrics = ImmutableList.of("met");
+    final Set<DataSegment> originalSegments = new HashSet<>();
+    for (int i = 0; i < 6; i++) {
+      final String start = i == 0 ? null : String.valueOf(i - 1);
+      final String end = i == 5 ? null : String.valueOf(i);
+      originalSegments.add(
+          new DataSegment(
+              datasource,
+              interval,
+              version,
+              ImmutableMap.of(),
+              dimensions,
+              metrics,
+              new SingleDimensionShardSpec(
+                  "dim",
+                  start,
+                  end,
+                  i,
+                  null // emulate shardSpecs created in older versions of Druid
+              ),
+              9,
+              10L
+          )
+      );
+    }
+    coordinator.announceHistoricalSegments(originalSegments);
+    final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+        datasource,
+        "seq",
+        null,
+        interval,
+        NumberedPartialShardSpec.instance(),
+        version,
+        false
+    );
+    Assert.assertNull(id);
   }
 }
