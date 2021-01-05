@@ -1049,6 +1049,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     log.info("Saved sequence metadata to disk: %s", sequences);
   }
 
+  /**
+   * Return a map of reports for the task.
+   *
+   * A successfull task should always have a null errorMsg. A falied task should always have a non-null
+   * errorMsg.
+   *
+   * @param errorMsg Nullable error message for the task. null if task succeeded.
+   * @return Map of reports for the task.
+   */
   private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
   {
     return TaskReport.buildTaskReports(
@@ -1059,7 +1068,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                false
+                errorMsg == null
             )
         )
     );
