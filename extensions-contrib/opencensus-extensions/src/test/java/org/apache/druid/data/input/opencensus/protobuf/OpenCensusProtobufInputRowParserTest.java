@@ -35,18 +35,16 @@ import io.opencensus.proto.metrics.v1.Point;
 import io.opencensus.proto.metrics.v1.SummaryValue;
 import io.opencensus.proto.metrics.v1.TimeSeries;
 import io.opencensus.proto.resource.v1.Resource;
-import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -62,51 +60,81 @@ public class OpenCensusProtobufInputRowParserTest
   private static final Timestamp TIMESTAMP = Timestamp.newBuilder()
                                                       .setSeconds(INSTANT.getEpochSecond())
                                                       .setNanos(INSTANT.getNano()).build();
+
+  static final JSONParseSpec PARSE_SPEC = new JSONParseSpec(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(null, null, null),
+      new JSONPathSpec(
+          true,
+          Lists.newArrayList(
+              new JSONPathFieldSpec(JSONPathFieldType.ROOT, "name", ""),
+              new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
+              new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
+          )
+      ), null, null
+  );
+
+  static final JSONParseSpec PARSE_SPEC_WITH_DIMENSIONS = new JSONParseSpec(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(ImmutableList.of(
+          new StringDimensionSchema("foo_key"),
+          new StringDimensionSchema("env_key")
+      ), null, null),
+      new JSONPathSpec(
+          true,
+          Lists.newArrayList(
+              new JSONPathFieldSpec(JSONPathFieldType.ROOT, "name", ""),
+              new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
+              new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
+          )
+      ), null, null
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private ParseSpec parseSpec;
-
-  private ParseSpec parseSpecWithDimensions;
-
-  @Before
-  public void setUp()
+  @Test
+  public void testSerde() throws Exception
   {
-    parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "millis", null),
-        new DimensionsSpec(null, null, null),
-        new JSONPathSpec(
-            true,
-            Lists.newArrayList(
-                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "name", ""),
-                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
-                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
-            )
-        ), null, null
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(
+        OpenCensusProtobufInputRowParserTest.PARSE_SPEC,
+        "metric.name",
+        "descriptor.",
+        "custom."
     );
 
-    parseSpecWithDimensions = new JSONParseSpec(
-        new TimestampSpec("timestamp", "millis", null),
-        new DimensionsSpec(ImmutableList.of(
-            new StringDimensionSchema("foo_key"),
-            new StringDimensionSchema("env_key")), null, null),
-        new JSONPathSpec(
-            true,
-            Lists.newArrayList(
-                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "name", ""),
-                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
-                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
-            )
-        ), null, null
+    final ObjectMapper jsonMapper = new ObjectMapper();
+    jsonMapper.registerModules(new OpenCensusProtobufExtensionsModule().getJacksonModules());
+
+    final OpenCensusProtobufInputRowParser actual = (OpenCensusProtobufInputRowParser) jsonMapper.readValue(
+        jsonMapper.writeValueAsString(parser),
+        InputRowParser.class
     );
+    Assert.assertEquals(parser, actual);
+    Assert.assertEquals("metric.name", actual.getMetricDimension());
+    Assert.assertEquals("descriptor.", actual.getMetricLabelPrefix());
+    Assert.assertEquals("custom.", actual.getResourceLabelPrefix());
   }
 
+
+  @Test
+  public void testDefaults()
+  {
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(
+        OpenCensusProtobufInputRowParserTest.PARSE_SPEC,
+        null, null, null
+    );
+
+    Assert.assertEquals("name", parser.getMetricDimension());
+    Assert.assertEquals("", parser.getMetricLabelPrefix());
+    Assert.assertEquals("", parser.getResourceLabelPrefix());
+  }
 
   @Test
   public void testDoubleGaugeParse()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, null, "");
 
     Metric metric = doubleGaugeMetric(TIMESTAMP);
 
@@ -124,7 +152,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testIntGaugeParse()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, null, "");
 
     Metric metric = intGaugeMetric(TIMESTAMP);
 
@@ -141,7 +169,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testSummaryParse()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, null, "");
 
     Metric metric = summaryMetric(TIMESTAMP);
 
@@ -166,7 +194,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testDistributionParse()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, null, "");
 
     Metric metric = distributionMetric(TIMESTAMP);
 
@@ -191,7 +219,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testDimensionsParseWithParseSpecDimensions()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpecWithDimensions, null, null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC_WITH_DIMENSIONS, null, null, "");
 
     Metric metric = summaryMetric(TIMESTAMP);
 
@@ -212,10 +240,10 @@ public class OpenCensusProtobufInputRowParserTest
   }
 
   @Test
-  public void testDimensionsParseWithoutParseSpecDimensions()
+  public void testDimensionsParseWithoutPARSE_SPECDimensions()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, null, "");
 
     Metric metric = summaryMetric(TIMESTAMP);
 
@@ -241,7 +269,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testMetricNameOverride()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, "dimension_name", null, "");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, "dimension_name", null, "");
 
     Metric metric = summaryMetric(Timestamp.getDefaultInstance());
 
@@ -266,7 +294,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testDefaultPrefix()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, null, null);
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, null, null);
 
     Metric metric = summaryMetric(Timestamp.getDefaultInstance());
 
@@ -291,7 +319,7 @@ public class OpenCensusProtobufInputRowParserTest
   public void testCustomPrefix()
   {
     //configure parser with desc file
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, null, "descriptor.", "custom.");
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(PARSE_SPEC, null, "descriptor.", "custom.");
 
     Metric metric = summaryMetric(Timestamp.getDefaultInstance());
 
@@ -312,20 +340,6 @@ public class OpenCensusProtobufInputRowParserTest
     assertDimensionEquals(row, "custom.env_key", "env_val");
   }
 
-  @Test
-  public void testSerde() throws Exception
-  {
-    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec, "metric.name", "descriptor.", "custom.");
-
-    final ObjectMapper jsonMapper = new ObjectMapper();
-    jsonMapper.registerModules(new OpenCensusProtobufExtensionsModule().getJacksonModules());
-
-    Assert.assertEquals(parser, jsonMapper.readValue(
-        jsonMapper.writeValueAsString(parser),
-        ByteBufferInputRowParser.class
-    ));
-  }
-
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
   {
     List<String> values = row.getDimension(dimension);
@@ -334,7 +348,7 @@ public class OpenCensusProtobufInputRowParserTest
     Assert.assertEquals(expected, values.get(0));
   }
 
-  private Metric doubleGaugeMetric(Timestamp timestamp)
+  static Metric doubleGaugeMetric(Timestamp timestamp)
   {
     return getMetric(
         "metric_gauge_double",
@@ -347,7 +361,7 @@ public class OpenCensusProtobufInputRowParserTest
         timestamp);
   }
 
-  private Metric intGaugeMetric(Timestamp timestamp)
+  static Metric intGaugeMetric(Timestamp timestamp)
   {
     return getMetric(
         "metric_gauge_int64",
@@ -360,7 +374,7 @@ public class OpenCensusProtobufInputRowParserTest
         timestamp);
   }
 
-  private Metric summaryMetric(Timestamp timestamp)
+  static Metric summaryMetric(Timestamp timestamp)
   {
 
     SummaryValue.Snapshot snapshot = SummaryValue.Snapshot.newBuilder()
@@ -408,7 +422,7 @@ public class OpenCensusProtobufInputRowParserTest
         timestamp);
   }
 
-  private Metric distributionMetric(Timestamp timestamp)
+  static Metric distributionMetric(Timestamp timestamp)
   {
     DistributionValue distributionValue = DistributionValue.newBuilder()
         .setCount(100)
@@ -426,7 +440,7 @@ public class OpenCensusProtobufInputRowParserTest
         timestamp);
   }
 
-  private Metric getMetric(String name, String description, MetricDescriptor.Type type, Point point, Timestamp timestamp)
+  static Metric getMetric(String name, String description, MetricDescriptor.Type type, Point point, Timestamp timestamp)
   {
     Metric dist = Metric.newBuilder()
         .setMetricDescriptor(
