@@ -114,7 +114,7 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? Metrics.pattern.matcher(userDim.toString()).replaceAll("_") : "unknown";
+        labelValues[i] = userDim != null ? Metrics.PATTERN.matcher(userDim.toString()).replaceAll("_") : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {
@@ -131,13 +131,15 @@ public class PrometheusEmitter implements Emitter
     }
   }
 
-  private void pushMetric(){
+  private void pushMetric()
+  {
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     try {
       for (DimensionsAndCollector collector : map.values()) {
         pushGateway.push(collector.getCollector(), config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
       }
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       log.error(e, "Unable to push prometheus metrics to pushGateway");
     }
   }
@@ -145,7 +147,7 @@ public class PrometheusEmitter implements Emitter
   @Override
   public void flush()
   {
-    if(pushGateway != null) {
+    if (pushGateway != null) {
       pushMetric();
     }
   }

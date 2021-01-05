@@ -47,13 +47,15 @@ public class Metrics
   private static final Logger log = new Logger(Metrics.class);
   private final Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
-  public static final Pattern pattern = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
+  public static final Pattern PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
   public DimensionsAndCollector getByName(String name, String service)
   {
     if (registeredMetrics.containsKey(name)) {
       return registeredMetrics.get(name);
-    } else return registeredMetrics.getOrDefault(service + "_" + name, null);
+    } else {
+      return registeredMetrics.getOrDefault(service + "_" + name, null);
+    }
   }
 
   public Metrics(String namespace, String path)
@@ -64,7 +66,7 @@ public class Metrics
       Metric metric = entry.getValue();
       Metric.Type type = metric.type;
       String[] dimensions = metric.dimensions.toArray(new String[0]);
-      String formattedName = pattern.matcher(StringUtils.toLowerCase(name)).replaceAll("_");
+      String formattedName = PATTERN.matcher(StringUtils.toLowerCase(name)).replaceAll("_");
       SimpleCollector collector = null;
       if (Metric.Type.count.equals(type)) {
         collector = new Counter.Builder()

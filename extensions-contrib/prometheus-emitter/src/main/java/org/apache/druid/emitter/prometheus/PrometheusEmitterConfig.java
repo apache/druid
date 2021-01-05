@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import javax.xml.ws.BindingType;
 import java.util.regex.Pattern;
 
 /**
@@ -33,7 +32,7 @@ import java.util.regex.Pattern;
 public class PrometheusEmitterConfig
 {
 
-  final static Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
+  static final Pattern PATTERN = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
   @JsonProperty
   private final Strategy strategy;
@@ -66,7 +65,7 @@ public class PrometheusEmitterConfig
 
     this.strategy = strategy != null ? strategy : Strategy.exporter;
     this.namespace = namespace != null ? namespace : "druid";
-    Preconditions.checkArgument(pattern.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
+    Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
     this.pushGatewayAddress = pushGatewayAddress;
