@@ -37,7 +37,8 @@ public class OpenCensusProtobufExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("OpenCensusProtobufInputRowParserModule")
             .registerSubtypes(
-                new NamedType(OpenCensusProtobufInputRowParser.class, "opencensus-protobuf")
+                new NamedType(OpenCensusProtobufInputRowParser.class, "opencensus-protobuf"),
+                new NamedType(OpenCensusProtobufInputFormat.class, "opencensus-protobuf")
             )
     );
   }
