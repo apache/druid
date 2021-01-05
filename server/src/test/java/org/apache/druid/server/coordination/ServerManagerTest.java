@@ -28,6 +28,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -143,7 +144,7 @@ public class ServerManagerTest
           }
 
           @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy)
+          public Segment getSegment(final DataSegment segment, boolean lazy, CommonCallback commonCallback)
           {
             return new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
@@ -666,7 +667,8 @@ public class ServerManagerTest
               IndexIO.CURRENT_VERSION_ID,
               123L
           ),
-          false
+          false,
+          CommonCallback.NOOP
       );
     }
     catch (SegmentLoadingException e) {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.common.utils.CommonCallback;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 
@@ -31,7 +32,7 @@ import java.io.File;
 public interface SegmentLoader
 {
   boolean isSegmentLoaded(DataSegment segment);
-  Segment getSegment(DataSegment segment, boolean lazy) throws SegmentLoadingException;
+  Segment getSegment(DataSegment segment, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException;
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
   void cleanup(DataSegment segment);
 }

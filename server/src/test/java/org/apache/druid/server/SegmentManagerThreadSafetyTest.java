@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
@@ -129,7 +130,7 @@ public class SegmentManagerThreadSafetyTest
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false)))
+        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false, CommonCallback.NOOP)))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
@@ -154,7 +155,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment, false);
+              segmentManager.loadSegment(segment, false, CommonCallback.NOOP);
             }
             catch (SegmentLoadingException e) {
               throw new RuntimeException(e);
@@ -222,7 +223,7 @@ public class SegmentManagerThreadSafetyTest
   private static class TestSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir, boolean lazy)
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy, CommonCallback commonCallback)
     {
       return new Segment()
       {

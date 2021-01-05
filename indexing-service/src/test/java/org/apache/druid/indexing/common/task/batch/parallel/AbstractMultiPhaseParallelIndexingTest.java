@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.utils.CommonCallback;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -282,7 +283,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     final SegmentLoader loader = new SegmentLoaderFactory(getIndexIO(), getObjectMapper())
         .manufacturate(tempSegmentDir);
     try {
-      return loader.getSegment(dataSegment, false);
+      return loader.getSegment(dataSegment, false, CommonCallback.NOOP);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

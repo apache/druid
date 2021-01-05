@@ -38,6 +38,7 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.utils.SerializerUtils;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -182,16 +183,16 @@ public class IndexIO
 
   public QueryableIndex loadIndex(File inDir) throws IOException
   {
-    return loadIndex(inDir, false);
+    return loadIndex(inDir, false, CommonCallback.NOOP);
   }
-  public QueryableIndex loadIndex(File inDir, boolean lazy) throws IOException
+  public QueryableIndex loadIndex(File inDir, boolean lazy, CommonCallback loadFailed) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(inDir);
 
     final IndexLoader loader = indexLoaders.get(version);
 
     if (loader != null) {
-      return loader.load(inDir, mapper, lazy);
+      return loader.load(inDir, mapper, lazy, loadFailed);
     } else {
       throw new ISE("Unknown index version[%s]", version);
     }
@@ -412,7 +413,7 @@ public class IndexIO
 
   interface IndexLoader
   {
-    QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy) throws IOException;
+    QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, CommonCallback loadFailed) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
@@ -427,7 +428,7 @@ public class IndexIO
     }
 
     @Override
-    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, CommonCallback loadFailed) throws IOException
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
@@ -522,7 +523,7 @@ public class IndexIO
     }
 
     @Override
-    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, CommonCallback loadFailed) throws IOException
     {
       log.debug("Mapping v9 index[%s]", inDir);
       long startTime = System.currentTimeMillis();
@@ -598,7 +599,9 @@ public class IndexIO
                 try {
                   return deserializeColumn(mapper, colBuffer, smooshedFiles);
                 }
-                catch (IOException e) {
+                catch (IOException | RuntimeException e) {
+                  log.warn(e,"Exception when deserialize Column " + columnName);
+                  loadFailed.execute();
                   throw Throwables.propagate(e);
                 }
               }
@@ -618,7 +621,9 @@ public class IndexIO
               try {
                 return deserializeColumn(mapper, timeBuffer, smooshedFiles);
               }
-              catch (IOException e) {
+              catch (IOException | RuntimeException e) {
+                log.warn(e,"Exception when deserialize Column " + ColumnHolder.TIME_COLUMN_NAME);
+                loadFailed.execute();
                 throw Throwables.propagate(e);
               }
             }
@@ -644,7 +649,7 @@ public class IndexIO
     }
 
     private ColumnHolder deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
-        throws IOException
+        throws IOException, RuntimeException
     {
       ColumnDescriptor serde = mapper.readValue(
           SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class

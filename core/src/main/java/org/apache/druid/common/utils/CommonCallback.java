@@ -17,20 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.segment.loading;
+package org.apache.druid.common.utils;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.common.utils.CommonCallback;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.timeline.DataSegment;
-
-import java.io.File;
-
-/**
- * Factory that loads segment files from the disk and creates {@link Segment} object
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MMappedQueryableSegmentizerFactory.class)
-public interface SegmentizerFactory
+public interface CommonCallback
 {
-  Segment factorize(DataSegment segment, File parentDir, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException;
+  void execute();
+  CommonCallback NOOP = () -> {};
 }

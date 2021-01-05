@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.common.utils.CommonCallback;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
@@ -219,9 +220,9 @@ public class SegmentManager
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException
   {
-    final Segment adapter = getAdapter(segment, lazy);
+    final Segment adapter = getAdapter(segment, lazy, loadFailed);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -271,11 +272,11 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  private Segment getAdapter(final DataSegment segment, boolean lazy) throws SegmentLoadingException
+  private Segment getAdapter(final DataSegment segment, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException
   {
     final Segment adapter;
     try {
-      adapter = segmentLoader.getSegment(segment, lazy);
+      adapter = segmentLoader.getSegment(segment, lazy, loadFailed);
     }
     catch (SegmentLoadingException e) {
       segmentLoader.cleanup(segment);
