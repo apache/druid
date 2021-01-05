@@ -25,7 +25,7 @@ title: "Druid AWS RDS Module"
 This module provides AWS RDS token [password provider](../../operations/password-provider.md) provides temp token for accessing AWS RDS DB cluster.
 
 ```json
-{ "type": "awsrdstoken", "user": "USER", "host": "HOST", "port": PORT, "region": "AWS_REGION" }
+{ "type": "aws-rds-token", "user": "USER", "host": "HOST", "port": PORT, "region": "AWS_REGION" }
 ```
 
 Before using this password provider, please make sure that you have connected all dots for db user to connect using token.

@@ -30,11 +30,12 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 /**
- * This class exists so that PasswordProvider is asked for password every time a brand new connection is established
- * with DB. PasswordProvider impls such as based on AWS tokens refresh the underlying token periodically since
- * each token is valid for a certain period of time only.
- * So, This class overrides[ummm copies] the methods from base class in order to keep track of connection properties
- * and call MetadataStorageConnectorConfig.getPassword() everytime a new connection is setup.
+ * This class exists so that {@link MetadataStorageConnectorConfig} is asked for password every time a brand new
+ * connection is established with DB. {@link PasswordProvider} impls such as those based on AWS tokens refresh the
+ * underlying token periodically since each token is valid for a certain period of time only.
+ * So, This class overrides,ummm copies due to lack of extensibility, the methods from base class in order to keep
+ * track of connection properties and call {@link MetadataStorageConnectorConfig#getPassword()} everytime a new
+ * connection is setup.
  */
 public class BasicDataSourceExt extends BasicDataSource
 {

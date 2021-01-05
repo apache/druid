@@ -37,7 +37,7 @@ public class AWSRDSTokenPasswordProviderTest
   {
     ObjectMapper jsonMapper = new ObjectMapper();
 
-    for (Module module : new AWSModule().getJacksonModules()) {
+    for (Module module : new AWSRDSModule().getJacksonModules()) {
       jsonMapper.registerModule(module);
     }
 
@@ -59,7 +59,7 @@ public class AWSRDSTokenPasswordProviderTest
     );
 
     String jsonStr = "{\n"
-                     + "  \"type\": \"awsrdstoken\",\n"
+                     + "  \"type\": \"aws-rds-token\",\n"
                      + "  \"user\": \"testuser\",\n"
                      + "  \"host\": \"testhost\",\n"
                      + "  \"port\": 5273,\n"

@@ -28,14 +28,14 @@ import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
-public class AWSModule implements DruidModule
+public class AWSRDSModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
         new SimpleModule("DruidAwsRdsExtentionsModule").registerSubtypes(
-            new NamedType(AWSRDSTokenPasswordProvider.class, "awsrdstoken")
+            new NamedType(AWSRDSTokenPasswordProvider.class, "aws-rds-token")
         )
     );
   }
