@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.ConnectionFactory;
 import org.apache.druid.java.util.common.RE;
@@ -88,6 +89,12 @@ public class BasicDataSourceExt extends BasicDataSource
     }
     this.connectionProperties = properties;
     super.setConnectionProperties(connectionProperties);
+  }
+
+  @VisibleForTesting
+  public Properties getConnectionProperties()
+  {
+    return connectionProperties;
   }
 
   @Override

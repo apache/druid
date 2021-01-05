@@ -54,11 +54,8 @@ public class BasicDataSourceExtTest
 
     BasicDataSourceExt basicDataSourceExt = new BasicDataSourceExt(connectorConfig);
 
-    basicDataSourceExt.setConnectionProperties("p1=v1;p2=v2;p3=v3");
-    basicDataSourceExt.addConnectionProperty("p4", "v4");
-    basicDataSourceExt.addConnectionProperty("p5", "v5");
-    basicDataSourceExt.removeConnectionProperty("p2");
-    basicDataSourceExt.removeConnectionProperty("p5");
+    basicDataSourceExt.setConnectionProperties("p1=v1");
+    basicDataSourceExt.addConnectionProperty("p2", "v2");
 
     Driver driver = EasyMock.mock(Driver.class);
     Capture<String> uriArg = Capture.newInstance();
@@ -72,8 +69,7 @@ public class BasicDataSourceExtTest
 
     Properties expectedProps = new Properties();
     expectedProps.put("p1", "v1");
-    expectedProps.put("p3", "v3");
-    expectedProps.put("p4", "v4");
+    expectedProps.put("p2", "v2");
     expectedProps.put("user", connectorConfig.getUser());
 
 
@@ -88,5 +84,30 @@ public class BasicDataSourceExtTest
 
     expectedProps.put("password", "pwd2");
     Assert.assertEquals(expectedProps, propsArg.getValue());
+  }
+
+  @Test
+  public void testConnectionPropertiesHanding()
+  {
+    BasicDataSourceExt basicDataSourceExt = new BasicDataSourceExt(EasyMock.mock(MetadataStorageConnectorConfig.class));
+    Properties expectedProps = new Properties();
+
+    basicDataSourceExt.setConnectionProperties("");
+    Assert.assertEquals(expectedProps, basicDataSourceExt.getConnectionProperties());
+
+    basicDataSourceExt.setConnectionProperties("p0;p1=v1;p2=v2;p3=v3");
+    basicDataSourceExt.addConnectionProperty("p4", "v4");
+    basicDataSourceExt.addConnectionProperty("p5", "v5");
+    basicDataSourceExt.removeConnectionProperty("p2");
+    basicDataSourceExt.removeConnectionProperty("p5");
+
+    expectedProps.put("p0", "");
+    expectedProps.put("p1", "v1");
+    expectedProps.put("p3", "v3");
+    expectedProps.put("p4", "v4");
+
+    Assert.assertEquals(expectedProps, basicDataSourceExt.getConnectionProperties());
+
+
   }
 }
