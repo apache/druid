@@ -101,6 +101,9 @@ spec:
     druid.indexer.logs.type=file
     druid.indexer.logs.directory=/druid/data/task-logs
     druid.indexer.task.baseDir=/druid/data/task-base
+
+    druid.lookup.enableLookupSyncOnStartup=false
+
   env:
     - name: POD_NAME
       valueFrom:
