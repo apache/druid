@@ -130,7 +130,7 @@ public class CoordinatorDynamicConfig
     this.maxSegmentsToMove = maxSegmentsToMove;
 
     if (percentOfSegmentsToConsiderPerMove == null) {
-      log.warn("percentOfSegmentsToConsiderPerMove was null! This is likely because your metastore does not "
+      log.debug("percentOfSegmentsToConsiderPerMove was null! This is likely because your metastore does not "
                + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
                + "to the Druid default of %f. It is recommended that you re-submit your dynamic config with your "
                + "desired value for percentOfSegmentsToConsideredPerMove",
