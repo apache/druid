@@ -344,7 +344,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         if (!Strings.isNullOrEmpty(response.getContent())) {
           throw new ISE(
-              "Failed to sample with sampler spec[%s].",
+              "Failed to sample with sampler spec[%s], response[%s].",
               samplerSpec,
               response.getContent()
           );
