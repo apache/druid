@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -47,6 +48,7 @@ public class PrometheusEmitter implements Emitter
   private final Metrics metrics;
   private final PrometheusEmitterConfig config;
   private final PrometheusEmitterConfig.Strategy strategy;
+  private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
   private HTTPServer server;
   private PushGateway pushGateway;
@@ -114,7 +116,7 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? Metrics.PATTERN.matcher(userDim.toString()).replaceAll("_") : "unknown";
+        labelValues[i] = userDim != null ? PATTERN.matcher(userDim.toString()).replaceAll("_") : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {
