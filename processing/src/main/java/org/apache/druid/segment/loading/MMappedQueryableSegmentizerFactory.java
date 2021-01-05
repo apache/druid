@@ -21,7 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.utils.CommonCallback;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;

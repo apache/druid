@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.coordination;
 
 public interface CommonCallback
 {

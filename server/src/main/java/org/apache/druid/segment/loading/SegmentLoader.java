@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.common.utils.CommonCallback;
+import org.apache.druid.coordination.CommonCallback;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 
