@@ -151,7 +151,7 @@ public class BasicDataSourceExt extends BasicDataSource
     }
 
     if (driverToUse == null) {
-      throw new RE("WTH! Couln't find a Driver");
+      throw new RE("Failed to find the DB Driver");
     }
 
     final Driver finalDriverToUse = driverToUse;

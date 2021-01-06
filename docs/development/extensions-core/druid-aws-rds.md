@@ -22,7 +22,7 @@ title: "Druid AWS RDS Module"
   ~ under the License.
   -->
 
-This module provides AWS RDS token [password provider](../../operations/password-provider.md) provides temp token for accessing AWS RDS DB cluster.
+[AWS RDS](https://aws.amazon.com/rds/) is a managed service to operate relation databases such as PostgreSQL, Mysql etc. These databases could be accessed using tranditional static db password mechanism or via [AWS IAM](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html) temporary tokens. This module provides AWS RDS token [password provider](../../operations/password-provider.md) implementation to be used with [mysql-metadata-store](mysql.md) or [postgresql-metadata-store](postgresql.md) when mysql/postgresql is operated using AWS RDS.
 
 ```json
 { "type": "aws-rds-token", "user": "USER", "host": "HOST", "port": PORT, "region": "AWS_REGION" }
@@ -31,8 +31,8 @@ This module provides AWS RDS token [password provider](../../operations/password
 Before using this password provider, please make sure that you have connected all dots for db user to connect using token.
 See [AWS Guide](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html).
 
-To use this extension, make sure you [include](../../development/extensions.md#loading-extensions) it in your config file:
+To use this extension, make sure you [include](../../development/extensions.md#loading-extensions) it in your config file along with other extensions e.g.
 
 ```
-druid.extensions.loadList=["druid-aws-rds-extensions"]
+druid.extensions.loadList=["druid-aws-rds-extensions", "postgresql-metadata-storage", ...]
 ```
