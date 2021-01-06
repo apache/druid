@@ -183,6 +183,7 @@ class ParallelIndexTestingFactory
           logParseExceptions,
           maxParseExceptions,
           25,
+          null,
           null
       );
     }

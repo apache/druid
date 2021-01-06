@@ -100,6 +100,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -144,6 +145,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -186,6 +188,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null,
         null
@@ -234,6 +237,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
   }
@@ -275,6 +279,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null,
         null
@@ -320,6 +325,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
   }
@@ -361,6 +367,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null,
         null

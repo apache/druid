@@ -765,6 +765,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -840,6 +841,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -1274,6 +1276,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -1376,6 +1379,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
