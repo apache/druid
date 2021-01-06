@@ -116,24 +116,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   }
 
   /**
-   * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
-   * array itself. Does not modify position or limit of the buffer.
-   */
-  private static byte[] toByteArray(final ByteBuffer buffer)
-  {
-    if (buffer.hasArray()
-        && buffer.arrayOffset() == 0
-        && buffer.position() == 0
-        && buffer.array().length == buffer.limit()) {
-      return buffer.array();
-    } else {
-      final byte[] retVal = new byte[buffer.remaining()];
-      buffer.duplicate().get(retVal);
-      return retVal;
-    }
-  }
-
-  /**
    * Catch any exception and wrap it in a {@link StreamException}
    */
   private static <T> T wrapExceptions(Callable<T> callable)
