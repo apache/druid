@@ -87,7 +87,6 @@ import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
