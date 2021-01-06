@@ -987,7 +987,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
     EasyMock.verify(mockToolbox);
   }
 
