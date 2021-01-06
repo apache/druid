@@ -62,6 +62,9 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   private static final String MERGE_REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_merge_index_queries.json";
   private static final String MERGE_REINDEX_DATASOURCE = "wikipedia_merge_reindex_test";
 
+  private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_TASK = "/indexer/wikipedia_index_with_merge_column_limit_task.json";
+  private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE = "wikipedia_index_with_merge_column_limit_test";
+
   private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_PAUSED =
       CoordinatorDynamicConfig.builder().withPauseCoordination(true).build();
   private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_DEFAULT =
@@ -269,6 +272,25 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
       ITRetryUtil.retryUntilTrue(
           () -> coordinator.areSegmentsLoaded(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()), "Segment Load"
+      );
+    }
+  }
+
+
+  @Test
+  public void testIndexWithMergeColumnLimitData() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
+      doIndexTest(
+          INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE,
+          INDEX_WITH_MERGE_COLUMN_LIMIT_TASK,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          new Pair<>(false, false)
       );
     }
   }

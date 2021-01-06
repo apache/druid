@@ -438,7 +438,8 @@ public class RealtimePlumber implements Plumber
                     schema.getAggregators(),
                     mergedTarget,
                     config.getIndexSpec(),
-                    config.getSegmentWriteOutMediumFactory()
+                    config.getSegmentWriteOutMediumFactory(),
+                    -1
                 );
               }
               catch (Throwable t) {

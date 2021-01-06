@@ -218,7 +218,8 @@ public class SchemalessIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 INDEX_SPEC,
-                null
+                null,
+                -1
             )
         );
 
@@ -265,7 +266,8 @@ public class SchemalessIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 INDEX_SPEC,
-                null
+                null,
+                -1
             )
         );
 
@@ -301,7 +303,7 @@ public class SchemalessIndexTest
         }
 
         return indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null)
+            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null, -1)
         );
       }
       catch (IOException e) {
@@ -562,7 +564,8 @@ public class SchemalessIndexTest
               METRIC_AGGS,
               mergedFile,
               INDEX_SPEC,
-              null
+              null,
+              -1
           )
       );
     }
