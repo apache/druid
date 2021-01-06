@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.sampler;
+package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 

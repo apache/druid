@@ -83,6 +83,7 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        1234,
         500,
         1000
     );
@@ -120,6 +121,7 @@ public class IndexTaskSerdeTest
         10,
         100,
         null,
+        null,
         null
     );
     assertSerdeTuningConfig(tuningConfig);
@@ -155,6 +157,7 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        null,
         500,
         1000
     );
@@ -191,6 +194,7 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        1234,
         500,
         1000
     );
@@ -230,6 +234,7 @@ public class IndexTaskSerdeTest
         10,
         100,
         null,
+        null,
         null
     );
   }
@@ -266,6 +271,7 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        null,
         null,
         null
     );

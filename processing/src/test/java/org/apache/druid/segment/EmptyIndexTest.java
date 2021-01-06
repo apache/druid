@@ -87,7 +87,8 @@ public class EmptyIndexTest
           true,
           new AggregatorFactory[0],
           tmpDir,
-          new IndexSpec()
+          new IndexSpec(),
+          -1
       );
 
       QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
