@@ -129,7 +129,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
           record.topic(),
           record.partition(),
           record.offset(),
-          ImmutableList.of(new KafkaRecordEntity(record))
+          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
       ));
     }
     return polledRecords;

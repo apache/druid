@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.ByteEntity;
 
 import javax.validation.constraints.NotNull;
@@ -54,7 +55,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     this.stream = stream;
     this.partitionId = partitionId;
     this.sequenceNumber = sequenceNumber;
-    this.data = data;
+    this.data = data == null ? ImmutableList.of() : data;
   }
 
   public String getStream()
