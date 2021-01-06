@@ -24,7 +24,7 @@ title: "Datasources"
 
 Datasources in Apache Druid are things that you can query. The most common kind of datasource is a table datasource,
 and in many contexts the word "datasource" implicitly refers to table datasources. This is especially true
-[during data ingestion](../ingestion/index.html), where ingestion is always creating or writing into a table
+[during data ingestion](../ingestion/index.md), where ingestion is always creating or writing into a table
 datasource. But at query time, there are many other types of datasources available.
 
 The word "datasource" is generally spelled `dataSource` (with a capital S) when it appears in API requests and
@@ -51,10 +51,10 @@ SELECT column1, column2 FROM "druid"."dataSourceName"
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 The table datasource is the most common type. This is the kind of datasource you get when you perform
-[data ingestion](../ingestion/index.html). They are split up into segments, distributed around the cluster,
+[data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql.html#from), table datasources reside in the the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql.md#from), table datasources reside in the the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -91,7 +91,7 @@ SELECT k, v FROM lookup.countries
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Lookup datasources correspond to Druid's key-value [lookup](lookups.html) objects. In [Druid SQL](sql.html#from),
+Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
 they reside in the the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
@@ -102,7 +102,7 @@ To see a list of all lookup datasources, use the SQL query
 `SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'lookup'`.
 
 > Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
-> SQL [`LOOKUP` function](sql.html#string-functions).
+> SQL [`LOOKUP` function](sql.md#string-functions).
 > However, the join operator must evaluate the condition on each row, whereas the
 > `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
 > usually faster than joining to a lookup datasource.
@@ -113,16 +113,6 @@ use table datasources.
 ### `union`
 
 <!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
-```sql
-SELECT col1, COUNT(*)
-FROM (
-  SELECT col1, col2, col3 FROM tbl1
-  UNION ALL
-  SELECT col1, col2, col3 FROM tbl2
-)
-GROUP BY col1
-```
 <!--Native-->
 ```json
 {
@@ -143,6 +133,8 @@ another will be treated as if they contained all null values in the tables where
 
 The list of "dataSources" must be nonempty. If you want to query an empty dataset, use an [`inline` datasource](#inline)
 instead.
+
+Union datasources are not available in Druid SQL.
 
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
@@ -332,7 +324,7 @@ Native join datasources have the following properties. All are required.
 Joins are a feature that can significantly affect performance of your queries. Some performance tips and notes:
 
 1. Joins are especially useful with [lookup datasources](#lookup), but in most cases, the
-[`LOOKUP` function](sql.html#string-functions) performs better than a join. Consider using the `LOOKUP` function if
+[`LOOKUP` function](sql.md#string-functions) performs better than a join. Consider using the `LOOKUP` function if
 it is appropriate for your use case.
 2. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
 your queries. Refer to the [Druid SQL](sql.md#query-translation) documentation for more details about when this happens

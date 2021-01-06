@@ -261,13 +261,15 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   renderDeleteLookupAction() {
     const { deleteLookupTier, deleteLookupName } = this.state;
-    if (!deleteLookupTier) return;
+    if (!deleteLookupTier || !deleteLookupName) return;
 
     return (
       <AsyncActionDialog
         action={async () => {
           await Api.instance.delete(
-            `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
+            `/druid/coordinator/v1/lookups/config/${Api.encodePath(
+              deleteLookupTier,
+            )}/${Api.encodePath(deleteLookupName)}`,
           );
         }}
         confirmButtonText="Delete lookup"

@@ -16,7 +16,6 @@ Object {
         "queryGranularity": "hour",
         "rollup": true,
         "segmentGranularity": "day",
-        "type": "uniform",
       },
       "metricsSpec": Array [
         Object {

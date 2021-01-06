@@ -315,6 +315,10 @@
             <groupId>io.timeandspace</groupId>
             <artifactId>cron-scheduler</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-guice</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

@@ -173,7 +173,8 @@ public class IndexMergeBenchmark
           schemaInfo.getAggsArray(),
           tmpFile,
           new IndexSpec(),
-          null
+          null,
+          -1
       );
 
       blackhole.consume(mergedFile);

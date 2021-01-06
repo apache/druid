@@ -998,10 +998,17 @@ public class CalciteTests
   )
   {
 
-    final DruidNode coordinatorNode = new DruidNode("test", "dummy", false, 8080, null, true, false);
+    final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
     FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
             NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+
+    final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
+    FakeDruidNodeDiscoveryProvider overlordProvider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, coordinatorNode))
         )
     );
 
@@ -1010,7 +1017,26 @@ public class CalciteTests
         provider,
         NodeRole.COORDINATOR,
         "/simple/leader"
-    );
+    ) {
+      @Override
+      public String findCurrentLeader()
+      {
+        return coordinatorNode.getHostAndPortToUse();
+      }
+    };
+
+    final DruidLeaderClient overlordLeaderClient = new DruidLeaderClient(
+        new FakeHttpClient(),
+        overlordProvider,
+        NodeRole.OVERLORD,
+        "/simple/leader"
+    ) {
+      @Override
+      public String findCurrentLeader()
+      {
+        return overlordNode.getHostAndPortToUse();
+      }
+    };
 
     return new SystemSchema(
         druidSchema,
@@ -1024,7 +1050,7 @@ public class CalciteTests
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
-        druidLeaderClient,
+        overlordLeaderClient,
         provider,
         getJsonMapper()
     );

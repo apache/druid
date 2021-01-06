@@ -408,27 +408,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
         // Dimension spec including dimension name and output name
         final List<DimensionSpec> subTotalDimensionSpec = new ArrayList<>(dimsInSubtotalSpec.size());
         final List<DimensionSpec> dimensions = query.getDimensions();
-        final List<DimensionSpec> newDimensions = new ArrayList<>();
 
-        for (int i = 0; i < dimensions.size(); i++) {
-          DimensionSpec dimensionSpec = dimensions.get(i);
+        for (DimensionSpec dimensionSpec : dimensions) {
           if (dimsInSubtotalSpec.contains(dimensionSpec.getOutputName())) {
-            newDimensions.add(
-                new DefaultDimensionSpec(
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputType()
-                )
-            );
             subTotalDimensionSpec.add(dimensionSpec);
-          } else {
-            // Insert dummy dimension so all subtotals queries have ResultRows with the same shape.
-            // Use a field name that does not appear in the main query result, to assure the result will be null.
-            String dimName = "_" + i;
-            while (query.getResultRowSignature().indexOf(dimName) >= 0) {
-              dimName = "_" + dimName;
-            }
-            newDimensions.add(DefaultDimensionSpec.of(dimName));
           }
         }
 
@@ -442,8 +425,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
 
         GroupByQuery subtotalQuery = baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec)
-            .withDimensionSpecs(newDimensions);
+            .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {

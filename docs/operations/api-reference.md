@@ -67,7 +67,7 @@ monitoring checks such as AWS load balancer health checks are not able to look a
 ## Master Server
 
 This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords)
-in the suggested [three-server configuration](../design/processes.html#server-types).
+in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Coordinator
 
@@ -461,7 +461,7 @@ will be set for them.
 * `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource.
-See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
+See [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE
@@ -584,7 +584,7 @@ Retrieve list of task status objects for list of task id strings in request body
 
 Manually clean up pending segments table in metadata storage for `datasource`. Returns a JSON object response with
 `numDeleted` and count of rows deleted from the pending segments table. This API is used by the
-`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.html#coordinator-operation)
+`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.md#coordinator-operation)
 which automates this operation to perform periodically.
 
 #### Supervisors
@@ -602,8 +602,8 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
 
@@ -614,8 +614,8 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
 
@@ -678,7 +678,7 @@ Shutdown a supervisor.
 
 #### Dynamic configuration
 
-See [Overlord Dynamic Configuration](../configuration/index.html#overlord-dynamic-configuration) for details.
+See [Overlord Dynamic Configuration](../configuration/index.md#overlord-dynamic-configuration) for details.
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 (e.g., 2016-06-27_2016-06-28).
@@ -711,7 +711,7 @@ Update overlord dynamic worker configuration.
 ## Data Server
 
 This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals)
-in the suggested [three-server configuration](../design/processes.html#server-types).
+in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### MiddleManager
 
@@ -802,7 +802,7 @@ in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven'
 
 ## Query Server
 
-This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Broker
 

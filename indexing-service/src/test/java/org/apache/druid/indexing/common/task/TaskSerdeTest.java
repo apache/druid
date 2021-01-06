@@ -267,6 +267,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -342,6 +343,7 @@ public class TaskSerdeTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,

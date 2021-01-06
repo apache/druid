@@ -772,7 +772,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getAggregators(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory(),
+            tuningConfig.getMaxColumnsToMerge()
         );
 
         mergeFinishTime = System.nanoTime();

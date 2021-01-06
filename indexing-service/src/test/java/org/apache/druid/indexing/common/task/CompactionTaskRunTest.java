@@ -299,6 +299,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )
