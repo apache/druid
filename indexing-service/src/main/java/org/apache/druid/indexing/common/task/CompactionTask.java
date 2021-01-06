@@ -243,7 +243,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           null,
           indexTuningConfig.isLogParseExceptions(),
           indexTuningConfig.getMaxParseExceptions(),
-          indexTuningConfig.getMaxSavedParseExceptions()
+          indexTuningConfig.getMaxSavedParseExceptions(),
+          indexTuningConfig.getMaxColumnsToMerge()
       );
     } else {
       throw new ISE(
