@@ -187,7 +187,8 @@ public class SegmentGenerator implements Closeable
                                         .map(AggregatorFactory::getCombiningFactory)
                                         .toArray(AggregatorFactory[]::new),
                               outDir,
-                              new IndexSpec(new RoaringBitmapSerdeFactory(true), null, null, null)
+                              new IndexSpec(new RoaringBitmapSerdeFactory(true), null, null, null),
+                              -1
                           )
             );
 

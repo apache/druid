@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.sampler;
+package org.apache.druid.client.indexing;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -33,7 +34,12 @@ public class SamplerResponse
   private final int numRowsIndexed;
   private final List<SamplerResponseRow> data;
 
-  public SamplerResponse(int numRowsRead, int numRowsIndexed, List<SamplerResponseRow> data)
+  @JsonCreator
+  public SamplerResponse(
+      @JsonProperty("numRowsRead") int numRowsRead,
+      @JsonProperty("numRowsIndexed") int numRowsIndexed,
+      @JsonProperty("data") List<SamplerResponseRow> data
+  )
   {
     this.numRowsRead = numRowsRead;
     this.numRowsIndexed = numRowsIndexed;
@@ -58,6 +64,27 @@ public class SamplerResponse
     return data;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SamplerResponse that = (SamplerResponse) o;
+    return getNumRowsRead() == that.getNumRowsRead() &&
+           getNumRowsIndexed() == that.getNumRowsIndexed() &&
+           Objects.equals(getData(), that.getData());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getNumRowsRead(), getNumRowsIndexed(), getData());
+  }
+
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public static class SamplerResponseRow
   {
@@ -66,11 +93,12 @@ public class SamplerResponse
     private final Boolean unparseable;
     private final String error;
 
+    @JsonCreator
     public SamplerResponseRow(
-        Map<String, Object> input,
-        Map<String, Object> parsed,
-        Boolean unparseable,
-        String error
+        @JsonProperty("input") Map<String, Object> input,
+        @JsonProperty("parsed") Map<String, Object> parsed,
+        @JsonProperty("unparseable") Boolean unparseable,
+        @JsonProperty("error") String error
     )
     {
       this.input = input;

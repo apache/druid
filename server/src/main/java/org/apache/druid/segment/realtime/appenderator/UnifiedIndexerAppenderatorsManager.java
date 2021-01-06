@@ -511,7 +511,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         AggregatorFactory[] metricAggs,
         File outDir,
         IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
@@ -527,7 +528,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                     metricAggs,
                     outDir,
                     indexSpec,
-                    segmentWriteOutMediumFactory
+                    segmentWriteOutMediumFactory,
+                    maxColumnsToMerge
                 );
               }
               catch (IOException ioe) {
@@ -590,7 +592,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
-        IndexSpec indexSpec
+        IndexSpec indexSpec,
+        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);
@@ -650,7 +653,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);
