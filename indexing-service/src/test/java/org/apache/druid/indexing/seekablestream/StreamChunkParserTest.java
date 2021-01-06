@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -82,7 +83,7 @@ public class StreamChunkParserTest
         ),
         StringUtils.UTF8_STRING
     );
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         // Set nulls for all parameters below since inputFormat will be never used.
         null,
@@ -100,7 +101,7 @@ public class StreamChunkParserTest
   public void testWithNullParserAndInputformatParseProperly() throws IOException
   {
     final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null);
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
@@ -118,7 +119,7 @@ public class StreamChunkParserTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Either parser or inputFormat should be set");
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         null,
         null,
@@ -148,7 +149,7 @@ public class StreamChunkParserTest
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
     );
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
@@ -162,10 +163,10 @@ public class StreamChunkParserTest
     Assert.assertTrue(inputFormat.props.used);
   }
 
-  private void parseAndAssertResult(StreamChunkParser chunkParser) throws IOException
+  private void parseAndAssertResult(StreamChunkParser<ByteEntity> chunkParser) throws IOException
   {
     final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
-    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(json.getBytes(StringUtils.UTF8_STRING)));
+    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))));
     Assert.assertEquals(1, parsedRows.size());
     InputRow row = parsedRows.get(0);
     Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
