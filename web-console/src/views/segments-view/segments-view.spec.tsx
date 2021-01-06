@@ -19,7 +19,7 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 import { SegmentsView } from '../segments-view/segments-view';
 
 describe('segments-view', () => {

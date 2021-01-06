@@ -21,6 +21,8 @@ package org.apache.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
@@ -42,6 +44,11 @@ public interface TuningConfig
    * The incremental index implementation to use
    */
   AppendableIndexSpec getAppendableIndexSpec();
+
+  /**
+   * Maximum number of rows in memory before persisting to local storage
+   */
+  int getMaxRowsInMemory();
 
   /**
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage
@@ -66,4 +73,10 @@ public interface TuningConfig
       return Long.MAX_VALUE;
     }
   }
+
+  PartitionsSpec getPartitionsSpec();
+
+  IndexSpec getIndexSpec();
+
+  IndexSpec getIndexSpecForIntermediatePersists();
 }

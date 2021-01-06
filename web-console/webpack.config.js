@@ -61,7 +61,7 @@ module.exports = env => {
     },
     target: 'web',
     resolve: {
-      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css'],
+      extensions: ['.tsx', '.ts', '.js', '.scss', '.css'],
     },
     devServer: {
       publicPath: '/public',

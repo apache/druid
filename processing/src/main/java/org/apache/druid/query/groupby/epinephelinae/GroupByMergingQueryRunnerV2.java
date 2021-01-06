@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
@@ -245,7 +246,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                                         return input.run(queryPlusForRunners, responseContext)
                                                     .accumulate(AggregateResult.ok(), accumulator);
                                       }
-                                      catch (QueryInterruptedException e) {
+                                      catch (QueryInterruptedException | QueryTimeoutException e) {
                                         throw e;
                                       }
                                       catch (Exception e) {
@@ -321,15 +322,18 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       if (hasTimeout) {
         final long timeout = timeoutAt - System.currentTimeMillis();
         if (timeout <= 0) {
-          throw new TimeoutException();
+          throw new QueryTimeoutException();
         }
         if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
-          throw new TimeoutException("Cannot acquire enough merge buffers");
+          throw new QueryTimeoutException("Cannot acquire enough merge buffers");
         }
       } else {
         mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);
       }
       return mergeBufferHolder;
+    }
+    catch (QueryTimeoutException e) {
+      throw e;
     }
     catch (Exception e) {
       throw new QueryInterruptedException(e);
@@ -350,7 +354,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       }
 
       if (hasTimeout && timeout <= 0) {
-        throw new TimeoutException();
+        throw new QueryTimeoutException();
       }
 
       final List<AggregateResult> results = hasTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
@@ -374,7 +378,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     catch (TimeoutException e) {
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
-      throw new QueryInterruptedException(e);
+      throw new QueryTimeoutException();
     }
     catch (ExecutionException e) {
       GuavaUtils.cancelAll(true, future, futures);

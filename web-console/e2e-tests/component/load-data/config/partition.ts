@@ -18,9 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { selectSuggestibleInput } from '../../../util/playwright';
-import { getLabeledInput } from '../../../util/playwright';
-import { setLabeledInput } from '../../../util/playwright';
+import { getLabeledInput, selectSuggestibleInput, setLabeledInput } from '../../../util/playwright';
 
 /* tslint:disable max-classes-per-file */
 
@@ -28,10 +26,10 @@ import { setLabeledInput } from '../../../util/playwright';
  * Possible values for partition step segment granularity.
  */
 export enum SegmentGranularity {
-  HOUR = 'HOUR',
-  DAY = 'DAY',
-  MONTH = 'MONTH',
-  YEAR = 'YEAR',
+  HOUR = 'hour',
+  DAY = 'day',
+  MONTH = 'month',
+  YEAR = 'year',
 }
 
 const PARTITIONING_TYPE = 'Partitioning type';
@@ -159,18 +157,14 @@ export interface SingleDimPartitionsSpec extends SingleDimPartitionsSpecProps {}
  * Data loader partition step configuration.
  */
 export class PartitionConfig {
-  readonly forceGuaranteedRollupText: string;
-
   constructor(props: PartitionConfigProps) {
     Object.assign(this, props);
-    this.forceGuaranteedRollupText = this.forceGuaranteedRollup ? 'True' : 'False';
   }
 }
 
 interface PartitionConfigProps {
   readonly segmentGranularity: SegmentGranularity;
   readonly timeIntervals: string | null;
-  readonly forceGuaranteedRollup: boolean | null;
   readonly partitionsSpec: PartitionsSpec | null;
 }
 

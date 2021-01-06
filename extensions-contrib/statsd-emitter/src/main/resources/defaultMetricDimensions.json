@@ -16,6 +16,7 @@
   "query/success/count" : { "dimensions" : [], "type" : "count" },
   "query/failed/count" : { "dimensions" : [], "type" : "count" },
   "query/interrupted/count" : { "dimensions" : [], "type" : "count" },
+  "query/timeout/count" : { "dimensions" : [], "type" : "count" },
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "count" },

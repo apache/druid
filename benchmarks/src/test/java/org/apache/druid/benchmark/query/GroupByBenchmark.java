@@ -38,6 +38,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.offheap.OffheapBufferGenerator;
@@ -682,6 +684,28 @@ public class GroupByBenchmark
     blackhole.consume(results);
   }
 
+  /**
+   * Measure the time to produce the first ResultRow unlike {@link #queryMultiQueryableIndexX} measures total query
+   * processing time. This measure is useful since the Broker can start merging as soon as the first result is returned.
+   */
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexTTFR(Blackhole blackhole) throws IOException
+  {
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Yielder<ResultRow> yielder = Yielders.each(queryResult);
+    yielder.close();
+  }
+
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -701,6 +725,32 @@ public class GroupByBenchmark
     Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
     List<ResultRow> results = queryResult.toList();
     blackhole.consume(results);
+  }
+
+  /**
+   * Measure the time to produce the first ResultRow unlike {@link #queryMultiQueryableIndexWithSpilling} measures
+   * total query processing time. This measure is useful since the Broker can start merging as soon as the first
+   * result is returned.
+   */
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexWithSpillingTTFR(Blackhole blackhole) throws IOException
+  {
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    final GroupByQuery spillingQuery = query.withOverriddenContext(
+        ImmutableMap.of("bufferGrouperMaxSize", 4000)
+    );
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
+    Yielder<ResultRow> yielder = Yielders.each(queryResult);
+    yielder.close();
   }
 
   @Benchmark

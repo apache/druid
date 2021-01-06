@@ -19,7 +19,7 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 
 import { IngestionView } from './ingestion-view';
 
@@ -32,7 +32,6 @@ describe('tasks view', () => {
         datasourceId={'datasource'}
         goToDatasource={() => {}}
         goToQuery={() => {}}
-        goToMiddleManager={() => {}}
         goToLoadData={() => {}}
         capabilities={Capabilities.FULL}
       />,

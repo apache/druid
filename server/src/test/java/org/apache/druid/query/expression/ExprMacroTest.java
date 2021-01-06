@@ -121,6 +121,7 @@ public class ExprMacroTest
     assertExpr("timestamp_shift(t, 'P1D', 2, 'America/Los_Angeles')", DateTimes.of("2000-02-05T04:05:06").getMillis());
     assertExpr("timestamp_shift(t, 'P1D', 2, CityOfAngels)", DateTimes.of("2000-02-05T04:05:06").getMillis());
     assertExpr("timestamp_shift(t, 'P1D', 2, '-08:00')", DateTimes.of("2000-02-05T04:05:06").getMillis());
+    assertExpr("timestamp_shift(t, 'P1D', 2, '')", DateTimes.of("2000-02-05T04:05:06").getMillis());
   }
 
   @Test

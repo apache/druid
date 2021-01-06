@@ -508,7 +508,8 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec,
-                null
+                null,
+                -1
             )
         );
         return mergedRealtime;

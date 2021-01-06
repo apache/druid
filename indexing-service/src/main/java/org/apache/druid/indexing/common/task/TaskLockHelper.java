@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
  * - {@link #verifyAndLockExistingSegments} is to verify the granularity of existing segments and lock them.
  *   This method must be called before the task starts indexing.
  * - Tells the task what {@link LockGranularity} it should use. Note that the LockGranularity is determined in
- *   {@link AbstractBatchIndexTask#determineLockGranularityandTryLock}.
+ *   {@link AbstractBatchIndexTask#determineLockGranularityAndTryLock}.
  * - Provides some util methods for {@link LockGranularity#SEGMENT}. Also caches the information of locked segments when
  *   - the SEGMENt lock granularity is used.
  */

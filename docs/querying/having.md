@@ -35,7 +35,7 @@ Apache Druid supports the following types of having clauses.
 
 ### Query filters
 
-Query filter HavingSpecs allow all [Druid query filters](filters.html) to be used in the Having part of the query.
+Query filter HavingSpecs allow all [Druid query filters](filters.md) to be used in the Having part of the query.
 
 The grammar for a query filter HavingSpec is:
 

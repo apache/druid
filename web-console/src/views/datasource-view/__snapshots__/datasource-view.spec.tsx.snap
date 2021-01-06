@@ -64,6 +64,7 @@ exports[`data source view matches snapshot 1`] = `
           "Segment load/drop queues",
           "Total data size",
           "Segment size",
+          "Segment granularity",
           "Total rows",
           "Avg. row size",
           "Replicated size",
@@ -192,6 +193,19 @@ exports[`data source view matches snapshot 1`] = `
           "filterable": false,
           "show": true,
           "width": 220,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": <React.Fragment>
+            Segment
+            <br />
+            granularity
+          </React.Fragment>,
+          "accessor": [Function],
+          "filterable": false,
+          "id": "segment_granularity",
+          "show": true,
+          "width": 100,
         },
         Object {
           "Cell": [Function],

@@ -20,7 +20,11 @@
 package org.apache.druid.server.coordination;
 
 /**
- * Use announcement made by {@link org.apache.druid.discovery.DruidNodeAnnouncer}
+ * We are gradually migrating usages of this to {@link org.apache.druid.discovery.DruidNodeAnnouncer}.
+ *
+ * However, it's still required in some cases. As of this writing (2020-12-03) it's required for any process that
+ * is serving queryable segments via Curator-based segment discovery. (When using Curator for segment discovery, Brokers
+ * look for these announcements as part of discovering what segments are available.)
  */
 @Deprecated
 public interface DataSegmentServerAnnouncer

@@ -160,8 +160,11 @@ public interface Task
   /**
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
-   * coordinator. If this method throws an exception, the task should be considered a failure.
-   * <p/>
+   * Overlord. If this method throws an exception, the task should be considered a failure.
+   *
+   * This method will not necessarily be executed before {@link #run(TaskToolbox)}, since this task readiness check
+   * may be done on a different machine from the one that actually runs the task.
+   *
    * This method must be idempotent, as it may be run multiple times per task.
    *
    * @param taskActionClient action client for this task (not the full toolbox)

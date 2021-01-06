@@ -1135,7 +1135,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         7,
-        7
+        7,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1216,9 +1217,9 @@ public class IndexTaskTest extends IngestionTestBase
             "Unable to parse row [this is not JSON]",
             "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=4.0, val=notnumber}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [Unable to parse value[notnumber] for field[val],]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=notnumber, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to float,]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=4.0, val=notnumber}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [Unable to parse value[notnumber] for field[val]]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=notnumber, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to float]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long]",
             "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         )
     );
@@ -1264,7 +1265,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1385,7 +1387,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1830,7 +1833,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        1
+        1,
+        null
     );
   }
 

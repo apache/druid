@@ -97,6 +97,35 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
   }
 
+  private void emitDutyStat(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final String duty,
+      final long value
+  )
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY, duty)
+            .build(metricName, value)
+    );
+  }
+
+  private void emitDutyStats(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final CoordinatorStats stats,
+      final String statName
+  )
+  {
+    stats.forEachDutyStat(
+        statName,
+        (final String duty, final long count) -> {
+          emitDutyStat(emitter, metricName, duty, count);
+        }
+    );
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
@@ -434,6 +463,9 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           );
         }
     );
+
+    // Emit coordinator runtime stats
+    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
 
     return params;
   }
