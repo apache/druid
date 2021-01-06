@@ -507,7 +507,8 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
               METRIC_AGGS,
               mergedFile,
               indexSpec,
-              null
+              null,
+              -1
           )
       );
 

@@ -104,4 +104,10 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   {
     return null;
   }
+
+  @Override
+  public SamplerResponse sample(SamplerSpec samplerSpec)
+  {
+    return new SamplerResponse(0, 0, Collections.emptyList());
+  }
 }

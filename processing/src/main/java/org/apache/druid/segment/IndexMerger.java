@@ -63,6 +63,7 @@ public interface IndexMerger
 
   SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
   int INVALID_ROW = -1;
+  int UNLIMITED_MAX_COLUMNS_TO_MERGE = -1;
 
   static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
   {
@@ -196,7 +197,8 @@ public interface IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
   ) throws IOException;
 
   File mergeQueryableIndex(
@@ -206,7 +208,8 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
   ) throws IOException;
 
   @VisibleForTesting
@@ -215,7 +218,8 @@ public interface IndexMerger
       boolean rollup,
       AggregatorFactory[] metricAggs,
       File outDir,
-      IndexSpec indexSpec
+      IndexSpec indexSpec,
+      int maxColumnsToMerge
   ) throws IOException;
 
   // Faster than IndexMaker

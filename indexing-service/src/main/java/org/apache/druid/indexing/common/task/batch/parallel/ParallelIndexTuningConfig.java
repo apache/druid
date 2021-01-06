@@ -99,6 +99,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -131,7 +132,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     super(
@@ -155,7 +157,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        maxColumnsToMerge
     );
 
     if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {
@@ -276,7 +279,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         getTotalNumMergeTasks(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getMaxColumnsToMerge()
     );
   }
 

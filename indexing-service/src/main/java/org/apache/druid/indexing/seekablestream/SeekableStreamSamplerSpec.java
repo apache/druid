@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.client.indexing.SamplerResponse;
+import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
@@ -36,8 +38,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
-import org.apache.druid.indexing.overlord.sampler.SamplerSpec;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;

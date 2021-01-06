@@ -1032,6 +1032,7 @@ httpAuthenticationUsername
 ingestSegment
 InputSource
 DruidInputSource
+maxColumnsToMerge
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
