@@ -147,6 +147,16 @@ source_paths:
 
 ---
 
+name: AWS RDS SDK for Java
+license_category: source
+module: extensions/druid-aws-rds-extensions
+license_name: Apache License version 2.0
+version: 1.11.199
+libraries:
+  - com.amazonaws: aws-java-sdk-rds
+
+---
+
 name: LDAP string encoding function from OWASP ESAPI
 license_category: source
 module: extensions/druid-basic-security
