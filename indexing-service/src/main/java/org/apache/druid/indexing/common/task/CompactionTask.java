@@ -243,7 +243,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           null,
           indexTuningConfig.isLogParseExceptions(),
           indexTuningConfig.getMaxParseExceptions(),
-          indexTuningConfig.getMaxSavedParseExceptions()
+          indexTuningConfig.getMaxSavedParseExceptions(),
+          indexTuningConfig.getMaxColumnsToMerge()
       );
     } else {
       throw new ISE(
@@ -832,6 +833,9 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     void checkSegments(LockGranularity lockGranularityInUse, List<DataSegment> latestSegments)
     {
+      if (latestSegments.isEmpty()) {
+        throw new ISE("No segments found for compaction. Please check that datasource name and interval are correct.");
+      }
       if (!inputSpec.validateSegments(lockGranularityInUse, latestSegments)) {
         throw new ISE(
             "Specified segments in the spec are different from the current used segments. "

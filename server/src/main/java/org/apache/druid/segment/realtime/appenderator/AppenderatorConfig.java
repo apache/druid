@@ -61,4 +61,9 @@ public interface AppenderatorConfig extends TuningConfig
 
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
+
+  default int getMaxColumnsToMerge()
+  {
+    return -1;
+  }
 }

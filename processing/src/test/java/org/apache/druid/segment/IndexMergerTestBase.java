@@ -322,7 +322,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 mergedAggregators,
                 mergedDir,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -387,7 +388,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{},
                 tmpDir3,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -444,7 +446,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -500,7 +503,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 mergedAggregators,
                 mergedDir,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -571,7 +575,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 mergedAggregators,
                 mergedDir,
                 newSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -784,7 +789,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -877,7 +883,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -949,7 +956,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
                   tmpDirMerged,
                   indexSpec,
-                  null
+                  null,
+                  -1
               )
           )
       );
@@ -1078,7 +1086,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
                   tmpDirMerged,
                   indexSpec,
-                  null
+                  null,
+                  -1
               )
           )
       );
@@ -1251,7 +1260,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -1381,7 +1391,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -1394,7 +1405,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged2,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -1524,7 +1536,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C"),
             },
         tmpDirMerged,
-        indexSpec
+        indexSpec,
+        -1
     );
   }
 
@@ -1573,7 +1586,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         true,
         new AggregatorFactory[]{new LongSumAggregatorFactory("A", "A"), new LongSumAggregatorFactory("C", "C")},
         tmpDirMerged,
-        indexSpec
+        indexSpec,
+        -1
     );
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
@@ -1643,7 +1657,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C")
         },
         tmpDirMerged,
-        indexSpec
+        indexSpec,
+        -1
     );
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
@@ -1706,7 +1721,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
-        indexSpec
+        indexSpec,
+        -1
     );
 
     // Since D was not present in any of the indices, it is not present in the output
@@ -1750,7 +1766,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
-        indexSpec
+        indexSpec,
+        -1
     );
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(
         closer.closeLater(indexIO.loadIndex(merged))
@@ -1784,7 +1801,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -2265,7 +2283,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 },
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -2494,7 +2513,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 },
                 tmpDirMerged,
                 indexSpec,
-                null
+                null,
+                -1
             )
         )
     );
@@ -2610,6 +2630,274 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       checkBitmapIndex(Collections.singletonList(9), adapter.getBitmapIndex("dimMultiVal", "5"));
     }
   }
+
+  private MapBasedInputRow getRowForTestMaxColumnsToMerge(
+      long ts,
+      String d1,
+      String d2,
+      String d3,
+      String d4,
+      String d5
+  )
+  {
+    return new MapBasedInputRow(
+        ts,
+        Arrays.asList("d1", "d2", "d3", "d4", "d5"),
+        ImmutableMap.of(
+            "d1", d1,
+            "d2", d2,
+            "d3", d3,
+            "d4", d4,
+            "d5", d5
+        )
+    );
+  }
+
+  private void validateTestMaxColumnsToMergeOutputSegment(QueryableIndex merged)
+  {
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
+
+    Assert.assertEquals(
+        ImmutableList.of("d1", "d2", "d3", "d4", "d5"),
+        ImmutableList.copyOf(adapter.getDimensionNames())
+    );
+
+    Assert.assertEquals(4, rowList.size());
+
+    Assert.assertEquals(
+        Arrays.asList("a", "b", "c", "d", "e"),
+        rowList.get(0).dimensionValues()
+    );
+    Assert.assertEquals(1L, rowList.get(0).metricValues().get(0));
+
+    Assert.assertEquals(
+        Arrays.asList("aa", "bb", "cc", "dd", "ee"),
+        rowList.get(1).dimensionValues()
+    );
+    Assert.assertEquals(1L, rowList.get(1).metricValues().get(0));
+
+    Assert.assertEquals(
+        Arrays.asList("aaa", "bbb", "ccc", "ddd", "eee"),
+        rowList.get(2).dimensionValues()
+    );
+    Assert.assertEquals(1L, rowList.get(2).metricValues().get(0));
+
+    Assert.assertEquals(
+        Arrays.asList("1", "2", "3", "4", "5"),
+        rowList.get(3).dimensionValues()
+    );
+    Assert.assertEquals(3L, rowList.get(3).metricValues().get(0));
+
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d1", "a"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d1", "aa"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d1", "aaa"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d1", "aaa"));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d1", "1"));
+
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d2", "b"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d2", "bb"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d2", "bbb"));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d2", "2"));
+
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d3", "c"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d3", "cc"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d3", "ccc"));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d3", "3"));
+
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d4", "d"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d4", "dd"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d4", "ddd"));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d4", "4"));
+
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d5", "e"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d5", "ee"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d5", "eee"));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d5", "5"));
+  }
+
+  @Test
+  public void testMaxColumnsToMerge() throws Exception
+  {
+    IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withMetrics(new CountAggregatorFactory("count"))
+        .withRollup(true)
+        .build();
+
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    toPersistA.add(getRowForTestMaxColumnsToMerge(10000, "a", "b", "c", "d", "e"));
+    toPersistA.add(getRowForTestMaxColumnsToMerge(99999, "1", "2", "3", "4", "5"));
+
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    toPersistB.add(getRowForTestMaxColumnsToMerge(20000, "aa", "bb", "cc", "dd", "ee"));
+    toPersistB.add(getRowForTestMaxColumnsToMerge(99999, "1", "2", "3", "4", "5"));
+
+    IncrementalIndex toPersistC = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    toPersistC.add(getRowForTestMaxColumnsToMerge(30000, "aaa", "bbb", "ccc", "ddd", "eee"));
+    toPersistC.add(getRowForTestMaxColumnsToMerge(99999, "1", "2", "3", "4", "5"));
+
+    final File tmpDirA = temporaryFolder.newFolder();
+    final File tmpDirB = temporaryFolder.newFolder();
+    final File tmpDirC = temporaryFolder.newFolder();
+
+    QueryableIndex indexA = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistA, tmpDirA, indexSpec, null))
+    );
+
+    QueryableIndex indexB = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistB, tmpDirB, indexSpec, null))
+    );
+
+    QueryableIndex indexC = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistC, tmpDirC, indexSpec, null))
+    );
+
+    // no column limit
+    final File tmpDirMerged0 = temporaryFolder.newFolder();
+    final QueryableIndex merged0 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged0,
+                indexSpec,
+                null,
+                -1
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged0);
+
+    // column limit is greater than total # of columns
+    final File tmpDirMerged1 = temporaryFolder.newFolder();
+    final QueryableIndex merged1 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged1,
+                indexSpec,
+                null,
+                50
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged1);
+
+    // column limit is greater than 2 segments worth of columns
+    final File tmpDirMerged2 = temporaryFolder.newFolder();
+    final QueryableIndex merged2 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged2,
+                indexSpec,
+                null,
+                15
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged2);
+
+    // column limit is between 1 and 2 segments worth of columns (merge two segments at once)
+    final File tmpDirMerged3 = temporaryFolder.newFolder();
+    final QueryableIndex merged3 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged3,
+                indexSpec,
+                null,
+                9
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged3);
+
+    // column limit is less than 1 segment
+    final File tmpDirMerged4 = temporaryFolder.newFolder();
+    final QueryableIndex merged4 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged4,
+                indexSpec,
+                null,
+                3
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged4);
+
+    // column limit is exactly 1 segment's worth of columns
+    final File tmpDirMerged5 = temporaryFolder.newFolder();
+    final QueryableIndex merged5 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged5,
+                indexSpec,
+                null,
+                6
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged5);
+
+    // column limit is exactly 2 segment's worth of columns
+    final File tmpDirMerged6 = temporaryFolder.newFolder();
+    final QueryableIndex merged6 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged6,
+                indexSpec,
+                null,
+                12
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged6);
+
+    // column limit is exactly the total number of columns
+    final File tmpDirMerged7 = temporaryFolder.newFolder();
+    final QueryableIndex merged7 = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexC),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged7,
+                indexSpec,
+                null,
+                18
+            )
+        )
+    );
+    validateTestMaxColumnsToMergeOutputSegment(merged7);
+  }
+
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
   {

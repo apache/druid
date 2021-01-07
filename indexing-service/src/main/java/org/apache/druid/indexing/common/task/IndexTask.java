@@ -73,6 +73,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -1122,6 +1123,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
+    private final int maxColumnsToMerge;
 
     // null if all partitionsSpec related params are null. see getDefaultPartitionsSpec() for details.
     @Nullable
@@ -1210,7 +1212,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-        @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+        @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+        @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
     )
     {
       this(
@@ -1235,7 +1238,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          maxColumnsToMerge
       );
 
       Preconditions.checkArgument(
@@ -1246,7 +1250,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1264,7 +1268,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @Nullable Boolean logParseExceptions,
         @Nullable Integer maxParseExceptions,
-        @Nullable Integer maxSavedParseExceptions
+        @Nullable Integer maxSavedParseExceptions,
+        @Nullable Integer maxColumnsToMerge
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1272,6 +1277,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+      this.maxColumnsToMerge = maxColumnsToMerge == null
+                               ? IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE
+                               : maxColumnsToMerge;
       this.partitionsSpec = partitionsSpec;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
@@ -1320,7 +1328,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          maxColumnsToMerge
       );
     }
 
@@ -1341,7 +1350,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          maxColumnsToMerge
       );
     }
 
@@ -1442,6 +1452,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return segmentWriteOutMediumFactory;
     }
 
+    @Override
+    @JsonProperty
+    public int getMaxColumnsToMerge()
+    {
+      return maxColumnsToMerge;
+    }
+
     @JsonProperty
     public boolean isLogParseExceptions()
     {
@@ -1532,6 +1549,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
              maxRowsInMemory == that.maxRowsInMemory &&
              maxBytesInMemory == that.maxBytesInMemory &&
+             maxColumnsToMerge == that.maxColumnsToMerge &&
              maxPendingPersists == that.maxPendingPersists &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
              reportParseExceptions == that.reportParseExceptions &&
@@ -1553,6 +1571,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          maxColumnsToMerge,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
@@ -1574,6 +1593,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return "IndexTuningConfig{" +
              "maxRowsInMemory=" + maxRowsInMemory +
              ", maxBytesInMemory=" + maxBytesInMemory +
+             ", maxColumnsToMerge=" + maxColumnsToMerge +
              ", partitionsSpec=" + partitionsSpec +
              ", indexSpec=" + indexSpec +
              ", indexSpecForIntermediatePersists=" + indexSpecForIntermediatePersists +

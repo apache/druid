@@ -456,7 +456,8 @@ public class SpatialFilterBonusTest
               METRIC_AGGS,
               mergedFile,
               indexSpec,
-              null
+              null,
+              -1
           )
       );
 
