@@ -73,6 +73,15 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     return sequenceNumber;
   }
 
+  /**
+   * Returns a list of ByteEntities representing this record
+   *
+   * This method will always return the same list of ByteEntity instances.
+   * Since each ByteEntity can only be read once (unless care is taking to reset its buffer positions), it
+   * is not advised to call this method multiple times, or iterating over the list more than once.
+   *
+   * @return the list of ByteEntity object for this record
+   */
   @NotNull
   public List<? extends ByteEntity> getData()
   {

@@ -32,6 +32,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
  * method also allows Kafka-aware {@link InputFormat} implementations to read the full Kafka record, including headers,
  * key, and timestamp.
  * <p>
+ * NOTE: Any records with null values will be skipped, even if they contain non-null keys, or headers
+ * <p>
  * This functionality is not yet exposed through any built-in InputFormats, but is available for use in extensions.
  */
 public class KafkaRecordEntity extends ByteEntity
