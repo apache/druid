@@ -20,8 +20,8 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
