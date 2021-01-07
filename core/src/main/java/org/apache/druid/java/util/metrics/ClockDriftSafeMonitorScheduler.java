@@ -78,6 +78,9 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
                   break;
                 }
               }
+              if (scheduleFuture == null) {
+                return;
+              }
             }
             try {
               if (monitorFuture != null && monitorFuture.isDone()) {
