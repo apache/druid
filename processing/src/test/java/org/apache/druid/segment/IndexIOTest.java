@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -27,8 +28,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -49,6 +52,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -335,6 +340,68 @@ public class IndexIOTest extends InitializedNullHandlingTest
       if (ex != null) {
         throw ex;
       }
+    }
+  }
+
+  @Test
+  public void testLoadSegmentWithLazy()
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
+    String path = this.getClass().getClassLoader().getResource("v9SegmentPersistDir/segment/").getPath();
+    File inDir = new File(path);
+    try {
+      QueryableIndex queryableIndex = indexIO.loadIndex(inDir, true, SegmentLazyLoadFailCallback.NOOP);
+      Assert.assertNotNull(queryableIndex);
+    }
+    catch (IOException e) {
+      Assert.assertEquals("Failed to load current segment : " + inDir.getAbsolutePath(), e.getMessage());
+    }
+  }
+
+  @Test
+  public void testLoadSegmentDamagedFileWithLazy() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
+    String path = this.getClass().getClassLoader().getResource("v9SegmentPersistDir/segmentWithDamagedFile/").getPath();
+
+    ForkSegmentLoadDropHandler segmentLoadDropHandler = new ForkSegmentLoadDropHandler();
+    ForkSegment segment = new ForkSegment(true);
+
+    File inDir = new File(path);
+    indexIO.loadIndex(inDir, true, () -> segmentLoadDropHandler.removeSegment(segment));
+    Assert.assertFalse(segment.getSegmentExist());
+  }
+
+  public static class ForkSegmentLoadDropHandler
+  {
+    public void addSegment()
+    {
+    }
+    public void removeSegment(ForkSegment segment)
+    {
+      segment.setSegmentExist(false);
+    }
+  }
+
+  public static class ForkSegment
+  {
+    private Boolean segmentExist;
+
+    ForkSegment(Boolean segmentExist)
+    {
+      this.segmentExist = segmentExist;
+    }
+
+    void setSegmentExist(Boolean value)
+    {
+      this.segmentExist = value;
+    }
+
+    Boolean getSegmentExist()
+    {
+      return this.segmentExist;
     }
   }
 }
