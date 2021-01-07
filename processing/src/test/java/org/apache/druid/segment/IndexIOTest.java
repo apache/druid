@@ -34,7 +34,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -71,7 +70,6 @@ import java.util.Objects;
 @RunWith(Parameterized.class)
 public class IndexIOTest extends InitializedNullHandlingTest
 {
-  private static final EmittingLogger log = new EmittingLogger(IndexIOTest.class);
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
@@ -374,7 +372,6 @@ public class IndexIOTest extends InitializedNullHandlingTest
       Assert.assertNotNull(queryableIndex);
       queryableIndex.getDimensionHandlers();
       List<String> columnNames = queryableIndex.getColumnNames();
-      log.info(columnNames.toString());
       for (String columnName : columnNames) {
         queryableIndex.getColumnHolder(columnName).toString();
       }
@@ -382,7 +379,6 @@ public class IndexIOTest extends InitializedNullHandlingTest
     catch (Exception ex) {
       // Do nothing. Can ignore exceptions here.
       e = ex;
-      log.warn(ex, "exception");
     }
     Assert.assertNotNull(e);
     Assert.assertFalse(segment.getSegmentExist());
