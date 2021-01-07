@@ -20,7 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.coordination.CommonCallback;
+import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 
@@ -32,5 +32,5 @@ import java.io.File;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MMappedQueryableSegmentizerFactory.class)
 public interface SegmentizerFactory
 {
-  Segment factorize(DataSegment segment, File parentDir, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException;
+  Segment factorize(DataSegment segment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
 }

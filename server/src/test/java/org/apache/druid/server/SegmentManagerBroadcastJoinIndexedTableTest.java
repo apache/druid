@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.coordination.CommonCallback;
+import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -160,7 +160,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
     final String interval = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
     DataSegment segment = createSegment(data, interval, version);
-    Assert.assertTrue(segmentManager.loadSegment(segment, false, CommonCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP));
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -209,8 +209,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     DataSegment segment1 = createSegment(data, interval, version);
     DataSegment segment2 = createSegment(data2, interval2, version2);
-    Assert.assertTrue(segmentManager.loadSegment(segment1, false, CommonCallback.NOOP));
-    Assert.assertTrue(segmentManager.loadSegment(segment2, false, CommonCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(segment1, false, SegmentLazyLoadFailCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(segment2, false, SegmentLazyLoadFailCallback.NOOP));
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -272,7 +272,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final String interval2 = "2011-01-12T00:00:00.000Z/2011-03-28T00:00:00.000Z";
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.top");
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), false, CommonCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), false, SegmentLazyLoadFailCallback.NOOP));
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
 
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -294,7 +294,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
 
     // add another segment with smaller interval, only partially overshadows so there will be 2 segments in timeline
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false, CommonCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false, SegmentLazyLoadFailCallback.NOOP));
 
 
     expectedException.expect(ISE.class);

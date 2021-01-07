@@ -19,8 +19,8 @@
 
 package org.apache.druid.coordination;
 
-public interface CommonCallback
+public interface SegmentLazyLoadFailCallback
 {
   void execute();
-  CommonCallback NOOP = () -> {};
+  SegmentLazyLoadFailCallback NOOP = () -> {};
 }

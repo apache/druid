@@ -38,7 +38,7 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.utils.SerializerUtils;
-import org.apache.druid.coordination.CommonCallback;
+import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -183,9 +183,10 @@ public class IndexIO
 
   public QueryableIndex loadIndex(File inDir) throws IOException
   {
-    return loadIndex(inDir, false, CommonCallback.NOOP);
+    return loadIndex(inDir, false, SegmentLazyLoadFailCallback.NOOP);
   }
-  public QueryableIndex loadIndex(File inDir, boolean lazy, CommonCallback loadFailed) throws IOException
+
+  public QueryableIndex loadIndex(File inDir, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(inDir);
 
@@ -413,7 +414,7 @@ public class IndexIO
 
   interface IndexLoader
   {
-    QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, CommonCallback loadFailed) throws IOException;
+    QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
@@ -428,7 +429,7 @@ public class IndexIO
     }
 
     @Override
-    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, CommonCallback loadFailed) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws IOException
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
@@ -523,7 +524,7 @@ public class IndexIO
     }
 
     @Override
-    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, CommonCallback loadFailed) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws IOException
     {
       log.debug("Mapping v9 index[%s]", inDir);
       long startTime = System.currentTimeMillis();
@@ -649,7 +650,7 @@ public class IndexIO
     }
 
     private ColumnHolder deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
-        throws IOException, RuntimeException
+        throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
           SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class

@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
-import org.apache.druid.coordination.CommonCallback;
+import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
@@ -215,12 +215,13 @@ public class SegmentManager
    *
    * @param segment segment to load
    * @param lazy    whether to lazy load columns metadata
+   * @param loadFailed callBack to execute when segment lazy load failed
    *
    * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final Segment adapter = getAdapter(segment, lazy, loadFailed);
 
@@ -272,7 +273,7 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  private Segment getAdapter(final DataSegment segment, boolean lazy, CommonCallback loadFailed) throws SegmentLoadingException
+  private Segment getAdapter(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final Segment adapter;
     try {

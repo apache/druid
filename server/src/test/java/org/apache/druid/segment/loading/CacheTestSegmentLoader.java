@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.coordination.CommonCallback;
+import org.apache.druid.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -47,7 +47,7 @@ public class CacheTestSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(final DataSegment segment, boolean lazy, CommonCallback commonCallback)
+  public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
   {
     return new Segment()
     {
