@@ -622,9 +622,7 @@ public class IndexIO
               try {
                 return deserializeColumn(mapper, timeBuffer, smooshedFiles);
               }
-              catch (IOException | RuntimeException e) {
-                log.warn(e, "Exception when deserialize Column " + ColumnHolder.TIME_COLUMN_NAME);
-                loadFailed.execute();
+              catch (IOException e) {
                 throw Throwables.propagate(e);
               }
             }
