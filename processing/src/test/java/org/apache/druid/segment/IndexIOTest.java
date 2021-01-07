@@ -370,11 +370,15 @@ public class IndexIOTest extends InitializedNullHandlingTest
     ForkSegment segment = new ForkSegment(true);
 
     File inDir = new File(path);
-    indexIO.loadIndex(inDir, true, () -> segmentLoadDropHandler.removeSegment(segment));
+    QueryableIndex queryableIndex = indexIO.loadIndex(inDir, true, () -> segmentLoadDropHandler.removeSegment(segment));
+    List<String> columnNames = queryableIndex.getColumnNames();
+    for (String columnName : columnNames) {
+      queryableIndex.getColumnHolder(columnName);
+    }
     Assert.assertFalse(segment.getSegmentExist());
   }
 
-  public static class ForkSegmentLoadDropHandler
+  private static class ForkSegmentLoadDropHandler
   {
     public void addSegment()
     {
@@ -385,7 +389,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
     }
   }
 
-  public static class ForkSegment
+  private static class ForkSegment
   {
     private Boolean segmentExist;
 
