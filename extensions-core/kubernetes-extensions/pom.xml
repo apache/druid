@@ -91,6 +91,7 @@
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
       <version>1.68</version>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- others -->
