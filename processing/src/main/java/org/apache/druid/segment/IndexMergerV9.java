@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
@@ -1011,7 +1012,7 @@ public class IndexMergerV9 implements IndexMerger
           // convert Files to QueryableIndexIndexableAdapter and do another merge phase
           List<IndexableAdapter> qIndexAdapters = new ArrayList<>();
           for (File outputFile : currentOutputs) {
-            QueryableIndex qIndex = indexIO.loadIndex(outputFile, true);
+            QueryableIndex qIndex = indexIO.loadIndex(outputFile, true, SegmentLazyLoadFailCallback.NOOP);
             qIndexAdapters.add(new QueryableIndexIndexableAdapter(qIndex));
           }
           currentPhases = getMergePhases(qIndexAdapters, maxColumnsToMerge);
