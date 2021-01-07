@@ -71,6 +71,46 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
           @Override
           public void run(long scheduledRunTimeMillis)
           {
+            waitForScheduleFutureToBeSet();
+            if (scheduleFuture == null) {
+              LOG.error("scheduleFuture is not set. Can't run monitor[%s]", monitor.getClass().getName());
+              return;
+            }
+            try {
+              // Do nothing if the monitor is still running.
+              if (monitorFuture == null || monitorFuture.isDone()) {
+                if (monitorFuture != null) {
+                  // monitorFuture must be done at this moment if it's not null
+                  if (!(monitorFuture.get() && hasMonitor(monitor))) {
+                    stopMonitor(monitor);
+                    return;
+                  }
+                }
+
+                LOG.trace("Running monitor[%s]", monitor.getClass().getName());
+                monitorFuture = monitorRunner.submit(() -> {
+                  try {
+                    return monitor.monitor(getEmitter());
+                  }
+                  catch (Throwable e) {
+                    LOG.error(
+                        e,
+                        "Exception while executing monitor[%s]. Rescheduling in %s ms",
+                        monitor.getClass().getName(),
+                        rate
+                    );
+                    return Boolean.TRUE;
+                  }
+                });
+              }
+            }
+            catch (Throwable e) {
+              LOG.error(e, "Uncaught exception.");
+            }
+          }
+
+          private void waitForScheduleFutureToBeSet()
+          {
             if (scheduleFuture == null) {
               while (!Thread.currentThread().isInterrupted()) {
                 if (scheduleFutureReference.get() != null) {
@@ -78,38 +118,14 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
                   break;
                 }
               }
-              if (scheduleFuture == null) {
-                return;
-              }
             }
-            try {
-              if (monitorFuture != null && monitorFuture.isDone()) {
-                if (!(monitorFuture.get() && hasMonitor(monitor))) {
-                  removeMonitor(monitor);
-                  scheduleFuture.cancel(false);
-                  LOG.debug("Stopped monitor[%s]", monitor.getClass().getName());
-                  return;
-                }
-              }
-              LOG.trace("Running monitor[%s]", monitor.getClass().getName());
-              monitorFuture = monitorRunner.submit(() -> {
-                try {
-                  return monitor.monitor(getEmitter());
-                }
-                catch (Throwable e) {
-                  LOG.error(
-                      e,
-                      "Exception while executing monitor[%s]. Rescheduling in %s ms",
-                      monitor.getClass().getName(),
-                      rate
-                  );
-                  return Boolean.TRUE;
-                }
-              });
-            }
-            catch (Throwable e) {
-              LOG.error(e, "Uncaught exception.");
-            }
+          }
+
+          private void stopMonitor(Monitor monitor)
+          {
+            removeMonitor(monitor);
+            scheduleFuture.cancel(false);
+            LOG.debug("Stopped monitor[%s]", monitor.getClass().getName());
           }
         }
     );
