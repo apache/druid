@@ -279,14 +279,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             );
 
 
-            log.trace(
-                "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
-                currRecord.getStream(),
-                currRecord.getPartitionId(),
-                currRecord.getSequenceNumber(),
-                records.remainingCapacity(),
-                currRecord.getData().stream().map(b -> StringUtils.fromUtf8(b.getBuffer())).collect(Collectors.toList())
-            );
+            if (log.isTraceEnabled()) {
+              log.trace(
+                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
+                  currRecord.getStream(),
+                  currRecord.getPartitionId(),
+                  currRecord.getSequenceNumber(),
+                  records.remainingCapacity(),
+                  currRecord.getData()
+                            .stream()
+                            .map(b -> StringUtils.fromUtf8(
+                                // duplicate buffer to avoid changing its position when logging
+                                b.getBuffer().duplicate())
+                            )
+                            .collect(Collectors.toList())
+              );
+            }
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
             // from this message and back off for a bit to let the buffer drain before retrying.
