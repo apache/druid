@@ -249,16 +249,19 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   // records can only be read once, hence we generate fresh records every time
-  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(int start) {
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(int start)
+  {
     final List<OrderedPartitionableRecord<String, String, ByteEntity>> records = generateRecords(STREAM);
     return records.subList(start, records.size());
   }
 
-  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(int start, int end) {
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(int start, int end)
+  {
     return generateRecords(STREAM).subList(start, end);
   }
 
-  private List<OrderedPartitionableRecord<String, String, ByteEntity>> generateSinglePartitionRecords(int start, int end) {
+  private List<OrderedPartitionableRecord<String, String, ByteEntity>> generateSinglePartitionRecords(int start, int end)
+  {
     return generateSinglePartitionRecords(STREAM).subList(start, end);
   }
 
@@ -2020,7 +2023,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
-    List<OrderedPartitionableRecord<String, String, ByteEntity>>  records = generateSinglePartitionRecords(STREAM);
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> records = generateSinglePartitionRecords(STREAM);
 
     recordSupplier.assign(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
