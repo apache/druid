@@ -72,7 +72,7 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
           public void run(long scheduledRunTimeMillis)
           {
             if (scheduleFuture == null) {
-              while (true) {
+              while (!Thread.currentThread().isInterrupted()) {
                 if (scheduleFutureReference.get() != null) {
                   scheduleFuture = scheduleFutureReference.get();
                   break;
