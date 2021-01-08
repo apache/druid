@@ -401,7 +401,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   {
     // We first find the intervals aligned with segmentGranularity (if defined), and then combine them
     // to find a final interval to lock. This is because, when an overwriting task finds a version
-    // for a given input row, it expects the interval associated to each version is equal or larger than
+    // for a given input row, it expects the interval associated to each version to be equal or larger than
     // the time bucket where the input row falls in. See ParallelIndexSupervisorTask.findVersion().
     final Set<Interval> uniqueIntervals = new HashSet<>();
     for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
@@ -413,13 +413,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
     }
 
-    // This method is called isReady() which is called in the Overlord to check if the task is ready for execution.
-    // Since the Overlord only checks the result of this method but doesn't do anything with locks by itself,
-    // locking individual interval can lead to deadlock. Imagine that there are two tasks that want to work on
-    // overlapping intervals. One task could lock some of intervals but failed for others for some reason.
+    // This method is called in Task.isReady() which is called in the Overlord to check if the task is ready
+    // for execution. Since the Overlord only checks the result of this method but doesn't do anything with locks
+    // by itself, locking intervals individually can lead to deadlock. Imagine that there are two tasks that want to
+    // work on overlapping intervals. One task could lock some of intervals but failed for others for some reason.
     // Later, another task could lock those intervals where the first task failed to lock. Now they would wait
     // for each other to release locks they possess. To avoid this potential deadlock scenario, we need to lock
-    // an umbrella interval.
+    // an umbrella interval instead.
     final List<Interval> sortedIntervals = new ArrayList<>(uniqueIntervals);
     sortedIntervals.sort(Comparators.intervalsByStartThenEnd());
     Interval interval = JodaUtils.umbrellaInterval(sortedIntervals);
