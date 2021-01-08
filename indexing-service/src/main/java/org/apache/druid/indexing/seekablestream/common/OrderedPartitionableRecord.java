@@ -110,7 +110,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     }
 
     for (int i = 0; i < data.size(); i++) {
-      if (data.get(i).getBuffer().equals(that.data.get(i).getBuffer())) {
+      if (!data.get(i).getBuffer().equals(that.data.get(i).getBuffer())) {
         return false;
       }
     }
@@ -123,7 +123,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   @Override
   public int hashCode()
   {
-    final int hashOfData = data.stream().map(Objects::hashCode).collect(Collectors.toList()).hashCode();
+    final int hashOfData = data.stream().map(e -> e.getBuffer().hashCode()).collect(Collectors.toList()).hashCode();
     return Objects.hash(stream, partitionId, sequenceNumber, hashOfData);
   }
 }
