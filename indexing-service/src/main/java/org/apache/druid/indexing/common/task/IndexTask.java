@@ -231,7 +231,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("partitionsSpec[%s] is not supported", tuningConfig.getPartitionsSpec().getClass().getName());
       }
     }
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec());
+    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec().inputIntervals());
   }
 
   @Override

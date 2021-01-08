@@ -141,7 +141,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * the segment granularity of existing segments until the task reads all data because we don't know what segments
    * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
    * are missing and force to use timeChunk lock.
-   *
+   * <p>
    * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
    * in the task logs.
    */
@@ -194,10 +194,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getDataSchema().getParser()
     );
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
-                                           && !ingestionSchema.getDataSchema()
-                                                              .getGranularitySpec()
-                                                              .bucketIntervals()
-                                                              .isPresent();
+                                           && ingestionSchema.getDataSchema()
+                                                             .getGranularitySpec()
+                                                             .inputIntervals()
+                                                             .isEmpty();
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
@@ -320,12 +320,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     return new PartialRangeSegmentGenerateParallelIndexTaskRunner(
-       toolbox,
-       getId(),
-       getGroupId(),
-       ingestionSchema,
-       getContext(),
-       intervalToPartitions
+        toolbox,
+        getId(),
+        getGroupId(),
+        ingestionSchema,
+        getContext(),
+        intervalToPartitions
     );
   }
 
@@ -350,7 +350,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
+    return determineLockGranularityAndTryLock(
+        taskActionClient,
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+    );
   }
 
   @Override
@@ -513,13 +516,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   /**
    * Run the multi phase parallel indexing for perfect rollup. In this mode, the parallel indexing is currently
    * executed in two phases.
-   *
+   * <p>
    * - In the first phase, each task partitions input data and stores those partitions in local storage.
-   *   - The partition is created based on the segment granularity (primary partition key) and the partition dimension
-   *     values in {@link PartitionsSpec} (secondary partition key).
-   *   - Partitioned data is maintained by {@link IntermediaryDataManager}.
+   * - The partition is created based on the segment granularity (primary partition key) and the partition dimension
+   * values in {@link PartitionsSpec} (secondary partition key).
+   * - Partitioned data is maintained by {@link IntermediaryDataManager}.
    * - In the second phase, each task reads partitioned data from the intermediary data server (middleManager
-   *   or indexer) and merges them to create the final segments.
+   * or indexer) and merges them to create the final segments.
    */
   private TaskStatus runMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
@@ -817,7 +820,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private static <S extends PartitionStat, L extends PartitionLocation>
-        Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
+  Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
       Map<String, ? extends GeneratedPartitionsReport<S>> subTaskIdToReport,
       BiFunction<String, S, L> createPartitionLocationFunction
   )
@@ -891,7 +894,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * @param index  index of partition
    * @param total  number of items to partition
    * @param splits number of desired partitions
-   *
    * @return partition range: [lhs, rhs)
    */
   private static Pair<Integer, Integer> getPartitionBoundaries(int index, int total, int splits)

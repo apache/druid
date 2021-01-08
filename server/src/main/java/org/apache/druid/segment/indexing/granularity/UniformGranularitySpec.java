@@ -30,6 +30,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -42,7 +43,7 @@ public class UniformGranularitySpec implements GranularitySpec
   private final Granularity queryGranularity;
   private final Boolean rollup;
   private final List<Interval> inputIntervals;
-  private final ArbitraryGranularitySpec wrappedSpec;
+  private ArbitraryGranularitySpec wrappedSpec;
 
   @JsonCreator
   public UniformGranularitySpec(
@@ -57,17 +58,12 @@ public class UniformGranularitySpec implements GranularitySpec
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
 
     if (inputIntervals != null) {
-      List<Interval> granularIntervals = new ArrayList<>();
-      for (Interval inputInterval : inputIntervals) {
-        Iterables.addAll(granularIntervals, this.segmentGranularity.getIterable(inputInterval));
-      }
       this.inputIntervals = ImmutableList.copyOf(inputIntervals);
-      this.wrappedSpec = new ArbitraryGranularitySpec(queryGranularity, rollup, granularIntervals);
     } else {
-      this.inputIntervals = null;
-      this.wrappedSpec = null;
+      this.inputIntervals = Collections.emptyList();
     }
   }
+
 
   public UniformGranularitySpec(
       Granularity segmentGranularity,
@@ -81,10 +77,10 @@ public class UniformGranularitySpec implements GranularitySpec
   @Override
   public Optional<SortedSet<Interval>> bucketIntervals()
   {
-    if (wrappedSpec == null) {
+    if (getWrappedSpec() == null) {
       return Optional.absent();
     } else {
-      return wrappedSpec.bucketIntervals();
+      return getWrappedSpec().bucketIntervals();
     }
   }
 
@@ -97,10 +93,10 @@ public class UniformGranularitySpec implements GranularitySpec
   @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
-    if (wrappedSpec == null) {
+    if (getWrappedSpec() == null) {
       return Optional.absent();
     } else {
-      return wrappedSpec.bucketInterval(dt);
+      return getWrappedSpec().bucketInterval(dt);
     }
   }
 
@@ -156,7 +152,8 @@ public class UniformGranularitySpec implements GranularitySpec
     if (inputIntervals != null ? !inputIntervals.equals(that.inputIntervals) : that.inputIntervals != null) {
       return false;
     }
-    return !(wrappedSpec != null ? !wrappedSpec.equals(that.wrappedSpec) : that.wrappedSpec != null);
+
+    return true;
 
   }
 
@@ -167,7 +164,6 @@ public class UniformGranularitySpec implements GranularitySpec
     result = 31 * result + queryGranularity.hashCode();
     result = 31 * result + rollup.hashCode();
     result = 31 * result + (inputIntervals != null ? inputIntervals.hashCode() : 0);
-    result = 31 * result + (wrappedSpec != null ? wrappedSpec.hashCode() : 0);
     return result;
   }
 
@@ -179,7 +175,6 @@ public class UniformGranularitySpec implements GranularitySpec
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
            ", inputIntervals=" + inputIntervals +
-           ", wrappedSpec=" + wrappedSpec +
            '}';
   }
 
@@ -188,4 +183,17 @@ public class UniformGranularitySpec implements GranularitySpec
   {
     return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals);
   }
+
+  private ArbitraryGranularitySpec getWrappedSpec()
+  {
+    if (!inputIntervals.isEmpty() && wrappedSpec == null) {
+      List<Interval> granularIntervals = new ArrayList<>();
+      for (Interval inputInterval : inputIntervals) {
+        Iterables.addAll(granularIntervals, this.segmentGranularity.getIterable(inputInterval));
+      }
+      this.wrappedSpec = new ArbitraryGranularitySpec(queryGranularity, rollup, granularIntervals);
+    }
+    return wrappedSpec;
+  }
+
 }

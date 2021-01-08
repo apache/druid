@@ -279,6 +279,20 @@ public class UniformGranularityTest
     Assert.assertEquals(expectedIntervals, actualIntervals);
   }
 
+  @Test
+  public void testUniformGranularitySpecWithLargeNumberOfIntervalsDoesNotBlowUp()
+  {
+    // just make sure that intervals for uniform spec are not materialized (causing OOM) when created
+    final GranularitySpec spec = new UniformGranularitySpec(
+        Granularities.SECOND,
+        null,
+        Lists.newArrayList(
+            Intervals.of("2012-01-08T00-08:00/P10Y")
+        )
+    );
+    Assert.assertTrue(spec != null);
+  }
+
   private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2)
   {
     Assert.assertNotEquals(spec1, spec2);
