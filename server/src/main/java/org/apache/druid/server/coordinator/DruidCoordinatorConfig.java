@@ -51,10 +51,6 @@ public abstract class DruidCoordinatorConfig
   @Default("0")
   public abstract int getCoordinatorKillMaxSegments();
 
-  @Config("druid.coordinator.logUsedSegments.enabled")
-  @Default("true")
-  public abstract boolean isLogUsedSegmentsDutyEnabled();
-
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()
   {

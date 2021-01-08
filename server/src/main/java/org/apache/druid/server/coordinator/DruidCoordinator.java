@@ -677,10 +677,8 @@ public class DruidCoordinator
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
-    if (config.isLogUsedSegmentsDutyEnabled()) {
-      duties.add(new LogUsedSegments());
-    }
     duties.addAll(ImmutableList.of(
+        new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(DruidCoordinator.this),
         new UnloadUnusedSegments(),
@@ -698,9 +696,7 @@ public class DruidCoordinator
   private List<CoordinatorDuty> makeIndexingServiceDuties()
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
-    if (config.isLogUsedSegmentsDutyEnabled()) {
-      duties.add(new LogUsedSegments());
-    }
+    duties.add(new LogUsedSegments());
     duties.addAll(indexingServiceDuties);
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
     duties.addAll(makeCompactSegmentsDuty());

@@ -172,8 +172,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         10,
-        new Duration("PT0s"),
-        true
+        new Duration("PT0s")
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,

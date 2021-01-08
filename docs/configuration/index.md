@@ -698,7 +698,6 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.loadqueuepeon.repeatDelay`|The start and repeat delay for the loadqueuepeon, which manages the load and drop of segments.|PT0.050S (50 ms)|
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator process should act like an Overlord as well. This configuration allows users to simplify a druid cluster by not having to deploy any standalone Overlord processes. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also. See next.|false|
 |`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord processes and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
-|`druid.coordinator.logUsedSegments.enabled`|Boolean value for whether or not the coordinator should execute the `LogUsedSegments` portion of its coordination work. `LogUsedSegments` is an informational job run by the Coordinator every coordination cycle which logs every segment at DEBUG level and the total number of used segments at INFO level. In addition to these logs, it emits an alert if a segment has a size less than 0. An admin can decide that forgoing this work may advantageous if they don't need any of the information provided.|false|
 
 ##### Segment Management
 |Property|Possible Values|Description|Default|

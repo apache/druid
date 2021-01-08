@@ -67,11 +67,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -84,7 +81,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class DruidCoordinatorTest extends CuratorTestBase
 {
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
@@ -109,24 +105,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
   private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
-
-  private boolean logUsedSegmentsDutyEnabled;
-
-  public DruidCoordinatorTest(boolean logUsedSegmentsDutyEnabled)
-  {
-    this.logUsedSegmentsDutyEnabled = logUsedSegmentsDutyEnabled;
-  }
-
-  @Parameterized.Parameters(name = "{index}: logUsedSegmentsDutyEnabled:{0}")
-  public static Iterable<Object[]> data()
-  {
-    return Arrays.asList(
-        new Object[][]{
-            {false},
-            {true}
-        }
-    );
-  }
 
   @Before
   public void setUp() throws Exception
@@ -166,8 +144,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         10,
-        new Duration("PT0s"),
-        logUsedSegmentsDutyEnabled
+        new Duration("PT0s")
     );
     pathChildrenCache = new PathChildrenCache(
         curator,
