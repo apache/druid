@@ -69,6 +69,9 @@ Some other cloud storage types are supported with the legacy [`firehose`](#fireh
 The below `firehose` types are also splittable. Note that only text formats are supported
 with the `firehose`.
 
+### Compression formats supported
+The supported compression formats for native batch ingestion are `bz2`, `gz`, `xz`, `zip`, `sz` (Snappy), and `zst` (ZSTD).
+
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
 You may want to consider the below things:
@@ -154,7 +157,7 @@ A sample task is shown below:
           "type": "json"
         }
     },
-    "tuningconfig": {
+    "tuningConfig": {
         "type": "index_parallel",
         "maxNumConcurrentSubTasks": 2
     }
@@ -201,6 +204,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
+|maxColumnsToMerge|A parameter that limits how many segments can be merged in a single phase when merging segments for publishing. This limit is imposed on the total number of columns present in a set of segments being merged. If the limit is exceeded, segment merging will occur in multiple phases. At least 2 segments will be merged in a single phase, regardless of this setting.|-1 (unlimited)|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
@@ -227,7 +231,7 @@ Note that each worker task processes a single input split. You can control the a
 
 #### Size-based Split Hint Spec
 
-The size-based split hint spec is respected by all splittable input sources except for the HTTP input source.
+The size-based split hint spec is respected by all splittable input sources except for the HTTP input source and SQL input source.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -254,10 +258,10 @@ For perfect rollup, you should use either `hashed` (partitioning based on the ha
 
 The three `partitionsSpec` types have different characteristics.
 
-| PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Segment pruning at query time |
+| PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Secondary partition pruning at query time |
 |----------------|-----------------|---------------------|-----------------------|-------------------------------|
 | `dynamic` | Fastest  | Partitioning based on number of rows in segment. | Best-effort rollup | N/A |
-| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries if `partitionDimensions` is explicitly specified during ingestion. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing. |
+| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
 | `single_dim` | Slowest | Range partitioning based on the value of the partition dimension. Segment sizes may be skewed depending on the partition key distribution. This may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
 
 The recommended use case for each partitionsSpec is:
@@ -291,11 +295,19 @@ How the worker task creates segments is:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|yes|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. This property and `targetRowsPerSegment` cannot both be set.|none|no|
+|targetRowsPerSegment|A target row count for each partition. If `numShards` is left unspecified, the Parallel task will determine a partition count automatically such that each partition has a row count close to the target, assuming evenly distributed keys in the input data. A target per-segment row count of 5 million is used if both `numShards` and `targetRowsPerSegment` are null. |null (or 5,000,000 if both `numShards` and `targetRowsPerSegment` are null)|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
 
 The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
-The task runs in 2 phases, i.e., `partial segment generation` and `partial segment merge`.
+The task runs in up to 3 phases: `partial dimension cardinality`, `partial segment generation` and `partial segment merge`.
+- The `partial dimension cardinality` phase is an optional phase that only runs if `numShards` is not specified.
+The Parallel task splits the input data and assigns them to worker tasks based on the split hint spec.
+Each worker task (type `partial_dimension_cardinality`) gathers estimates of partitioning dimensions cardinality for
+each time chunk. The Parallel task will aggregate these estimates from the worker tasks and determine the highest
+cardinality across all of the time chunks in the input data, dividing this cardinality by `targetRowsPerSegment` to
+automatically determine `numShards`.
 - In the `partial segment generation` phase, just like the Map phase in MapReduce,
 the Parallel task splits the input data based on the split hint spec
 and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split,
@@ -310,10 +322,21 @@ the time chunk and the hash value of `partitionDimensions` to be merged; each wo
 falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges
 them to create the final segments. Finally, they push the final segments to the deep storage at once.
 
+##### Hash partition function
+
+In hash partitioning, the partition function is used to compute hash of partition dimensions. The partition dimension
+values are first serialized into a byte array as a whole, and then the partition function is applied to compute hash of
+the byte array.
+Druid currently supports only one partition function.
+
+|name|description|
+|----|-----------|
+|`murmur3_32_abs`|Applies an absolute value function to the result of [`murmur3_32`](https://guava.dev/releases/16.0/api/docs/com/google/common/hash/Hashing.html#murmur3_32()).|
+
 #### Single-dimension range partitioning
 
 > Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
-Try set `maxNumConcurrentSubTasks` to larger than 1 to use this partitioning.
+The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -734,6 +757,7 @@ For perfect rollup, you should use `hashed`.
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
 
 For best-effort rollup, you should use `dynamic`.
 
@@ -1112,7 +1136,7 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 The HTTP input source is to support reading files directly
 from remote sites via HTTP.
 The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read only one file.
+where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
 Sample specs:
 
@@ -1241,7 +1265,7 @@ Sample spec:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes if `baseDir` is specified|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
 
@@ -1317,6 +1341,7 @@ Only rows where `page` = `Druid` will be returned.
 
 The SQL input source is used to read data directly from RDBMS.
 The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
+This input source does not support Split Hint Spec.
 Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 Please refer to the Recommended practices section below before using this input source.
 
@@ -1363,6 +1388,48 @@ Compared to the other native batch InputSources, SQL InputSource behaves differe
 * Pagination may be used on the SQL queries to ensure that each query pulls a similar amount of data, thereby improving the efficiency of the sub-tasks.
 
 * Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
+
+
+### Combining Input Source
+
+The Combining input source is used to read data from multiple InputSources. This input source should be only used if all the delegate input sources are
+ _splittable_ and can be used by the [Parallel task](#parallel-task). This input source will identify the splits from its delegates and each split will be processed by a worker task. Similar to other input sources, this input source supports a single `inputFormat`. Therefore, please note that delegate input sources requiring an `inputFormat` must have the same format for input data.
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "combining".|Yes|
+|delegates|List of _splittable_ InputSources to read data from.|Yes|
+
+Sample spec:
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "combining",
+        "delegates" : [
+         {
+          "type": "local",
+          "filter" : "*.csv",
+          "baseDir": "/data/directory",
+          "files": ["/bar/foo", "/foo/bar"]
+         },
+         {
+          "type": "druid",
+          "dataSource": "wikipedia",
+          "interval": "2013-01-01/2013-01-02"
+         }
+        ]
+      },
+      "inputFormat": {
+        "type": "csv"
+      },
+      ...
+    },
+...
+```
 
 
 ###
@@ -1504,7 +1571,7 @@ A sample local Firehose spec is shown below:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information.|yes|
 |baseDir|directory to search recursively for files to be ingested. |yes|
 
 <a name="http-firehose"></a>

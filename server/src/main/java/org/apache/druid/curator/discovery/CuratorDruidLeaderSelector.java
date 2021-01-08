@@ -185,7 +185,12 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     }
     try {
       this.listener = listener;
-      this.listenerExecutor = Execs.singleThreaded(StringUtils.format("LeaderSelector[%s]", latchPath));
+      this.listenerExecutor = Execs.singleThreaded(
+          StringUtils.format(
+              "LeaderSelector[%s]",
+              StringUtils.encodeForFormat(latchPath)
+          )
+      );
 
       createNewLeaderLatchWithListener();
       leaderLatch.get().start();

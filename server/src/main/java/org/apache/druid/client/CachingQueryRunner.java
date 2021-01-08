@@ -21,7 +21,9 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.primitives.Bytes;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
@@ -39,11 +41,13 @@ import org.apache.druid.query.context.ResponseContext;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Optional;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
   private final String cacheId;
   private final SegmentDescriptor segmentDescriptor;
+  private final Optional<byte[]> cacheKeyPrefix;
   private final QueryRunner<T> base;
   private final QueryToolChest toolChest;
   private final Cache cache;
@@ -53,6 +57,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
   public CachingQueryRunner(
       String cacheId,
+      Optional<byte[]> cacheKeyPrefix,
       SegmentDescriptor segmentDescriptor,
       ObjectMapper mapper,
       Cache cache,
@@ -62,6 +67,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       CacheConfig cacheConfig
   )
   {
+    this.cacheKeyPrefix = cacheKeyPrefix;
     this.base = base;
     this.cacheId = cacheId;
     this.segmentDescriptor = segmentDescriptor;
@@ -77,20 +83,15 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
-    final boolean populateCache = CacheUtil.isPopulateSegmentCache(
-        query,
-        strategy,
-        cacheConfig,
-        CacheUtil.ServerType.DATA
-    );
-    final boolean useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.DATA);
+    final boolean populateCache = canPopulateCache(query, strategy);
+    final boolean useCache = canUseCache(query, strategy);
 
     final Cache.NamedKey key;
-    if (strategy != null && (useCache || populateCache)) {
+    if (useCache || populateCache) {
       key = CacheUtil.computeSegmentCacheKey(
           cacheId,
           segmentDescriptor,
-          strategy.computeCacheKey(query)
+          Bytes.concat(cacheKeyPrefix.get(), strategy.computeCacheKey(query))
       );
     } else {
       key = null;
@@ -141,6 +142,34 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     } else {
       return base.run(queryPlus, responseContext);
     }
+  }
+
+  /**
+   * @return whether the segment level cache should be used or not. False if strategy is null
+   */
+  @VisibleForTesting
+  boolean canUseCache(Query<T> query, CacheStrategy strategy)
+  {
+    return CacheUtil.isUseSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    ) && cacheKeyPrefix.isPresent();
+  }
+
+  /**
+   * @return whether the segment level cache should be populated or not. False if strategy is null
+   */
+  @VisibleForTesting
+  boolean canPopulateCache(Query<T> query, CacheStrategy strategy)
+  {
+    return CacheUtil.isPopulateSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    ) && cacheKeyPrefix.isPresent();
   }
 
 }

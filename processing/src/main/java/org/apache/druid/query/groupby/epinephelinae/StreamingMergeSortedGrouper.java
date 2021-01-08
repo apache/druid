@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -33,7 +34,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is being
@@ -302,7 +302,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
       while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted()) {
         if (timeoutNs <= 0L) {
-          throw new RuntimeException(new TimeoutException());
+          throw new QueryTimeoutException();
         }
         // Thread.yield() should not be called from the very beginning
         if (spinTimeoutNs <= 0L) {
@@ -321,7 +321,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
       while ((nextWriteIndex == nextReadIndex) && !Thread.currentThread().isInterrupted()) {
         if (timeoutNs <= 0L) {
-          throw new RuntimeException(new TimeoutException());
+          throw new QueryTimeoutException();
         }
         // Thread.yield() should not be called from the very beginning
         if (spinTimeoutNs <= 0L) {
@@ -470,7 +470,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         while ((curWriteIndex == -1 || target == curWriteIndex) &&
                !finished && !Thread.currentThread().isInterrupted()) {
           if (timeoutNs <= 0L) {
-            throw new RuntimeException(new TimeoutException());
+            throw new QueryTimeoutException();
           }
           // Thread.yield() should not be called from the very beginning
           if (spinTimeoutNs <= 0L) {

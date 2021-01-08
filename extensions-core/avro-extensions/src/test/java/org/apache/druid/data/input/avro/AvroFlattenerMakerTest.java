@@ -23,6 +23,8 @@ import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.junit.Assert;
 import org.junit.Test;
+import java.util.Collections;
+import java.util.List;
 
 public class AvroFlattenerMakerTest
 {
@@ -78,7 +80,8 @@ public class AvroFlattenerMakerTest
         flattener.getRootField(record, "someNull")
     );
     Assert.assertEquals(
-        record.getSomeFixed(),
+        // Casted to an array by transformValue
+        record.getSomeFixed().bytes(),
         flattener.getRootField(record, "someFixed")
     );
     Assert.assertEquals(
@@ -87,7 +90,8 @@ public class AvroFlattenerMakerTest
         flattener.getRootField(record, "someBytes")
     );
     Assert.assertEquals(
-        record.getSomeEnum(),
+        // Casted to a string by transformValue
+        record.getSomeEnum().toString(),
         flattener.getRootField(record, "someEnum")
     );
     Assert.assertEquals(
@@ -163,7 +167,8 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someNull").apply(record)
     );
     Assert.assertEquals(
-        record.getSomeFixed(),
+        // Casted to an array by transformValue
+        record.getSomeFixed().bytes(),
         flattener.makeJsonPathExtractor("$.someFixed").apply(record)
     );
     Assert.assertEquals(
@@ -172,7 +177,8 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someBytes").apply(record)
     );
     Assert.assertEquals(
-        record.getSomeEnum(),
+        // Casted to a string by transformValue
+        record.getSomeEnum().toString(),
         flattener.makeJsonPathExtractor("$.someEnum").apply(record)
     );
     Assert.assertEquals(
@@ -194,6 +200,22 @@ public class AvroFlattenerMakerTest
     Assert.assertEquals(
         record.getSomeRecordArray(),
         flattener.makeJsonPathExtractor("$.someRecordArray").apply(record)
+    );
+
+    Assert.assertEquals(
+        record.getSomeRecordArray().get(0).getNestedString(),
+        flattener.makeJsonPathExtractor("$.someRecordArray[0].nestedString").apply(record)
+    );
+
+    Assert.assertEquals(
+        record.getSomeRecordArray(),
+        flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString)]").apply(record)
+    );
+
+    List<String> nestedStringArray = Collections.singletonList(record.getSomeRecordArray().get(0).getNestedString().toString());
+    Assert.assertEquals(
+        nestedStringArray,
+        flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString=='string in record')].nestedString").apply(record)
     );
   }
 

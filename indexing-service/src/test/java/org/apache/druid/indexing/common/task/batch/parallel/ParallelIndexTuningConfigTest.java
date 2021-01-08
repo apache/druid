@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -69,6 +70,7 @@ public class ParallelIndexTuningConfigTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         10,
         1000L,
         null,
@@ -97,6 +99,7 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -109,6 +112,7 @@ public class ParallelIndexTuningConfigTest
   {
     final int maxNumConcurrentSubTasks = 250;
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         10,
@@ -139,6 +143,7 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -151,6 +156,7 @@ public class ParallelIndexTuningConfigTest
   {
     final int maxNumSubTasks = 250;
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         10,
@@ -180,6 +186,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null
     );
@@ -197,6 +204,7 @@ public class ParallelIndexTuningConfigTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         10,
         1000L,
         null,
@@ -225,6 +233,7 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
         null
     );
   }
@@ -236,6 +245,7 @@ public class ParallelIndexTuningConfigTest
     expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
     final boolean forceGuaranteedRollup = false;
     new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         10,
@@ -266,6 +276,7 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
         null
     );
   }
@@ -277,6 +288,7 @@ public class ParallelIndexTuningConfigTest
     expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
     final boolean forceGuaranteedRollup = false;
     new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         10,
@@ -307,6 +319,7 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
         null
     );
   }
@@ -318,6 +331,7 @@ public class ParallelIndexTuningConfigTest
     expectedException.expectMessage("cannot be used for perfect rollup");
     final boolean forceGuaranteedRollup = true;
     new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         10,
@@ -348,7 +362,16 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
         null
     );
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ParallelIndexTuningConfig.class)
+        .usingGetClass()
+        .verify();
   }
 }

@@ -76,7 +76,7 @@ This string can then be used in the native or SQL Druid query.
 |`type`                   |Filter Type. Should always be `bloom`|yes|
 |`dimension`              |The dimension to filter over. | yes |
 |`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
-|`extractionFn`|[Extraction function](../../querying/dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
+|`extractionFn`|[Extraction function](../../querying/dimensionspecs.md#extraction-functions) to apply to the dimension values |no|
 
 
 ### Serialized Format for BloomKFilter

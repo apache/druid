@@ -19,37 +19,31 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -59,7 +53,6 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -73,7 +66,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -81,7 +73,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link SinglePhaseParallelIndexTaskRunner}. Similar to {@link IndexTask}, but this task
@@ -98,9 +89,6 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
-  private final IndexingServiceClient indexingServiceClient;
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
-  private final AppenderatorsManager appenderatorsManager;
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -125,10 +113,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(
@@ -146,9 +131,6 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
-    this.indexingServiceClient = indexingServiceClient;
-    this.taskClientFactory = taskClientFactory;
-    this.appenderatorsManager = appenderatorsManager;
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
                                            && !ingestionSchema.getDataSchema()
                                                               .getGranularitySpec()
@@ -168,7 +150,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
+    return determineLockGranularityAndTryLock(
+        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+        ingestionSchema.getDataSchema().getGranularitySpec()
+    );
   }
 
   @JsonProperty
@@ -202,8 +187,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         ingestionSchema.getDataSchema().getParser()
     );
 
-    final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
-        new ClientBasedTaskInfoProvider(indexingServiceClient),
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
+        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
         getId(),
         1, // always use a single http thread
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
@@ -317,96 +302,81 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         partitionsSpec
     );
 
+    final RowIngestionMeters rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+        rowIngestionMeters,
+        tuningConfig.isLogParseExceptions(),
+        tuningConfig.getMaxParseExceptions(),
+        tuningConfig.getMaxSavedParseExceptions()
+    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
-        appenderatorsManager,
+        toolbox.getAppenderatorsManager(),
         fireDepartmentMetrics,
         toolbox,
         dataSchema,
         tuningConfig,
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
-    );
-    final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
-                                            .map(AggregatorFactory::getName)
-                                            .collect(Collectors.toList());
-    final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
-        inputSource.reader(
-            new InputRowSchema(
-                ingestionSchema.getDataSchema().getTimestampSpec(),
-                ingestionSchema.getDataSchema().getDimensionsSpec(),
-                metricsNames
-            ),
-            inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
-            tmpDir
+        rowIngestionMeters,
+        new ParseExceptionHandler(
+            rowIngestionMeters,
+            tuningConfig.isLogParseExceptions(),
+            tuningConfig.getMaxParseExceptions(),
+            tuningConfig.getMaxSavedParseExceptions()
         )
     );
-
     boolean exceptionOccurred = false;
     try (
         final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator);
-        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()
+        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+            tmpDir,
+            dataSchema,
+            inputSource,
+            inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
+            inputRow -> {
+              if (inputRow == null) {
+                return false;
+              }
+              if (explicitIntervals) {
+                final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+                return optInterval.isPresent();
+              }
+              return true;
+            },
+            rowIngestionMeters,
+            parseExceptionHandler
+        )
     ) {
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
 
       while (inputRowIterator.hasNext()) {
-        try {
-          final InputRow inputRow = inputRowIterator.next();
+        final InputRow inputRow = inputRowIterator.next();
 
-          if (inputRow == null) {
-            fireDepartmentMetrics.incrementThrownAway();
-            continue;
+        // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
+        // (in append mode) or may be created on our own authority (in overwrite mode).
+        final String sequenceName = getId();
+        final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
+
+        if (addResult.isOk()) {
+          final boolean isPushRequired = addResult.isPushRequired(
+              partitionsSpec.getMaxRowsPerSegment(),
+              partitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
+          );
+          if (isPushRequired) {
+            // There can be some segments waiting for being published even though any rows won't be added to them.
+            // If those segments are not published here, the available space in appenderator will be kept to be small
+            // which makes the size of segments smaller.
+            final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
+            pushedSegments.addAll(pushed.getSegments());
+            LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+            LOG.infoSegments(pushed.getSegments(), "Pushed segments");
           }
-
-          if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
-            final String errorMsg = StringUtils.format(
-                "Encountered row with timestamp that cannot be represented as a long: [%s]",
-                inputRow
-            );
-            throw new ParseException(errorMsg);
-          }
-
-          if (explicitIntervals) {
-            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-            if (!optInterval.isPresent()) {
-              fireDepartmentMetrics.incrementThrownAway();
-              continue;
-            }
-          }
-
-          // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
-          // (in append mode) or may be created on our own authority (in overwrite mode).
-          final String sequenceName = getId();
-          final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
-
-          if (addResult.isOk()) {
-            final boolean isPushRequired = addResult.isPushRequired(
-                partitionsSpec.getMaxRowsPerSegment(),
-                partitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
-            );
-            if (isPushRequired) {
-              // There can be some segments waiting for being published even though any rows won't be added to them.
-              // If those segments are not published here, the available space in appenderator will be kept to be small
-              // which makes the size of segments smaller.
-              final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-              pushedSegments.addAll(pushed.getSegments());
-              LOG.info("Pushed [%s] segments", pushed.getSegments().size());
-              LOG.infoSegments(pushed.getSegments(), "Pushed segments");
-            }
-          } else {
-            throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
-          }
-
-          fireDepartmentMetrics.incrementProcessed();
+        } else {
+          throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
         }
-        catch (ParseException e) {
-          if (tuningConfig.isReportParseExceptions()) {
-            throw e;
-          } else {
-            fireDepartmentMetrics.incrementUnparseable();
-          }
-        }
+
+        fireDepartmentMetrics.incrementProcessed();
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);

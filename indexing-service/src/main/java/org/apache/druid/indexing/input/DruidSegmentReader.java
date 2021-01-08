@@ -127,9 +127,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   }
 
   @Override
-  protected Map<String, Object> toMap(Map<String, Object> intermediateRow)
+  protected List<Map<String, Object>> toMap(Map<String, Object> intermediateRow)
   {
-    return intermediateRow;
+    return Collections.singletonList(intermediateRow);
   }
 
   /**

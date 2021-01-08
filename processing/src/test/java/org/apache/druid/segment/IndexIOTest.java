@@ -40,6 +40,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -253,7 +254,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
     this.exception = exception;
   }
 
-  final IncrementalIndex<Aggregator> incrementalIndex1 = new IncrementalIndex.Builder()
+  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
@@ -268,9 +269,9 @@ public class IndexIOTest extends InitializedNullHandlingTest
               .build()
       )
       .setMaxRowCount(1000000)
-      .buildOnheap();
+      .build();
 
-  final IncrementalIndex<Aggregator> incrementalIndex2 = new IncrementalIndex.Builder()
+  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
@@ -285,7 +286,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               .build()
       )
       .setMaxRowCount(1000000)
-      .buildOnheap();
+      .build();
 
   IndexableAdapter adapter1;
   IndexableAdapter adapter2;

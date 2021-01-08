@@ -21,14 +21,18 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.Bytes;
 import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -70,6 +74,8 @@ import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -120,6 +126,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final DruidProcessingConfig processingConfig;
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
 
   @Inject
   public CachingClusteredClient(
@@ -132,7 +139,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Client DruidHttpClientConfig httpClientConfig,
       DruidProcessingConfig processingConfig,
       @Merging ForkJoinPool pool,
-      QueryScheduler scheduler
+      QueryScheduler scheduler,
+      JoinableFactory joinableFactory
   )
   {
     this.warehouse = warehouse;
@@ -145,6 +153,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.processingConfig = processingConfig;
     this.pool = pool;
     this.scheduler = scheduler;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -273,6 +282,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final DataSourceAnalysis dataSourceAnalysis;
     private final List<Interval> intervals;
+    private final CacheKeyManager<T> cacheKeyManager;
 
     SpecificQueryRunnable(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
     {
@@ -281,6 +291,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.query = queryPlus.getQuery();
       this.toolChest = warehouse.getToolChest(query);
       this.strategy = toolChest.getCacheStrategy(query);
+      this.dataSourceAnalysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
       this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
       this.populateCache = CacheUtil.isPopulateSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
@@ -288,11 +299,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
-      this.dataSourceAnalysis = DataSourceAnalysis.forDataSource(query.getDataSource());
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
                                          .orElseGet(() -> query.getIntervals());
+      this.cacheKeyManager = new CacheKeyManager<>(
+          query,
+          strategy,
+          useCache,
+          populateCache,
+          dataSourceAnalysis,
+          joinableFactoryWrapper
+      );
     }
 
     private ImmutableMap<String, Object> makeDownstreamQueryContext()
@@ -343,12 +361,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       @Nullable
-      final byte[] queryCacheKey = computeQueryCacheKey();
+      final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable
         final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
         @Nullable
-        final String currentEtag = computeCurrentEtag(segmentServers, queryCacheKey);
+        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, queryCacheKey);
+        if (null != currentEtag) {
+          responseContext.put(Key.ETAG, currentEtag);
+        }
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return new ClusterQueryResult<>(Sequences.empty(), 0);
         }
@@ -423,12 +444,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-        final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
-            query.getFilter(),
-            holder.getObject(),
-            partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
-            dimensionRangeCache
-        );
+        final Set<PartitionChunk<ServerSelector>> filteredChunks;
+        if (QueryContexts.isSecondaryPartitionPruningEnabled(query)) {
+          filteredChunks = DimFilterUtils.filterShards(
+              query.getFilter(),
+              holder.getObject(),
+              partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
+              dimensionRangeCache
+          );
+        } else {
+          filteredChunks = Sets.newHashSet(holder.getObject());
+        }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           final SegmentDescriptor segment = new SegmentDescriptor(
@@ -480,46 +506,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // case, though, this query will not include any data from the identified intervals.
         responseContext.add(ResponseContext.Key.UNCOVERED_INTERVALS, uncoveredIntervals);
         responseContext.add(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, uncoveredIntervalsOverflowed);
-      }
-    }
-
-    @Nullable
-    private byte[] computeQueryCacheKey()
-    {
-      if ((populateCache || useCache) // implies strategy != null
-          && !isBySegment) { // explicit bySegment queries are never cached
-        assert strategy != null;
-        return strategy.computeCacheKey(query);
-      } else {
-        return null;
-      }
-    }
-
-    @Nullable
-    private String computeCurrentEtag(final Set<SegmentServerSelector> segments, @Nullable byte[] queryCacheKey)
-    {
-      Hasher hasher = Hashing.sha1().newHasher();
-      boolean hasOnlyHistoricalSegments = true;
-      for (SegmentServerSelector p : segments) {
-        if (!p.getServer().pick().getServer().isSegmentReplicationTarget()) {
-          hasOnlyHistoricalSegments = false;
-          break;
-        }
-        hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
-        // it is important to add the "query interval" as part ETag calculation
-        // to have result level cache work correctly for queries with different
-        // intervals covering the same set of segments
-        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
-      }
-
-      if (hasOnlyHistoricalSegments) {
-        hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
-
-        String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
-        responseContext.put(ResponseContext.Key.ETAG, currEtag);
-        return currEtag;
-      } else {
-        return null;
       }
     }
 
@@ -602,7 +588,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
-        final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick();
+        final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick(query);
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -768,6 +754,106 @@ public class CachingClusteredClient implements QuerySegmentWalker
             );
           })
           .flatMerge(seq -> seq, query.getResultOrdering());
+    }
+  }
+
+  /**
+   * An inner class that is used solely for computing cache keys. Its a separate class to allow extensive unit testing
+   * of cache key generation.
+   */
+  @VisibleForTesting
+  static class CacheKeyManager<T>
+  {
+    private final Query<T> query;
+    private final CacheStrategy<T, Object, Query<T>> strategy;
+    private final DataSourceAnalysis dataSourceAnalysis;
+    private final JoinableFactoryWrapper joinableFactoryWrapper;
+    private final boolean isSegmentLevelCachingEnable;
+
+    CacheKeyManager(
+        final Query<T> query,
+        final CacheStrategy<T, Object, Query<T>> strategy,
+        final boolean useCache,
+        final boolean populateCache,
+        final DataSourceAnalysis dataSourceAnalysis,
+        final JoinableFactoryWrapper joinableFactoryWrapper
+    )
+    {
+
+      this.query = query;
+      this.strategy = strategy;
+      this.dataSourceAnalysis = dataSourceAnalysis;
+      this.joinableFactoryWrapper = joinableFactoryWrapper;
+      this.isSegmentLevelCachingEnable = ((populateCache || useCache)
+                                          && !QueryContexts.isBySegment(query));   // explicit bySegment queries are never cached
+
+    }
+
+    @Nullable
+    byte[] computeSegmentLevelQueryCacheKey()
+    {
+      if (isSegmentLevelCachingEnable) {
+        return computeQueryCacheKeyWithJoin();
+      }
+      return null;
+    }
+
+    /**
+     * It computes the ETAG which is used by {@link org.apache.druid.query.ResultLevelCachingQueryRunner} for
+     * result level caches. queryCacheKey can be null if segment level cache is not being used. However, ETAG
+     * is still computed since result level cache may still be on.
+     */
+    @Nullable
+    String computeResultLevelCachingEtag(
+        final Set<SegmentServerSelector> segments,
+        @Nullable byte[] queryCacheKey
+    )
+    {
+      Hasher hasher = Hashing.sha1().newHasher();
+      boolean hasOnlyHistoricalSegments = true;
+      for (SegmentServerSelector p : segments) {
+        QueryableDruidServer queryableServer = p.getServer().pick(query);
+        if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
+          hasOnlyHistoricalSegments = false;
+          break;
+        }
+        hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
+        // it is important to add the "query interval" as part ETag calculation
+        // to have result level cache work correctly for queries with different
+        // intervals covering the same set of segments
+        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
+      }
+
+      if (!hasOnlyHistoricalSegments) {
+        return null;
+      }
+
+      // query cache key can be null if segment level caching is disabled
+      final byte[] queryCacheKeyFinal = (queryCacheKey == null) ? computeQueryCacheKeyWithJoin() : queryCacheKey;
+      if (queryCacheKeyFinal == null) {
+        return null;
+      }
+      hasher.putBytes(queryCacheKeyFinal);
+      String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
+      return currEtag;
+    }
+
+    /**
+     * Adds the cache key prefix for join data sources. Return null if its a join but caching is not supported
+     */
+    @Nullable
+    private byte[] computeQueryCacheKeyWithJoin()
+    {
+      Preconditions.checkNotNull(strategy, "strategy cannot be null");
+      if (dataSourceAnalysis.isJoin()) {
+        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)
+                                                              .orElse(null);
+        if (null == joinDataSourceCacheKey) {
+          return null;    // A join operation that does not support caching
+        }
+        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+      }
+      return strategy.computeCacheKey(query);
     }
   }
 }

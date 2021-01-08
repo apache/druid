@@ -33,6 +33,9 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -58,6 +61,14 @@ public class StreamChunkParserTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  private final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
+  private final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+      rowIngestionMeters,
+      false,
+      0,
+      0
+  );
+
   @Test
   public void testWithParserAndNullInputformatParseProperly() throws IOException
   {
@@ -77,7 +88,10 @@ public class StreamChunkParserTest
         null,
         null,
         null,
-        null
+        null,
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
   }
@@ -91,7 +105,10 @@ public class StreamChunkParserTest
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
         TransformSpec.NONE,
-        temporaryFolder.newFolder()
+        temporaryFolder.newFolder(),
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
   }
@@ -106,7 +123,10 @@ public class StreamChunkParserTest
         null,
         null,
         null,
-        null
+        null,
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
   }
 
@@ -123,6 +143,7 @@ public class StreamChunkParserTest
         ),
         StringUtils.UTF8_STRING
     );
+
     final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
@@ -132,10 +153,13 @@ public class StreamChunkParserTest
         inputFormat,
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
         TransformSpec.NONE,
-        temporaryFolder.newFolder()
+        temporaryFolder.newFolder(),
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
-    Assert.assertTrue(inputFormat.used);
+    Assert.assertTrue(inputFormat.props.used);
   }
 
   private void parseAndAssertResult(StreamChunkParser chunkParser) throws IOException
@@ -151,18 +175,44 @@ public class StreamChunkParserTest
 
   private static class TrackingJsonInputFormat extends JsonInputFormat
   {
-    private boolean used;
+    static class Props
+    {
+      private boolean used;
+    }
+    Props props;
 
-    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
+                                    @Nullable Map<String, Boolean> featureSpec)
     {
       super(flattenSpec, featureSpec, null);
+      props = new Props();
+    }
+
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
+                                    @Nullable Map<String, Boolean> featureSpec,
+                                    boolean lineSplittable,
+                                    Props props)
+    {
+      super(flattenSpec, featureSpec, null, lineSplittable);
+      this.props = props;
     }
 
     @Override
     public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
-      used = true;
+      props.used = true;
       return super.createReader(inputRowSchema, source, temporaryDirectory);
+    }
+
+    @Override
+    public JsonInputFormat withLineSplittable(boolean lineSplittable)
+    {
+      return new TrackingJsonInputFormat(this.getFlattenSpec(),
+                                         this.getFeatureSpec(),
+                                         lineSplittable,
+                                         //pass `props` to new object as reference,
+                                         //so any changes on this property of the new object can also be seen from original object
+                                         this.props);
     }
   }
 }

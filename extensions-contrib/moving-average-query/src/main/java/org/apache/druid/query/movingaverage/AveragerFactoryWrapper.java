@@ -167,9 +167,21 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
    * return type to be treated as unknown.
    */
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return ValueType.COMPLEX.name();
+  }
+
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return getType();
   }
 
   /**
@@ -180,5 +192,4 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   {
     throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
-
 }

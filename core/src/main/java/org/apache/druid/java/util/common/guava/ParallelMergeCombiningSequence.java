@@ -25,6 +25,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 
@@ -189,7 +190,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               {
                 final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
                 if (hasTimeout && thisTimeoutNanos < 0) {
-                  throw new RE(new TimeoutException("Sequence iterator timed out"));
+                  throw new QueryTimeoutException("Sequence iterator timed out");
                 }
 
                 if (currentBatch != null && !currentBatch.isTerminalResult() && !currentBatch.isDrained()) {
@@ -204,7 +205,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                     }
                   }
                   if (currentBatch == null) {
-                    throw new RE(new TimeoutException("Sequence iterator timed out waiting for data"));
+                    throw new QueryTimeoutException("Sequence iterator timed out waiting for data");
                   }
 
                   if (cancellationGizmo.isCancelled()) {

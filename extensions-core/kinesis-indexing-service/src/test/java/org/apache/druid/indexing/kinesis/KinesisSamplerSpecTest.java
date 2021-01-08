@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -35,7 +36,6 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -262,7 +262,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             .build(),
         null,
         true,
-        "Timestamp cannot be represented as a long: [MapBasedInputRow{timestamp=246140482-04-24T15:36:27.903Z, event={timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}]"
+        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         null,

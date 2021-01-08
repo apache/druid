@@ -19,15 +19,12 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -57,10 +54,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final PartialGenericSegmentMergeIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      @JacksonInject ShuffleClient shuffleClient
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(
@@ -72,10 +66,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
         ingestionSchema.getIOConfig(),
         ingestionSchema.getTuningConfig(),
         numAttempts,
-        context,
-        indexingServiceClient,
-        taskClientFactory,
-        shuffleClient
+        context
     );
 
     this.ingestionSchema = ingestionSchema;

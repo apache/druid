@@ -206,7 +206,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       }
     }
     catch (Exception e) {
-      LOG.makeAlert(e, "WTF? Could not deserialize user/role map received from coordinator.").emit();
+      LOG.makeAlert(e, "Could not deserialize user/role map received from coordinator").emit();
     }
   }
 

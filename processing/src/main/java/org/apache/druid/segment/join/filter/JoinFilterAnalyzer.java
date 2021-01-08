@@ -438,9 +438,7 @@ public class JoinFilterAnalyzer
         for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
           Filter rewrittenFilter = new InDimFilter(
               correlatedBaseColumn,
-              newFilterValues,
-              null,
-              null
+              newFilterValues
           ).toFilter();
           newFilters.add(rewrittenFilter);
         }
@@ -461,9 +459,7 @@ public class JoinFilterAnalyzer
 
           Filter rewrittenFilter = new InDimFilter(
               pushDownVirtualColumn.getOutputName(),
-              newFilterValues,
-              null,
-              null
+              newFilterValues
           ).toFilter();
           newFilters.add(rewrittenFilter);
         }

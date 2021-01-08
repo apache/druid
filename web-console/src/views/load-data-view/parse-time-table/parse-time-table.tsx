@@ -22,13 +22,14 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import {
-  getTimestampSpecColumn,
-  isColumnTimestampSpec,
+  getTimestampDetailFromSpec,
+  getTimestampSpecColumnFromSpec,
+  IngestionSpec,
+  possibleDruidFormatForValues,
   TimestampSpec,
-} from '../../../utils/ingestion-spec';
+} from '../../../druid-models';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
@@ -46,7 +47,7 @@ export function parseTimeTableSelectedColumnName(
 export interface ParseTimeTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
-    timestampSpec: TimestampSpec;
+    spec: IngestionSpec;
   };
   columnFilter: string;
   possibleTimestampColumnsOnly: boolean;
@@ -62,9 +63,9 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
     selectedColumnName,
     onTimestampColumnSelect,
   } = props;
-  const { headerAndRows, timestampSpec } = sampleBundle;
-  const timestampSpecColumn = getTimestampSpecColumn(timestampSpec);
-  const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
+  const { headerAndRows, spec } = sampleBundle;
+  const timestampSpecColumn = getTimestampSpecColumnFromSpec(spec);
+  const timestampDetail = getTimestampDetailFromSpec(spec);
 
   return (
     <ReactTable
@@ -73,27 +74,27 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
       columns={filterMap(
         headerAndRows.header.length ? headerAndRows.header : ['__error__'],
         (columnName, i) => {
-          const timestamp = columnName === '__time';
-          if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
-          const used = timestampSpec.column === columnName;
-          const possibleFormat = timestamp
+          const isTimestamp = columnName === '__time';
+          if (!isTimestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
+          const used = timestampSpecColumn === columnName;
+          const possibleFormat = isTimestamp
             ? null
             : possibleDruidFormatForValues(
                 filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : undefined)),
               );
-          if (possibleTimestampColumnsOnly && !timestamp && !possibleFormat) return;
+          if (possibleTimestampColumnsOnly && !isTimestamp && !possibleFormat) return;
 
           const columnClassName = classNames({
-            timestamp,
+            timestamp: isTimestamp,
             used,
             selected: selectedColumnName === columnName,
           });
           return {
             Header: (
               <div
-                className={classNames({ clickable: !timestamp })}
+                className={classNames({ clickable: !isTimestamp })}
                 onClick={
-                  timestamp
+                  isTimestamp
                     ? undefined
                     : () => {
                         onTimestampColumnSelect({
@@ -105,11 +106,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">
-                  {timestamp
-                    ? timestampSpecFromColumn
-                      ? `from: '${timestampSpecColumn}'`
-                      : `mv: ${timestampSpec.missingValue}`
-                    : possibleFormat || ''}
+                  {isTimestamp ? timestampDetail : possibleFormat || ''}
                   &nbsp;
                 </div>
               </div>
@@ -123,12 +120,12 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
                 return <TableCell value={row.original.error} />;
               }
               if (row.original.unparseable) {
-                return <TableCellUnparseable timestamp={timestamp} />;
+                return <TableCellUnparseable timestamp={isTimestamp} />;
               }
-              return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+              return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
             },
-            minWidth: timestamp ? 200 : 100,
-            resizable: !timestamp,
+            minWidth: isTimestamp ? 200 : 100,
+            resizable: !isTimestamp,
           };
         },
       )}

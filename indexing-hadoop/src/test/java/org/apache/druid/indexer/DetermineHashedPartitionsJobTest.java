@@ -36,6 +36,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -43,6 +45,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
@@ -78,7 +81,8 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 1,
                 first,
-                Granularities.DAY
+                Granularities.DAY,
+                null
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
@@ -87,7 +91,8 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 6,
                 second,
-                Granularities.DAY
+                Granularities.DAY,
+                null
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
@@ -96,7 +101,8 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 6,
                 third,
-                Granularities.DAY
+                Granularities.DAY,
+                null
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
@@ -105,7 +111,18 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 6,
                 third,
-                Granularities.DAY
+                Granularities.DAY,
+                null
+            },
+            {
+                DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                1,
+                null,
+                0,
+                6,
+                third,
+                Granularities.DAY,
+                HashPartitionFunction.MURMUR3_32_ABS
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.rows.in.timezone.tsv").getPath(),
@@ -114,7 +131,8 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 1,
                 first,
-                new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzFromString("America/Los_Angeles"))
+                new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
+                null
             }
         }
     );
@@ -127,7 +145,8 @@ public class DetermineHashedPartitionsJobTest
       int errorMargin,
       int expectedNumTimeBuckets,
       int[] expectedNumOfShards,
-      Granularity segmentGranularity
+      Granularity segmentGranularity,
+      @Nullable HashPartitionFunction partitionFunction
   )
   {
     this.expectedNumOfShards = expectedNumOfShards;
@@ -194,7 +213,8 @@ public class DetermineHashedPartitionsJobTest
         new HadoopTuningConfig(
             tmpDir.getAbsolutePath(),
             null,
-            new HashedPartitionsSpec(targetPartitionSize, null, null),
+            new HashedPartitionsSpec(targetPartitionSize, null, null, partitionFunction),
+            null,
             null,
             null,
             null,
@@ -226,6 +246,8 @@ public class DetermineHashedPartitionsJobTest
   {
     DetermineHashedPartitionsJob determineHashedPartitionsJob = new DetermineHashedPartitionsJob(indexerConfig);
     determineHashedPartitionsJob.run();
+    HashPartitionFunction expectedFunction = ((HashedPartitionsSpec) indexerConfig.getPartitionsSpec())
+        .getPartitionFunction();
     Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
     Assert.assertEquals(
         expectedNumTimeBuckets,
@@ -238,6 +260,10 @@ public class DetermineHashedPartitionsJobTest
           entry.getValue().size(),
           errorMargin
       );
+      for (HadoopyShardSpec eachShardSpec : entry.getValue()) {
+        final HashBasedNumberedShardSpec hashShardSpec = (HashBasedNumberedShardSpec) eachShardSpec.getActualSpec();
+        Assert.assertEquals(expectedFunction, hashShardSpec.getPartitionFunction());
+      }
     }
   }
 }

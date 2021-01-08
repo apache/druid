@@ -19,7 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -39,32 +42,64 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   }
 
   @Override
-  public GroupByVectorColumnSelector makeSingleValueDimensionProcessor(final SingleValueDimensionVectorSelector selector)
+  public GroupByVectorColumnSelector makeSingleValueDimensionProcessor(
+      final ColumnCapabilities capabilities,
+      final SingleValueDimensionVectorSelector selector
+  )
   {
+    Preconditions.checkArgument(
+        ValueType.STRING == capabilities.getType(),
+        "groupBy dimension processors must be STRING typed"
+    );
     return new SingleValueStringGroupByVectorColumnSelector(selector);
   }
 
   @Override
-  public GroupByVectorColumnSelector makeMultiValueDimensionProcessor(final MultiValueDimensionVectorSelector selector)
+  public GroupByVectorColumnSelector makeMultiValueDimensionProcessor(
+      final ColumnCapabilities capabilities,
+      final MultiValueDimensionVectorSelector selector
+  )
   {
+    Preconditions.checkArgument(
+        ValueType.STRING == capabilities.getType(),
+        "groupBy dimension processors must be STRING typed"
+    );
     throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
   }
 
   @Override
-  public GroupByVectorColumnSelector makeFloatProcessor(final VectorValueSelector selector)
+  public GroupByVectorColumnSelector makeFloatProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorValueSelector selector
+  )
   {
-    return new FloatGroupByVectorColumnSelector(selector);
+    if (capabilities.hasNulls().isFalse()) {
+      return new FloatGroupByVectorColumnSelector(selector);
+    }
+    return new NullableFloatGroupByVectorColumnSelector(selector);
   }
 
   @Override
-  public GroupByVectorColumnSelector makeDoubleProcessor(final VectorValueSelector selector)
+  public GroupByVectorColumnSelector makeDoubleProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorValueSelector selector
+  )
   {
-    return new DoubleGroupByVectorColumnSelector(selector);
+    if (capabilities.hasNulls().isFalse()) {
+      return new DoubleGroupByVectorColumnSelector(selector);
+    }
+    return new NullableDoubleGroupByVectorColumnSelector(selector);
   }
 
   @Override
-  public GroupByVectorColumnSelector makeLongProcessor(final VectorValueSelector selector)
+  public GroupByVectorColumnSelector makeLongProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorValueSelector selector
+  )
   {
-    return new LongGroupByVectorColumnSelector(selector);
+    if (capabilities.hasNulls().isFalse()) {
+      return new LongGroupByVectorColumnSelector(selector);
+    }
+    return new NullableLongGroupByVectorColumnSelector(selector);
   }
 }

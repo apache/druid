@@ -32,11 +32,11 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 ## Getting started
 
-The Druid source code contains [an example `docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) which can pull an image from Docker Hub and is suited to be used as an example environment and to experiment with Docker based Druid configuration and deployments.
+The Druid source code contains [an example `docker-compose.yml`](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/docker-compose.yml) which can pull an image from Docker Hub and is suited to be used as an example environment and to experiment with Docker based Druid configuration and deployments.
 
 ### Compose file
 
-The example `docker-compose.yml` will create a container for each Druid service, as well as Zookeeper and a PostgreSQL container as the metadata store. Deep storage will be a local directory, by default configured as `./storage` relative to your `docker-compose.yml` file, and will be mounted as `/opt/data` and shared between Druid containers which require access to deep storage. The Druid containers are configured via an [environment file](https://github.com/apache/druid/blob/master/distribution/docker/environment).
+The example `docker-compose.yml` will create a container for each Druid service, as well as Zookeeper and a PostgreSQL container as the metadata store. Deep storage will be a local directory, by default configured as `./storage` relative to your `docker-compose.yml` file, and will be mounted as `/opt/data` and shared between Druid containers which require access to deep storage. The Druid containers are configured via an [environment file](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/environment).
 
 ### Configuration
 

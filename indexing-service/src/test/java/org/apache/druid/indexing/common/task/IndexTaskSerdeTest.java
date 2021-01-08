@@ -59,6 +59,7 @@ public class IndexTaskSerdeTest
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
         null,
+        null,
         100,
         2000L,
         null,
@@ -81,7 +82,8 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        1234
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -90,6 +92,7 @@ public class IndexTaskSerdeTest
   public void testSerdeTuningConfigWithHashedPartitionsSpec() throws IOException
   {
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
         null,
         null,
         100,
@@ -114,7 +117,8 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -125,6 +129,7 @@ public class IndexTaskSerdeTest
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
         1000,
+        null,
         100,
         2000L,
         3000L,
@@ -147,7 +152,8 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -156,6 +162,7 @@ public class IndexTaskSerdeTest
   public void testSerdeTuningConfigWithDeprecatedHashedPartitionsSpec() throws IOException
   {
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
         null,
         null,
         100,
@@ -180,7 +187,8 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        1234
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -191,6 +199,7 @@ public class IndexTaskSerdeTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("DynamicPartitionsSpec cannot be used for perfect rollup");
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
         null,
         null,
         100,
@@ -215,7 +224,8 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null
     );
   }
 
@@ -225,6 +235,7 @@ public class IndexTaskSerdeTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
         null,
         null,
         100,
@@ -249,7 +260,8 @@ public class IndexTaskSerdeTest
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true,
         10,
-        100
+        100,
+        null
     );
   }
 

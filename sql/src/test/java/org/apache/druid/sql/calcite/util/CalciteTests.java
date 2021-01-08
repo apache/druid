@@ -42,6 +42,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -71,6 +72,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
@@ -311,6 +313,25 @@ public class CalciteTests
       .withRollup(false)
       .build();
 
+  private static final IncrementalIndexSchema INDEX_SCHEMA_DIFFERENT_DIM3_M1_TYPES = new IncrementalIndexSchema.Builder()
+      .withDimensionsSpec(
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("dim1"),
+                  new StringDimensionSchema("dim2"),
+                  new LongDimensionSchema("dim3")
+              )
+          )
+      )
+      .withMetrics(
+          new CountAggregatorFactory("cnt"),
+          new LongSumAggregatorFactory("m1", "m1"),
+          new DoubleSumAggregatorFactory("m2", "m2"),
+          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+      )
+      .withRollup(false)
+      .build();
+
   private static final IncrementalIndexSchema INDEX_SCHEMA_WITH_X_COLUMNS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt_x"),
@@ -536,18 +557,21 @@ public class CalciteTests
           .put("t", "2000-01-01")
           .put("dim1", "דרואיד")
           .put("dim2", "he")
+          .put("dim3", 10L)
           .put("m1", 1.0)
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2000-01-01")
           .put("dim1", "druid")
           .put("dim2", "en")
+          .put("dim3", 11L)
           .put("m1", 1.0)
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2000-01-01")
           .put("dim1", "друид")
           .put("dim2", "ru")
+          .put("dim3", 12L)
           .put("m1", 1.0)
           .build()
   );
@@ -775,7 +799,7 @@ public class CalciteTests
         .create()
         .tmpDir(new File(tmpDir, "2"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(INDEX_SCHEMA)
+        .schema(INDEX_SCHEMA_DIFFERENT_DIM3_M1_TYPES)
         .rows(ROWS2)
         .buildMMappedIndex();
 
@@ -974,10 +998,17 @@ public class CalciteTests
   )
   {
 
-    final DruidNode coordinatorNode = new DruidNode("test", "dummy", false, 8080, null, true, false);
+    final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
     FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
             NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+
+    final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
+    FakeDruidNodeDiscoveryProvider overlordProvider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, coordinatorNode))
         )
     );
 
@@ -985,11 +1016,27 @@ public class CalciteTests
         new FakeHttpClient(),
         provider,
         NodeRole.COORDINATOR,
-        "/simple/leader",
-        () -> {
-          throw new UnsupportedOperationException();
-        }
-    );
+        "/simple/leader"
+    ) {
+      @Override
+      public String findCurrentLeader()
+      {
+        return coordinatorNode.getHostAndPortToUse();
+      }
+    };
+
+    final DruidLeaderClient overlordLeaderClient = new DruidLeaderClient(
+        new FakeHttpClient(),
+        overlordProvider,
+        NodeRole.OVERLORD,
+        "/simple/leader"
+    ) {
+      @Override
+      public String findCurrentLeader()
+      {
+        return overlordNode.getHostAndPortToUse();
+      }
+    };
 
     return new SystemSchema(
         druidSchema,
@@ -1003,7 +1050,7 @@ public class CalciteTests
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
-        druidLeaderClient,
+        overlordLeaderClient,
         provider,
         getJsonMapper()
     );

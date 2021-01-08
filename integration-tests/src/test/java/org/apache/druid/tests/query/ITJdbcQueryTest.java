@@ -126,7 +126,7 @@ public class ITJdbcQueryTest
           catalogs.add(catalog);
         }
         LOG.info("catalogs %s", catalogs);
-        Assert.assertEquals(ImmutableList.of("druid"), catalogs);
+        Assert.assertEquals(catalogs, ImmutableList.of("druid"));
 
         Set<String> schemas = new HashSet<>();
         ResultSet schemasMetadata = metadata.getSchemas("druid", null);
@@ -180,7 +180,7 @@ public class ITJdbcQueryTest
             resultRowCount++;
             LOG.info("%s,%s,%s", resultSet.getString(1), resultSet.getLong(2), resultSet.getLong(3));
           }
-          Assert.assertEquals(10, resultRowCount);
+          Assert.assertEquals(resultRowCount, 10);
           resultSet.close();
         }
       }
@@ -203,7 +203,7 @@ public class ITJdbcQueryTest
             resultRowCount++;
             LOG.info("%s,%s,%s", resultSet.getString(1), resultSet.getLong(2), resultSet.getLong(3));
           }
-          Assert.assertEquals(10, resultRowCount);
+          Assert.assertEquals(resultRowCount, 10);
           resultSet.close();
         }
       }

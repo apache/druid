@@ -56,7 +56,7 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
     baseTrustManager.checkServerTrusted(chain, authType, engine);
 
     // fail intentionally when trying to talk to the broker
-    if (chain[0].toString().contains("172.172.172.8")) {
+    if (chain[0].toString().contains("172.172.172.60")) {
       throw new CertificateException("Custom check intentionally terminated request to broker.");
     }
   }

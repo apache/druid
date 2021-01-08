@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.AbstractPrioritizedCallable;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -361,9 +362,13 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final long timeout = queryTimeoutAt - System.currentTimeMillis();
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
-    catch (InterruptedException | TimeoutException | CancellationException e) {
+    catch (InterruptedException | CancellationException e) {
       GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
+    }
+    catch (TimeoutException e) {
+      GuavaUtils.cancelAll(true, future, futures);
+      throw new QueryTimeoutException();
     }
     catch (ExecutionException e) {
       GuavaUtils.cancelAll(true, future, futures);
