@@ -134,5 +134,5 @@ public abstract class MonitorScheduler
   }
 
   @GuardedBy("lock")
-  abstract void startMonitor(final Monitor monitor);
+  abstract void startMonitor(Monitor monitor);
 }
