@@ -1218,14 +1218,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final QuerySegmentSpec interval = OBJECT_MAPPER.readValue(
         "\"2008/2012\"", QuerySegmentSpec.class
     );
-    List<ScanResultValue>scanResultValues = scanData(task, interval);
+    List<ScanResultValue> scanResultValues = scanData(task, interval);
     //verify that there are no records indexed in the rollbacked time period
     Assert.assertEquals(3, Iterables.size(scanResultValues));
 
     int i = 0;
     for (ScanResultValue result : scanResultValues) {
       final Map<String, Object> event = ((List<Map<String, Object>>) result.getEvents()).get(0);
-      Assert.assertEquals((long)i++, event.get("kafka.offset"));
+      Assert.assertEquals((long) i++, event.get("kafka.offset"));
       Assert.assertEquals(topic, event.get("kafka.topic"));
       Assert.assertEquals("application/json", event.get("kafka.header.encoding"));
     }
@@ -3001,9 +3001,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
 
     @Override
-    public InputEntityReader createReader(
-        InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory
-    )
+    public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
       final KafkaRecordEntity recordEntity = (KafkaRecordEntity) source;
       final InputEntityReader delegate = baseInputFormat.createReader(inputRowSchema, recordEntity, temporaryDirectory);
