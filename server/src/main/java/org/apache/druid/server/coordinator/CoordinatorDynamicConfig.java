@@ -138,7 +138,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
       @JsonProperty("pauseCoordination") boolean pauseCoordination,
-      @JsonProperty("guildReplicationMaxPercentOfMaxSegmentsToMove") Double guildReplicationMaxPercentOfMaxSegmentsToMove,
+      @JsonProperty("guildReplicationMaxPercentOfMaxSegmentsToMove") double guildReplicationMaxPercentOfMaxSegmentsToMove,
       @JsonProperty("emitGuildReplicationMetrics") boolean emitGuildReplicationMetrics
   )
   {
@@ -177,14 +177,6 @@ public class CoordinatorDynamicConfig
     }
     this.pauseCoordination = pauseCoordination;
 
-    if (guildReplicationMaxPercentOfMaxSegmentsToMove == null) {
-      log.debug("guildReplicationMaxPercentOfMaxSegmentsToMove was null! This is likely because your metastore does"
-                + " not reflect this configuration being added to Druid in a recent release. Druid is defaulting the"
-                + " value to the Druid default of %f. It is recommended that you re-submit your dynamic confgi with"
-                + " your desired value for guildReplicationMaxPercentOfMaxSegmentsToMove",
-                Builder.DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT);
-      guildReplicationMaxPercentOfMaxSegmentsToMove = Builder.DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT;
-    }
     Preconditions.checkArgument(
         guildReplicationMaxPercentOfMaxSegmentsToMove >= 0
         && guildReplicationMaxPercentOfMaxSegmentsToMove <= 100,
