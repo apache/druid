@@ -230,6 +230,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-aws-rds-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-google-extensions</argument>

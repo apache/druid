@@ -59,6 +59,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
@@ -719,14 +720,14 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testSearchWithNullValueInDimension() throws Exception
   {
-    IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
+    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
                 .build()
         )
         .setMaxRowCount(10)
-        .buildOnheap();
+        .build();
 
     index.add(
         new MapBasedInputRow(
