@@ -2725,24 +2725,24 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         .withRollup(true)
         .build();
 
-    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+    IncrementalIndex toPersistA = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
     toPersistA.add(getRowForTestMaxColumnsToMerge(10000, "a", "b", "c", "d", "e"));
     toPersistA.add(getRowForTestMaxColumnsToMerge(99999, "1", "2", "3", "4", "5"));
 
-    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+    IncrementalIndex toPersistB = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
     toPersistB.add(getRowForTestMaxColumnsToMerge(20000, "aa", "bb", "cc", "dd", "ee"));
     toPersistB.add(getRowForTestMaxColumnsToMerge(99999, "1", "2", "3", "4", "5"));
 
-    IncrementalIndex toPersistC = new IncrementalIndex.Builder()
+    IncrementalIndex toPersistC = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
     toPersistC.add(getRowForTestMaxColumnsToMerge(30000, "aaa", "bbb", "ccc", "ddd", "eee"));
     toPersistC.add(getRowForTestMaxColumnsToMerge(99999, "1", "2", "3", "4", "5"));
 
