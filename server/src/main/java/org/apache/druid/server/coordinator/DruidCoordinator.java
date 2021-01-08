@@ -676,8 +676,7 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
-    List<CoordinatorDuty> duties = new ArrayList<>();
-    duties.addAll(ImmutableList.of(
+    return ImmutableList.of(
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(DruidCoordinator.this),
@@ -685,12 +684,7 @@ public class DruidCoordinator
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
         new BalanceSegments(DruidCoordinator.this),
         new EmitClusterStatsAndMetrics(DruidCoordinator.this)
-    ));
-    log.debug(
-        "Done making historical management duties %s",
-        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
-    return duties;
   }
 
   private List<CoordinatorDuty> makeIndexingServiceDuties()
