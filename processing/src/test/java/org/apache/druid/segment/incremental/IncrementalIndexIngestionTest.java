@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -30,32 +31,54 @@ import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
+@RunWith(Parameterized.class)
+public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
 {
-  private static final int MAX_ROWS = 100000;
+  private static final int MAX_ROWS = 100_000;
+
+  public final IncrementalIndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
+
+  public IncrementalIndexIngestionTest(String indexType) throws JsonProcessingException
+  {
+    indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
+        .setIndexSchema((IncrementalIndexSchema) args[0])
+        .setMaxRowCount(MAX_ROWS)
+        .build()
+    ));
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return IncrementalIndexCreator.getAppendableIndexTypes();
+  }
 
   @Test
   public void testMultithreadAddFacts() throws Exception
   {
-    final IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.MINUTE)
-                .withMetrics(new LongMaxAggregatorFactory("max", "max"))
-                .build()
-        )
-        .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+    final IncrementalIndex<?> index = indexCreator.createIndex(new IncrementalIndexSchema.Builder()
+        .withQueryGranularity(Granularities.MINUTE)
+        .withMetrics(new LongMaxAggregatorFactory("max", "max"))
+        .build()
+    );
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -111,39 +134,33 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testMultithreadAddFactsUsingExpressionAndJavaScript() throws Exception
   {
-    final IncrementalIndex indexExpr = new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.MINUTE)
-                .withMetrics(new LongSumAggregatorFactory(
-                    "oddnum",
-                    null,
-                    "if(value%2==1,1,0)",
-                    TestExprMacroTable.INSTANCE
-                ))
-                .withRollup(true)
-                .build()
-        )
-        .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+    final IncrementalIndex<?> indexExpr = indexCreator.createIndex(
+        new IncrementalIndexSchema.Builder()
+            .withQueryGranularity(Granularities.MINUTE)
+            .withMetrics(new LongSumAggregatorFactory(
+                "oddnum",
+                null,
+                "if(value%2==1,1,0)",
+                TestExprMacroTable.INSTANCE
+            ))
+            .withRollup(true)
+            .build()
+    );
 
-    final IncrementalIndex indexJs = new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.MINUTE)
-                .withMetrics(new JavaScriptAggregatorFactory(
-                    "oddnum",
-                    ImmutableList.of("value"),
-                    "function(current, value) { if (value%2==1) current = current + 1; return current;}",
-                    "function() {return 0;}",
-                    "function(a, b) { return a + b;}",
-                    JavaScriptConfig.getEnabledInstance()
-                ))
-                .withRollup(true)
-                .build()
-        )
-        .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+    final IncrementalIndex<?> indexJs = indexCreator.createIndex(
+        new IncrementalIndexSchema.Builder()
+            .withQueryGranularity(Granularities.MINUTE)
+            .withMetrics(new JavaScriptAggregatorFactory(
+                "oddnum",
+                ImmutableList.of("value"),
+                "function(current, value) { if (value%2==1) current = current + 1; return current;}",
+                "function() {return 0;}",
+                "function(a, b) { return a + b;}",
+                JavaScriptConfig.getEnabledInstance()
+            ))
+            .withRollup(true)
+            .build()
+    );
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -205,15 +222,19 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
-    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.MINUTE)
-                .withMetrics(new LongMaxAggregatorFactory("max", "max"))
-                .build()
-        )
-        .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+    final IncrementalIndex<?> genericIndex = indexCreator.createIndex(
+        new IncrementalIndexSchema.Builder()
+            .withQueryGranularity(Granularities.MINUTE)
+            .withMetrics(new LongMaxAggregatorFactory("max", "max"))
+            .build()
+    );
+
+    // This test is specific to the on-heap index
+    if (!(genericIndex instanceof OnheapIncrementalIndex)) {
+      return;
+    }
+
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) genericIndex;
 
     index.add(new MapBasedInputRow(
             0,
