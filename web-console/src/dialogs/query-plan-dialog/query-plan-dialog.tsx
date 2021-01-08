@@ -25,6 +25,7 @@ import {
   Intent,
   TextArea,
 } from '@blueprintjs/core';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
@@ -59,7 +60,11 @@ export const QueryPlanDialog = React.memo(function QueryPlanDialog(props: QueryP
       );
     }
 
-    queryString = JSON.stringify((explainResult as BasicQueryExplanation).query[0], undefined, 2);
+    queryString = JSONBig.stringify(
+      (explainResult as BasicQueryExplanation).query[0],
+      undefined,
+      2,
+    );
     content = (
       <div className="one-query">
         <FormGroup label="Query">
@@ -98,7 +103,7 @@ export const QueryPlanDialog = React.memo(function QueryPlanDialog(props: QueryP
         <FormGroup label="Main query">
           <TextArea
             readOnly
-            value={JSON.stringify(
+            value={JSONBig.stringify(
               (explainResult as SemiJoinQueryExplanation).mainQuery.query,
               undefined,
               2,
@@ -109,7 +114,7 @@ export const QueryPlanDialog = React.memo(function QueryPlanDialog(props: QueryP
         <FormGroup label="Sub query">
           <TextArea
             readOnly
-            value={JSON.stringify(
+            value={JSONBig.stringify(
               (explainResult as SemiJoinQueryExplanation).subQueryRight.query,
               undefined,
               2,
