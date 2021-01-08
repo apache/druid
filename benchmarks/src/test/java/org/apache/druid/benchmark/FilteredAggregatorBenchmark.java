@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
@@ -68,13 +69,17 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCreator;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -88,7 +93,6 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -113,22 +117,22 @@ public class FilteredAggregatorBenchmark
   @Param({"false", "true"})
   private String vectorize;
 
+  @Param({"true", "false"})
+  private boolean descending;
+
   private static final Logger log = new Logger(FilteredAggregatorBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
-  private IncrementalIndex incIndex;
-  private IncrementalIndex incIndexFilteredAgg;
-  private AggregatorFactory[] filteredMetrics;
-  private QueryableIndex qIndex;
-  private File indexFile;
+
+  private AppendableIndexSpec appendableIndexSpec;
+  private AggregatorFactory filteredMetric;
   private DimFilter filter;
-  private List<InputRow> inputRows;
+  private DataGenerator generator;
   private QueryRunnerFactory factory;
   private GeneratorSchemaInfo schemaInfo;
   private TimeseriesQuery query;
-  private File tmpDir;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -146,8 +150,11 @@ public class FilteredAggregatorBenchmark
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
+  /**
+   * Setup everything common for benchmarking both the incremental-index and the queriable-index.
+   */
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
@@ -155,14 +162,12 @@ public class FilteredAggregatorBenchmark
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
-    DataGenerator gen = new DataGenerator(
+    generator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval(),
         rowsPerSegment
     );
-
-    incIndex = makeIncIndex(schemaInfo.getAggsArray());
 
     filter = new OrDimFilter(
         Arrays.asList(
@@ -172,30 +177,7 @@ public class FilteredAggregatorBenchmark
             new InDimFilter("dimSequential", Collections.singletonList("X"), null)
         )
     );
-    filteredMetrics = new AggregatorFactory[1];
-    filteredMetrics[0] = new FilteredAggregatorFactory(new CountAggregatorFactory("rows"), filter);
-    incIndexFilteredAgg = makeIncIndex(filteredMetrics);
-
-    inputRows = new ArrayList<>();
-    for (int j = 0; j < rowsPerSegment; j++) {
-      InputRow row = gen.nextRow();
-      if (j % 10000 == 0) {
-        log.info(j + " rows generated.");
-      }
-      incIndex.add(row);
-      inputRows.add(row);
-    }
-
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
-    indexFile = INDEX_MERGER_V9.persist(
-        incIndex,
-        tmpDir,
-        new IndexSpec(),
-        null
-    );
-    qIndex = INDEX_IO.loadIndex(indexFile);
+    filteredMetric = new FilteredAggregatorFactory(new CountAggregatorFactory("rows"), filter);
 
     factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(),
@@ -205,30 +187,127 @@ public class FilteredAggregatorBenchmark
 
     GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
     QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
-    List<AggregatorFactory> queryAggs = new ArrayList<>();
-    queryAggs.add(filteredMetrics[0]);
+    List<AggregatorFactory> queryAggs = Collections.singletonList(filteredMetric);
 
     query = Druids.newTimeseriesQueryBuilder()
                   .dataSource("blah")
                   .granularity(Granularities.ALL)
                   .intervals(intervalSpec)
                   .aggregators(queryAggs)
-                  .descending(false)
+                  .descending(descending)
                   .build();
   }
 
-  @TearDown
-  public void tearDown() throws IOException
+  /**
+   * Setup/teardown everything specific for benchmarking the incremental-index.
+   */
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexState
   {
-    FileUtils.deleteDirectory(tmpDir);
+    @Param({"onheap", "offheap"})
+    private String indexType;
+
+    IncrementalIndex<?> incIndex;
+
+    @Setup
+    public void setup(FilteredAggregatorBenchmark global) throws JsonProcessingException
+    {
+      // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+      // It is used in {@code global.makeIncIndex()} to instanciate an incremental-index of the specified type.
+      global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
+      incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+      global.generator.addToIndex(incIndex, global.rowsPerSegment);
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      if (incIndex != null) {
+        incIndex.close();
+      }
+    }
   }
 
-  private IncrementalIndex makeIncIndex(AggregatorFactory[] metrics)
+  /**
+   * Setup/teardown everything specific for benchmarking the ingestion of the incremental-index.
+   */
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexIngestState
   {
-    return new IncrementalIndex.Builder()
+    @Param({"onheap", "offheap"})
+    private String indexType;
+
+    IncrementalIndex<?> incIndex;
+    List<InputRow> inputRows;
+
+    @Setup(Level.Invocation)
+    public void setup(FilteredAggregatorBenchmark global) throws JsonProcessingException
+    {
+      // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+      // It is used in {@code global.makeIncIndex()} to instanciate an incremental-index of the specified type.
+      global.appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
+      inputRows = global.generator.toList(global.rowsPerSegment);
+      incIndex = global.makeIncIndex(new AggregatorFactory[]{global.filteredMetric});
+    }
+
+    @TearDown(Level.Invocation)
+    public void tearDown()
+    {
+      if (incIndex != null) {
+        incIndex.close();
+      }
+    }
+  }
+
+  /**
+   * Setup/teardown everything specific for benchmarking the queriable-index.
+   */
+  @State(Scope.Benchmark)
+  public static class QueryableIndexState
+  {
+    private File qIndexesDir;
+    private QueryableIndex qIndex;
+
+    @Setup
+    public void setup(FilteredAggregatorBenchmark global) throws IOException
+    {
+      global.appendableIndexSpec = new OnheapIncrementalIndex.Spec();
+
+      IncrementalIndex<?> incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+      global.generator.addToIndex(incIndex, global.rowsPerSegment);
+
+      qIndexesDir = FileUtils.createTempDir();
+      log.info("Using temp dir: " + qIndexesDir.getAbsolutePath());
+
+      File indexFile = INDEX_MERGER_V9.persist(
+          incIndex,
+          qIndexesDir,
+          new IndexSpec(),
+          null
+      );
+      incIndex.close();
+
+      qIndex = INDEX_IO.loadIndex(indexFile);
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      if (qIndex != null) {
+        qIndex.close();
+      }
+      if (qIndexesDir != null) {
+        qIndexesDir.delete();
+      }
+    }
+  }
+
+  private IncrementalIndex<?> makeIncIndex(AggregatorFactory[] metrics)
+  {
+    return appendableIndexSpec.builder()
         .setSimpleTestingIndexSchema(metrics)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build();
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query, String vectorize)
@@ -254,11 +333,10 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void ingest(Blackhole blackhole) throws Exception
+  public void ingest(Blackhole blackhole, IncrementalIndexIngestState state) throws Exception
   {
-    incIndexFilteredAgg = makeIncIndex(filteredMetrics);
-    for (InputRow row : inputRows) {
-      int rv = incIndexFilteredAgg.add(row).getRowCount();
+    for (InputRow row : state.inputRows) {
+      int rv = state.incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -266,12 +344,12 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole)
+  public void querySingleIncrementalIndex(Blackhole blackhole, IncrementalIndexState state)
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
-        new IncrementalIndexSegment(incIndex, SegmentId.dummy("incIndex"))
+        new IncrementalIndexSegment(state.incIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(
@@ -288,12 +366,12 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole)
+  public void querySingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(qIndex, SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndex, SegmentId.dummy("qIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(
