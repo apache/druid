@@ -21,7 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { DruidFilter } from '../../../druid-models';
+import { DruidFilter, getFilterDimension } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
@@ -42,19 +42,11 @@ export interface FilterTableProps {
   columnFilter: string;
   dimensionFilters: DruidFilter[];
   selectedFilterName: string | undefined;
-  onShowGlobalFilter: () => void;
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
 
 export const FilterTable = React.memo(function FilterTable(props: FilterTableProps) {
-  const {
-    sampleData,
-    columnFilter,
-    dimensionFilters,
-    selectedFilterName,
-    onShowGlobalFilter,
-    onFilterSelect,
-  } = props;
+  const { sampleData, columnFilter, dimensionFilters, selectedFilterName, onFilterSelect } = props;
 
   return (
     <ReactTable
@@ -63,7 +55,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const timestamp = columnName === '__time';
-        const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
+        const filterIndex = dimensionFilters.findIndex(f => getFilterDimension(f) === columnName);
         const filter = dimensionFilters[filterIndex];
 
         const columnClassName = classNames({
@@ -73,14 +65,17 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
         return {
           Header: (
             <div
-              className={classNames('clickable')}
+              className="clickable"
               onClick={() => {
-                if (timestamp) {
-                  onShowGlobalFilter();
-                } else if (filter) {
+                if (filter) {
                   onFilterSelect(filter, filterIndex);
                 } else {
-                  onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);
+                  onFilterSelect(
+                    timestamp
+                      ? { type: 'interval', dimension: columnName, intervals: [] }
+                      : { type: 'selector', dimension: columnName, value: '' },
+                    -1,
+                  );
                 }
               }}
             >

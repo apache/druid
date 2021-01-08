@@ -14,7 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 # Build Druid Cluster Image
+set -e
+
 if [ -z "$DRUID_INTEGRATION_TEST_JVM_RUNTIME" ]
 then
   echo "\$DRUID_INTEGRATION_TEST_JVM_RUNTIME is not set. Build druid-cluster with Java 8"
@@ -38,7 +42,7 @@ else
 fi
 
 # Build Hadoop docker if needed
-if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
+if [ -n "$DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER" == true ]
 then
   docker build -t druid-it/hadoop:2.8.5 $HADOOP_DOCKER_DIR
 fi

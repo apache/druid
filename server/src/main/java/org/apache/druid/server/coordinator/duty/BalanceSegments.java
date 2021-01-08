@@ -189,7 +189,8 @@ public class BalanceSegments implements CoordinatorDuty
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
       final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(
           toMoveFrom,
-          params.getBroadcastDatasources()
+          params.getBroadcastDatasources(),
+          params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
       );
       if (segmentToMoveHolder == null) {
         log.info("All servers to move segments from are empty, ending run.");

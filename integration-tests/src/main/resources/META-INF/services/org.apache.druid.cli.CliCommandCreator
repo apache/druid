@@ -14,3 +14,4 @@
 # limitations under the License.
 
 org.apache.druid.cli.QueryRetryTestCommandCreator
+org.apache.druid.cli.CustomNodeRoleCommandCreator

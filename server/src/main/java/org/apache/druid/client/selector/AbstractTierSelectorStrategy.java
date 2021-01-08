@@ -21,6 +21,7 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -38,19 +39,21 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
   {
     this.serverSelectorStrategy = serverSelectorStrategy;
   }
-
+  
   @Nullable
   @Override
-  public QueryableDruidServer pick(
+  public <T> QueryableDruidServer pick(
+      Query<T> query,
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment
   )
   {
-    return Iterables.getOnlyElement(pick(prioritizedServers, segment, 1), null);
+    return Iterables.getOnlyElement(pick(query, prioritizedServers, segment, 1), null);
   }
 
   @Override
-  public List<QueryableDruidServer> pick(
+  public <T> List<QueryableDruidServer> pick(
+      Query<T> query,
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment,
       int numServersToPick
@@ -58,7 +61,7 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
   {
     List<QueryableDruidServer> result = new ArrayList<>(numServersToPick);
     for (Set<QueryableDruidServer> priorityServers : prioritizedServers.values()) {
-      result.addAll(serverSelectorStrategy.pick(priorityServers, segment, numServersToPick - result.size()));
+      result.addAll(serverSelectorStrategy.pick(query, priorityServers, segment, numServersToPick - result.size()));
       if (result.size() == numServersToPick) {
         break;
       }

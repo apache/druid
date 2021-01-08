@@ -109,19 +109,6 @@ public class PartialDimensionCardinalityTaskTest
     }
 
     @Test
-    public void requiresGranularitySpecInputIntervals()
-    {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("Missing intervals in granularitySpec");
-
-      DataSchema dataSchema = ParallelIndexTestingFactory.createDataSchema(Collections.emptyList());
-
-      new PartialDimensionCardinalityTaskBuilder()
-          .dataSchema(dataSchema)
-          .build();
-    }
-
-    @Test
     public void serializesDeserializes()
     {
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()

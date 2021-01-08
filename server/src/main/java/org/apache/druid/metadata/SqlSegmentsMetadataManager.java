@@ -257,7 +257,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       if (exec != null) {
         return; // Already started
       }
-      exec = Execs.scheduledSingleThreaded(getClass().getName() + "-Exec--%d");
+      exec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(getClass().getName()) + "-Exec--%d");
     }
     finally {
       lock.unlock();

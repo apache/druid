@@ -21,6 +21,8 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.druid.client.indexing.SamplerResponse;
+import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -31,7 +33,6 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
@@ -229,8 +231,8 @@ public class InputSourceSampler
         .withRollup(dataSchema.getGranularitySpec().isRollup())
         .build();
 
-    return new IncrementalIndex.Builder().setIndexSchema(schema)
+    return new OnheapIncrementalIndex.Builder().setIndexSchema(schema)
                                          .setMaxRowCount(samplerConfig.getNumRows())
-                                         .buildOnheap();
+                                         .build();
   }
 }

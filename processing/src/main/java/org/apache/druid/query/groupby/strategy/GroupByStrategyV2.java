@@ -405,27 +405,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // Iterate through each subtotalSpec, build results for it and add to subtotalsResults
       for (List<String> subtotalSpec : subtotals) {
         final ImmutableSet<String> dimsInSubtotalSpec = ImmutableSet.copyOf(subtotalSpec);
+        // Dimension spec including dimension name and output name
+        final List<DimensionSpec> subTotalDimensionSpec = new ArrayList<>(dimsInSubtotalSpec.size());
         final List<DimensionSpec> dimensions = query.getDimensions();
-        final List<DimensionSpec> newDimensions = new ArrayList<>();
 
-        for (int i = 0; i < dimensions.size(); i++) {
-          DimensionSpec dimensionSpec = dimensions.get(i);
+        for (DimensionSpec dimensionSpec : dimensions) {
           if (dimsInSubtotalSpec.contains(dimensionSpec.getOutputName())) {
-            newDimensions.add(
-                new DefaultDimensionSpec(
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputType()
-                )
-            );
-          } else {
-            // Insert dummy dimension so all subtotals queries have ResultRows with the same shape.
-            // Use a field name that does not appear in the main query result, to assure the result will be null.
-            String dimName = "_" + i;
-            while (query.getResultRowSignature().indexOf(dimName) >= 0) {
-              dimName = "_" + dimName;
-            }
-            newDimensions.add(DefaultDimensionSpec.of(dimName));
+            subTotalDimensionSpec.add(dimensionSpec);
           }
         }
 
@@ -439,15 +425,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
 
         GroupByQuery subtotalQuery = baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec)
-            .withDimensionSpecs(newDimensions);
+            .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subtotalSpec, subtotalQuery, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -459,7 +444,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
               baseSubtotalQuery,
               subtotalQuery,
-              resultSupplierOneFinal.results(subtotalSpec),
+              resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
               resource,
               spillMapper,
@@ -468,7 +453,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subtotalSpec, subtotalQuery, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
           );
         }
       }
@@ -486,7 +471,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
-      List<String> dimsToInclude,
+      List<DimensionSpec> dimsToInclude,
       GroupByQuery subtotalQuery,
       boolean closeOnSequenceRead
   )

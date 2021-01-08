@@ -50,6 +50,7 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -159,6 +160,7 @@ public class SystemSchema extends AbstractSchema
       .add("tier", ValueType.STRING)
       .add("curr_size", ValueType.LONG)
       .add("max_size", ValueType.LONG)
+      .add("is_leader", ValueType.LONG)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -215,7 +217,7 @@ public class SystemSchema extends AbstractSchema
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
@@ -479,16 +481,22 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final InventoryView serverInventoryView;
+    private final DruidLeaderClient overlordLeaderClient;
+    private final DruidLeaderClient coordinatorLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         InventoryView serverInventoryView,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        DruidLeaderClient overlordLeaderClient,
+        DruidLeaderClient coordinatorLeaderClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
+      this.overlordLeaderClient = overlordLeaderClient;
+      this.coordinatorLeaderClient = coordinatorLeaderClient;
     }
 
     @Override
@@ -513,17 +521,30 @@ public class SystemSchema extends AbstractSchema
       );
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
+      String tmpCoordinatorLeader = "";
+      String tmpOverlordLeader = "";
+      try {
+        tmpCoordinatorLeader = coordinatorLeaderClient.findCurrentLeader();
+        tmpOverlordLeader = overlordLeaderClient.findCurrentLeader();
+      }
+      catch (ISE ignored) {
+        // no reason to kill the results if something is sad and there are no leaders
+      }
+      final String coordinatorLeader = tmpCoordinatorLeader;
+      final String overlordLeader = tmpOverlordLeader;
+
       final FluentIterable<Object[]> results = FluentIterable
           .from(() -> druidServers)
           .transform((DiscoveryDruidNode discoveryDruidNode) -> {
             //noinspection ConstantConditions
             final boolean isDiscoverableDataServer = isDiscoverableDataServer(discoveryDruidNode);
+            final NodeRole serverRole = discoveryDruidNode.getNodeRole();
 
             if (isDiscoverableDataServer) {
               final DruidServer druidServer = serverInventoryView.getInventoryValue(
                   discoveryDruidNode.getDruidNode().getHostAndPortToUse()
               );
-              if (druidServer != null || discoveryDruidNode.getNodeRole().equals(NodeRole.HISTORICAL)) {
+              if (druidServer != null || NodeRole.HISTORICAL.equals(serverRole)) {
                 // Build a row for the data server if that server is in the server view, or the node type is historical.
                 // The historicals are usually supposed to be found in the server view. If some historicals are
                 // missing, it could mean that there are some problems in them to announce themselves. We just fill
@@ -532,12 +553,23 @@ public class SystemSchema extends AbstractSchema
               } else {
                 return buildRowForNonDataServer(discoveryDruidNode);
               }
+            } else if (NodeRole.COORDINATOR.equals(serverRole)) {
+              return buildRowForNonDataServerWithLeadership(
+                  discoveryDruidNode,
+                  coordinatorLeader.contains(discoveryDruidNode.getDruidNode().getHostAndPortToUse())
+              );
+            } else if (NodeRole.OVERLORD.equals(serverRole)) {
+              return buildRowForNonDataServerWithLeadership(
+                  discoveryDruidNode,
+                  overlordLeader.contains(discoveryDruidNode.getDruidNode().getHostAndPortToUse())
+              );
             } else {
               return buildRowForNonDataServer(discoveryDruidNode);
             }
           });
       return Linq4j.asEnumerable(results);
     }
+
 
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
@@ -553,7 +585,27 @@ public class SystemSchema extends AbstractSchema
           StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
           null,
           UNKNOWN_SIZE,
-          UNKNOWN_SIZE
+          UNKNOWN_SIZE,
+          NullHandling.defaultLongValue()
+      };
+    }
+
+    /**
+     * Returns a row for all node types which don't serve data. The returned row contains only static information.
+     */
+    private static Object[] buildRowForNonDataServerWithLeadership(DiscoveryDruidNode discoveryDruidNode, boolean isLeader)
+    {
+      final DruidNode node = discoveryDruidNode.getDruidNode();
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
+          isLeader ? 1L : 0L
       };
     }
 
@@ -586,7 +638,8 @@ public class SystemSchema extends AbstractSchema
           StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
           druidServerToUse.getTier(),
           currentSize,
-          druidServerToUse.getMaxSize()
+          druidServerToUse.getMaxSize(),
+          NullHandling.defaultLongValue()
       };
     }
 

@@ -772,7 +772,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getAggregators(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory(),
+            tuningConfig.getMaxColumnsToMerge()
         );
 
         mergeFinishTime = System.nanoTime();
@@ -968,21 +969,24 @@ public class AppenderatorImpl implements Appenderator
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-persist", maxPendingPersists)
+          Execs.newBlockingSingleThreaded(
+              "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
+              maxPendingPersists
+          )
       );
     }
 
     if (pushExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-merge", 1)
+          Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-merge", 1)
       );
     }
 
     if (intermediateTempExecutor == null) {
       // use single threaded executor with SynchronousQueue so that all abandon operations occur sequentially
       intermediateTempExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-abandon", 0)
+          Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-abandon", 0)
       );
     }
   }
