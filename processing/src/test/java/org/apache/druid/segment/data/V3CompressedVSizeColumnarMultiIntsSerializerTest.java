@@ -322,12 +322,17 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           Assert.assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }
-      CloseableUtils.closeAndWrapExceptions(columnarMultiInts);
-      mapper.close();
+      CloseableUtils.closeAll(columnarMultiInts, mapper);
     }
   }
 
-  private void generateV2SerializedSizeAndData(long numRows, int maxValue, int maxValuesPerRow, int offsetChunkFactor, int valueChunkFactor) throws Exception
+  private void generateV2SerializedSizeAndData(
+      long numRows,
+      int maxValue,
+      int maxValuesPerRow,
+      int offsetChunkFactor,
+      int valueChunkFactor
+  ) throws Exception
   {
     File tmpDirectory = FileUtils.createTempDir(StringUtils.format(
         "CompressedVSizeIndexedV3WriterTest_%d_%d",
@@ -395,8 +400,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           Assert.assertEquals(subVals.get(j), expected[j]);
         }
       }
-      CloseableUtils.closeAndWrapExceptions(columnarMultiInts);
-      mapper.close();
+      CloseableUtils.closeAll(columnarMultiInts, mapper);
     }
   }
 }

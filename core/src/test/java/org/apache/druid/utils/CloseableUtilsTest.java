@@ -77,7 +77,7 @@ public class CloseableUtilsTest
 
     // Second exception
     Assert.assertEquals(1, e.getSuppressed().length);
-    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
   @Test
@@ -106,7 +106,7 @@ public class CloseableUtilsTest
 
     // Second exception
     Assert.assertEquals(1, e.getSuppressed().length);
-    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
   @Test

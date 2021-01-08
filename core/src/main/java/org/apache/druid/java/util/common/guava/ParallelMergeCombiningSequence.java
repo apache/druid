@@ -1383,6 +1383,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     Closer closer = Closer.create();
     closer.registerAll(cursors);
-    CloseableUtils.closeAndWrapExceptions(closer);
+    CloseableUtils.closeAndSuppressExceptions(closer, e -> LOG.warn(e, "Failed to close result cursors"));
   }
 }

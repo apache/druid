@@ -21,6 +21,7 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
@@ -42,6 +43,8 @@ import java.util.Optional;
  */
 public class HashJoinSegment implements SegmentReference
 {
+  private static final Logger log = new Logger(HashJoinSegment.class);
+
   private final SegmentReference baseSegment;
   private final List<JoinableClause> clauses;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
@@ -129,7 +132,10 @@ public class HashJoinSegment implements SegmentReference
       }
     }
     catch (Throwable e) {
-      throw CloseableUtils.closeAndWrapInCatch(e, closer);
+      // acquireReferences is not permitted to throw exceptions.
+      CloseableUtils.closeAndSuppressExceptions(closer, e::addSuppressed);
+      log.warn(e, "Exception encountered while trying to acquire reference");
+      return Optional.empty();
     }
   }
 }

@@ -323,7 +323,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
 
     protected void loadBuffer(int bufferNum)
     {
-      CloseableUtils.closeAndWrapExceptions(holder);
+      holder.close();
       holder = singleThreadedIntBuffers.get(bufferNum);
       // asIntBuffer() makes the buffer's position = 0
       buffer = holder.get().asIntBuffer();
