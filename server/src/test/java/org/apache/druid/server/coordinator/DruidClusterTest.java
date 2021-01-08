@@ -75,7 +75,16 @@ public class DruidClusterTest
 
   private static final ServerHolder NEW_REALTIME = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", null, 100L, ServerType.REALTIME, "tier1", 0, DruidServer.DEFAULT_GUILD),
+          new DruidServerMetadata(
+              "name1",
+              "host2",
+              null,
+              100L,
+              ServerType.REALTIME,
+              "tier1",
+              0,
+              DruidServer.DEFAULT_GUILD
+          ),
           0L,
           ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
           1
@@ -85,7 +94,16 @@ public class DruidClusterTest
 
   private static final ServerHolder NEW_HISTORICAL = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", null, 100L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
+          new DruidServerMetadata(
+              "name1",
+              "host2",
+              null,
+              100L,
+              ServerType.HISTORICAL,
+              "tier1",
+              0,
+              DruidServer.DEFAULT_GUILD
+          ),
           0L,
           ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
           1
@@ -103,7 +121,16 @@ public class DruidClusterTest
         .withRealtimes(
             new ServerHolder(
                 new ImmutableDruidServer(
-                    new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0, DruidServer.DEFAULT_GUILD),
+                    new DruidServerMetadata(
+                        "name1",
+                        "host1",
+                        null,
+                        100L,
+                        ServerType.REALTIME,
+                        "tier1",
+                        0,
+                        DruidServer.DEFAULT_GUILD
+                    ),
                     0L,
                     ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
                     1
@@ -115,7 +142,16 @@ public class DruidClusterTest
             "tier1",
             new ServerHolder(
                 new ImmutableDruidServer(
-                    new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
+                    new DruidServerMetadata(
+                        "name1",
+                        "host1",
+                        null,
+                        100L,
+                        ServerType.HISTORICAL,
+                        "tier1",
+                        0,
+                        DruidServer.DEFAULT_GUILD
+                    ),
                     0L,
                     ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
                     1

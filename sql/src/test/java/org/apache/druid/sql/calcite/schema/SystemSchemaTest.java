@@ -482,7 +482,16 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
-      new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0, DruidServer.DEFAULT_GUILD),
+      new DruidServerMetadata(
+          "server1",
+          "localhost:0000",
+          null,
+          5L,
+          ServerType.REALTIME,
+          DruidServer.DEFAULT_TIER,
+          0,
+          DruidServer.DEFAULT_GUILD
+      ),
       1L,
       ImmutableMap.of(
           "dummy",
@@ -492,7 +501,16 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final ImmutableDruidServer druidServer2 = new ImmutableDruidServer(
-      new DruidServerMetadata("server2", "server2:1234", null, 5L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0, DruidServer.DEFAULT_GUILD),
+      new DruidServerMetadata(
+          "server2",
+          "server2:1234",
+          null,
+          5L,
+          ServerType.HISTORICAL,
+          DruidServer.DEFAULT_TIER,
+          0,
+          DruidServer.DEFAULT_GUILD
+      ),
       1L,
       ImmutableMap.of(
           "dummy",

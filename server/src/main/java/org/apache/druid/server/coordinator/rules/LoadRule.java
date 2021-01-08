@@ -371,7 +371,8 @@ public abstract class LoadRule implements Rule
       ServerHolder holder = strategyCache.remove(tier);
 
       if (!params.isGuildReplicationEnabled()) {
-        // Does strategy call if not in cache
+        // If guild replication is not enabled, we either use the ServerHolder from cache or fetch a holder using
+        // the BalancerStrategy.
         if (holder == null) {
           holder = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
         }

@@ -44,7 +44,16 @@ public class ServersResourceTest
   @Before
   public void setUp()
   {
-    DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0, DruidServer.DEFAULT_GUILD);
+    DruidServer dummyServer = new DruidServer(
+        "dummy",
+        "host",
+        null,
+        1234L,
+        ServerType.HISTORICAL,
+        "tier",
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
                                      .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
@@ -118,7 +127,16 @@ public class ServersResourceTest
   @Test
   public void testDruidServerSerde() throws Exception
   {
-    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1, DruidServer.DEFAULT_GUILD);
+    DruidServer server = new DruidServer(
+        "dummy",
+        "dummyHost",
+        null,
+        1234,
+        ServerType.HISTORICAL,
+        "dummyTier",
+        1,
+        DruidServer.DEFAULT_GUILD
+    );
     String serverJson = objectMapper.writeValueAsString(server);
     String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1,\"guild\":\"_default_guild\"}";
     Assert.assertEquals(expected, serverJson);

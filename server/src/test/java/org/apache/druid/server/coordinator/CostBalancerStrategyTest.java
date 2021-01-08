@@ -72,7 +72,16 @@ public class CostBalancerStrategyTest
       String serverName = "DruidServer_Name_" + i;
       ServerHolder serverHolder = new ServerHolder(
           new ImmutableDruidServer(
-              new DruidServerMetadata(serverName, "localhost", null, 10000000L, ServerType.HISTORICAL, "hot", 1, DruidServer.DEFAULT_GUILD),
+              new DruidServerMetadata(
+                  serverName,
+                  "localhost",
+                  null,
+                  10000000L,
+                  ServerType.HISTORICAL,
+                  "hot",
+                  1,
+                  DruidServer.DEFAULT_GUILD
+              ),
               3000L,
               ImmutableMap.of("DUMMY", dataSource),
               segments.size()

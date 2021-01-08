@@ -206,7 +206,16 @@ public class CachingClusteredClientFunctionalityTest
               )
               {
                 return new QueryableDruidServer(
-                    new DruidServer("localhost", "localhost", null, 100, ServerType.HISTORICAL, "a", 10, DruidServer.DEFAULT_GUILD),
+                    new DruidServer(
+                        "localhost",
+                        "localhost",
+                        null,
+                        100,
+                        ServerType.HISTORICAL,
+                        "a",
+                        10,
+                        DruidServer.DEFAULT_GUILD
+                    ),
                     EasyMock.createNiceMock(DirectDruidClient.class)
                 );
               }
@@ -220,7 +229,16 @@ public class CachingClusteredClientFunctionalityTest
               {
                 return Collections.singletonList(
                     new QueryableDruidServer(
-                        new DruidServer("localhost", "localhost", null, 100, ServerType.HISTORICAL, "a", 10, DruidServer.DEFAULT_GUILD),
+                        new DruidServer(
+                            "localhost",
+                            "localhost",
+                            null,
+                            100,
+                            ServerType.HISTORICAL,
+                            "a",
+                            10,
+                            DruidServer.DEFAULT_GUILD
+                        ),
                         EasyMock.createNiceMock(DirectDruidClient.class)
                     )
                 );

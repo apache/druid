@@ -290,7 +290,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(dataSource);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, null, 5L, ServerType.HISTORICAL, null, 0, DruidServer.DEFAULT_GUILD),
+            new DruidServerMetadata(
+                "from",
+                null,
+                null,
+                5L,
+                ServerType.HISTORICAL,
+                null,
+                0,
+                DruidServer.DEFAULT_GUILD
+            ),
             1L,
             ImmutableMap.of("dummyDataSource", dataSource),
             1
@@ -302,7 +311,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, null, 5L, ServerType.HISTORICAL, null, 0, DruidServer.DEFAULT_GUILD),
+            new DruidServerMetadata(
+                "to",
+                null,
+                null,
+                5L,
+                ServerType.HISTORICAL,
+                null,
+                0,
+                DruidServer.DEFAULT_GUILD
+            ),
             1L,
             ImmutableMap.of("dummyDataSource", dataSource),
             1
@@ -384,7 +402,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    druidServer = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, tier, 0, DruidServer.DEFAULT_GUILD);
+    druidServer = new DruidServer(
+        "server1",
+        "localhost",
+        null,
+        5L,
+        ServerType.HISTORICAL,
+        tier,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
     loadManagementPeons.put("server1", loadQueuePeon);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)
@@ -451,8 +478,26 @@ public class DruidCoordinatorTest extends CuratorTestBase
     final Rule hotTier = new IntervalLoadRule(Intervals.of("2018-01-01/P1M"), ImmutableMap.of(hotTierName, 1));
     final Rule coldTier = new ForeverLoadRule(ImmutableMap.of(coldTierName, 1));
     final String loadPathCold = "/druid/loadqueue/cold:1234";
-    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0, DruidServer.DEFAULT_GUILD);
-    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0, DruidServer.DEFAULT_GUILD);
+    final DruidServer hotServer = new DruidServer(
+        "hot",
+        "hot",
+        null,
+        5L,
+        ServerType.HISTORICAL,
+        hotTierName,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
+    final DruidServer coldServer = new DruidServer(
+        "cold",
+        "cold",
+        null,
+        5L,
+        ServerType.HISTORICAL,
+        coldTierName,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
 
     final Map<String, DataSegment> dataSegments = ImmutableMap.of(
         "2018-01-02T00:00:00.000Z_2018-01-03T00:00:00.000Z",
@@ -542,11 +587,56 @@ public class DruidCoordinatorTest extends CuratorTestBase
     final String loadPathBroker1 = "/druid/loadqueue/broker1:1234";
     final String loadPathBroker2 = "/druid/loadqueue/broker2:1234";
     final String loadPathPeon = "/druid/loadqueue/peon:1234";
-    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0, DruidServer.DEFAULT_GUILD);
-    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0, DruidServer.DEFAULT_GUILD);
-    final DruidServer brokerServer1 = new DruidServer("broker1", "broker1", null, 5L, ServerType.BROKER, tierName1, 0, DruidServer.DEFAULT_GUILD);
-    final DruidServer brokerServer2 = new DruidServer("broker2", "broker2", null, 5L, ServerType.BROKER, tierName2, 0, DruidServer.DEFAULT_GUILD);
-    final DruidServer peonServer = new DruidServer("peon", "peon", null, 5L, ServerType.INDEXER_EXECUTOR, tierName2, 0, DruidServer.DEFAULT_GUILD);
+    final DruidServer hotServer = new DruidServer(
+        "hot",
+        "hot",
+        null,
+        5L,
+        ServerType.HISTORICAL,
+        hotTierName,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
+    final DruidServer coldServer = new DruidServer(
+        "cold",
+        "cold",
+        null,
+        5L,
+        ServerType.HISTORICAL,
+        coldTierName,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
+    final DruidServer brokerServer1 = new DruidServer(
+        "broker1",
+        "broker1",
+        null,
+        5L,
+        ServerType.BROKER,
+        tierName1,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
+    final DruidServer brokerServer2 = new DruidServer(
+        "broker2",
+        "broker2",
+        null,
+        5L,
+        ServerType.BROKER,
+        tierName2,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
+    final DruidServer peonServer = new DruidServer(
+        "peon",
+        "peon",
+        null,
+        5L,
+        ServerType.INDEXER_EXECUTOR,
+        tierName2,
+        0,
+        DruidServer.DEFAULT_GUILD
+    );
 
     final Map<String, DataSegment> dataSegments = ImmutableMap.of(
         "2018-01-02T00:00:00.000Z_2018-01-03T00:00:00.000Z",
