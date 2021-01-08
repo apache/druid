@@ -67,7 +67,7 @@ public interface InputEntity
    * This is the basic way to read the given entity.
    *
    * The behavior of this method is only defined fort the first call to open().
-   * The behvior of subsequent calls is undefined and may vary between implementations.
+   * The behavior of subsequent calls is undefined and may vary between implementations.
    *
    * @see #fetch
    */
