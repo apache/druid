@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
@@ -73,7 +74,16 @@ public class ServerHolderTest
     // available size of 100
     final ServerHolder h1 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata(
+                "name1",
+                "host1",
+                null,
+                100L,
+                ServerType.HISTORICAL,
+                "tier1",
+                0,
+                DruidServer.DEFAULT_GUILD
+            ),
             0L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -84,7 +94,7 @@ public class ServerHolderTest
     // available size of 100
     final ServerHolder h2 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             100L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -95,7 +105,7 @@ public class ServerHolderTest
     // available size of 10
     final ServerHolder h3 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 1000L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name1", "host1", null, 1000L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             990L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -106,7 +116,7 @@ public class ServerHolderTest
     // available size of 50
     final ServerHolder h4 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 50L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name1", "host1", null, 50L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             0L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -124,7 +134,7 @@ public class ServerHolderTest
   {
     final ServerHolder h1 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             0L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -134,7 +144,7 @@ public class ServerHolderTest
 
     final ServerHolder h2 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name2", "host1", null, 200L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name2", "host1", null, 200L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             100L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -144,7 +154,7 @@ public class ServerHolderTest
 
     final ServerHolder h3 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host2", null, 200L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name1", "host2", null, 200L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             100L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -154,7 +164,7 @@ public class ServerHolderTest
 
     final ServerHolder h4 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier2", 0),
+            new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier2", 0, DruidServer.DEFAULT_GUILD),
             100L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -164,7 +174,7 @@ public class ServerHolderTest
 
     final ServerHolder h5 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
+            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0, DruidServer.DEFAULT_GUILD),
             0L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
@@ -183,7 +193,7 @@ public class ServerHolderTest
   {
     final ServerHolder h1 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD),
             0L,
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1

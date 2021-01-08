@@ -119,7 +119,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         10000000L,
         ServerType.HISTORICAL,
         "default_tier",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
     setupZNodeForServer(druidServer, new ZkPathsConfig(), jsonMapper);
     optimizer = new DataSourceOptimizer(brokerServerView);

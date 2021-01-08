@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -145,20 +146,55 @@ public class BalanceSegments implements CoordinatorDuty
         params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
     int maxSegmentsToMoveFromDecommissioningNodes =
         (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
-    log.info(
-        "Processing %d segments for moving from decommissioning servers",
-        maxSegmentsToMoveFromDecommissioningNodes
-    );
-    Pair<Integer, Integer> decommissioningResult =
-        balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
 
-    int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
+    // An aggregate result that accumulates during decommissioning moves and guild replication moves
+    Pair<Integer, Integer> specialtyMoveResult;
+
+    Pair<Integer, Integer> decommissioningResult;
+    if (decommissioningServers.size() > 0) {
+      log.info(
+          "Processing %d segments for moving from decommissioning servers",
+          maxSegmentsToMoveFromDecommissioningNodes
+      );
+      decommissioningResult =
+          balanceServers(
+              params,
+              decommissioningServers,
+              activeServers,
+              maxSegmentsToMoveFromDecommissioningNodes,
+              false
+          );
+    } else {
+      // There were no decommissioning servers, default to an empty Pair.
+      decommissioningResult = new Pair<>(0, 0);
+    }
+
+    // If guildReplication is enabled and the dynamic config guildReplicationMaxPercentOfMaxSegmentsToMove > 0,
+    // run balanceSegments focused solely on moving segments who live on <= 1 guild.
+    double guildReplicationMovePercent = params.getCoordinatorDynamicConfig().getGuildReplicationMaxPercentOfMaxSegmentsToMove();
+    if (params.isGuildReplicationEnabled() && guildReplicationMovePercent > 0) {
+      int guildReplicationMaxSegmentsToMove = (int) Math.ceil((maxSegmentsToMove - decommissioningResult.lhs) * (guildReplicationMovePercent / 100.0));
+
+      log.info(
+          "Processing %d segments who live on less than two guilds for balancing to active servers to increase guild distribution.",
+          guildReplicationMaxSegmentsToMove
+      );
+      Pair<Integer, Integer> guildReplicationResult = balanceServers(params, activeServers, activeServers, guildReplicationMaxSegmentsToMove, true);
+      specialtyMoveResult = new Pair<>(decommissioningResult.lhs + guildReplicationResult.lhs, decommissioningResult.rhs + guildReplicationResult.rhs);
+    } else {
+      specialtyMoveResult = decommissioningResult;
+    }
+
+    // The maxSegmentsToMove remaining is the difference between the dynamic config and the aggregate segments moved
+    // from decommissioning nodes + from nodes violating guildReplication thresholds.
+    int maxGeneralSegmentsToMove = maxSegmentsToMove - specialtyMoveResult.lhs;
+
     log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
     Pair<Integer, Integer> generalResult =
-        balanceServers(params, activeServers, activeServers, maxGeneralSegmentsToMove);
+        balanceServers(params, activeServers, activeServers, maxGeneralSegmentsToMove, false);
 
-    int moved = generalResult.lhs + decommissioningResult.lhs;
-    int unmoved = generalResult.rhs + decommissioningResult.rhs;
+    int moved = generalResult.lhs + specialtyMoveResult.lhs;
+    int unmoved = generalResult.rhs + specialtyMoveResult.rhs;
     if (unmoved == maxSegmentsToMove) {
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);
@@ -173,11 +209,26 @@ public class BalanceSegments implements CoordinatorDuty
     log.info("[%s]: Segments Moved: [%d] Segments Let Alone: [%d]", tier, moved, unmoved);
   }
 
+  /**
+   * balanceServers attempts to make up to maxSegmentsToMove segment moves by picking segments from
+   * servers in toMoveFrom and picking a destination server from toMoveTo. There is no guarantee that
+   * maxSegmentsToMove will be made, it is just an upper bound on the number of moves possible. A special
+   * flag, balanceGuildViolatorsOnly can be set to true in order to only balance segments who live on <= 1
+   * guild.
+   *
+   * @param params {@link DruidCoordinatorRuntimeParams}
+   * @param toMoveFrom {@link ServerHolder} list of candidates to pick segments for moving from
+   * @param toMoveTo {@link ServerHolder} list of candidates to move picked segments to
+   * @param maxSegmentsToMove An upper bound on the number of segments that can be moved.
+   * @param balanceGuildViolatorsOnly A boolean flag that indicates if only segments violating guildReplication rules are moved
+   * @return {@link Pair} lhs is the number of segments moved. rhs is the number picked for move but not moved
+   */
   private Pair<Integer, Integer> balanceServers(
       DruidCoordinatorRuntimeParams params,
       List<ServerHolder> toMoveFrom,
       List<ServerHolder> toMoveTo,
-      int maxSegmentsToMove
+      int maxSegmentsToMove,
+      boolean balanceGuildViolatorsOnly
   )
   {
     final BalancerStrategy strategy = params.getBalancerStrategy();
@@ -187,11 +238,20 @@ public class BalanceSegments implements CoordinatorDuty
 
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(
-          toMoveFrom,
-          params.getBroadcastDatasources(),
-          params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
-      );
+      final BalancerSegmentHolder segmentToMoveHolder;
+      if (!balanceGuildViolatorsOnly) {
+        segmentToMoveHolder = strategy.pickSegmentToMove(
+            toMoveFrom,
+            params.getBroadcastDatasources(),
+            params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
+        );
+      } else {
+        segmentToMoveHolder = strategy.pickSegmentToMove(
+            toMoveFrom,
+            params.getBroadcastDatasources(),
+            params
+        );
+      }
       if (segmentToMoveHolder == null) {
         log.info("All servers to move segments from are empty, ending run.");
         break;
@@ -205,18 +265,70 @@ public class BalanceSegments implements CoordinatorDuty
       if (needToBalancePickedSegment) {
         final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
         final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer();
-        // we want to leave the server the segment is currently on in the list...
-        // but filter out replicas that are already serving the segment, and servers with a full load queue
-        final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
-            toMoveTo.stream()
-                    .filter(s -> s.getServer().equals(fromServer) ||
-                                 (!s.isServingSegment(segmentToMove) &&
-                                  (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)))
-                    .collect(Collectors.toList());
 
-        if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {
+        // The list of ServerHolder objects that are candidates to recieve the moved segment
+        List<ServerHolder> filteredToMoveTo;
+
+        if (!params.isGuildReplicationEnabled()) {
+          // If the cluster is not using guild replication, filteredMoveTo will be all servers that are not serving the
+          // segment and also have a non-full load queue; plus the server currently holding this segment.
+          filteredToMoveTo =
+              toMoveTo.stream()
+                      .filter(
+                          s -> s.getServer().equals(fromServer) ||
+                               (!s.isServingSegment(segmentToMove) && (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad))
+                      ).collect(Collectors.toList());
+        } else {
+          // If the cluster is using guild replication, we need to make balancing decisions with the goal of retaining
+          // or improving the distribution of the chosen segment across guilds.
+
+          // The set of guilds who have at least one ServerHolder serving this segment
+          final Set<String> usedGuildSet =
+              params.getSegmentReplicantLookup().getGuildSetForSegment(segmentToMove.getId());
+
+          // The replication factor for this segment on the guild that the segment we are moving lives on.
+          final int guildReplicationFactor =
+              params
+                  .getSegmentReplicantLookup()
+                  .getGuildMapForSegment(segmentToMove.getId()).getOrDefault(fromServer.getGuild(), 1);
+
+          // filteredToMoveTo is all of the segments that we can choose as a destination for this move.
+          // The source server can be a destination if and only if the guildReplicationFactor on it's guild is <= 1
+          // A server that shares the same guild as the source server can be a destination if it is not serving the
+          // segment, the guildReplicationFactor <= 1, and the server does not have a full load queue.
+          // A server on a guild that is not serving the segment can be a destination if it is not serving the segment, and does not have a full load queue.
+          filteredToMoveTo =
+              toMoveTo.stream()
+                      .filter(s -> (s.getServer().equals(fromServer) && guildReplicationFactor <= 1) ||
+                                   (s.getServer().getGuild().equals(fromServer.getGuild()) &&
+                                    guildReplicationFactor <= 1 && (!s.isServingSegment(segmentToMove)) &&
+                                    (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)) ||
+                                   (!usedGuildSet.contains(s.getServer().getGuild())) &&
+                                   (!s.isServingSegment(segmentToMove)) &&
+                                   (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)
+                      ).collect(Collectors.toList());
+
+          // If filteredToMoveTo is empty and guildReplication is greater than 1, the coordinator  will try to populate
+          // filteredToMoveTo by using more permissive criteria. Doing so will reduce the chance of an unbalanced cluster.
+          // Since we have a guildReplicationFactor > 1, we know we can take the freedom to move this segment anywhere that
+          // it isn't already being served.
+          // This criteria will consider any node that is not serving the segment as well as the the node serving the segment,
+          // with the stipulation that it's load queue is not full as usual.
+          if (filteredToMoveTo.size() == 0 && guildReplicationFactor > 1) {
+            filteredToMoveTo =
+                toMoveTo.stream()
+                        .filter(s -> (s.getServer().getGuild().equals(fromServer.getGuild()) &&
+                                      (!s.isServingSegment(segmentToMove)) &&
+                                      (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)) ||
+                                     (!s.isServingSegment(segmentToMove)) &&
+                                     (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)
+                        ).collect(Collectors.toList());
+          }
+        }
+
+        if (filteredToMoveTo.size() > 0) {
           final ServerHolder destinationHolder =
-              strategy.findNewSegmentHomeBalancer(segmentToMove, toMoveToWithLoadQueueCapacityAndNotServingSegment);
+              strategy.findNewSegmentHomeBalancer(segmentToMove, filteredToMoveTo);
 
           if (destinationHolder != null && !destinationHolder.getServer().equals(fromServer)) {
             if (moveSegment(segmentToMoveHolder, destinationHolder.getServer(), params)) {

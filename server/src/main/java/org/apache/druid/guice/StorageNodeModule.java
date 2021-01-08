@@ -80,7 +80,8 @@ public class StorageNodeModule implements Module
         config.getMaxSize(),
         serverTypeConfig.getServerType(),
         config.getTier(),
-        config.getPriority()
+        config.getPriority(),
+        config.getGuild()
     );
   }
 
@@ -110,7 +111,8 @@ public class StorageNodeModule implements Module
         config.getMaxSize(),
         serverTypeConfig.getServerType(),
         config.getPriority(),
-        isSegmentCacheConfigured
+        isSegmentCacheConfigured,
+        config.getGuild()
     );
   }
 

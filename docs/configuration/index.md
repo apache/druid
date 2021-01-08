@@ -698,6 +698,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.loadqueuepeon.repeatDelay`|The start and repeat delay for the loadqueuepeon, which manages the load and drop of segments.|PT0.050S (50 ms)|
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator process should act like an Overlord as well. This configuration allows users to simplify a druid cluster by not having to deploy any standalone Overlord processes. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also. See next.|false|
 |`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord processes and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
+|`druid.coordinator.guildReplication.on`| Boolean flag for whether of not the Coordinator should attempt to load and balance segments in a way that prioritizes segments being loaded onto two or more guilds.|false|
 
 ##### Segment Management
 |Property|Possible Values|Description|Default|
@@ -753,7 +754,9 @@ A sample Coordinator dynamic config JSON object is shown below:
   "killDataSourceWhitelist": ["wikipedia", "testDatasource"],
   "decommissioningNodes": ["localhost:8182", "localhost:8282"],
   "decommissioningMaxPercentOfMaxSegmentsToMove": 70,
-  "pauseCoordination": false
+  "pauseCoordination": false,
+  "guildReplicationMaxPercentOfMaxSegmentsToMove": 0,
+  "emitGuildReplicationMetrics": false
 }
 ```
 
@@ -777,6 +780,8 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`decommissioningNodes`| List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning' servers,  and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `decommissioningMaxPercentOfMaxSegmentsToMove`.|none|
 |`decommissioningMaxPercentOfMaxSegmentsToMove`|  The maximum number of segments that may be moved away from 'decommissioning' servers to non-decommissioning (that is, active) servers during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by `maxSegmentsToMove`. If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, segments will neither be moved from _or to_ 'decommissioning' servers, effectively putting them in a sort of "maintenance" mode that will not participate in balancing or assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place the segments. By leveraging the maximum percent of decommissioning segment movements, an operator can prevent active servers from overload by prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.|70|
 |`pauseCoordination`| Boolean flag for whether or not the coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` Interface. Such duties include: Segment balancing, Segment compaction, Emission of metrics controlled by the dynamic coordinator config `emitBalancingStats`, Submitting kill tasks for unused segments (if enabled), Logging of used segments in the cluster, Marking of newly unused or overshadowed segments, Matching and execution of load/drop rules for used segments, Unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS Name Nodes with downtime and don't want the coordinator to be directing Historical Nodes to hit the Name Node with API requests until maintenance is done and the deep store is declared healthy for use again. |false|
+|`guildReplicationMaxPercentOfMaxSegmentsToMove`| Only used if `druid.coordinator.guildReplication.on=true`. Setting this to a value greater than 0 enables a special phase of balancing. The maxiumum number of segments that may be moved in this phase is the specified percentage of the max number of segments remaining to be moved after segments are moved from decommissioning servers. This phase will only consider segments for moving that are located on fewer than two guilds. By modifying this value, an operator can emphasize or de-emphasize the balancers priority for achieving a state of zero segments who lack distribution across multiple guilds. The higher the value, the more segments that will be moved to improve guild distribution. The value must be between 0 and 100. 0 meaning that this phase is skipped.|0|
+|`emitGuildReplicationMetrics`| Only used if `druid.coordinator.guildReplication.on=true`. Emits guild replication metrics as a part of the Coordinator duty for emitting metrics and stats. It must be noted that computing these metrics results in compute overhead for the coordinator.|false| 
 
 
 To view the audit history of Coordinator dynamic config issue a GET request to the URL -
@@ -1405,6 +1410,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.server.maxSize`|The maximum number of bytes-worth of segments that the process wants assigned to it. The Coordinator process will attempt to assign segments to a Historical process only if this property is greater than the total size of segments served by it. Since this property defines the upper limit on the total segment size that can be assigned to a Historical, it is defaulted to the sum of all `maxSize` values specified within `druid.segmentCache.locations` property. Human-readable format is supported, see [here](human-readable-byte.md). |Sum of `maxSize` values defined within `druid.segmentCache.locations`|
 |`druid.server.tier`| A string to name the distribution tier that the storage process belongs to. Many of the [rules Coordinator processes use](../operations/rule-configuration.md) to manage segments can be keyed on tiers. |  `_default_tier` |
 |`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which processes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
+|`druid.server.guild`|The name of the guild that the server belongs to. Guilds are used for replication distribution. If `druid.coordinator.guildReplication.on=true`, the coordinator will attempt to distribute each segment across two or more guilds.|_default_guild|
 
 #### Storing Segments
 

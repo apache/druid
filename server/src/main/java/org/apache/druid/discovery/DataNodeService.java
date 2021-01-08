@@ -38,16 +38,18 @@ public class DataNodeService extends DruidService
   private final ServerType type;
   private final int priority;
   private final boolean isDiscoverable;
+  private final String guild;
 
   @JsonCreator
   public DataNodeService(
       @JsonProperty("tier") String tier,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") ServerType type,
-      @JsonProperty("priority") int priority
+      @JsonProperty("priority") int priority,
+      @JsonProperty("guild") String guild
   )
   {
-    this(tier, maxSize, type, priority, true);
+    this(tier, maxSize, type, priority, true, guild);
   }
 
   public DataNodeService(
@@ -55,7 +57,8 @@ public class DataNodeService extends DruidService
       long maxSize,
       ServerType type,
       int priority,
-      boolean isDiscoverable
+      boolean isDiscoverable,
+      String guild
   )
   {
     this.tier = tier;
@@ -63,6 +66,7 @@ public class DataNodeService extends DruidService
     this.type = type;
     this.priority = priority;
     this.isDiscoverable = isDiscoverable;
+    this.guild = guild;
   }
 
   @Override
@@ -100,6 +104,12 @@ public class DataNodeService extends DruidService
   public boolean isDiscoverable()
   {
     return isDiscoverable;
+  }
+
+  @JsonProperty
+  public String getGuild()
+  {
+    return guild;
   }
 
   @Override

@@ -173,7 +173,8 @@ public class HttpServerInventoryViewTest
         new DruidNode("service", "host", false, 8080, null, true, false),
         NodeRole.HISTORICAL,
         ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+            DataNodeService.DISCOVERY_SERVICE_KEY,
+            new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0, DruidServer.DEFAULT_GUILD)
         )
     );
 

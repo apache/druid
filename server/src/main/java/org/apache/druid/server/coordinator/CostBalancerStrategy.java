@@ -226,6 +226,16 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
+  public BalancerSegmentHolder pickSegmentToMove(
+      final List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    return ReservoirSegmentSampler.getGuildReplicationViolatorSegmentHolder(serverHolders, broadcastDatasources, params);
+  }
+
+  @Override
   public Iterator<ServerHolder> pickServersToDrop(DataSegment toDrop, NavigableSet<ServerHolder> serverHolders)
   {
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();

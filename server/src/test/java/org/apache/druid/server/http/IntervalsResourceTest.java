@@ -96,7 +96,7 @@ public class IntervalsResourceTest
             5
         )
     );
-    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD);
     server.addDataSegment(dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2));

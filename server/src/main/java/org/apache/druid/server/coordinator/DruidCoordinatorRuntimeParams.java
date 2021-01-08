@@ -70,6 +70,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
+  private final boolean guildReplicationEnabled;
 
   private DruidCoordinatorRuntimeParams(
       long startTimeNanos,
@@ -85,7 +86,8 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorCompactionConfig coordinatorCompactionConfig,
       CoordinatorStats stats,
       BalancerStrategy balancerStrategy,
-      Set<String> broadcastDatasources
+      Set<String> broadcastDatasources,
+      boolean guildReplicationEnabled
   )
   {
     this.startTimeNanos = startTimeNanos;
@@ -102,6 +104,7 @@ public class DruidCoordinatorRuntimeParams
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
     this.broadcastDatasources = broadcastDatasources;
+    this.guildReplicationEnabled = guildReplicationEnabled;
   }
 
   public long getStartTimeNanos()
@@ -195,6 +198,11 @@ public class DruidCoordinatorRuntimeParams
     return dataSourcesSnapshot;
   }
 
+  public boolean isGuildReplicationEnabled()
+  {
+    return guildReplicationEnabled;
+  }
+
   public static Builder newBuilder()
   {
     return new Builder();
@@ -216,7 +224,8 @@ public class DruidCoordinatorRuntimeParams
         coordinatorCompactionConfig,
         stats,
         balancerStrategy,
-        broadcastDatasources
+        broadcastDatasources,
+        guildReplicationEnabled
     );
   }
 
@@ -236,7 +245,8 @@ public class DruidCoordinatorRuntimeParams
         coordinatorCompactionConfig,
         stats,
         balancerStrategy,
-        broadcastDatasources
+        broadcastDatasources,
+        guildReplicationEnabled
     );
   }
 
@@ -256,6 +266,7 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
+    private boolean guildReplicationEnabled;
 
     private Builder()
     {
@@ -272,6 +283,7 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.broadcastDatasources = new HashSet<>();
+      this.guildReplicationEnabled = false;
     }
 
     Builder(
@@ -288,7 +300,8 @@ public class DruidCoordinatorRuntimeParams
         CoordinatorCompactionConfig coordinatorCompactionConfig,
         CoordinatorStats stats,
         BalancerStrategy balancerStrategy,
-        Set<String> broadcastDatasources
+        Set<String> broadcastDatasources,
+        boolean guildReplicationEnabled
     )
     {
       this.startTimeNanos = startTimeNanos;
@@ -305,6 +318,7 @@ public class DruidCoordinatorRuntimeParams
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
       this.broadcastDatasources = broadcastDatasources;
+      this.guildReplicationEnabled = guildReplicationEnabled;
     }
 
     public DruidCoordinatorRuntimeParams build()
@@ -324,7 +338,8 @@ public class DruidCoordinatorRuntimeParams
           coordinatorCompactionConfig,
           stats,
           balancerStrategy,
-          broadcastDatasources
+          broadcastDatasources,
+          guildReplicationEnabled
       );
     }
 
@@ -434,6 +449,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withBroadcastDatasources(Set<String> broadcastDatasources)
     {
       this.broadcastDatasources = broadcastDatasources;
+      return this;
+    }
+
+    public Builder withGuildReplicationDirective(boolean guildReplicationEnabled)
+    {
+      this.guildReplicationEnabled = guildReplicationEnabled;
       return this;
     }
   }

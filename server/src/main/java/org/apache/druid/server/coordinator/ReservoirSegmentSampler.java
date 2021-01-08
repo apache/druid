@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -108,6 +109,59 @@ final class ReservoirSegmentSampler
       // We have iterated over the alloted number of segments and will return the currently proposed segment or null
       // We will only break out early if we are iterating less than 100% of the total cluster segments
       if (percentOfSegmentsToConsider < 100 && numSoFar >= calculatedSegmentLimit) {
+        break;
+      }
+    }
+    if (fromServerHolder != null) {
+      return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Iterates over segments on each ServerHolder in serverHolders looking for a segment
+   * who lives on less than two guilds. If one is found, that segment is chosen to be moved.
+   * If no segment is found, null is returned.
+   *
+   * @param serverHolders List of {@link ServerHolder} objects that are holding candidate SegmentHolder objects.
+   * @param broadcastDatasources Datasources that are broadcast only and should not have segments checked
+   * @param params {@link DruidCoordinatorRuntimeParams} used to access {@link ReservoirSegmentSampler}
+   * @return null or {@link BalancerSegmentHolder} that holds a segment chosen to be moved.
+   */
+  @Nullable
+  static BalancerSegmentHolder getGuildReplicationViolatorSegmentHolder(
+      final List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    ServerHolder fromServerHolder = null;
+    DataSegment proposalSegment = null;
+
+    for (ServerHolder server : serverHolders) {
+      if (!server.getServer().getType().isSegmentReplicationTarget()) {
+        // if the server only handles broadcast segments (which don't need to be rebalanced), we have nothing to do
+        continue;
+      }
+
+      for (DataSegment segment : server.getServer().iterateAllSegments()) {
+        if (broadcastDatasources.contains(segment.getDataSource())) {
+          // we don't need to rebalance segments that were assigned via broadcast rules
+          continue;
+        }
+
+        if (params.getSegmentReplicantLookup().getGuildSetForSegment(segment.getId()).size() > 1) {
+          // we are only looking for segments who are living on less than two guilds
+          continue;
+        }
+        // We found a ServerHolder with a segment that lives on less than two guilds. We will select it and return.
+        fromServerHolder = server;
+        proposalSegment = segment;
+        break;
+      }
+      // If we short circuited from inner for-loop, we can break out of outer for loop
+      if (fromServerHolder != null) {
         break;
       }
     }

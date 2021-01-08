@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 
 import javax.annotation.Nonnull;
@@ -87,6 +88,25 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsInNodeLoadingQueue;
   private final boolean pauseCoordination;
 
+  /**
+   * Only applies if druid.coorinator.guildReplication.on=true.
+   *
+   * If this is non-zero and there are segments left to be moved in the coordination cycle after decommissioning moves
+   * are made, segments who are located on <= 1 guild will be evaluated for moves. This value is a percentage of the
+   * remaining moves that will be allocated to this phase.
+   */
+  private final double guildReplicationMaxPercentOfMaxSegmentsToMove;
+
+  /**
+   * Only applies if druid.coordinator.guildReplication.on=true.
+   *
+   * If this is true, emit Guild Replication Metrics as a part of the Coordinators metrics and stats duty. It must be
+   * noted that computing these metrics introduces overhead for the coordinator run.
+   */
+  private final boolean emitGuildReplicationMetrics;
+
+  private static final EmittingLogger log = new EmittingLogger(CoordinatorDynamicConfig.class);
+
   @JsonCreator
   public CoordinatorDynamicConfig(
       // Keeping the legacy 'millisToWaitBeforeDeleting' property name for backward compatibility. When the project is
@@ -117,7 +137,9 @@ public class CoordinatorDynamicConfig
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
-      @JsonProperty("pauseCoordination") boolean pauseCoordination
+      @JsonProperty("pauseCoordination") boolean pauseCoordination,
+      @JsonProperty("guildReplicationMaxPercentOfMaxSegmentsToMove") Double guildReplicationMaxPercentOfMaxSegmentsToMove,
+      @JsonProperty("emitGuildReplicationMetrics") boolean emitGuildReplicationMetrics
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -154,6 +176,22 @@ public class CoordinatorDynamicConfig
       );
     }
     this.pauseCoordination = pauseCoordination;
+
+    if (guildReplicationMaxPercentOfMaxSegmentsToMove == null) {
+      log.debug("guildReplicationMaxPercentOfMaxSegmentsToMove was null! This is likely because your metastore does"
+                + " not reflect this configuration being added to Druid in a recent release. Druid is defaulting the"
+                + " value to the Druid default of %f. It is recommended that you re-submit your dynamic confgi with"
+                + " your desired value for guildReplicationMaxPercentOfMaxSegmentsToMove",
+                Builder.DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT);
+      guildReplicationMaxPercentOfMaxSegmentsToMove = Builder.DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT;
+    }
+    Preconditions.checkArgument(
+        guildReplicationMaxPercentOfMaxSegmentsToMove >= 0
+        && guildReplicationMaxPercentOfMaxSegmentsToMove <= 100,
+        "guildReplicationMaxPercentOfMaxSegmentsToMove should be in range [0, 100]"
+    );
+    this.guildReplicationMaxPercentOfMaxSegmentsToMove = guildReplicationMaxPercentOfMaxSegmentsToMove;
+    this.emitGuildReplicationMetrics = emitGuildReplicationMetrics;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -308,6 +346,31 @@ public class CoordinatorDynamicConfig
     return pauseCoordination;
   }
 
+  /**
+   * The percent of {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()} - the number of segments moved from
+   * decommissioning servers that determines the maximum number of segments that may be moved due to being on <= 1
+   * guild. If this value is 0, no segments will be moved in this phase of balancing. Instead all remaining moves will
+   * be made by the normal druid balancing process that does not take guild replication factor into account when
+   * choosing segments to move. By adjusting this value, an operator can prioritize ensuring adequate guild distribution
+   * for segments in the cluster, or focus on balancing the cluster with less prioritization for moving segments lacking
+   * distribution to two or more guilds.
+   *
+   * @return number in range [0, 100]
+   */
+  @Min(0)
+  @Max(100)
+  @JsonProperty
+  public double getGuildReplicationMaxPercentOfMaxSegmentsToMove()
+  {
+    return guildReplicationMaxPercentOfMaxSegmentsToMove;
+  }
+
+  @JsonProperty
+  public boolean isEmitGuildReplicationMetrics()
+  {
+    return emitGuildReplicationMetrics;
+  }
+
   @Override
   public String toString()
   {
@@ -329,6 +392,8 @@ public class CoordinatorDynamicConfig
            ", decommissioningNodes=" + decommissioningNodes +
            ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
            ", pauseCoordination=" + pauseCoordination +
+           ", guildReplicationMaxPercentOfSegmentsToMove=" + guildReplicationMaxPercentOfMaxSegmentsToMove +
+           ", emitGuildReplicationMetrics=" + emitGuildReplicationMetrics +
            '}';
   }
 
@@ -390,7 +455,13 @@ public class CoordinatorDynamicConfig
     if (pauseCoordination != that.pauseCoordination) {
       return false;
     }
-    return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
+    if (decommissioningMaxPercentOfMaxSegmentsToMove != that.decommissioningMaxPercentOfMaxSegmentsToMove) {
+      return false;
+    }
+    if (guildReplicationMaxPercentOfMaxSegmentsToMove != that.guildReplicationMaxPercentOfMaxSegmentsToMove) {
+      return false;
+    }
+    return emitGuildReplicationMetrics == that.emitGuildReplicationMetrics;
   }
 
   @Override
@@ -412,7 +483,9 @@ public class CoordinatorDynamicConfig
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
-        pauseCoordination
+        pauseCoordination,
+        guildReplicationMaxPercentOfMaxSegmentsToMove,
+        emitGuildReplicationMetrics
     );
   }
 
@@ -437,6 +510,8 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
+    private static final double DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT = 0;
+    private static final boolean DEFAULT_EMIT_GUILD_REPLICATION_METRICS = false;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
@@ -454,6 +529,8 @@ public class CoordinatorDynamicConfig
     private Object decommissioningNodes;
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
     private Boolean pauseCoordination;
+    private Double guildReplicationMaxPercentOfMaxSegmentsToMove;
+    private Boolean emitGuildReplicationMetrics;
 
     public Builder()
     {
@@ -478,7 +555,10 @@ public class CoordinatorDynamicConfig
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
         @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove")
         @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
-        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination
+        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
+        @JsonProperty("guildReplicationMaxPercentOfMaxSegmentsToMove")
+        @Nullable Double guildReplicationMaxPercentOfMaxSegmentsToMove,
+        @JsonProperty("emitGuildReplicationMetrics") @Nullable Boolean emitGuildReplicationMetrics
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -498,6 +578,8 @@ public class CoordinatorDynamicConfig
       this.decommissioningNodes = decommissioningNodes;
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
       this.pauseCoordination = pauseCoordination;
+      this.guildReplicationMaxPercentOfMaxSegmentsToMove = guildReplicationMaxPercentOfMaxSegmentsToMove;
+      this.emitGuildReplicationMetrics = emitGuildReplicationMetrics;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -590,6 +672,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withGuildReplicationMaxPercentOfMaxSegmentsToMove(Double percent)
+    {
+      this.guildReplicationMaxPercentOfMaxSegmentsToMove = percent;
+      return this;
+    }
+
+    public Builder withEmitGuildReplicationMetrics(boolean emitGuildReplicationMetrics)
+    {
+      this.emitGuildReplicationMetrics = emitGuildReplicationMetrics;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -617,7 +711,11 @@ public class CoordinatorDynamicConfig
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
           : decommissioningMaxPercentOfMaxSegmentsToMove,
-          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination
+          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination,
+          guildReplicationMaxPercentOfMaxSegmentsToMove == null
+          ? DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT : guildReplicationMaxPercentOfMaxSegmentsToMove,
+          emitGuildReplicationMetrics == null ? DEFAULT_EMIT_GUILD_REPLICATION_METRICS : emitGuildReplicationMetrics
+
       );
     }
 
@@ -651,7 +749,10 @@ public class CoordinatorDynamicConfig
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? defaults.getDecommissioningMaxPercentOfMaxSegmentsToMove()
           : decommissioningMaxPercentOfMaxSegmentsToMove,
-          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination
+          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination,
+          guildReplicationMaxPercentOfMaxSegmentsToMove == null
+          ? defaults.getGuildReplicationMaxPercentOfMaxSegmentsToMove() : guildReplicationMaxPercentOfMaxSegmentsToMove,
+          emitGuildReplicationMetrics == null ? defaults.isEmitGuildReplicationMetrics() : emitGuildReplicationMetrics
       );
     }
   }

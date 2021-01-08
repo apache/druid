@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Sets;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
@@ -267,7 +268,8 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
         10000,
         type,
         "tier",
-        1
+        1,
+        DruidServer.DEFAULT_GUILD
     );
   }
 

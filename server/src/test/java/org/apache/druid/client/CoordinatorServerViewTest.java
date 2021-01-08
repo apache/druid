@@ -95,7 +95,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         10000000L,
         ServerType.HISTORICAL,
         "default_tier",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
 
     setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
@@ -161,7 +162,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                 10000000L,
                 ServerType.HISTORICAL,
                 "default_tier",
-                0
+                0,
+                DruidServer.DEFAULT_GUILD
             );
           }
         }

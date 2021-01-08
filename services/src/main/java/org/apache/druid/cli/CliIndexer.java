@@ -212,7 +212,8 @@ public class CliIndexer extends ServerRunnable
                 DruidServer.DEFAULT_TIER,
                 serverConfig.getMaxSize(),
                 ServerType.INDEXER_EXECUTOR,
-                DruidServer.DEFAULT_PRIORITY
+                DruidServer.DEFAULT_PRIORITY,
+                DruidServer.DEFAULT_GUILD
             );
           }
         },

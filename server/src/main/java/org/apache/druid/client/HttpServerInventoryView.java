@@ -180,7 +180,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getType(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getGuild()
                 );
               }
             }
@@ -450,7 +451,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                         serverHolder.druidServer.getMaxSize(),
                         serverHolder.druidServer.getType(),
                         serverHolder.druidServer.getTier(),
-                        serverHolder.druidServer.getPriority()
+                        serverHolder.druidServer.getPriority(),
+                        serverHolder.druidServer.getGuild()
                     ));
                   }
                 }

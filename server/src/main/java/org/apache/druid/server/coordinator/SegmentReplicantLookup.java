@@ -28,24 +28,37 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 
 /**
  * A lookup for the number of replicants of a given segment for a certain tier.
+ * A lookup for the guildReplicaiton information of a given segment.
  */
 public class SegmentReplicantLookup
 {
-  public static SegmentReplicantLookup make(DruidCluster cluster)
+  public static SegmentReplicantLookup make(DruidCluster cluster, boolean makeGuildReplicationDataStructures)
   {
     final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
     final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();
+    final Table<SegmentId, String, Integer> historicalGuildDistribution =
+        (makeGuildReplicationDataStructures) ? HashBasedTable.create() : null;
 
     for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serversByType) {
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (DataSegment segment : server.iterateAllSegments()) {
+          if (makeGuildReplicationDataStructures) {
+            Integer numReplicantsOnGuild = historicalGuildDistribution.get(segment.getId(), server.getGuild());
+            if (numReplicantsOnGuild == null) {
+              numReplicantsOnGuild = 0;
+            }
+            historicalGuildDistribution.put(segment.getId(), server.getGuild(), numReplicantsOnGuild + 1);
+          }
+
           Integer numReplicants = segmentsInCluster.get(segment.getId(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;
@@ -55,6 +68,14 @@ public class SegmentReplicantLookup
 
         // Also account for queued segments
         for (DataSegment segment : serverHolder.getPeon().getSegmentsToLoad()) {
+          if (makeGuildReplicationDataStructures) {
+            Integer numReplicantsOnGuild = historicalGuildDistribution.get(segment.getId(), server.getGuild());
+            if (numReplicantsOnGuild == null) {
+              numReplicantsOnGuild = 0;
+            }
+            historicalGuildDistribution.put(segment.getId(), server.getGuild(), numReplicantsOnGuild + 1);
+          }
+
           Integer numReplicants = loadingSegments.get(segment.getId(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;
@@ -64,22 +85,26 @@ public class SegmentReplicantLookup
       }
     }
 
-    return new SegmentReplicantLookup(segmentsInCluster, loadingSegments, cluster);
+    return new SegmentReplicantLookup(segmentsInCluster, loadingSegments, cluster, historicalGuildDistribution);
   }
 
   private final Table<SegmentId, String, Integer> segmentsInCluster;
   private final Table<SegmentId, String, Integer> loadingSegments;
+  private final Table<SegmentId, String, Integer> historicalGuildDistribution;
+
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
       Table<SegmentId, String, Integer> segmentsInCluster,
       Table<SegmentId, String, Integer> loadingSegments,
-      DruidCluster cluster
+      DruidCluster cluster,
+      Table<SegmentId, String, Integer> historicalGuildDistribution
   )
   {
     this.segmentsInCluster = segmentsInCluster;
     this.loadingSegments = loadingSegments;
     this.cluster = cluster;
+    this.historicalGuildDistribution = historicalGuildDistribution;
   }
 
   public Map<String, Integer> getClusterTiers(SegmentId segmentId)
@@ -145,5 +170,36 @@ public class SegmentReplicantLookup
       }
     }
     return perTier;
+  }
+
+  /**
+   * Return {@link Map} with K:V Pairs of type String:Integer that represent
+   * a guild name and the number of replicas on that guild as it pertains to
+   * the provided segmentId. If Map for this segment does not exist, return
+   * an empty Map.
+   *
+   * @param segmentId ID of segment to lookup
+   * @return {@link Map} that maps gulid name to the number of replicas on that guild.
+   */
+  public Map<String, Integer> getGuildMapForSegment(SegmentId segmentId)
+  {
+    if (historicalGuildDistribution == null) {
+      return new HashMap<>();
+    }
+    Map<String, Integer> retVal = historicalGuildDistribution.row(segmentId);
+    return (retVal == null) ? new HashMap<>() : retVal;
+  }
+
+  /**
+   * Return {@link Set} of guild names serving segment. If no guild set exists,
+   * return an empty Set.
+   *
+   * @param segmentId ID of segment we are looking up.
+   * @return {@link Set} containing names of guilds serving specified segment.
+   */
+  public Set<String> getGuildSetForSegment(SegmentId segmentId)
+  {
+    Map<String, Integer> map = getGuildMapForSegment(segmentId);
+    return (map.isEmpty()) ? new HashSet<>() : map.keySet();
   }
 }

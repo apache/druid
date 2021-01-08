@@ -417,7 +417,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s3", "brokerHostWithBroadcastSegments", false, 8082, 8282, true, true),
       NodeRole.BROKER,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.BROKER, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.BROKER, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
@@ -431,7 +431,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s5", "localhost", false, 8083, null, true, false),
       NodeRole.HISTORICAL,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
@@ -439,7 +439,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s5", "histHost", false, 8083, null, true, false),
       NodeRole.HISTORICAL,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
@@ -447,7 +447,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s5", "lameHost", false, 8083, null, true, false),
       NodeRole.HISTORICAL,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
@@ -461,7 +461,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s7", "localhost", false, 8080, null, true, false),
       NodeRole.PEON,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
@@ -469,7 +469,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s7", "peonHost", false, 8080, null, true, false),
       NodeRole.PEON,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
@@ -477,12 +477,12 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidNode("s8", "indexerHost", false, 8091, null, true, false),
       NodeRole.INDEXER,
       ImmutableMap.of(
-          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0, DruidServer.DEFAULT_GUILD)
       )
   );
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
-      new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
+      new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0, DruidServer.DEFAULT_GUILD),
       1L,
       ImmutableMap.of(
           "dummy",
@@ -492,7 +492,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final ImmutableDruidServer druidServer2 = new ImmutableDruidServer(
-      new DruidServerMetadata("server2", "server2:1234", null, 5L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+      new DruidServerMetadata("server2", "server2:1234", null, 5L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0, DruidServer.DEFAULT_GUILD),
       1L,
       ImmutableMap.of(
           "dummy",

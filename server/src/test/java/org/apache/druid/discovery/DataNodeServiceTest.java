@@ -20,6 +20,7 @@
 package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
@@ -36,7 +37,8 @@ public class DataNodeServiceTest
         "tier",
         100,
         ServerType.HISTORICAL,
-        1
+        1,
+        DruidServer.DEFAULT_GUILD
     );
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();

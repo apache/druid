@@ -67,8 +67,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -83,6 +86,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
  */
+@RunWith(Parameterized.class)
 public class CuratorDruidCoordinatorTest extends CuratorTestBase
 {
   private DruidCoordinator coordinator;
@@ -125,10 +129,24 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private ScheduledExecutorService peonExec = Execs.scheduledSingleThreaded("Master-PeonExec--%d");
   private ExecutorService callbackExec = Execs.multiThreaded(4, "LoadQueuePeon-callbackexec--%d");
 
-  public CuratorDruidCoordinatorTest()
+  private boolean guildReplicationEnabled;
+
+  public CuratorDruidCoordinatorTest(boolean guildReplicationEnabled)
   {
     jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
+    this.guildReplicationEnabled = guildReplicationEnabled;
+  }
+
+  @Parameterized.Parameters(name = "{index}: guildReplicationEnabled:{0}")
+  public static Iterable<Object[]> data()
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {false},
+            {true}
+        }
+    );
   }
 
   @Before
@@ -172,7 +190,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         10,
-        new Duration("PT0s")
+        new Duration("PT0s"),
+        guildReplicationEnabled
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
@@ -296,7 +315,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         10000000L,
         ServerType.HISTORICAL,
         "default_tier",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
 
     DruidServer dest = new DruidServer(
@@ -306,7 +326,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         10000000L,
         ServerType.HISTORICAL,
         "default_tier",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
 
     setupZNodeForServer(source, zkPathsConfig, jsonMapper);

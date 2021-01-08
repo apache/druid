@@ -44,7 +44,7 @@ public class ServersResourceTest
   @Before
   public void setUp()
   {
-    DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0);
+    DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0, DruidServer.DEFAULT_GUILD);
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
                                      .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
@@ -70,6 +70,7 @@ public class ServersResourceTest
                       + "\"maxSize\":1234,"
                       + "\"type\":\"historical\","
                       + "\"tier\":\"tier\","
+                      + "\"guild\":\"_default_guild\","
                       + "\"priority\":0,"
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
                       + "{\"dataSource\":\"dataSource\",\"interval\":\"2016-03-22T14:00:00.000Z/2016-03-22T15:00:00.000Z\",\"version\":\"v0\",\"loadSpec\":{},\"dimensions\":\"\",\"metrics\":\"\","
@@ -83,7 +84,7 @@ public class ServersResourceTest
   {
     Response res = serversResource.getClusterServers(null, "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
+    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"guild\":\"_default_guild\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
     Assert.assertEquals(expected, result);
   }
 
@@ -96,6 +97,7 @@ public class ServersResourceTest
                       + "\"maxSize\":1234,"
                       + "\"type\":\"historical\","
                       + "\"tier\":\"tier\","
+                      + "\"guild\":\"_default_guild\","
                       + "\"priority\":0,"
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
                       + "{\"dataSource\":\"dataSource\",\"interval\":\"2016-03-22T14:00:00.000Z/2016-03-22T15:00:00.000Z\",\"version\":\"v0\",\"loadSpec\":{},\"dimensions\":\"\",\"metrics\":\"\","
@@ -109,16 +111,16 @@ public class ServersResourceTest
   {
     Response res = serversResource.getServer(server.getName(), "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
+    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"guild\":\"_default_guild\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
     Assert.assertEquals(expected, result);
   }
 
   @Test
   public void testDruidServerSerde() throws Exception
   {
-    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1);
+    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1, DruidServer.DEFAULT_GUILD);
     String serverJson = objectMapper.writeValueAsString(server);
-    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
+    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1,\"guild\":\"_default_guild\"}";
     Assert.assertEquals(expected, serverJson);
     DruidServer deserializedServer = objectMapper.readValue(serverJson, DruidServer.class);
     Assert.assertEquals(server, deserializedServer);
@@ -134,10 +136,11 @@ public class ServersResourceTest
         1234,
         ServerType.HISTORICAL,
         "tier",
-        1
+        1,
+        DruidServer.DEFAULT_GUILD
     );
     String metadataJson = objectMapper.writeValueAsString(metadata);
-    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1}";
+    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1,\"guild\":\"_default_guild\"}";
     Assert.assertEquals(expected, metadataJson);
     DruidServerMetadata deserializedMetadata = objectMapper.readValue(metadataJson, DruidServerMetadata.class);
     Assert.assertEquals(metadata, deserializedMetadata);
@@ -149,11 +152,12 @@ public class ServersResourceTest
         0,
         ServerType.HISTORICAL,
         "t1",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
 
     Assert.assertEquals(metadata, objectMapper.readValue(
-        "{\"name\":\"host:123\",\"maxSize\":0,\"type\":\"HISTORICAL\",\"tier\":\"t1\",\"priority\":0,\"host\":\"host:123\"}",
+        "{\"name\":\"host:123\",\"maxSize\":0,\"type\":\"HISTORICAL\",\"tier\":\"t1\",\"priority\":0,\"host\":\"host:123\",\"guild\":\"_default_guild\"}",
         DruidServerMetadata.class
     ));
 
@@ -164,10 +168,11 @@ public class ServersResourceTest
         0,
         ServerType.HISTORICAL,
         "t1",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
     Assert.assertEquals(metadata, objectMapper.readValue(
-        "{\"name\":\"host:123\",\"maxSize\":0,\"type\":\"HISTORICAL\",\"tier\":\"t1\",\"priority\":0,\"host\":\"host:123\",\"hostAndTlsPort\":\"host:214\"}",
+        "{\"name\":\"host:123\",\"maxSize\":0,\"type\":\"HISTORICAL\",\"tier\":\"t1\",\"priority\":0,\"host\":\"host:123\",\"hostAndTlsPort\":\"host:214\",\"guild\":\"_default_guild\"}",
         DruidServerMetadata.class
     ));
     Assert.assertEquals(metadata, objectMapper.readValue(

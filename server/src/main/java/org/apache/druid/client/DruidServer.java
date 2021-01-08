@@ -50,6 +50,7 @@ public class DruidServer implements Comparable<DruidServer>
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_NUM_REPLICANTS = 2;
   public static final String DEFAULT_TIER = "_default_tier";
+  public static final String DEFAULT_GUILD = "_default_guild";
 
   private static final Logger log = new Logger(DruidServer.class);
 
@@ -68,7 +69,8 @@ public class DruidServer implements Comparable<DruidServer>
         config.getMaxSize(),
         type,
         config.getTier(),
-        DEFAULT_PRIORITY
+        DEFAULT_PRIORITY,
+        config.getGuild()
     );
   }
 
@@ -80,10 +82,11 @@ public class DruidServer implements Comparable<DruidServer>
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
-      @JsonProperty("priority") int priority
+      @JsonProperty("priority") int priority,
+      @JsonProperty("guild") String guild
   )
   {
-    this.metadata = new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority);
+    this.metadata = new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority, guild);
   }
 
   @JsonProperty
@@ -161,6 +164,12 @@ public class DruidServer implements Comparable<DruidServer>
   public String getScheme()
   {
     return metadata.getHostAndTlsPort() != null ? "https" : "http";
+  }
+
+  @JsonProperty
+  public String getGuild()
+  {
+    return metadata.getGuild();
   }
 
   /**

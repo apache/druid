@@ -184,7 +184,8 @@ public class SimpleServerView implements TimelineServerView
         Long.MAX_VALUE,
         ServerType.HISTORICAL,
         "default",
-        0
+        0,
+        DruidServer.DEFAULT_GUILD
     );
   }
 }

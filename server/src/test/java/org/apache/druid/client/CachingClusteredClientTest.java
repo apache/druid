@@ -313,11 +313,11 @@ public class CachingClusteredClientTest
     client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1));
 
     servers = new DruidServer[]{
-        new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test2", "test2", null, 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test3", "test3", null, 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test4", "test4", null, 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test5", "test5", null, 10, ServerType.HISTORICAL, "bye", 0)
+        new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0, DruidServer.DEFAULT_GUILD),
+        new DruidServer("test2", "test2", null, 10, ServerType.HISTORICAL, "bye", 0, DruidServer.DEFAULT_GUILD),
+        new DruidServer("test3", "test3", null, 10, ServerType.HISTORICAL, "bye", 0, DruidServer.DEFAULT_GUILD),
+        new DruidServer("test4", "test4", null, 10, ServerType.HISTORICAL, "bye", 0, DruidServer.DEFAULT_GUILD),
+        new DruidServer("test5", "test5", null, 10, ServerType.HISTORICAL, "bye", 0, DruidServer.DEFAULT_GUILD)
     };
   }
 

@@ -92,4 +92,8 @@ public abstract class DruidCoordinatorConfig
   {
     return 1;
   }
+
+  @Config("druid.coordinator.guildReplication.on")
+  @Default("false")
+  public abstract boolean isGuildReplicationOn();
 }

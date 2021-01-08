@@ -467,6 +467,27 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     // Emit coordinator runtime stats
     emitDutyStats(emitter, "coordinator/time", stats, "runtime");
 
+    // Emit Guild Replication Metrics. There is a guard on this controlled by Coordinator Dynamic Config due to the
+    // cost involved in calculating these metrics.
+    if (params.isGuildReplicationEnabled() && params.getCoordinatorDynamicConfig().isEmitGuildReplicationMetrics()) {
+      params.getUsedSegmentsTimelinesPerDataSource().forEach(
+          (String dataSource, VersionedIntervalTimeline<String, DataSegment> dataSourceWithUsedSegments) -> {
+            long totalSegmentsInViolationOfGuildReplicationMinimums = dataSourceWithUsedSegments
+                .iterateAllObjects()
+                .stream()
+                .filter(s -> params.getSegmentReplicantLookup().getGuildSetForSegment(s.getId()).size() <= 1).count();
+            emitter.emit(
+                new ServiceMetricEvent.Builder()
+                    .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                    .build(
+                        "guild/replicationMinimumViolation/count",
+                        totalSegmentsInViolationOfGuildReplicationMinimums
+                    )
+            );
+          }
+      );
+    }
+
     return params;
   }
 }

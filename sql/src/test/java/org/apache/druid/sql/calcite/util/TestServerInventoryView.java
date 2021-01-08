@@ -53,7 +53,8 @@ public class TestServerInventoryView implements TimelineServerView
       0,
       ServerType.HISTORICAL,
       "dummy",
-      0
+      0,
+      DruidServer.DEFAULT_GUILD
   );
   private static final DruidServerMetadata DUMMY_SERVER_REALTIME = new DruidServerMetadata(
       "dummy2",
@@ -62,7 +63,8 @@ public class TestServerInventoryView implements TimelineServerView
       0,
       ServerType.REALTIME,
       "dummy",
-      0
+      0,
+      DruidServer.DEFAULT_GUILD
   );
   private static final DruidServerMetadata DUMMY_BROKER = new DruidServerMetadata(
       "dummy3",
@@ -71,7 +73,8 @@ public class TestServerInventoryView implements TimelineServerView
       0,
       ServerType.BROKER,
       "dummy",
-      0
+      0,
+      DruidServer.DEFAULT_GUILD
   );
   private List<DataSegment> segments = new ArrayList<>();
   private List<DataSegment> realtimeSegments = new ArrayList<>();

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
@@ -71,7 +72,7 @@ public class CostBalancerStrategyTest
       String serverName = "DruidServer_Name_" + i;
       ServerHolder serverHolder = new ServerHolder(
           new ImmutableDruidServer(
-              new DruidServerMetadata(serverName, "localhost", null, 10000000L, ServerType.HISTORICAL, "hot", 1),
+              new DruidServerMetadata(serverName, "localhost", null, 10000000L, ServerType.HISTORICAL, "hot", 1, DruidServer.DEFAULT_GUILD),
               3000L,
               ImmutableMap.of("DUMMY", dataSource),
               segments.size()

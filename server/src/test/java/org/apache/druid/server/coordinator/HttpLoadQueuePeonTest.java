@@ -40,10 +40,14 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -51,6 +55,7 @@ import java.util.concurrent.Executors;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class HttpLoadQueuePeonTest
 {
   final DataSegment segment1 = new DataSegment(
@@ -73,23 +78,47 @@ public class HttpLoadQueuePeonTest
       null, null, null, null, 0, 0
   );
 
-  final TestDruidCoordinatorConfig config = new TestDruidCoordinatorConfig(
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      10,
-      Duration.ZERO
-  )
+  private boolean guildReplicationEnabled;
+  private TestDruidCoordinatorConfig config;
+
+  public HttpLoadQueuePeonTest(boolean guildReplicationEnabled)
   {
-    @Override
-    public int getHttpLoadQueuePeonBatchSize()
+    this.guildReplicationEnabled = guildReplicationEnabled;
+  }
+
+  @Parameterized.Parameters(name = "{index}: guildReplicationEnabled:{0}")
+  public static Iterable<Object[]> data()
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {false},
+            {true}
+        }
+    );
+  }
+
+  @Before
+  public void setup()
+  {
+    config = new TestDruidCoordinatorConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        10,
+        Duration.ZERO,
+        guildReplicationEnabled
+    )
     {
-      return 2;
-    }
-  };
+      @Override
+      public int getHttpLoadQueuePeonBatchSize()
+      {
+        return 2;
+      }
+    };
+  }
 
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception

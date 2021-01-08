@@ -79,6 +79,27 @@ public interface BalancerStrategy
   );
 
   /**
+   * Pick the best segment to move from one of the supplied set of servers according to the balancing strategy.
+   * @param serverHolders set of historicals to consider for moving segments
+   * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
+   *                             Balancing strategies should avoid rebalancing segments for such datasources, since
+   *                             they should be loaded on all servers anyway.
+   *                             NOTE: this should really be handled on a per-segment basis, to properly support
+   *                                   the interval or period-based broadcast rules. For simplicity of the initial
+   *                                   implementation, only forever broadcast rules are supported.
+   * @param params {@link DruidCoordinatorRuntimeParams} object with Coordinator params.
+   *
+   * @return {@link BalancerSegmentHolder} containing segment to move and server it currently resides on, or null if
+   *         there are no segments to pick from (i. e. all provided serverHolders are empty).
+   */
+  @Nullable
+  BalancerSegmentHolder pickSegmentToMove(
+      List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      DruidCoordinatorRuntimeParams params
+  );
+
+  /**
    * Returns an iterator for a set of servers to drop from, ordered by preference of which server to drop from first
    * for a given drop strategy. One or more segments may be dropped, depending on how much the segment is
    * over-replicated.

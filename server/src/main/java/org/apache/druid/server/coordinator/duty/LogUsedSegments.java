@@ -51,6 +51,14 @@ public class LogUsedSegments implements CoordinatorDuty
       log.debug("Used Segments");
       for (DataSegment dataSegment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
         log.debug("  %s", dataSegment);
+        // Log the guilds used for each used segment
+        if (params.isGuildReplicationEnabled() && params.getSegmentReplicantLookup() != null) {
+          log.debug("GuildReplication{"
+                    + "segmentId=" + dataSegment.getId()
+                    + ", guildSet=" + params.getSegmentReplicantLookup().getGuildSetForSegment(dataSegment.getId())
+                    + "}"
+          );
+        }
       }
     }
 

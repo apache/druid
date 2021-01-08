@@ -58,6 +58,7 @@ public class BalanceSegmentsProfiler
   MetadataRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, ImmutableMap.of("normal", 3));
   List<Rule> rules = ImmutableList.of(loadRule);
+  private boolean guildReplicationEnabled = false;
 
   @Before
   public void setUp()
@@ -135,7 +136,7 @@ public class BalanceSegmentsProfiler
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder(druidCluster)
+        .newBuilder(druidCluster, guildReplicationEnabled)
         .withLoadManagementPeons(peonMap)
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(

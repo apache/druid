@@ -405,9 +405,9 @@ public class DataSourcesResourceTest
   @Test
   public void testSimpleGetTheDataSourceWithReplicatedSegments()
   {
-    server = new DruidServer("server1", "host1", null, 1234, ServerType.HISTORICAL, "tier1", 0);
-    DruidServer server2 = new DruidServer("server2", "host2", null, 1234, ServerType.HISTORICAL, "tier2", 0);
-    DruidServer server3 = new DruidServer("server3", "host3", null, 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("server1", "host1", null, 1234, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD);
+    DruidServer server2 = new DruidServer("server2", "host2", null, 1234, ServerType.HISTORICAL, "tier2", 0, DruidServer.DEFAULT_GUILD);
+    DruidServer server3 = new DruidServer("server3", "host3", null, 1234, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD);
 
     server.addDataSegment(dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1));
@@ -456,7 +456,7 @@ public class DataSourcesResourceTest
   @Test
   public void testGetSegmentDataSourceIntervals()
   {
-    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD);
     server.addDataSegment(dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2));
@@ -519,7 +519,7 @@ public class DataSourcesResourceTest
   @Test
   public void testGetServedSegmentsInIntervalInDataSource()
   {
-    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0, DruidServer.DEFAULT_GUILD);
     server.addDataSegment(dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2));
@@ -1454,7 +1454,7 @@ public class DataSourcesResourceTest
 
   private DruidServerMetadata createServerMetadata(String name, ServerType type)
   {
-    return new DruidServerMetadata(name, name, null, 10000, type, "tier", 1);
+    return new DruidServerMetadata(name, name, null, 10000, type, "tier", 1, DruidServer.DEFAULT_GUILD);
   }
 
   private DataSegment createSegment(Interval interval, String version, int partitionNumber)

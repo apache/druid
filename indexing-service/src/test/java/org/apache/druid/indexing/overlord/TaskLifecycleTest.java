@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
@@ -672,7 +673,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0, DruidServer.DEFAULT_GUILD),
         new NoopTestTaskReportFileWriter(),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
