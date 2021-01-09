@@ -37,7 +37,6 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler.Status;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler.Status.STATE;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
