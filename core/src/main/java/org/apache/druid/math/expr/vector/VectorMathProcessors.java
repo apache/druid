@@ -21,7 +21,6 @@ package org.apache.druid.math.expr.vector;
 
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
-import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Exprs;
@@ -1993,13 +1992,55 @@ public class VectorMathProcessors
           @Override
           public long apply(double input)
           {
-            return ~Evals.doubleToLongBits(input);
+            return ~((long) input);
           }
         }
     );
   }
 
-  public static <T> ExprVectorProcessor<T> bitwiseConvertDouble(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static <T> ExprVectorProcessor<T> bitwiseConvertDoubleToLongBits(
+      Expr.VectorInputBindingInspector inspector,
+      Expr arg
+  )
+  {
+    final ExprType inputType = arg.getOutputType(inspector);
+
+    ExprVectorProcessor<?> processor = null;
+    if (inputType == ExprType.LONG) {
+      processor = new LongOutLongInFunctionVectorProcessor(
+          arg.buildVectorized(inspector),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public long apply(long input)
+        {
+          return Double.doubleToLongBits(input);
+        }
+      };
+    } else if (inputType == ExprType.DOUBLE) {
+      processor = new LongOutDoubleInFunctionVectorProcessor(
+          arg.buildVectorized(inspector),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public long apply(double input)
+        {
+          return Double.doubleToLongBits(input);
+        }
+      };
+    }
+    if (processor == null) {
+      throw Exprs.cannotVectorize();
+    }
+    return (ExprVectorProcessor<T>) processor;
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseConvertLongBitsToDouble(
+      Expr.VectorInputBindingInspector inspector,
+      Expr arg
+  )
   {
     final ExprType inputType = arg.getOutputType(inspector);
 
@@ -2013,19 +2054,19 @@ public class VectorMathProcessors
         @Override
         public double apply(long input)
         {
-          return Evals.longBitsToDouble(input);
+          return Double.longBitsToDouble(input);
         }
       };
     } else if (inputType == ExprType.DOUBLE) {
-      processor = new LongOutDoubleInFunctionVectorProcessor(
+      processor = new DoubleOutDoubleInFunctionVectorProcessor(
           arg.buildVectorized(inspector),
           inspector.getMaxVectorSize()
       )
       {
         @Override
-        public long apply(double input)
+        public double apply(double input)
         {
-          return Evals.doubleToLongBits(input);
+          return Double.longBitsToDouble((long) input);
         }
       };
     }
@@ -2062,7 +2103,7 @@ public class VectorMathProcessors
           @Override
           public long apply(long left, double right)
           {
-            return left & Evals.doubleToLongBits(right);
+            return left & (long) right;
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorProcessor(
@@ -2074,7 +2115,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, long right)
           {
-            return Evals.doubleToLongBits(left) & right;
+            return (long) left & right;
           }
         },
         () -> new LongOutDoublesInFunctionVectorProcessor(
@@ -2086,7 +2127,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, double right)
           {
-            return Evals.doubleToLongBits(left) & Evals.doubleToLongBits(right);
+            return (long) left & (long) right;
           }
         }
     );
@@ -2119,7 +2160,7 @@ public class VectorMathProcessors
           @Override
           public long apply(long left, double right)
           {
-            return left | Evals.doubleToLongBits(right);
+            return left | (long) right;
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorProcessor(
@@ -2131,7 +2172,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, long right)
           {
-            return Evals.doubleToLongBits(left) | right;
+            return (long) left | right;
           }
         },
         () -> new LongOutDoublesInFunctionVectorProcessor(
@@ -2143,7 +2184,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, double right)
           {
-            return Evals.doubleToLongBits(left) | Evals.doubleToLongBits(right);
+            return (long) left | (long) right;
           }
         }
     );
@@ -2176,7 +2217,7 @@ public class VectorMathProcessors
           @Override
           public long apply(long left, double right)
           {
-            return left ^ Evals.doubleToLongBits(right);
+            return left ^ (long) right;
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorProcessor(
@@ -2188,7 +2229,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, long right)
           {
-            return Evals.doubleToLongBits(left) ^ right;
+            return (long) left ^ right;
           }
         },
         () -> new LongOutDoublesInFunctionVectorProcessor(
@@ -2200,7 +2241,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, double right)
           {
-            return Evals.doubleToLongBits(left) ^ Evals.doubleToLongBits(right);
+            return (long) left ^ (long) right;
           }
         }
     );
@@ -2237,7 +2278,7 @@ public class VectorMathProcessors
           @Override
           public long apply(long left, double right)
           {
-            return left << Evals.doubleToLongBits(right);
+            return left << (long) right;
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorProcessor(
@@ -2249,7 +2290,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, long right)
           {
-            return Evals.doubleToLongBits(left) << right;
+            return (long) left << right;
           }
         },
         () -> new LongOutDoublesInFunctionVectorProcessor(
@@ -2261,7 +2302,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, double right)
           {
-            return Evals.doubleToLongBits(left) << Evals.doubleToLongBits(right);
+            return (long) left << (long) right;
           }
         }
     );
@@ -2298,7 +2339,7 @@ public class VectorMathProcessors
           @Override
           public long apply(long left, double right)
           {
-            return left >> Evals.doubleToLongBits(right);
+            return left >> (long) right;
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorProcessor(
@@ -2310,7 +2351,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, long right)
           {
-            return Evals.doubleToLongBits(left) >> right;
+            return (long) left >> right;
           }
         },
         () -> new LongOutDoublesInFunctionVectorProcessor(
@@ -2322,7 +2363,7 @@ public class VectorMathProcessors
           @Override
           public long apply(double left, double right)
           {
-            return Evals.doubleToLongBits(left) >> Evals.doubleToLongBits(right);
+            return (long) left >> (long) right;
           }
         }
     );

@@ -139,7 +139,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "toRadians",
         "ulp",
         "bitwiseComplement",
-        "bitwiseConvertDouble"
+        "bitwiseConvertDoubleToLongBits",
+        "bitwiseConvertLongBitsToDouble"
     };
     final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())"};
     testFunctions(types, templates, functions);

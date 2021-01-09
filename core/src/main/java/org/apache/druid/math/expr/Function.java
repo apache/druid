@@ -327,9 +327,7 @@ public interface Function
       if (type == ExprType.STRING) {
         return ExprEval.of(null);
       }
-      final long xlong = ExprType.DOUBLE.equals(x.type()) ? Evals.doubleToLongBits(x.asDouble()) : x.asLong();
-      final long ylong = ExprType.DOUBLE.equals(y.type()) ? Evals.doubleToLongBits(y.asDouble()) : y.asLong();
-      return eval(xlong, ylong);
+      return eval(x.asLong(), y.asLong());
     }
 
     protected abstract ExprEval eval(long x, long y);
@@ -782,24 +780,18 @@ public interface Function
     }
 
     @Override
-    protected ExprEval eval(double param)
-    {
-      return ExprEval.of(~Evals.doubleToLongBits(param));
-    }
-
-    @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorMathProcessors.bitwiseComplement(inspector, args.get(0));
     }
   }
 
-  class BitwiseConvertDouble extends UnivariateMathFunction
+  class BitwiseConvertLongBitsToDouble extends UnivariateMathFunction
   {
     @Override
     public String name()
     {
-      return "bitwiseConvertDouble";
+      return "bitwiseConvertLongBitsToDouble";
     }
 
     @Nullable
@@ -810,28 +802,51 @@ public interface Function
       if (type == null) {
         return null;
       }
-      if (type == ExprType.LONG) {
-        return ExprType.DOUBLE;
-      }
-      return ExprType.LONG;
+      return ExprType.DOUBLE;
     }
 
     @Override
     protected ExprEval eval(long param)
     {
-      return ExprEval.of(Evals.longBitsToDouble(param));
-    }
-
-    @Override
-    protected ExprEval eval(double param)
-    {
-      return ExprEval.of(Evals.doubleToLongBits(param));
+      return ExprEval.of(Double.longBitsToDouble(param));
     }
 
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseConvertDouble(inspector, args.get(0));
+      return VectorMathProcessors.bitwiseConvertLongBitsToDouble(inspector, args.get(0));
+    }
+  }
+
+  class BitwiseConvertDoubleToLongBits extends UnivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseConvertDoubleToLongBits";
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExprType type = args.get(0).getOutputType(inspector);
+      if (type == null) {
+        return null;
+      }
+      return ExprType.LONG;
+    }
+
+    @Override
+    protected ExprEval eval(double param)
+    {
+      return ExprEval.of(Double.doubleToLongBits(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseConvertDoubleToLongBits(inspector, args.get(0));
     }
   }
 

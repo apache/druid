@@ -534,14 +534,24 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseAnd('2', '1')", null);
     assertExpr("bitwiseAnd(2, '1')", 0L);
 
-    assertExpr("bitwiseOr(2.345, 1)", 4612462889363109315L);
-    assertExpr("bitwiseAnd(2.345, 2.0)", 4611686018427387904L);
+    // doubles are cast
+    assertExpr("bitwiseOr(2.345, 1)", 3L);
+    assertExpr("bitwiseOr(2, 1.3)", 3L);
+    assertExpr("bitwiseAnd(2.345, 2.0)", 2L);
+
+    // but can be converted to be double-like
     assertExpr(
-        "bitwiseAnd(bitwiseConvertDouble(2.345), bitwiseConvertDouble(2.0))",
+        "bitwiseAnd(bitwiseConvertDoubleToLongBits(2.345), bitwiseConvertDoubleToLongBits(2.0))",
         4611686018427387904L
     );
-    assertExpr("bitwiseConvertDouble(bitwiseAnd(2.345, 2.0))", 2.0);
-    assertExpr("bitwiseConvertDouble(2.0)", 4611686018427387904L);
+    assertExpr(
+        "bitwiseConvertLongBitsToDouble(bitwiseAnd(bitwiseConvertDoubleToLongBits(2.345), bitwiseConvertDoubleToLongBits(2.0)))",
+        2.0
+    );
+    assertExpr("bitwiseConvertDoubleToLongBits(2.0)", 4611686018427387904L);
+    assertExpr("bitwiseConvertDoubleToLongBits(bitwiseConvertDoubleToLongBits(2.0))", 4886405595696988160L);
+    assertExpr("bitwiseConvertLongBitsToDouble(4611686018427387904)", 2.0);
+    assertExpr("bitwiseConvertLongBitsToDouble(bitwiseConvertLongBitsToDouble(4611686018427387904))", 1.0E-323);
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
