@@ -59,6 +59,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -398,6 +399,7 @@ public class AppenderatorImpl implements Appenderator
     Sink retVal = sinks.get(identifier);
 
     if (retVal == null) {
+      bytesCurrentlyInMemory.addAndGet(Sink.ROUGH_OVERHEAD_PER_SINK);
       retVal = new Sink(
           identifier.getInterval(),
           schema,
@@ -527,7 +529,16 @@ public class AppenderatorImpl implements Appenderator
       }
 
       if (sink.swappable()) {
+        // After swapping the sink, we use memory mapped segment instead. However, the memory mapped segment still consumes memory.
+        // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
+        // These calculations are approximated from actual heap dumps.
+        // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
+        // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
+        int memoryStillInUse = Integer.BYTES + (4 * Short.BYTES) + 7000 + sink.getCurrHydrant().getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
+        bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
+
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
+
       }
     }
 

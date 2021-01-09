@@ -56,6 +56,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
+  // Rough estimate of memory footprint of empty Sink (excluding hydrant index)
+  public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
+
   private static final IncrementalIndexAddResult ALREADY_SWAPPED =
       new IncrementalIndexAddResult(-1, -1, "write after index swapped");
 
