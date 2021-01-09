@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
@@ -230,8 +231,8 @@ public class InputSourceSampler
         .withRollup(dataSchema.getGranularitySpec().isRollup())
         .build();
 
-    return new IncrementalIndex.Builder().setIndexSchema(schema)
+    return new OnheapIncrementalIndex.Builder().setIndexSchema(schema)
                                          .setMaxRowCount(samplerConfig.getNumRows())
-                                         .buildOnheap();
+                                         .build();
   }
 }
