@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 public interface ColumnHolder
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
-  int ROUGH_OVERHEAD_PER_COLUMN_HOLDER = 1300;
+  int ROUGH_OVERHEAD_PER_COLUMN_HOLDER = 1000;
   String TIME_COLUMN_NAME = "__time";
   String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
 

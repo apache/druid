@@ -534,7 +534,7 @@ public class AppenderatorImpl implements Appenderator
         // These calculations are approximated from actual heap dumps.
         // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
         // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
-        int memoryStillInUse = Integer.BYTES + (4 * Short.BYTES) + 7000 + sink.getCurrHydrant().getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
+        int memoryStillInUse = Integer.BYTES + (4 * Short.BYTES) + 1000 + sink.getCurrHydrant().getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
         bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
 
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
