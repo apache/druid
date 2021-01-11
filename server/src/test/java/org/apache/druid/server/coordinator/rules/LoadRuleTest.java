@@ -913,7 +913,7 @@ public class LoadRuleTest
    * Drop will always happen on default guild to retain guild distribution.
    */
   @Test
-  public void testDropTwoGuilds()
+  public void testDropMultipleGuilds()
   {
     final LoadQueuePeon mockPeon1 = new LoadQueuePeonTester();
     final LoadQueuePeon mockPeon2 = new LoadQueuePeonTester();
