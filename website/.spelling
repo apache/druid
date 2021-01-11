@@ -1663,6 +1663,7 @@ TrustManager
 TuningConfig
 _N_
 _default
+_default_guild
 _default_tier
 addr
 affinityConfig
