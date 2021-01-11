@@ -132,12 +132,6 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   }
 
   @Override
-  public int getNumColumns()
-  {
-    return columns.size();
-  }
-
-  @Override
   public List<String> getColumnNames()
   {
     return columnNames;

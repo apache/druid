@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -27,6 +28,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -75,10 +77,9 @@ public class FireHydrant
   {
     final Segment segment = adapter.get().getBaseSegment();
     if (segment != null) {
-      final QueryableIndex index = segment.asQueryableIndex();
-      if (index != null) {
-        return index.getNumColumns();
-      }
+      final StorageAdapter storageAdapter = segment.asStorageAdapter();
+      // Adds 1 for the time column
+      return 1 + storageAdapter.getAvailableDimensions().size() + Iterables.size(storageAdapter.getAvailableMetrics());
     }
     return 0;
   }

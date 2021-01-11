@@ -399,7 +399,6 @@ public class AppenderatorImpl implements Appenderator
     Sink retVal = sinks.get(identifier);
 
     if (retVal == null) {
-      bytesCurrentlyInMemory.addAndGet(Sink.ROUGH_OVERHEAD_PER_SINK);
       retVal = new Sink(
           identifier.getInterval(),
           schema,
@@ -410,6 +409,7 @@ public class AppenderatorImpl implements Appenderator
           maxBytesTuningConfig,
           null
       );
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -534,7 +534,7 @@ public class AppenderatorImpl implements Appenderator
         // These calculations are approximated from actual heap dumps.
         // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
         // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
-        int memoryStillInUse = Integer.BYTES + (4 * Short.BYTES) + 1000 + sink.getCurrHydrant().getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
+        int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
         bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
 
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
@@ -1184,6 +1184,10 @@ public class AppenderatorImpl implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      for (FireHydrant hydrant : sink) {
+        bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+      }
       totalRows.addAndGet(-sink.getNumRows());
     }
 
@@ -1392,5 +1396,15 @@ public class AppenderatorImpl implements Appenderator
            .emit();
       }
     }
+  }
+
+  private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
+  {
+    return Integer.BYTES + (4 * Short.BYTES) + 1000 + hydrant.getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
+  }
+
+  private int calculateSinkMemoryInUsed(Sink sink)
+  {
+    return Sink.ROUGH_OVERHEAD_PER_SINK;
   }
 }
