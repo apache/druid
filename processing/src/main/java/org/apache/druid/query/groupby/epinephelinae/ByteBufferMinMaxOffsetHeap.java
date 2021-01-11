@@ -43,6 +43,7 @@ public class ByteBufferMinMaxOffsetHeap
   private final LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
 
   private int heapSize;
+  private int maxHeapSize;
 
   public ByteBufferMinMaxOffsetHeap(
       ByteBuffer buf,
@@ -69,6 +70,9 @@ public class ByteBufferMinMaxOffsetHeap
     int pos = heapSize;
     buf.putInt(pos * Integer.BYTES, offset);
     heapSize++;
+    if (heapSize > maxHeapSize) {
+      maxHeapSize = heapSize;
+    }
 
     if (heapIndexUpdater != null) {
       heapIndexUpdater.updateHeapIndexForOffset(offset, pos);
@@ -492,7 +496,7 @@ public class ByteBufferMinMaxOffsetHeap
   @Override
   public String toString()
   {
-    if (heapSize == 0) {
+    if (heapSize == 0 && maxHeapSize == 0) {
       return "[]";
     }
 
@@ -500,6 +504,14 @@ public class ByteBufferMinMaxOffsetHeap
     for (int i = 0; i < heapSize; i++) {
       ret.append(buf.getInt(i * Integer.BYTES));
       if (i < heapSize - 1) {
+        ret.append(", ");
+      }
+    }
+
+    ret.append("] backing-array:[");
+    for (int i = 0; i < maxHeapSize; i++) {
+      ret.append(buf.getInt(i * Integer.BYTES));
+      if (i < maxHeapSize - 1) {
         ret.append(", ");
       }
     }
