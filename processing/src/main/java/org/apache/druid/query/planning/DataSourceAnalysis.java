@@ -82,14 +82,14 @@ public class DataSourceAnalysis
   @Nullable
   private final Query<?> baseQuery;
   @Nullable
-  private final DimFilter joinBaseFilter;
+  private final DimFilter joinBaseTableFilter;
   private final List<PreJoinableClause> preJoinableClauses;
 
   private DataSourceAnalysis(
       DataSource dataSource,
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
-      @Nullable DimFilter joinBaseFilter,
+      @Nullable DimFilter joinBaseTableFilter,
       List<PreJoinableClause> preJoinableClauses
   )
   {
@@ -102,13 +102,13 @@ public class DataSourceAnalysis
     this.dataSource = dataSource;
     this.baseDataSource = baseDataSource;
     this.baseQuery = baseQuery;
-    this.joinBaseFilter = joinBaseFilter;
+    this.joinBaseTableFilter = joinBaseTableFilter;
     this.preJoinableClauses = preJoinableClauses;
   }
 
   public static DataSourceAnalysis forDataSource(final DataSource dataSource)
   {
-    // Strip outer queries, retaining querySegmentSpecs as we go down (lowest will become the 'baseQuerySegmentSpec').
+    // Strip outer queries, retaining querySegmentSpecs as we go down (lowest will become the 'baseQuerySegmentSpec'o).
     Query<?> baseQuery = null;
     DataSource current = dataSource;
 
@@ -148,6 +148,9 @@ public class DataSourceAnalysis
     while (current instanceof JoinDataSource) {
       final JoinDataSource joinDataSource = (JoinDataSource) current;
       current = joinDataSource.getLeft();
+      if (currentDimFilter != null) {
+        throw new IAE("Left filters are only allowed when left child is direct table access");
+      }
       currentDimFilter = joinDataSource.getLeftFilter();
       preJoinableClauses.add(
           new PreJoinableClause(
@@ -225,9 +228,9 @@ public class DataSourceAnalysis
    * If the original data source is a join data source and there is a DimFilter on the base table data source,
    * that DimFilter is returned here
    */
-  public Optional<DimFilter> getJoinBaseFilter()
+  public Optional<DimFilter> getJoinBaseTableFilter()
   {
-    return Optional.ofNullable(joinBaseFilter);
+    return Optional.ofNullable(joinBaseTableFilter);
   }
 
   /**

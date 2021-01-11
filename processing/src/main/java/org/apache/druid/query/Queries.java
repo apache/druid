@@ -193,7 +193,7 @@ public class Queries
       final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
       DataSource current = newBaseDataSource;
-      DimFilter joinBaseFilter = analysis.getJoinBaseFilter().orElse(null);
+      DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
       for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
         current = JoinDataSource.create(

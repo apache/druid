@@ -60,6 +60,8 @@ public class JoinDataSource implements DataSource
   private final String rightPrefix;
   private final JoinConditionAnalysis conditionAnalysis;
   private final JoinType joinType;
+  // An optional filter on the left side if left is direct table access
+  @Nullable
   private final DimFilter leftFilter;
 
   private JoinDataSource(
@@ -68,7 +70,7 @@ public class JoinDataSource implements DataSource
       String rightPrefix,
       JoinConditionAnalysis conditionAnalysis,
       JoinType joinType,
-      DimFilter leftFilter
+      @Nullable DimFilter leftFilter
   )
   {
     this.left = Preconditions.checkNotNull(left, "left");

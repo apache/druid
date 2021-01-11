@@ -120,15 +120,15 @@ public class Filtration
     );
   }
 
+  /**
+   * Only pulls the intervals out of any filters on time column. The intervals can be used as {@link QuerySegmentSpec}.
+   */
   public Filtration pullIntervals()
   {
     return transform(
         this,
         ImmutableList.of(
-            CombineAndSimplifyBounds.instance(),
-            MoveTimeFiltersToIntervals.instance(),
-            MoveMarkerFiltersToIntervals.instance(),
-            ValidateNoMarkerFiltersRemain.instance()
+            MoveTimeFiltersToIntervals.instance()
         )
     );
   }

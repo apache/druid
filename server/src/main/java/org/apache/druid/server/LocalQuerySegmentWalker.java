@@ -96,7 +96,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseFilter().map(Filters::toFilter).orElse(null),
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuAccumulator,
         analysis.getBaseQuery().orElse(query)

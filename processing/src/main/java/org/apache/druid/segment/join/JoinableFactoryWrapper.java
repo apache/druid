@@ -106,7 +106,8 @@ public class JoinableFactoryWrapper
   }
 
   /**
-   * Compute a cache key prefix for data sources that participate in the RHS of a join. This key prefix
+   * Compute a cache key prefix for a join data source. This includes the data sources that participate in the RHS of a
+   * join as well as any query specific constructs associated with join data source such as base table filter. This key prefix
    * can be used in segment level cache or result level cache. The function can return following wrapped in an
    * Optional
    * - Non-empty byte array - If there is join datasource involved and caching is possible. The result includes
@@ -129,8 +130,8 @@ public class JoinableFactoryWrapper
 
     final CacheKeyBuilder keyBuilder;
     keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
-    if (dataSourceAnalysis.getJoinBaseFilter().isPresent()) {
-      keyBuilder.appendCacheable(dataSourceAnalysis.getJoinBaseFilter().get());
+    if (dataSourceAnalysis.getJoinBaseTableFilter().isPresent()) {
+      keyBuilder.appendCacheable(dataSourceAnalysis.getJoinBaseTableFilter().get());
     }
     for (PreJoinableClause clause : clauses) {
       Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
