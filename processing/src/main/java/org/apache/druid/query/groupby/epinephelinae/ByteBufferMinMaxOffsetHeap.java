@@ -63,6 +63,7 @@ public class ByteBufferMinMaxOffsetHeap
   public void reset()
   {
     heapSize = 0;
+    maxHeapSize = 0;
   }
 
   public int addOffset(int offset)
