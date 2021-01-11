@@ -40,6 +40,7 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
@@ -134,7 +135,7 @@ import java.util.stream.Collectors;
  * @param <PartitionIdType>    Partition Number Type
  * @param <SequenceOffsetType> Sequence Number Type
  */
-public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> implements ChatHandler
+public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> implements ChatHandler
 {
   public enum Status
   {
@@ -193,7 +194,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected final Lock pollRetryLock = new ReentrantLock();
   protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
-  private final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task;
+  private final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task;
   private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
   private final InputRowSchema inputRowSchema;
@@ -232,7 +233,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Throwable backgroundThreadException;
 
   public SeekableStreamIndexTaskRunner(
-      final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task,
+      final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
       final LockGranularity lockGranularityToUse
@@ -370,7 +371,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
 
     // Now we can initialize StreamChunkReader with the given toolbox.
-    final StreamChunkParser parser = new StreamChunkParser(
+    final StreamChunkParser parser = new StreamChunkParser<RecordType>(
         this.parser,
         inputFormat,
         inputRowSchema,
@@ -412,7 +413,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
 
     Throwable caughtExceptionOuter = null;
-    try (final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier = task.newTaskRecordSupplier()) {
+    try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier = task.newTaskRecordSupplier()) {
 
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
@@ -600,7 +601,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
           // are handled in the subclasses.
-          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> records = getRecords(
+          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> records = getRecords(
               recordSupplier,
               toolbox
           );
@@ -609,7 +610,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           stillReading = !assignment.isEmpty();
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
-          for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record : records) {
+          for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record : records) {
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
             log.trace(
@@ -621,8 +622,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
 
             if (shouldProcess) {
-              final List<byte[]> valueBytess = record.getData();
-              final List<InputRow> rows = parser.parse(valueBytess);
+              final List<InputRow> rows = parser.parse(record.getData());
               boolean isPersistRequired = false;
 
               final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToUse = sequences
@@ -1112,7 +1112,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   private Set<StreamPartition<PartitionIdType>> assignPartitions(
-      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier
   )
   {
     final Set<StreamPartition<PartitionIdType>> assignment = new HashSet<>();
@@ -1230,7 +1230,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   private void seekToStartingSequence(
-      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
       Set<StreamPartition<PartitionIdType>> partitions
   ) throws InterruptedException
   {
@@ -1914,8 +1914,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @throws Exception
    */
   @NotNull
-  protected abstract List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> getRecords(
-      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
+  protected abstract List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> getRecords(
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
       TaskToolbox toolbox
   ) throws Exception;
 
@@ -1945,7 +1945,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    */
   protected abstract void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
       Set<StreamPartition<PartitionIdType>> assignment
   );
 

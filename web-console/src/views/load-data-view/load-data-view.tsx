@@ -40,6 +40,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
+import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
 import React from 'react';
 
@@ -208,11 +209,11 @@ function showRawLine(line: SampleEntry): string {
 
 function showDruidLine(line: SampleEntry): string {
   if (!line.parsed) return 'No parse';
-  return `Druid row: ${JSON.stringify(line.parsed)}`;
+  return `Druid row: ${JSONBig.stringify(line.parsed)}`;
 }
 
 function showBlankLine(line: SampleEntry): string {
-  return line.parsed ? `[Row: ${JSON.stringify(line.parsed)}]` : '[Binary data]';
+  return line.parsed ? `[Row: ${JSONBig.stringify(line.parsed)}]` : '[Binary data]';
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
@@ -496,7 +497,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       deltaState.cacheRows = undefined;
     }
     this.setState(deltaState as LoadDataViewState);
-    localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
+    localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(newSpec));
   };
 
   private updateSpecPreview = (newSpecPreview: IngestionSpec) => {
@@ -505,7 +506,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private applyPreviewSpec = () => {
     this.setState(({ spec, specPreview }) => {
-      localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(specPreview));
+      localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(specPreview));
       return { spec: spec === specPreview ? Object.assign({}, specPreview) : specPreview }; // If applying again, make a shallow copy to force a refresh
     });
   };
