@@ -147,6 +147,16 @@ source_paths:
 
 ---
 
+name: AWS RDS SDK for Java
+license_category: source
+module: extensions/druid-aws-rds-extensions
+license_name: Apache License version 2.0
+version: 1.11.199
+libraries:
+  - com.amazonaws: aws-java-sdk-rds
+
+---
+
 name: LDAP string encoding function from OWASP ESAPI
 license_category: source
 module: extensions/druid-basic-security
@@ -1001,7 +1011,7 @@ name: org.bouncycastle bcprov-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.66
+version: 1.68
 libraries:
   - org.bouncycastle: bcprov-jdk15on
 
@@ -4813,7 +4823,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 0.19.0
+version: 0.21.1
 license_file_path: licenses/bin/axios.MIT
 
 ---

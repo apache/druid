@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 import { deepDelete, deepExtend, deepGet, deepSet, makePath, parsePath } from './object-change';
 
 describe('object-change', () => {
@@ -136,7 +138,7 @@ describe('object-change', () => {
     });
 
     it('works with arrays', () => {
-      expect(JSON.parse(JSON.stringify(deepDelete(thing, 'hello.wow.0')))).toEqual({
+      expect(JSON.parse(JSONBig.stringify(deepDelete(thing, 'hello.wow.0')))).toEqual({
         hello: {
           moon: 1,
           wow: [

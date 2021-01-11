@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -5268,7 +5269,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected RecordSupplier<String, String> setupRecordSupplier()
+    protected RecordSupplier<String, String, ByteEntity> setupRecordSupplier()
     {
       return supervisorRecordSupplier;
     }
