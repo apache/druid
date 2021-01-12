@@ -224,12 +224,12 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     try {
-      cachePathsIfNeeded();
+      Collection<Path> paths = Preconditions.checkNotNull(getPaths(inputPaths, configuration), "paths");
+      securityConfig.validateURIAccess(paths.stream().map(path -> path.toUri()).collect(Collectors.toList()));
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    securityConfig.validateURIAccess(cachedPaths.stream().map(path -> path.toUri()).collect(Collectors.toList()));
   }
 
   static Builder builder()
