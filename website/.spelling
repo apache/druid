@@ -1092,7 +1092,8 @@ atan
 atan2
 bitwiseAnd
 bitwiseComplement
-bitwiseConvertDouble
+bitwiseConvertDoubleToLongBits
+bitwiseConvertLongBitsToDouble
 bitwiseOr
 bitwiseShiftLeft
 bitwiseShiftRight
