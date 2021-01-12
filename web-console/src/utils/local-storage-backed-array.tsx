@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
 export class LocalStorageBackedArray<T> {
@@ -43,7 +45,7 @@ export class LocalStorageBackedArray<T> {
   }
 
   private setDataInStorage(): void {
-    localStorageSet(this.key, JSON.stringify(this.storedArray));
+    localStorageSet(this.key, JSONBig.stringify(this.storedArray));
   }
 
   toggle(value: T): LocalStorageBackedArray<T> {

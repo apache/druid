@@ -18,6 +18,7 @@
 
 import { Button, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import Hjson from 'hjson';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { QueryContext } from '../../utils/query-context';
@@ -43,7 +44,7 @@ export const EditContextDialog = React.memo(function EditContextDialog(
   const [state, setState] = useState<EditContextDialogState>(() => ({
     queryContext: props.queryContext,
     queryContextString: Object.keys(props.queryContext).length
-      ? JSON.stringify(props.queryContext, undefined, 2)
+      ? JSONBig.stringify(props.queryContext, undefined, 2)
       : '{\n\n}',
   }));
 
