@@ -503,7 +503,7 @@ public class AppenderatorImpl implements Appenderator
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     throwPersistErrorIfExists();
-
+    long bytesInMemoryBeforePersist = bytesCurrentlyInMemory.get();
     final Map<String, Integer> currentHydrants = new HashMap<>();
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
@@ -531,9 +531,6 @@ public class AppenderatorImpl implements Appenderator
       if (sink.swappable()) {
         // After swapping the sink, we use memory mapped segment instead. However, the memory mapped segment still consumes memory.
         // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
-        // These calculations are approximated from actual heap dumps.
-        // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
-        // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
         int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
         bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
 
@@ -628,6 +625,19 @@ public class AppenderatorImpl implements Appenderator
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
+
+    // bytesCurrentlyInMemory can change while persisting due to concurrent ingestion.
+    // Hence, we use bytesInMemoryBeforePersist to determine the change of this persist
+    if (bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
+      // We are still over maxBytesTuningConfig even after persisting.
+      // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
+      log.makeAlert("Persist no longer free up memory")
+         .addData("dataSource", schema.getDataSource())
+         .addData("numSinks", sinks.size())
+         .addData("numHydrantsAcrossAllSinks", sinks.values().stream().mapToInt(Iterables::size).sum())
+         .emit();
+      throw new RuntimeException("Ingestion run out of available memory as persist can no longer free up memory.");
+    }
     return future;
   }
 
@@ -1400,11 +1410,15 @@ public class AppenderatorImpl implements Appenderator
 
   private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
   {
+    // These calculations are approximated from actual heap dumps.
+    // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
+    // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
     return Integer.BYTES + (4 * Short.BYTES) + 1000 + hydrant.getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
   }
 
   private int calculateSinkMemoryInUsed(Sink sink)
   {
+    // Rough estimate of memory footprint of empty Sink based on actual heap dumps
     return Sink.ROUGH_OVERHEAD_PER_SINK;
   }
 }
