@@ -25,22 +25,20 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.segment.indexing.LookupIntervalBuckets;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeSet;
 
 public class ArbitraryGranularitySpec implements GranularitySpec
 {
-  private final TreeSet<Interval> intervals;
+  private final LookupIntervalBuckets buckets;
   private final Granularity queryGranularity;
   private final Boolean rollup;
 
@@ -53,17 +51,16 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   {
     this.queryGranularity = queryGranularity == null ? Granularities.NONE : queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
-    this.intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
 
     if (inputIntervals == null) {
       inputIntervals = new ArrayList<>();
     }
 
     // Insert all intervals
-    intervals.addAll(inputIntervals);
+    buckets = new LookupIntervalBuckets(inputIntervals);
 
     // Ensure intervals are non-overlapping (but they may abut each other)
-    final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(intervals.iterator());
+    final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(buckets.iterator());
     while (intervalIterator.hasNext()) {
       final Interval currentInterval = intervalIterator.next();
 
@@ -88,26 +85,19 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   @JsonProperty("intervals")
   public Iterable<Interval> bucketIntervals()
   {
-    return () -> intervals.iterator();
+    return () -> buckets.iterator();
   }
 
   @Override
   public List<Interval> inputIntervals()
   {
-    return ImmutableList.copyOf(intervals);
+    return ImmutableList.copyOf(buckets.iterator());
   }
 
   @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
-    // First interval with start time ≤ dt
-    final Interval interval = intervals.floor(new Interval(dt, DateTimes.MAX));
-
-    if (interval != null && interval.contains(dt)) {
-      return Optional.of(interval);
-    } else {
-      return Optional.absent();
-    }
+    return buckets.bucketInterval(dt);
   }
 
   @Override
@@ -142,7 +132,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
 
     ArbitraryGranularitySpec that = (ArbitraryGranularitySpec) o;
 
-    if (!intervals.equals(that.intervals)) {
+    if (!inputIntervals().equals(that.inputIntervals())) {
       return false;
     }
     if (!rollup.equals(that.rollup)) {
@@ -158,7 +148,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   @Override
   public int hashCode()
   {
-    int result = intervals.hashCode();
+    int result = inputIntervals().hashCode();
     result = 31 * result + rollup.hashCode();
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
     return result;
@@ -168,7 +158,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   public String toString()
   {
     return "ArbitraryGranularitySpec{" +
-           "intervals=" + intervals +
+           "intervals=" + inputIntervals() +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
            '}';

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
+import org.apache.druid.segment.indexing.LookupIntervalBuckets;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -42,6 +43,7 @@ public class UniformGranularitySpec implements GranularitySpec
   private final Boolean rollup;
   private final List<Interval> inputIntervals;
   private final IntervalsByGranularity intervalsByGranularity;
+  private final LookupIntervalBuckets buckets;
 
   @JsonCreator
   public UniformGranularitySpec(
@@ -61,6 +63,7 @@ public class UniformGranularitySpec implements GranularitySpec
       this.inputIntervals = Collections.emptyList();
     }
     intervalsByGranularity = new IntervalsByGranularity(this.inputIntervals, segmentGranularity);
+    buckets = new LookupIntervalBuckets(bucketIntervals());
   }
 
 
@@ -88,25 +91,7 @@ public class UniformGranularitySpec implements GranularitySpec
   @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
-    // find largest interval with start time <= dt:
-    Interval floor = null;
-    Interval previous = null;
-    for (Interval interval : bucketIntervals()) {
-      if (dt.getMillis() < interval.getStartMillis()) {
-        floor = previous;
-        break;
-      }
-      previous = interval;
-    }
-    floor = floor == null ? previous : floor;
-
-    // now check if the given date time is included in the floor interval:
-    if (floor != null && floor.contains(dt)) {
-      return Optional.of(floor);
-    } else {
-      return Optional.absent();
-    }
-
+    return buckets.bucketInterval(dt);
   }
 
   @Override
