@@ -32,6 +32,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.Result;
@@ -221,10 +222,40 @@ public class AppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test(expected = RuntimeException.class)
+  public void testTaskShouldFailAsPersistCannotFreeAnyMoreMemory() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 300, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+    }
+  }
+
   @Test
   public void testMaxBytesInMemoryInMultipleSinks() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 6000, true)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 10300, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -543,7 +574,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testVerifyRowIngestionMetrics() throws Exception
   {
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    try (final AppenderatorTester tester = new AppenderatorTester(5, 1000L, null, false, rowIngestionMeters)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(5, 10000L, null, false, rowIngestionMeters)) {
       final Appenderator appenderator = tester.getAppenderator();
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", "invalid_met"), Committers.nilSupplier());

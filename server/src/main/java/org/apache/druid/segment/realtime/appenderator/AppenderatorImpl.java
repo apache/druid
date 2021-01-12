@@ -636,7 +636,7 @@ public class AppenderatorImpl implements Appenderator
          .addData("numSinks", sinks.size())
          .addData("numHydrantsAcrossAllSinks", sinks.values().stream().mapToInt(Iterables::size).sum())
          .emit();
-      throw new RuntimeException("Ingestion run out of available memory as persist can no longer free up memory.");
+      throw new RuntimeException("Ingestion run out of available memory as persist can no longer free up any memory.");
     }
     return future;
   }
@@ -1413,7 +1413,8 @@ public class AppenderatorImpl implements Appenderator
     // These calculations are approximated from actual heap dumps.
     // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
-    return Integer.BYTES + (4 * Short.BYTES) + 1000 + hydrant.getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
+    return Integer.BYTES + (4 * Short.BYTES) + FireHydrant.ROUGH_OVERHEAD_PER_HYDRANT +
+           hydrant.getSegmentNumColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER;
   }
 
   private int calculateSinkMemoryInUsed(Sink sink)
