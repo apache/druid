@@ -32,6 +32,7 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -42,6 +43,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
+  @VisibleForTesting
+  static final String DOWNLOAD_START_MARKER_FILE_NAME = "downloadStartMarker";
+
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
 
   private final IndexIO indexIO;
@@ -133,6 +137,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return findStorageLocationIfLoaded(segment) != null;
   }
 
+  @Nullable
   private StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
   {
     for (StorageLocation location : locations) {
@@ -168,7 +173,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private boolean checkSegmentFilesIntactWithStartMarker(File localStorageDir)
   {
-    final File downloadStartMarker = new File(localStorageDir.getPath(), "downloadStartMarker");
+    final File downloadStartMarker = new File(localStorageDir.getPath(), DOWNLOAD_START_MARKER_FILE_NAME);
     return downloadStartMarker.exists();
   }
 
@@ -271,7 +276,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   {
     // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
     // the parent directories of the segment are removed
-    final File downloadStartMarker = new File(storageDir, "downloadStartMarker");
+    final File downloadStartMarker = new File(storageDir, DOWNLOAD_START_MARKER_FILE_NAME);
     synchronized (directoryWriteRemoveLock) {
       if (!storageDir.mkdirs()) {
         log.debug("Unable to make parent file[%s]", storageDir);
