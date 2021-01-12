@@ -80,6 +80,11 @@ public class UniformGranularityTest
 
 
     Assert.assertEquals(
+        Optional.<Interval>absent(),
+        spec.bucketInterval(DateTimes.of("2011-01-12T00Z"))
+    );
+
+    Assert.assertEquals(
         Optional.of(Intervals.of("2012-01-01T00Z/2012-01-02T00Z")),
         spec.bucketInterval(DateTimes.of("2012-01-01T00Z"))
     );
