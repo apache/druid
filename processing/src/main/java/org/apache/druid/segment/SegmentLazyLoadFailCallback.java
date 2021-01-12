@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.coordination;
+package org.apache.druid.segment;
 
 public interface SegmentLazyLoadFailCallback
 {

@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;

@@ -27,7 +27,6 @@ import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import org.apache.druid.segment.loading.SegmentLoadingException;

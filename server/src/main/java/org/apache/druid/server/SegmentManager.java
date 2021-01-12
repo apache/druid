@@ -31,7 +31,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;

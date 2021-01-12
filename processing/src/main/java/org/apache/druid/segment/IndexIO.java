@@ -53,7 +53,6 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;

@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;

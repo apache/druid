@@ -42,7 +42,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.BroadcastTableJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;

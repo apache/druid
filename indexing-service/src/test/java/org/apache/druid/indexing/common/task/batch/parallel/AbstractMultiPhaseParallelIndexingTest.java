@@ -51,7 +51,7 @@ import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;

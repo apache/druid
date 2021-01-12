@@ -46,7 +46,7 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import org.apache.druid.segment.loading.SegmentLoadingException;

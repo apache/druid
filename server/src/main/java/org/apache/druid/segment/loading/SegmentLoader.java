@@ -20,7 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;

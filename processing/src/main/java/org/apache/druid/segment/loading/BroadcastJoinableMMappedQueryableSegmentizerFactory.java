@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.coordination.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.join.table.BroadcastSegmentIndexedTable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.DataSegment;
