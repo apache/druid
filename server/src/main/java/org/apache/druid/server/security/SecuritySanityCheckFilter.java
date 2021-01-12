@@ -21,8 +21,6 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.server.DruidNode;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
