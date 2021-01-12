@@ -60,10 +60,7 @@ public class UniformGranularitySpec implements GranularitySpec
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
 
     if (inputIntervals != null) {
-      // sort them
-      List<Interval> sortedInputIntervals = new ArrayList<>(inputIntervals);
-      sortedInputIntervals.sort(Comparators.intervalsByStartThenEnd());
-      this.inputIntervals = ImmutableList.copyOf(sortedInputIntervals);
+      this.inputIntervals = ImmutableList.copyOf(inputIntervals);
     } else {
       this.inputIntervals = Collections.emptyList();
     }

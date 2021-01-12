@@ -42,9 +42,9 @@ import java.util.SortedSet;
 public interface GranularitySpec
 {
   /**
-   * Set of all time groups, broken up on segment boundaries. Should be sorted by interval start and non-overlapping.
+   * Iterable all time groups, broken up on segment boundaries. Should be sorted by interval start and non-overlapping.
    *
-   * @return set of all time groups
+   * @return Iterable of all time groups
    */
   Iterable<Interval> bucketIntervals();
 

@@ -22,6 +22,7 @@ package org.apache.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -44,18 +45,25 @@ public class UniformGranularityTest
   @Test
   public void testSimple()
   {
+
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
     final GranularitySpec spec = new UniformGranularitySpec(
         Granularities.DAY,
         null,
-        Lists.newArrayList(
-            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
-            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
-            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
-            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
-        )
+        inputIntervals
     );
 
     Assert.assertTrue(spec.isRollup());
+
+    Assert.assertEquals(
+        inputIntervals,
+        Lists.newArrayList(spec.inputIntervals())
+    );
 
     Assert.assertEquals(
         Lists.newArrayList(
@@ -286,10 +294,15 @@ public class UniformGranularityTest
         Granularities.SECOND,
         null,
         Lists.newArrayList(
-            Intervals.of("2012-01-08T00-08:00/P10Y")
+            Intervals.of("2012-01-01T00Z/P10Y")
         )
     );
+
     Assert.assertTrue(spec != null);
+
+    int count = Iterators.size(spec.bucketIntervals().iterator());
+    // account for three leap years...
+    Assert.assertEquals(3600 * 24 * 365 * 10 + 3 * 24 * 3600, count);
   }
 
   private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2)
