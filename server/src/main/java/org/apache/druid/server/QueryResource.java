@@ -19,6 +19,8 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -40,13 +42,17 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.BadJsonQueryException;
+import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -70,6 +76,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
@@ -347,6 +354,11 @@ public class QueryResource implements QueryCountStatsProvider
       queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotUnsupported(unsupported);
     }
+    catch (BadJsonQueryException | ResourceLimitExceededException e) {
+      interruptedQueryCount.incrementAndGet();
+      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+      return ioReaderWriter.gotBadQuery(e);
+    }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
       // send an error response if this is thrown.
@@ -375,7 +387,13 @@ public class QueryResource implements QueryCountStatsProvider
       final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    Query baseQuery = ioReaderWriter.getInputMapper().readValue(in, Query.class);
+    Query baseQuery;
+    try {
+      baseQuery = ioReaderWriter.getInputMapper().readValue(in, Query.class);
+    }
+    catch (JsonParseException e) {
+      throw new BadJsonQueryException(e);
+    }
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
@@ -463,36 +481,36 @@ public class QueryResource implements QueryCountStatsProvider
 
     Response gotError(Exception e) throws IOException
     {
-      return Response.serverError()
-                     .type(contentType)
-                     .entity(
-                         newOutputWriter(null, null, false)
-                             .writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e))
-                     )
-                     .build();
+      return buildNonOkResponse(
+          Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+          QueryInterruptedException.wrapIfNeeded(e)
+      );
     }
 
     Response gotTimeout(QueryTimeoutException e) throws IOException
     {
-      return Response.status(QueryTimeoutException.STATUS_CODE)
-                     .type(contentType)
-                     .entity(
-                         newOutputWriter(null, null, false)
-                             .writeValueAsBytes(e)
-                     )
-                     .build();
+      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, e);
     }
 
     Response gotLimited(QueryCapacityExceededException e) throws IOException
     {
-      return Response.status(QueryCapacityExceededException.STATUS_CODE)
-                     .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
-                     .build();
+      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, e);
     }
 
     Response gotUnsupported(QueryUnsupportedException e) throws IOException
     {
-      return Response.status(QueryUnsupportedException.STATUS_CODE)
+      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, e);
+    }
+
+    Response gotBadQuery(BadQueryException e) throws IOException
+    {
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
+    }
+
+    Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
+    {
+      return Response.status(status)
+                     .type(contentType)
                      .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
                      .build();
     }

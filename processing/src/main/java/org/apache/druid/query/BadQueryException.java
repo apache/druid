@@ -20,12 +20,16 @@
 package org.apache.druid.query;
 
 /**
- * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
+ * An abstract class for all query exceptions that should return a bad request status code (404).
+ *
+ * See {@code BadRequestException} for non-query requests.
  */
-public class InsufficientResourcesException extends RuntimeException
+public abstract class BadQueryException extends QueryException
 {
-  public InsufficientResourcesException(String message)
+  public static final int STATUS_CODE = 400;
+
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
-    super(message);
+    super(errorCode, errorMessage, errorClass, null);
   }
 }

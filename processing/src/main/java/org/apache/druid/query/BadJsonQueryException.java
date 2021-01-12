@@ -17,18 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server.initialization.jetty;
+package org.apache.druid.query;
 
-/**
- * This class is for any exceptions that should return a bad request status code (404).
- * See {@code BadQueryException} for query requests.
- *
- * @see BadRequestExceptionMapper
- */
-public class BadRequestException extends RuntimeException
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParseException;
+
+public class BadJsonQueryException extends BadQueryException
 {
-  public BadRequestException(String msg)
+  public static final String ERROR_CODE = "Json parse failed";
+  public static final String ERROR_CLASS = JsonParseException.class.getName();
+
+  public BadJsonQueryException(JsonParseException e)
   {
-    super(msg);
+    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
+  }
+
+  @JsonCreator
+  private BadJsonQueryException(
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass
+  )
+  {
+    super(errorCode, errorMessage, errorClass);
   }
 }

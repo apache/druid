@@ -41,19 +41,12 @@ public class SecuritySanityCheckFilter implements Filter
 
   private final String unauthorizedMessage;
 
-  public SecuritySanityCheckFilter(
-      ObjectMapper jsonMapper
-  )
+  public SecuritySanityCheckFilter(ObjectMapper jsonMapper)
   {
     try {
-      QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-          QueryInterruptedException.UNAUTHORIZED,
-          null,
-          null,
-          DruidNode.getDefaultHost()
-      );
-      unauthorizedError.setStackTrace(new StackTraceElement[0]);
-      this.unauthorizedMessage = jsonMapper.writeValueAsString(unauthorizedError);
+      ForbiddenException forbiddenException = new ForbiddenException();
+      forbiddenException.setStackTrace(new StackTraceElement[0]);
+      this.unauthorizedMessage = jsonMapper.writeValueAsString(forbiddenException);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
