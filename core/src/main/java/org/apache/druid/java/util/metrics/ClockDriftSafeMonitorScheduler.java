@@ -58,21 +58,21 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
   {
     monitor.start();
     long rate = getConfig().getEmitterPeriod().getMillis();
-    final AtomicReference<Future<?>> scheduleFutureReference = new AtomicReference<>();
-    Future<?> scheduledFuture = monitorScheduler.scheduleAtFixedRate(
+    final AtomicReference<Future<?>> futureReference = new AtomicReference<>();
+    Future<?> future = monitorScheduler.scheduleAtFixedRate(
         rate,
         rate,
         TimeUnit.MILLISECONDS,
         new CronTask()
         {
-          private Future<?> scheduleFuture = null;
+          private Future<?> cancellationFuture = null;
           private Future<Boolean> monitorFuture = null;
 
           @Override
           public void run(long scheduledRunTimeMillis)
           {
             waitForScheduleFutureToBeSet();
-            if (scheduleFuture == null) {
+            if (cancellationFuture == null) {
               LOG.error("scheduleFuture is not set. Can't run monitor[%s]", monitor.getClass().getName());
               return;
             }
@@ -111,10 +111,10 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
 
           private void waitForScheduleFutureToBeSet()
           {
-            if (scheduleFuture == null) {
+            if (cancellationFuture == null) {
               while (!Thread.currentThread().isInterrupted()) {
-                if (scheduleFutureReference.get() != null) {
-                  scheduleFuture = scheduleFutureReference.get();
+                if (futureReference.get() != null) {
+                  cancellationFuture = futureReference.get();
                   break;
                 }
               }
@@ -124,11 +124,11 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
           private void stopMonitor(Monitor monitor)
           {
             removeMonitor(monitor);
-            scheduleFuture.cancel(false);
+            cancellationFuture.cancel(false);
             LOG.debug("Stopped monitor[%s]", monitor.getClass().getName());
           }
         }
     );
-    scheduleFutureReference.set(scheduledFuture);
+    futureReference.set(future);
   }
 }
