@@ -26,9 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Iterator;
 import java.util.List;
-import java.util.SortedSet;
 
 /**
  * Tells the indexer how to group events based on timestamp. The events may then be further partitioned based
@@ -59,7 +57,6 @@ public interface GranularitySpec
    * Time-grouping interval corresponding to some instant, if any.
    *
    * @param dt instant to return time interval for
-   *
    * @return optional time interval
    */
   Optional<Interval> bucketInterval(DateTime dt);

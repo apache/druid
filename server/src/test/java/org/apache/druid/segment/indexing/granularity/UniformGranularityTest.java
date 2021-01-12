@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class UniformGranularityTest
@@ -314,7 +315,7 @@ public class UniformGranularityTest
     final GranularitySpec spec = new UniformGranularitySpec(
         Granularities.SECOND,
         null,
-        Lists.newArrayList(
+        Collections.singletonList(
             Intervals.of("2012-01-01T00Z/P10Y")
         )
     );
