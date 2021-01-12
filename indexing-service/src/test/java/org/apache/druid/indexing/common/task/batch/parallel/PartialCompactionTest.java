@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -229,8 +228,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     return new Builder(
         DATASOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
   }
 }

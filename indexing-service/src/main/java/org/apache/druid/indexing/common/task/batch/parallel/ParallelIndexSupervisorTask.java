@@ -179,7 +179,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject InputSourceSecurityConfig securityConfig
-      )
+  )
   {
     super(
         getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
@@ -356,6 +356,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
+    InputSource inputSource = getIngestionSchema().getIOConfig().getNonNullInputSource(
+        getIngestionSchema().getDataSchema().getParser()
+    );
+    inputSource.validateAllowDenyPrefixList(securityConfig);
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 

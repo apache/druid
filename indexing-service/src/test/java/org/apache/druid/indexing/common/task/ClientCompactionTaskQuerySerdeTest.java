@@ -197,8 +197,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
         new SegmentLoaderFactory(null, mapper),
-        new RetryPolicyFactory(new RetryPolicyConfig()),
-        InputSourceSecurityConfig.ALLOW_ALL
+        new RetryPolicyFactory(new RetryPolicyConfig())
     );
     final CompactionTask task = builder
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
