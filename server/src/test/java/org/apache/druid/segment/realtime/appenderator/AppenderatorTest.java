@@ -158,7 +158,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxBytesInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 5365, true)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 5360, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
