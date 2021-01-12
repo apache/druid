@@ -23,15 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -44,7 +41,6 @@ public class UniformGranularitySpec implements GranularitySpec
   private final Granularity queryGranularity;
   private final Boolean rollup;
   private final List<Interval> inputIntervals;
-  private ArbitraryGranularitySpec wrappedSpec;
   private final IntervalsByGranularity intervalsByGranularity;
 
   @JsonCreator
@@ -92,11 +88,25 @@ public class UniformGranularitySpec implements GranularitySpec
   @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
-    if (getWrappedSpec() == null) {
-      return Optional.absent();
-    } else {
-      return getWrappedSpec().bucketInterval(dt);
+    // find largest interval with start time <= dt:
+    Interval floor = null;
+    Interval previous = null;
+    for (Interval interval : bucketIntervals()) {
+      if (dt.getMillis() < interval.getStartMillis()) {
+        floor = previous;
+        break;
+      }
+      previous = interval;
     }
+    floor = floor == null ? previous : floor;
+
+    // now check if the given date time is included in the floor interval:
+    if (floor != null && floor.contains(dt)) {
+      return Optional.of(floor);
+    } else {
+      return Optional.absent();
+    }
+
   }
 
   @Override
@@ -181,18 +191,6 @@ public class UniformGranularitySpec implements GranularitySpec
   public GranularitySpec withIntervals(List<Interval> inputIntervals)
   {
     return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals);
-  }
-
-  private ArbitraryGranularitySpec getWrappedSpec()
-  {
-    if (!inputIntervals.isEmpty() && wrappedSpec == null) {
-      List<Interval> granularIntervals = new ArrayList<>();
-      for (Interval inputInterval : inputIntervals) {
-        Iterables.addAll(granularIntervals, this.segmentGranularity.getIterable(inputInterval));
-      }
-      this.wrappedSpec = new ArbitraryGranularitySpec(queryGranularity, rollup, granularIntervals);
-    }
-    return wrappedSpec;
   }
 
 }

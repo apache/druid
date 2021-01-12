@@ -81,6 +81,16 @@ public class ArbitraryGranularityTest
     );
 
     Assert.assertEquals(
+        Optional.of(Intervals.of("2012-01-01T00Z/2012-01-03T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-01T00Z"))
+    );
+
+    Assert.assertEquals(
+        Optional.of(Intervals.of("2012-01-08T00Z/2012-01-11T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-08T00Z"))
+    );
+
+    Assert.assertEquals(
         "2012-01-03T00Z",
         Optional.of(Intervals.of("2012-01-03T00Z/2012-01-04T00Z")),
         spec.bucketInterval(DateTimes.of("2012-01-03T00Z"))

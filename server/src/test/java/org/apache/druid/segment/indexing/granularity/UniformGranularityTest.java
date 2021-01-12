@@ -78,6 +78,22 @@ public class UniformGranularityTest
         Lists.newArrayList(spec.bucketIntervals())
     );
 
+
+    Assert.assertEquals(
+        Optional.of(Intervals.of("2012-01-01T00Z/2012-01-02T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-01T00Z"))
+    );
+
+    Assert.assertEquals(
+        Optional.of(Intervals.of("2012-01-10T00Z/2012-01-11T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-10T00Z"))
+    );
+
+    Assert.assertEquals(
+        Optional.<Interval>absent(),
+        spec.bucketInterval(DateTimes.of("2012-01-12T00Z"))
+    );
+
     Assert.assertEquals(
         "2012-01-03T00Z",
         Optional.of(Intervals.of("2012-01-03T00Z/2012-01-04T00Z")),
