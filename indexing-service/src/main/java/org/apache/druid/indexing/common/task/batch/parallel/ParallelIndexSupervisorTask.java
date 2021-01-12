@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -36,6 +37,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -167,14 +169,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
+  private final InputSourceSecurityConfig securityConfig;
+
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
       @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") Map<String, Object> context
-  )
+      @JsonProperty("context") Map<String, Object> context,
+      @JacksonInject InputSourceSecurityConfig securityConfig
+      )
   {
     super(
         getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
@@ -201,6 +206,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
+    this.securityConfig = securityConfig;
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -957,7 +963,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getIngestionSchema().getIOConfig(),
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
-        getContext()
+        getContext(),
+        securityConfig
     );
 
     if (currentSubTaskHolder.setTask(indexTask) && indexTask.isReady(toolbox.getTaskActionClient())) {

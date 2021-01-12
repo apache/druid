@@ -510,7 +510,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         null,
         null,
         ingestionSpec,
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        InputSourceSecurityConfig.ALLOW_ALL
     );
   }
 

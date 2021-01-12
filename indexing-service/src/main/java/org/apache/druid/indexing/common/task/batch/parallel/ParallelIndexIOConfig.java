@@ -46,7 +46,7 @@ public class ParallelIndexIOConfig extends IndexIOConfig
       @JacksonInject InputSourceSecurityConfig securityConfig
   )
   {
-    super(firehoseFactory, inputSource, inputFormat, appendToExisting, securityConfig);
+    super(firehoseFactory, inputSource, inputFormat, appendToExisting);
   }
 
   // old constructor for backward compatibility

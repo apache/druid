@@ -248,7 +248,8 @@ public class ParallelIndexSupervisorTaskTest
           null,
           null,
           indexIngestionSpec,
-          null
+          null,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
     }
   }

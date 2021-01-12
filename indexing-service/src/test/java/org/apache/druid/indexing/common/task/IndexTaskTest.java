@@ -223,7 +223,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     Assert.assertFalse(indexTask.supportsQueries());
@@ -325,7 +326,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         indexIngestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
@@ -417,7 +419,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(10, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -452,7 +455,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(50, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -483,7 +487,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 1, null), true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -525,7 +530,8 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -565,7 +571,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")), true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -637,7 +644,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, false),
             true
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
@@ -685,7 +693,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -751,7 +760,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -807,7 +817,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -852,7 +863,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -895,7 +907,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(3, 2, null, 2L, null, true, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -937,7 +950,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(3, 2, null, 2L, null, false, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1019,7 +1033,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         parseExceptionIgnoreSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1075,7 +1090,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         indexIngestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1177,7 +1193,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1308,7 +1325,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1430,7 +1448,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1529,7 +1548,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1601,7 +1621,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1646,7 +1667,8 @@ public class IndexTaskTest extends IngestionTestBase
               createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
-          null
+          null,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
 
       final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1710,7 +1732,8 @@ public class IndexTaskTest extends IngestionTestBase
               createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
-          null
+          null,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
 
       final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1745,7 +1768,8 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithPartitionsSpec(new SingleDimensionPartitionsSpec(null, 1, null, false), true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage(
@@ -1970,8 +1994,7 @@ public class IndexTaskTest extends IngestionTestBase
               null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
-              appendToExisting,
-              InputSourceSecurityConfig.ALLOW_ALL
+              appendToExisting
           ),
           tuningConfig
       );
@@ -2003,8 +2026,7 @@ public class IndexTaskTest extends IngestionTestBase
                   "druid*",
                   null
               ),
-              appendToExisting,
-              InputSourceSecurityConfig.ALLOW_ALL
+              appendToExisting
           ),
           tuningConfig
       );

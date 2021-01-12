@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.NoopFirehoseFactory;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
@@ -61,8 +60,7 @@ public class IndexIngestionSpecTest
             null,
             new NoopInputSource(),
             new NoopInputFormat(),
-            null,
-            InputSourceSecurityConfig.ALLOW_ALL
+            null
         ),
         null
     );
@@ -86,8 +84,7 @@ public class IndexIngestionSpecTest
             null,
             new NoopInputSource(),
             null,
-            null,
-            InputSourceSecurityConfig.ALLOW_ALL
+            null
         ),
         null
     );
@@ -113,8 +110,7 @@ public class IndexIngestionSpecTest
             new NoopFirehoseFactory(),
             new NoopInputSource(),
             null,
-            null,
-            InputSourceSecurityConfig.ALLOW_ALL
+            null
         ),
         null
     );
@@ -138,8 +134,7 @@ public class IndexIngestionSpecTest
             new NoopFirehoseFactory(),
             null,
             new NoopInputFormat(),
-            null,
-            InputSourceSecurityConfig.ALLOW_ALL
+            null
         ),
         null
     );

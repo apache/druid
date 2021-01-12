@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -158,6 +157,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private final IndexIngestionSpec ingestionSchema;
 
+  private final InputSourceSecurityConfig securityConfig;
+
   private IngestionState ingestionState;
 
   @MonotonicNonNull
@@ -184,7 +185,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context
+      @JsonProperty("context") final Map<String, Object> context,
+      InputSourceSecurityConfig securityConfig
   )
   {
     this(
@@ -193,7 +195,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
         ingestionSchema,
-        context
+        context,
+        securityConfig
     );
   }
 
@@ -203,7 +206,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       TaskResource resource,
       String dataSource,
       IndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      InputSourceSecurityConfig securityConfig
   )
   {
     super(
@@ -215,6 +219,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     );
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.securityConfig = securityConfig;
   }
 
   @Override
@@ -233,6 +238,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("partitionsSpec[%s] is not supported", tuningConfig.getPartitionsSpec().getClass().getName());
       }
     }
+    InputSource inputSource = getIngestionSchema().getIOConfig().getNonNullInputSource(
+        getIngestionSchema().getDataSchema().getParser()
+    );
+    inputSource.validateAllowDenyPrefixList(securityConfig);
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec());
   }
 
@@ -1032,15 +1041,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final InputSource inputSource;
     private final InputFormat inputFormat;
     private final boolean appendToExisting;
-    private final InputSourceSecurityConfig securityConfig;
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
-        @JacksonInject InputSourceSecurityConfig securityConfig
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1049,21 +1056,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (firehoseFactory != null && inputFormat != null) {
         throw new IAE("Cannot use firehose and inputFormat together. Try using inputSource instead of firehose.");
       }
-      if (inputSource != null) {
-        inputSource.validateAllowDenyPrefixList(securityConfig);
-      }
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
-      this.securityConfig = securityConfig;
     }
 
     // old constructor for backward compatibility
     @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, InputSourceSecurityConfig securityConfig)
+    public IndexIOConfig(
+        FirehoseFactory firehoseFactory,
+        @Nullable Boolean appendToExisting
+    )
     {
-      this(firehoseFactory, null, null, appendToExisting, securityConfig);
+      this(firehoseFactory, null, null, appendToExisting);
     }
 
     @Nullable
@@ -1102,7 +1108,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             (FiniteFirehoseFactory) firehoseFactory,
             inputRowParser
         );
-        inputSource.validateAllowDenyPrefixList(securityConfig);
         return inputSource;
       } else {
         return inputSource;

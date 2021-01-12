@@ -613,7 +613,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           taskResource,
           ingestionSchema,
-          context
+          context,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
     }
   }

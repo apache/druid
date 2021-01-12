@@ -763,7 +763,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -789,7 +789,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             )
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -845,7 +846,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
+            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -871,7 +872,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             )
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1272,7 +1274,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1298,7 +1300,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             )
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final long startTime = System.currentTimeMillis();
@@ -1381,7 +1384,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, InputSourceSecurityConfig.ALLOW_ALL),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1407,7 +1410,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             )
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());

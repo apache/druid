@@ -220,8 +220,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -267,8 +266,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -344,8 +342,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask1 = builder
@@ -417,8 +414,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -456,7 +452,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final Future<Pair<TaskStatus, List<DataSegment>>> compactionFuture = exec.submit(
@@ -511,8 +508,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     // day segmentGranularity
@@ -561,8 +557,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -603,8 +598,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -656,8 +650,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -767,13 +760,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     segmentLoaderFactory,
                     RETRY_POLICY_FACTORY
                 ),
-                false,
-                InputSourceSecurityConfig.ALLOW_ALL
-
+                false
             ),
             IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     // This is a regular index so we need to explicitly add this context to store the CompactionState
@@ -844,7 +836,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             appendToExisting
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     return runTask(indexTask, readyLatchToCountDown, latchToAwaitBeforeRun);

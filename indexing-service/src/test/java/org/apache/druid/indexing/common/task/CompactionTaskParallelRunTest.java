@@ -137,8 +137,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -170,8 +169,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -200,8 +198,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -230,8 +227,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -258,8 +254,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -287,8 +282,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -333,8 +327,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Builder builder = new Builder(
         DATA_SOURCE,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        InputSourceSecurityConfig.ALLOW_ALL
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -439,7 +432,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             ioConfig,
             tuningConfig
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     runTask(indexTask);

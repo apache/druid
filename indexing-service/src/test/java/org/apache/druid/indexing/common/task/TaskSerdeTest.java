@@ -246,8 +246,8 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true,
-                              InputSourceSecurityConfig.ALLOW_ALL),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true
+            ),
             new IndexTuningConfig(
                 null,
                 null,
@@ -273,7 +273,8 @@ public class TaskSerdeTest
                 null
             )
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -329,8 +330,8 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true,
-                              InputSourceSecurityConfig.ALLOW_ALL),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true
+            ),
             new IndexTuningConfig(
                 null,
                 null,
@@ -356,7 +357,8 @@ public class TaskSerdeTest
                 null
             )
         ),
-        null
+        null,
+        InputSourceSecurityConfig.ALLOW_ALL
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {

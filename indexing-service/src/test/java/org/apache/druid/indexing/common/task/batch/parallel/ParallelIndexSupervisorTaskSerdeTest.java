@@ -183,7 +183,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
           null,
           taskResource,
           ingestionSpec,
-          context
+          context,
+          InputSourceSecurityConfig.ALLOW_ALL
       );
     }
   }

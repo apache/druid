@@ -246,7 +246,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         null,
         null,
         ingestionSpec,
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        InputSourceSecurityConfig.ALLOW_ALL
     );
   }
 

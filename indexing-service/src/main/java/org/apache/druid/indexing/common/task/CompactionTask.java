@@ -351,8 +351,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         segmentGranularity,
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
-        retryPolicyFactory,
-        securityConfig
+        retryPolicyFactory
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -424,7 +423,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         getGroupId(),
         getTaskResource(),
         ingestionSpec,
-        createContextForSubtask()
+        createContextForSubtask(),
+        InputSourceSecurityConfig.ALLOW_ALL
     );
   }
 
