@@ -1090,6 +1090,7 @@ array_to_string
 asin
 atan
 atan2
+bitwise
 bitwiseAnd
 bitwiseComplement
 bitwiseConvertDoubleToLongBits
