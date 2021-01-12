@@ -26,13 +26,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
 
 public class UniformGranularitySpec implements GranularitySpec
 {
@@ -44,6 +45,7 @@ public class UniformGranularitySpec implements GranularitySpec
   private final Boolean rollup;
   private final List<Interval> inputIntervals;
   private ArbitraryGranularitySpec wrappedSpec;
+  private final IntervalsByGranularity intervalsByGranularity;
 
   @JsonCreator
   public UniformGranularitySpec(
@@ -58,10 +60,14 @@ public class UniformGranularitySpec implements GranularitySpec
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
 
     if (inputIntervals != null) {
-      this.inputIntervals = ImmutableList.copyOf(inputIntervals);
+      // sort them
+      List<Interval> sortedInputIntervals = new ArrayList<>(inputIntervals);
+      sortedInputIntervals.sort(Comparators.intervalsByStartThenEnd());
+      this.inputIntervals = ImmutableList.copyOf(sortedInputIntervals);
     } else {
       this.inputIntervals = Collections.emptyList();
     }
+    intervalsByGranularity = new IntervalsByGranularity(this.inputIntervals, segmentGranularity);
   }
 
 
@@ -75,13 +81,9 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public Optional<SortedSet<Interval>> bucketIntervals()
+  public Iterable<Interval> bucketIntervals()
   {
-    if (getWrappedSpec() == null) {
-      return Optional.absent();
-    } else {
-      return getWrappedSpec().bucketIntervals();
-    }
+    return () -> intervalsByGranularity.granularityIntervalsIterator();
   }
 
   @Override

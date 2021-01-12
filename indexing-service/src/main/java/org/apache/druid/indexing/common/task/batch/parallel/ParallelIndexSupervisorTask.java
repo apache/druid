@@ -27,6 +27,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -109,7 +110,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1039,7 +1039,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
+    final Iterable<Interval> bucketIntervals = granularitySpec.bucketIntervals();
 
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
     final List<TaskLock> locks = toolbox
@@ -1055,7 +1055,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Interval interval;
     String version;
-    if (bucketIntervals.isPresent()) {
+    if (bucketIntervals.iterator().hasNext()) {
       // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
       // This is because we should have gotten all required locks up front when the task starts up.
       final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
@@ -1064,7 +1064,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
 
       interval = maybeInterval.get();
-      if (!bucketIntervals.get().contains(interval)) {
+      if (!Iterators.contains(bucketIntervals.iterator(), interval)) {
         throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
       }
 

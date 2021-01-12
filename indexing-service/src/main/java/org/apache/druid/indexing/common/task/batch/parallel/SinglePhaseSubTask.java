@@ -98,7 +98,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
    * the segment granularity of existing segments until the task reads all data because we don't know what segments
    * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
    * are missing and force to use timeChunk lock.
-   *
+   * <p>
    * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
    * in the task logs.
    */
@@ -135,7 +135,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
                                            && !ingestionSchema.getDataSchema()
                                                               .getGranularitySpec()
                                                               .bucketIntervals()
-                                                              .isPresent();
+                                                              .iterator()
+                                                              .hasNext();
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
@@ -263,7 +264,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
    * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
-   *
+   * <p>
    * At the end of this method, all the remaining segments are published.
    *
    * @return true if generated segments are successfully published, otherwise false
@@ -291,7 +292,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
-    final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
+    final boolean explicitIntervals = granularitySpec.bucketIntervals().iterator().hasNext();
     final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
         toolbox,
         getId(),

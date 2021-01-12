@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -45,7 +46,7 @@ public interface GranularitySpec
    *
    * @return set of all time groups
    */
-  Optional<SortedSet<Interval>> bucketIntervals();
+  Iterable<Interval> bucketIntervals();
 
   /**
    * Returns user provided intervals as-is state. used for configuring granular path spec

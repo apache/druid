@@ -35,8 +35,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class ArbitraryGranularitySpec implements GranularitySpec
@@ -87,9 +87,9 @@ public class ArbitraryGranularitySpec implements GranularitySpec
 
   @Override
   @JsonProperty("intervals")
-  public Optional<SortedSet<Interval>> bucketIntervals()
+  public Iterable<Interval> bucketIntervals()
   {
-    return Optional.of(intervals);
+    return () -> intervals.iterator();
   }
 
   @Override

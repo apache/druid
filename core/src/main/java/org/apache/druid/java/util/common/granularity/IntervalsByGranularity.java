@@ -15,6 +15,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -43,7 +44,12 @@ public class IntervalsByGranularity
 
   public Iterator<Interval> granularityIntervalsIterator()
   {
-    IntervalIterator ite = new IntervalIterator(sortedIntervals);
+    Iterator<Interval> ite;
+    if (sortedIntervals.isEmpty()) {
+      ite = Collections.emptyIterator();
+    } else {
+      ite = new IntervalIterator(sortedIntervals);
+    }
     return ite;
   }
 

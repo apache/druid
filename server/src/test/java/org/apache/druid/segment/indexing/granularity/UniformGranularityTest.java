@@ -21,6 +21,7 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,7 +36,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
 
 public class UniformGranularityTest
 {
@@ -67,7 +67,7 @@ public class UniformGranularityTest
             Intervals.of("2012-01-09T00Z/P1D"),
             Intervals.of("2012-01-10T00Z/P1D")
         ),
-        Lists.newArrayList(spec.bucketIntervals().get())
+        Lists.newArrayList(spec.bucketIntervals())
     );
 
     Assert.assertEquals(
@@ -133,8 +133,8 @@ public class UniformGranularityTest
       final GranularitySpec rtSpec = JOSN_MAPPER.readValue(JOSN_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals(
           "Round-trip bucketIntervals",
-          spec.bucketIntervals(),
-          rtSpec.bucketIntervals()
+          ImmutableList.copyOf(spec.bucketIntervals()),
+          ImmutableList.copyOf(rtSpec.bucketIntervals().iterator())
       );
       Assert.assertEquals(
           "Round-trip granularity",
@@ -253,10 +253,9 @@ public class UniformGranularityTest
         )
     );
 
-    Assert.assertTrue(spec.bucketIntervals().isPresent());
+    Assert.assertTrue(spec.bucketIntervals().iterator().hasNext());
 
-    final Optional<SortedSet<Interval>> sortedSetOptional = spec.bucketIntervals();
-    final SortedSet<Interval> intervals = sortedSetOptional.get();
+    final Iterable<Interval> intervals = spec.bucketIntervals();
     ArrayList<Long> actualIntervals = new ArrayList<>();
     for (Interval interval : intervals) {
       actualIntervals.add(interval.toDurationMillis());
