@@ -179,6 +179,21 @@ public class CombiningInputSourceTest
                   .verify();
   }
 
+  @Test
+  public void testValidateAllowDenyPrefixList()
+  {
+    SplittableInputSource delegate = EasyMock.createStrictMock(SplittableInputSource.class);
+    delegate.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
+    EasyMock.expectLastCall().times(2);
+    EasyMock.replay(delegate);
+    final CombiningInputSource combiningInputSource = new CombiningInputSource(ImmutableList.of(
+        delegate,
+        delegate
+    ));
+    combiningInputSource.validateAllowDenyPrefixList(InputSourceSecurityConfig.ALLOW_ALL);
+    EasyMock.verify(delegate);
+  }
+
   private static List<File> generateFiles(int numFiles)
   {
     final List<File> files = new ArrayList<>();

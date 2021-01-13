@@ -1614,6 +1614,7 @@ GiB
 8u60
 Autoscaler
 AvaticaConnectionBalancer
+cloudfiles
 EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace

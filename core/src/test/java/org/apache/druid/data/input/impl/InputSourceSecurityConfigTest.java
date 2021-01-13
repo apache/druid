@@ -20,10 +20,13 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.net.URI;
+import java.util.Collection;
 import java.util.Collections;
 
 public class InputSourceSecurityConfigTest
@@ -92,6 +95,7 @@ public class InputSourceSecurityConfigTest
     Assert.assertFalse(config.isURIAllowed(URI.create("gs://deny-bucket/allow-path/../deny-path")));
   }
 
+
   @Test(expected = IllegalArgumentException.class)
   public void testCannotSetBothAllowAndDenyList()
   {
@@ -100,4 +104,26 @@ public class InputSourceSecurityConfigTest
         Collections.singletonList(URI.create("http://deny.com"))
     );
   }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(InputSourceSecurityConfig.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testNullArguments()
+  {
+    InputSourceSecurityConfig config = new InputSourceSecurityConfig(
+        null,
+        Collections.singletonList(URI.create("gs://deny-bucket/deny-path"))
+    );
+    config.validateCloudLocationAccess(null, null);
+    config.validateFileAccess((File) null);
+    config.validateFileAccess((Collection<File>) null);
+    config.validateURIAccess((URI) null);
+    config.validateURIAccess((Collection<URI>) null);
+    config.validateCloudLocationAccess(null, null);
+  }
+
 }
