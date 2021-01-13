@@ -140,6 +140,8 @@ public class VectorMatch implements ReadableVectorMatch
   /**
    * Removes all rows from this object that occur in "other", in place, and returns a reference to this object. Does
    * not modify "other".
+   *
+   * "other" cannot be the same instance as this object.
    */
   public VectorMatch removeAll(final ReadableVectorMatch other)
   {
