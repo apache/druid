@@ -626,6 +626,8 @@ public class AppenderatorImpl implements Appenderator
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
 
+    log.info("Persisted rows[%,d] and bytes[%,d]", numPersistedRows, bytesPersisted);
+
     // bytesCurrentlyInMemory can change while persisting due to concurrent ingestion.
     // Hence, we use bytesInMemoryBeforePersist to determine the change of this persist
     if (bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
