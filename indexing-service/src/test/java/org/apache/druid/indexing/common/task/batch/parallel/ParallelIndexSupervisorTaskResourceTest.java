@@ -490,7 +490,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // No URI to validate
-      setValidated();
     }
   }
 

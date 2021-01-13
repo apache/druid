@@ -158,7 +158,6 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     securityConfig.validateURIAccess(blobs.stream().map(b -> b.toURI()).collect(Collectors.toList()));
-    setValidated();
   }
 }
 

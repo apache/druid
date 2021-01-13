@@ -222,6 +222,5 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   {
     securityConfig.validateFileAccess(baseDir);
     securityConfig.validateFileAccess(files);
-    setValidated();
   }
 }

@@ -177,6 +177,5 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     securityConfig.validateURIAccess(uris);
-    setValidated();
   }
 }

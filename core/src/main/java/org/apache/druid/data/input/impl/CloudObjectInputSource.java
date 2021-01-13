@@ -191,6 +191,5 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     securityConfig.validateURIAccess(uris);
     securityConfig.validateURIAccess(prefixes);
     securityConfig.validateCloudLocationAccess(objects, scheme);
-    setValidated();
   }
 }

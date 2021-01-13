@@ -151,6 +151,5 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     securityConfig.validateURIAccess(uris);
-    setValidated();
   }
 }

@@ -177,7 +177,6 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
                                                   blob.getPath()
                                               )))
                                           .collect(Collectors.toList()));
-    setValidated();
   }
 
 }

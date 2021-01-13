@@ -605,7 +605,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // Nothing to validate
-      setValidated();
     }
 
     private class TestInputStream extends InputStream

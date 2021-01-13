@@ -247,6 +247,5 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
   {
     securityConfig.validateURIAccess(uris);
     securityConfig.validateURIAccess(prefixes);
-    setValidated();
   }
 }

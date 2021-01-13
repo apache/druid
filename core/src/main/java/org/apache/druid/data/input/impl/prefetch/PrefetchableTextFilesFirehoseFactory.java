@@ -159,7 +159,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, @Nullable File temporaryDirectory) throws IOException
   {
-    Preconditions.checkArgument(validated, "Firehose not Validated");
     return connectInternal(firehoseParser, temporaryDirectory, this.fetchConfig, this.cacheManager);
   }
 

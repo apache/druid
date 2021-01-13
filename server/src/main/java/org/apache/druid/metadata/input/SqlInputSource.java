@@ -154,6 +154,5 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     // No URI to validate
-    setValidated();
   }
 }

@@ -31,8 +31,6 @@ import java.io.File;
  */
 public abstract class AbstractInputSource implements InputSource
 {
-  private transient boolean validated = false;
-
   @Override
   public InputSourceReader reader(
       InputRowSchema inputRowSchema,
@@ -40,7 +38,6 @@ public abstract class AbstractInputSource implements InputSource
       File temporaryDirectory
   )
   {
-    Preconditions.checkArgument(validated, "InputSource not Validated");
     if (needsFormat()) {
       return formattableReader(
           inputRowSchema,
@@ -64,11 +61,6 @@ public abstract class AbstractInputSource implements InputSource
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, File temporaryDirectory)
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = false");
-  }
-
-  protected void setValidated()
-  {
-    this.validated = true;
   }
 
 }

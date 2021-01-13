@@ -295,6 +295,5 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     // No URI to validate
-    setValidated();
   }
 }

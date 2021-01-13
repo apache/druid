@@ -80,6 +80,5 @@ public class InlineInputSource extends AbstractInputSource
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     // Nothing to validate as data is already inline.
-    setValidated();
   }
 }

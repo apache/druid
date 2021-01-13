@@ -264,7 +264,6 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // No URI to validate
-      setValidated();
     }
   }
 

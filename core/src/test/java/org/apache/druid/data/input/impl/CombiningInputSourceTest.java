@@ -235,7 +235,6 @@ public class CombiningInputSourceTest
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // Nothing to do
-      setValidated();
     }
 
     @Override
@@ -321,7 +320,6 @@ public class CombiningInputSourceTest
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // Nothing to do
-      setValidated();
     }
   }
 }

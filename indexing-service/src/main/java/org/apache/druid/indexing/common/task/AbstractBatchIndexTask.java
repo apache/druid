@@ -129,6 +129,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       //
       // We're only really calling it for its side effects, and we expect it to return "true". If it doesn't, something
       // strange is going on, so bail out.
+
       if (!isReady(toolbox.getTaskActionClient())) {
         throw new ISE("Cannot start; not ready!");
       }

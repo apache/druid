@@ -107,6 +107,5 @@ public class FirehoseFactoryToInputSourceAdaptor extends AbstractInputSource imp
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     firehoseFactory.validateAllowDenyPrefixList(securityConfig);
-    setValidated();
   }
 }

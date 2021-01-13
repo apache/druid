@@ -53,12 +53,9 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
 
   private List<T> objects;
 
-  protected transient boolean validated = false;
-
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
-    Preconditions.checkArgument(validated, "Firehose not Validated");
     initializeObjectsIfNeeded();
     final Iterator<T> iterator = objects.iterator();
     return new FileIteratingFirehose(
@@ -144,10 +141,4 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
    * @return an wrapped input stream
    */
   protected abstract InputStream wrapObjectStream(T object, InputStream stream) throws IOException;
-
-  protected void setValidated()
-  {
-    this.validated = true;
-  }
-
 }

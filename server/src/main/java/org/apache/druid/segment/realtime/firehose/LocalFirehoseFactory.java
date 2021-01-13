@@ -115,6 +115,5 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     securityConfig.validateFileAccess(baseDir);
-    setValidated();
   }
 }

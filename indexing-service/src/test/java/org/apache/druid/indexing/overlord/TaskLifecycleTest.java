@@ -335,7 +335,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // No URI to validate
-      setValidated();
     }
   }
 
@@ -377,7 +376,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
     {
       // No URI to validate
-      setValidated();
     }
   }
 

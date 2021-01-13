@@ -480,6 +480,5 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     // No URI to validate
-    setValidated();
   }
 }

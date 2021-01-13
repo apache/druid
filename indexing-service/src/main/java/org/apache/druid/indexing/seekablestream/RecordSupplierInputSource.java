@@ -163,6 +163,5 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
   public void validateAllowDenyPrefixList(InputSourceSecurityConfig securityConfig)
   {
     // No URI to validate
-    setValidated();
   }
 }
