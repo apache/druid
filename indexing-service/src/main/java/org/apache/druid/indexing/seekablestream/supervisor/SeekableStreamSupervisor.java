@@ -3423,7 +3423,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     SeekableStreamSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
-    // Lag is collected with fixed delay instead of fixed rate so as lag collection can involve calling external
+    // Lag is collected with fixed delay instead of fixed rate as lag collection can involve calling external
     // services and with fixed delay, a cooling buffer is guaranteed between successive calls
     reportingExec.scheduleWithFixedDelay(
         this::updateCurrentAndLatestOffsets,

@@ -211,8 +211,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
           interval,
           (intervalKey) -> DimensionCardinalityReport.createHllSketchForReport()
       );
-      // For cardinality estimation, we want to consider unique rows instead of unique hash buckets and hence
-      // we do not pass partition dimensions
+      // For cardinality estimation, we want to consider unique rows instead of unique hash buckets and therefore
+      // we do not use partition dimensions in computing the group key
       List<Object> groupKey = HashPartitioner.extractKeys(
           Collections.emptyList(),
           queryGranularity.bucketStart(timestamp).getMillis(),

@@ -579,8 +579,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               publishOnStop.set(true);
               stopRequested.set(true);
 
-              // We let the fireDepartmentMetrics know that all messages have been read. So some metrics such as
-              // high message gap are not reported
+              // We let the fireDepartmentMetrics know that all messages have been read. This way, some metrics such as
+              // high message gap need not be reported
               fireDepartmentMetrics.markProcessingDone();
             }
           }
