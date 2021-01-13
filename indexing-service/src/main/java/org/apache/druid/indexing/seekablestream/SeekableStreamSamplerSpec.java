@@ -106,7 +106,6 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           "[spec.ioConfig.inputFormat] is required"
       );
     }
-    inputSource.validateAllowDenyPrefixList(securityConfig);
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
 

@@ -217,22 +217,6 @@ public class AzureInputSourceTest extends EasyMockSupport
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void test_Deny_All()
-  {
-    new AzureInputSource(
-        storage,
-        entityFactory,
-        azureCloudBlobIterableFactory,
-        azureCloudBlobToLocationConverter,
-        inputDataConfig,
-        EMPTY_URIS,
-        Collections.singletonList(URI.create("azure://container/blob")),
-        EMPTY_OBJECTS
-    ).validateAllowDenyPrefixList(
-        new InputSourceSecurityConfig(Collections.emptyList(), null));
-  }
-
-  @Test(expected = IllegalArgumentException.class)
   public void testDenyAll()
   {
     new AzureInputSource(
