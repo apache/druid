@@ -20,11 +20,6 @@
 package org.apache.druid.segment.incremental.oak;
 
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.openjdk.jmh.runner.options.TimeValue;
 
 /**
  * This class wraps Oak relevant benchmarks and adds additional static initialization
@@ -32,25 +27,6 @@ import org.openjdk.jmh.runner.options.TimeValue;
  */
 public class OakBenchmarks
 {
-  public static void main(String[] args) throws RunnerException
-  {
-    final String thisClass = OakBenchmarks.class.getName();
-
-    Options opt = new OptionsBuilder()
-        .include(thisClass + ".IncrementalIndexReadBenchmark.read$")
-        .warmupIterations(0)
-        .measurementIterations(1)
-        .measurementTime(TimeValue.NONE)
-        .forks(1)
-        .threads(1)
-        .param("indexType", "oak")
-        .param("rollup", "true")
-        .param("rowsPerSegment", "1000")
-        .build();
-
-    new Runner(opt).run();
-  }
-
   public static void initModule()
   {
     IncrementalIndexCreator.JSON_MAPPER.registerModule(OakIncrementalIndexModule.JACKSON_MODULE);
