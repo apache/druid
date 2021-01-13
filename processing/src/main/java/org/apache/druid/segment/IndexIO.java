@@ -600,7 +600,7 @@ public class IndexIO
                   return deserializeColumn(mapper, colBuffer, smooshedFiles);
                 }
                 catch (IOException | RuntimeException e) {
-                  log.warn(e, "Throw Exception when deserialize column [%s].", columnName);
+                  log.warn(e, "Throw exception when deserialize column [%s].", columnName);
                   loadFailed.execute();
                   throw Throwables.propagate(e);
                 }
