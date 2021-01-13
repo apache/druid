@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class FireDepartmentMetrics
 {
+  private static final long DEFAULT_COMPLETION_TIME = -1L;
+
   private final AtomicLong processedCount = new AtomicLong(0);
   private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
@@ -43,7 +45,7 @@ public class FireDepartmentMetrics
   private final AtomicLong sinkCount = new AtomicLong(0);
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
-  private final AtomicLong completionTime = new AtomicLong(-1L);
+  private final AtomicLong completionTime = new AtomicLong(DEFAULT_COMPLETION_TIME);
 
   public void incrementProcessed()
   {
@@ -132,7 +134,7 @@ public class FireDepartmentMetrics
 
   public void markProcessingDone()
   {
-    this.completionTime.set(System.currentTimeMillis());
+    this.completionTime.compareAndSet(DEFAULT_COMPLETION_TIME, System.currentTimeMillis());
   }
 
   public long processed()
@@ -246,7 +248,7 @@ public class FireDepartmentMetrics
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.completionTime.set(completionTime.get());
-    retVal.completionTime.compareAndSet(-1L, System.currentTimeMillis());
+    retVal.completionTime.compareAndSet(DEFAULT_COMPLETION_TIME, System.currentTimeMillis());
     retVal.messageGap.set(retVal.completionTime.get() - messageMaxTimestamp.get());
     return retVal;
   }
