@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
@@ -46,6 +47,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -170,7 +172,9 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @After
   public void tearDownTest()
   {
-    recordSupplier.close();
+    if (null != recordSupplier) {
+      recordSupplier.close();
+    }
     recordSupplier = null;
   }
 
@@ -409,6 +413,53 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
     Assert.assertEquals(SHARDS_LAG_MILLIS, recordSupplier.getPartitionResourcesTimeLag());
   }
+
+  @Test
+  public void testRecoverableException_IOException()
+  {
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(new AmazonClientException(new IOException())));
+  }
+
+  @Test
+  public void testRecoverableException_RequestTimeout()
+  {
+    AmazonServiceException ex = new AmazonServiceException(null);
+    ex.setErrorCode("RequestTimeout");
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_500()
+  {
+    AmazonServiceException ex = new AmazonServiceException(null);
+    ex.setStatusCode(500);
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_502()
+  {
+    AmazonServiceException ex = new AmazonServiceException(null);
+    ex.setStatusCode(502);
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_503()
+  {
+    AmazonServiceException ex = new AmazonServiceException(null);
+    ex.setStatusCode(503);
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_ProvisionedThroughputExceededException()
+  {
+    AmazonServiceException ex = new AmazonServiceException(null);
+    ex.setErrorCode("ProvisionedThroughputExceededException");
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
 
   @Test
   public void testSeek()
