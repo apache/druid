@@ -18,6 +18,10 @@ set -e
 
 export KUBECTL="sudo /usr/local/bin/kubectl"
 
+DRUID_CLUSTER_SPEC_YAML=$1
+
+echo "Druid Cluster Spec ${DRUID_CLUSTER_SPEC_YAML}"
+
 # setup client keystore
 cd integration-tests
 ./docker/tls/generate-client-certs-and-keystores.sh
@@ -41,8 +45,8 @@ chmod 777 tmp
 
 # spec name needs to come from argument for high availability test
 $KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
-sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
-$KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
+sed -i "s|REPLACE_VOLUMES|`pwd`|g" ${DRUID_CLUSTER_SPEC_YAML}
+$KUBECTL apply -f ${DRUID_CLUSTER_SPEC_YAML}
 
 # Wait a bit
 sleep 60

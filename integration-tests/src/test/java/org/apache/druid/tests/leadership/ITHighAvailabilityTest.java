@@ -65,6 +65,7 @@ public class ITHighAvailabilityTest
 {
   private static final Logger LOG = new Logger(ITHighAvailabilityTest.class);
   private static final String SYSTEM_QUERIES_RESOURCE = "/queries/high_availability_sys.json";
+  private static final String K8S_SYSTEM_QUERIES_RESOURCE = "/queries/k8s_high_availability_sys.json";
   private static final int NUM_LEADERSHIP_SWAPS = 3;
 
   private static final int NUM_RETRIES = 120;
@@ -114,7 +115,10 @@ public class ITHighAvailabilityTest
 
       String queries = fillTemplate(
           config,
-          AbstractIndexerTest.getResourceAsString(SYSTEM_QUERIES_RESOURCE),
+          AbstractIndexerTest.getResourceAsString(
+              config.getDruidDeploymentEnvType() == DruidTestModule.DruidDeploymentEnvType.K8S ?
+              K8S_SYSTEM_QUERIES_RESOURCE : SYSTEM_QUERIES_RESOURCE
+          ),
           overlordLeader,
           coordinatorLeader
       );

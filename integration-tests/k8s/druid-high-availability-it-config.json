@@ -1,5 +1,4 @@
 {
-  "comment": "we need to have different file for availability",
   "broker_host" : "localhost",
   "broker_port" : "30100",
   "broker_internal_host": "druid-tiny-cluster-brokers-0.broker-druid-tiny-cluster-brokers-service.default.svc.cluster.local",

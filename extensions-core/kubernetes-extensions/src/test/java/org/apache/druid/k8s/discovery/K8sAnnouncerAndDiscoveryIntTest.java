@@ -50,7 +50,7 @@ public class K8sAnnouncerAndDiscoveryIntTest
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
-  private final PodInfo podInfo = new PodInfo("busybox", "default");
+  private final PodInfo podInfo = new PodInfo("postgres-0", "default");
 
   private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null);
 

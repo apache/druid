@@ -651,7 +651,15 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker
+<<<<<<< HEAD
       env: CONFIG_FILE='k8s_run_config_file.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest' POD_NAME=int-test POD_NAMESPACE=default BUILD_DRUID_CLSUTER=true
+=======
+      env: CONFIG_FILE='integration-tests/k8s/druid-sanity-it-config.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest' POD_NAME=int-test POD_NAMESPACE=default
+      before_script:
+        - integration-tests/script/setup_k8s_cluster.sh
+        - integration-tests/script/setup_druid_operator_on_k8s.sh
+        - integration-tests/script/setup_druid_on_k8s.sh 'integration-tests/k8s/druid-sanity-it-cluster.yaml'
+>>>>>>> ec1f6c394d... prepping for PR
       script: &run_integration_test_k8s
         - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLSUTER}
       after_failure: &integration_test_diags_k8s
@@ -659,6 +667,26 @@ jobs:
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
           sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0;
           done
+
+    - &integration_high_availability_k8s
+      name: "(Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITHighAvailabilityTest integration test"
+      jdk: openjdk8
+      services: &integration_test_services_k8s
+        - docker
+      env: CONFIG_FILE='integration-tests/k8s/druid-high-availability-it-config.json' IT_TEST='-Dit.test=ITHighAvailabilityTest' POD_NAME=int-test POD_NAMESPACE=default
+      before_script:
+        - integration-tests/script/setup_k8s_cluster.sh
+        - integration-tests/script/setup_druid_operator_on_k8s.sh
+        - integration-tests/script/setup_druid_on_k8s.sh 'integration-tests/k8s/druid-high-availability-it-cluster.yaml'
+      script: &run_integration_test_k8s
+        - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP}
+      after_script: integration-tests/script/stop_k8s_cluster.sh
+      after_failure: &integration_test_diags_k8s
+        - for v in brokers-0 routers-0 coordinator1-0 coordinator2-0 overlord1-0 overlord2-0 ; do
+          echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
+          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v";
+          done
+
     - name: "security vulnerabilities"
       stage: cron
       install: skip
