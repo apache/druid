@@ -46,6 +46,6 @@ public class ResourceLimitExceededException extends BadQueryException
       @JsonProperty("errorClass") String errorClass
   )
   {
-    super(errorCode, errorMessage, errorClass);
+    super(errorCode, errorMessage, errorClass, resolveHostname());
   }
 }

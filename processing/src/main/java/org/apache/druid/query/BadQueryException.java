@@ -20,7 +20,7 @@
 package org.apache.druid.query;
 
 /**
- * An abstract class for all query exceptions that should return a bad request status code (404).
+ * An abstract class for all query exceptions that should return a bad request status code (400).
  *
  * See {@code BadRequestException} for non-query requests.
  */
@@ -31,5 +31,10 @@ public abstract class BadQueryException extends QueryException
   protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
     super(errorCode, errorMessage, errorClass, null);
+  }
+
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass, String host)
+  {
+    super(errorCode, errorMessage, errorClass, host);
   }
 }

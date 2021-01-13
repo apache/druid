@@ -29,8 +29,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 
 import javax.annotation.Nullable;
@@ -166,11 +169,9 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           throw timeoutQuery();
         } else {
           // TODO: NettyHttpClient should check the actual cause of the failure and set it in the future properly.
-          throw interruptQuery(
-              new ResourceLimitExceededException(
-                  "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
-                  url
-              )
+          throw new ResourceLimitExceededException(
+              "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
+              url
           );
         }
 
@@ -179,7 +180,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           jp.nextToken();
           objectCodec = jp.getCodec();
         } else if (nextToken == JsonToken.START_OBJECT) {
-          throw interruptQuery(jp.getCodec().readValue(jp, QueryInterruptedException.class));
+          throw interruptQuery(jp.getCodec().readValue(jp, QueryException.class));
         } else {
           throw interruptQuery(
               new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
@@ -200,10 +201,61 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     return new QueryTimeoutException(StringUtils.nonStrictFormat("url[%s] timed out", url), host);
   }
 
-  private QueryInterruptedException interruptQuery(Exception cause)
+  private QueryException interruptQuery(Exception cause)
   {
     LOG.warn(cause, "Query [%s] to host [%s] interrupted", queryId, host);
-    return new QueryInterruptedException(cause, host);
+    if (cause instanceof QueryException) {
+      final QueryException queryException = (QueryException) cause;
+      if (queryException.getErrorCode() == null) {
+        // errorCode should not be null now, but maybe could be null in the past..
+        return new QueryInterruptedException(
+            queryException.getErrorCode(),
+            queryException.getMessage(),
+            queryException.getErrorClass(),
+            queryException.getHost()
+        );
+      }
+
+      // The below is the list of exceptions that can be thrown in historicals and propagated to the broker.
+      switch (queryException.getErrorCode()) {
+        case QueryTimeoutException.ERROR_CODE:
+          return new QueryTimeoutException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              queryException.getHost()
+          );
+        case QueryCapacityExceededException.ERROR_CODE:
+          return new QueryCapacityExceededException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              queryException.getHost()
+          );
+        case QueryUnsupportedException.ERROR_CODE:
+          return new QueryUnsupportedException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              queryException.getHost()
+          );
+        case ResourceLimitExceededException.ERROR_CODE:
+          return new ResourceLimitExceededException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              queryException.getHost()
+          );
+        default:
+          return new QueryInterruptedException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              queryException.getHost()
+          );
+      }
+    } else {
+      return new QueryInterruptedException(cause, host);
+    }
   }
 }
-

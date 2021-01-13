@@ -56,19 +56,24 @@ public class QueryCapacityExceededException extends QueryException
     super(ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null);
   }
 
-  public QueryCapacityExceededException(String errorMessage)
+  /**
+   * This method sets hostName unlike constructors because this can be called in historicals
+   * while those constructors are only used in brokers.
+   */
+  public static QueryCapacityExceededException withErrorMessageAndResolvedHost(String errorMessage)
   {
-    super(ERROR_CODE, errorMessage, ERROR_CLASS, null);
+    return new QueryCapacityExceededException(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
   }
 
   @JsonCreator
   public QueryCapacityExceededException(
       @JsonProperty("error") String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass
+      @JsonProperty("errorClass") String errorClass,
+      @JsonProperty("host") String host
   )
   {
-    super(errorCode, errorMessage, errorClass, null);
+    super(errorCode, errorMessage, errorClass, host);
   }
 
   @VisibleForTesting

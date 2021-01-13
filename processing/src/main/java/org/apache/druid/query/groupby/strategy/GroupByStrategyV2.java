@@ -134,7 +134,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
       }
       if (mergeBufferHolders.isEmpty()) {
-        throw new QueryCapacityExceededException(
+        throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
             StringUtils.format(
                 "Cannot acquire %s merge buffers. Try again after current running queries are finished.",
                 requiredMergeBufferNum
