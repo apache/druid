@@ -20,7 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
+import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.MonitorSchedulerConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -30,7 +30,7 @@ import org.joda.time.Period;
 public class DruidMonitorSchedulerConfig extends MonitorSchedulerConfig
 {
   @JsonProperty
-  private String schedulerClassName = ClockDriftSafeMonitorScheduler.class.getName();
+  private String schedulerClassName = BasicMonitorScheduler.class.getName();
 
   @JsonProperty
   private Period emissionPeriod = new Period("PT1M");
