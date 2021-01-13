@@ -412,6 +412,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
 
     private final int vectorSize;
 
+    private int id = 0;
+
     SettableVectorInputBinding(int vectorSize)
     {
       this.nulls = new HashMap<>();
@@ -503,6 +505,13 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     public int getCurrentVectorSize()
     {
       return vectorSize;
+    }
+
+    @Override
+    public int getCurrentVectorId()
+    {
+      // never cache, this is just for tests anyway
+      return id++;
     }
   }
 }
