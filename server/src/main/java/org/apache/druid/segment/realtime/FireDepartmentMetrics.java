@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment.realtime;
 
-import com.google.common.base.Preconditions;
-
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -45,6 +43,7 @@ public class FireDepartmentMetrics
   private final AtomicLong sinkCount = new AtomicLong(0);
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
+  private final AtomicLong completionTime = new AtomicLong(-1L);
 
   public void incrementProcessed()
   {
@@ -129,6 +128,11 @@ public class FireDepartmentMetrics
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
     this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+  }
+
+  public void markProcessingDone()
+  {
+    this.completionTime.set(System.currentTimeMillis());
   }
 
   public long processed()
@@ -241,37 +245,9 @@ public class FireDepartmentMetrics
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
-    retVal.messageGap.set(System.currentTimeMillis() - messageMaxTimestamp.get());
+    retVal.completionTime.set(completionTime.get());
+    retVal.completionTime.compareAndSet(-1L, System.currentTimeMillis());
+    retVal.messageGap.set(retVal.completionTime.get() - messageMaxTimestamp.get());
     return retVal;
-  }
-
-  /**
-   * merge other FireDepartmentMetrics, will modify this object's data
-   *
-   * @return this object
-   */
-  public FireDepartmentMetrics merge(FireDepartmentMetrics other)
-  {
-    Preconditions.checkNotNull(other, "Cannot merge a null FireDepartmentMetrics");
-    FireDepartmentMetrics otherSnapshot = other.snapshot();
-    processedCount.addAndGet(otherSnapshot.processed());
-    processedWithErrorsCount.addAndGet(otherSnapshot.processedWithErrors());
-    thrownAwayCount.addAndGet(otherSnapshot.thrownAway());
-    rowOutputCount.addAndGet(otherSnapshot.rowOutput());
-    unparseableCount.addAndGet(otherSnapshot.unparseable());
-    dedupCount.addAndGet(otherSnapshot.dedup());
-    numPersists.addAndGet(otherSnapshot.numPersists());
-    persistTimeMillis.addAndGet(otherSnapshot.persistTimeMillis());
-    persistBackPressureMillis.addAndGet(otherSnapshot.persistBackPressureMillis());
-    failedPersists.addAndGet(otherSnapshot.failedPersists());
-    failedHandoffs.addAndGet(otherSnapshot.failedHandoffs());
-    mergeTimeMillis.addAndGet(otherSnapshot.mergeTimeMillis());
-    mergeCpuTime.addAndGet(otherSnapshot.mergeCpuTime());
-    persistCpuTime.addAndGet(otherSnapshot.persistCpuTime());
-    handOffCount.addAndGet(otherSnapshot.handOffCount());
-    sinkCount.addAndGet(otherSnapshot.sinkCount());
-    messageMaxTimestamp.set(Math.max(messageMaxTimestamp(), otherSnapshot.messageMaxTimestamp()));
-    messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
-    return this;
   }
 }

@@ -578,6 +578,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               log.debug("All partitions have been fully read.");
               publishOnStop.set(true);
               stopRequested.set(true);
+
+              // We let the fireDepartmentMetrics know that all messages have been read. So some metrics such as
+              // high message gap are not reported
+              fireDepartmentMetrics.markProcessingDone();
             }
           }
 
