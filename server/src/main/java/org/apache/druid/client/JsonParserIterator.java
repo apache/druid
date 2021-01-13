@@ -120,7 +120,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         timeoutException.addSuppressed(e);
         throw timeoutException;
       } else {
-        throw interruptQuery(e);
+        throw convertException(e);
       }
     }
   }
@@ -180,15 +180,15 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           jp.nextToken();
           objectCodec = jp.getCodec();
         } else if (nextToken == JsonToken.START_OBJECT) {
-          throw interruptQuery(jp.getCodec().readValue(jp, QueryException.class));
+          throw convertException(jp.getCodec().readValue(jp, QueryException.class));
         } else {
-          throw interruptQuery(
+          throw convertException(
               new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
           );
         }
       }
       catch (IOException | InterruptedException | ExecutionException | CancellationException e) {
-        throw interruptQuery(e);
+        throw convertException(e);
       }
       catch (TimeoutException e) {
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out!", queryId), host);
@@ -201,7 +201,16 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     return new QueryTimeoutException(StringUtils.nonStrictFormat("url[%s] timed out", url), host);
   }
 
-  private QueryException interruptQuery(Exception cause)
+  /**
+   * Converts the given exception to a proper type of {@link QueryException}.
+   * The use cases of this method are:
+   *
+   * - All non-QueryExceptions are wrapped with {@link QueryInterruptedException}.
+   * - The QueryException from {@link DirectDruidClient} is converted to a more specific type of QueryException
+   *   based on {@link QueryException#getErrorCode()}. During conversion, {@link QueryException#host} is overridden
+   *   by {@link #host}.
+   */
+  private QueryException convertException(Exception cause)
   {
     LOG.warn(cause, "Query [%s] to host [%s] interrupted", queryId, host);
     if (cause instanceof QueryException) {
@@ -212,7 +221,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
             queryException.getErrorCode(),
             queryException.getMessage(),
             queryException.getErrorClass(),
-            queryException.getHost()
+            host
         );
       }
 
@@ -226,35 +235,35 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
-              queryException.getHost()
+              host
           );
         case QueryCapacityExceededException.ERROR_CODE:
           return new QueryCapacityExceededException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
-              queryException.getHost()
+              host
           );
         case QueryUnsupportedException.ERROR_CODE:
           return new QueryUnsupportedException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
-              queryException.getHost()
+              host
           );
         case ResourceLimitExceededException.ERROR_CODE:
           return new ResourceLimitExceededException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
-              queryException.getHost()
+              host
           );
         default:
           return new QueryInterruptedException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
-              queryException.getHost()
+              host
           );
       }
     } else {
