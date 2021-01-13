@@ -52,7 +52,6 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
-import javax.xml.ws.Holder;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -493,15 +492,15 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
   private Iterator<IncrementalIndexRow> transformStreamIterator(
       Iterator<Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer>> iterator)
   {
-    Holder<OakIncrementalIndexRow> row = new Holder<>();
+    final OakIncrementalIndexRow[] rowHolder = new OakIncrementalIndexRow[1];
 
     return Iterators.transform(iterator, entry -> {
-      if (row.value == null) {
-        row.value = new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue());
+      if (rowHolder[0] == null) {
+        rowHolder[0] = new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue());
       } else {
-        row.value.reset();
+        rowHolder[0].reset();
       }
-      return row.value;
+      return rowHolder[0];
     });
   }
 
