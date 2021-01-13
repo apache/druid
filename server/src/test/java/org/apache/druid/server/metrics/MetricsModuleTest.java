@@ -111,10 +111,10 @@ public class MetricsModuleTest
   }
 
   @Test
-  public void testGetClockDriftSafeMonitorSchedulerByDefault()
+  public void testGetBasicMonitorSchedulerByDefault()
   {
     final MonitorScheduler monitorScheduler = createInjector(new Properties()).getInstance(MonitorScheduler.class);
-    Assert.assertSame(ClockDriftSafeMonitorScheduler.class, monitorScheduler.getClass());
+    Assert.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
   }
 
   @Test
