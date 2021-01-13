@@ -208,8 +208,11 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       sinkSizeOverhead = 1 * Sink.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant size is 0 since we just persist all indexes to disk.
       indexSize = 0;
-      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have 4 columns.
-      int mappedIndexSize = 1 * (1012 + (4 * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER));
+      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
+      // 1 dimension columns, 2 metric column, 1 time column.
+      int mappedIndexSize = 3012 + (2 * ColumnHolder.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                            ColumnHolder.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                            ColumnHolder.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
       Assert.assertEquals(
           indexSize + sinkSizeOverhead + mappedIndexSize,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
@@ -309,8 +312,11 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       sinkSizeOverhead = 2 * Sink.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant size is 0 since we just persist all indexes to disk.
       indexSize = 0;
-      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have 4 columns.
-      int mappedIndexSize = 2 * (1012 + (4 * ColumnHolder.ROUGH_OVERHEAD_PER_COLUMN_HOLDER));
+      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
+      // 1 dimension columns, 2 metric column, 1 time column.
+      int mappedIndexSize = 2 * (3012 + (2 * ColumnHolder.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                                 ColumnHolder.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                                 ColumnHolder.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
       Assert.assertEquals(
           indexSize + sinkSizeOverhead + mappedIndexSize,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()

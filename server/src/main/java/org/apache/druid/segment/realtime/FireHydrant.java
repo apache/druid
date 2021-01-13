@@ -43,7 +43,7 @@ import java.util.function.Function;
 public class FireHydrant
 {
   // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
-  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 3000;
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
   private volatile IncrementalIndex index;
@@ -74,13 +74,22 @@ public class FireHydrant
     return adapter.get().getId();
   }
 
-  public int getSegmentNumColumns()
+  public int getSegmentNumDimensionColumns()
   {
     final Segment segment = adapter.get().getBaseSegment();
     if (segment != null) {
       final StorageAdapter storageAdapter = segment.asStorageAdapter();
-      // Adds 1 for the time column
-      return 1 + storageAdapter.getAvailableDimensions().size() + Iterables.size(storageAdapter.getAvailableMetrics());
+      return storageAdapter.getAvailableDimensions().size();
+    }
+    return 0;
+  }
+
+  public int getSegmentNumMetricColumns()
+  {
+    final Segment segment = adapter.get().getBaseSegment();
+    if (segment != null) {
+      final StorageAdapter storageAdapter = segment.asStorageAdapter();
+      return Iterables.size(storageAdapter.getAvailableMetrics());
     }
     return 0;
   }
