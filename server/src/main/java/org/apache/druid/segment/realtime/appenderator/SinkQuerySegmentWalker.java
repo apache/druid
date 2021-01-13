@@ -235,7 +235,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         StorageAdapter storageAdapter = segmentAndCloseable.lhs.asStorageAdapter();
                         long segmentMinTime = storageAdapter.getMinTime().getMillis();
                         long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
-                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime);
+                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
                         runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
                             cacheKeyPrefix,

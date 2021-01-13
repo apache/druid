@@ -305,7 +305,7 @@ public class ServerManager implements QuerySegmentWalker
     StorageAdapter storageAdapter = segment.asStorageAdapter();
     long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
     long segmentMinTime = storageAdapter.getMinTime().getMillis();
-    Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime);
+    Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
         cacheKeyPrefix,
