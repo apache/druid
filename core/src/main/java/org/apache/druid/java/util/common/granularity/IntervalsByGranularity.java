@@ -67,7 +67,7 @@ public class IntervalsByGranularity
   {
     private final List<Interval> sortedIntervals;
     private int currentInterval;
-    private Iterator<Interval> currentIterator;
+    private volatile Iterator<Interval> currentIterator;
 
     public IntervalIterator(List<Interval> sortedIntervals)
     {

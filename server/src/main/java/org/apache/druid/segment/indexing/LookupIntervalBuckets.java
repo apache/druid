@@ -53,7 +53,10 @@ public class LookupIntervalBuckets
     }
   }
 
-  public Iterator<Interval> iterator() { return materializedIntervals().iterator(); }
+  public Iterator<Interval> iterator()
+  {
+    return materializedIntervals().iterator();
+  }
 
   private TreeSet<Interval> materializedIntervals()
   {
