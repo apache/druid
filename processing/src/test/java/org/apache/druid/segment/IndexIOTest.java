@@ -53,7 +53,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -341,17 +340,6 @@ public class IndexIOTest extends InitializedNullHandlingTest
         throw ex;
       }
     }
-  }
-
-  @Test
-  public void testLoadSegmentWithLazy() throws IOException
-  {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
-    String path = this.getClass().getClassLoader().getResource("v9SegmentPersistDir/segment/").getPath();
-    File inDir = new File(path);
-    QueryableIndex queryableIndex = indexIO.loadIndex(inDir, true, SegmentLazyLoadFailCallback.NOOP);
-    Assert.assertNotNull(queryableIndex);
   }
 
   @Test

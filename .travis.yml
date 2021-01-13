@@ -154,7 +154,7 @@ jobs:
         # Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
         # resolving the SIGAR dependency.
         - >
-          MAVEN_OPTS='-Xmx1400m' ${MVN} test -pl ${MAVEN_PROJECTS}
+          MAVEN_OPTS='-Xmx1100m' ${MVN} test -pl ${MAVEN_PROJECTS}
           ${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m

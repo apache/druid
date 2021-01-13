@@ -1,9 +1,0 @@
-v1,2147483647,1
-__time,0,0,141
-count,0,141,282
-dstIP,0,564,805
-index.drd,0,1046,1205
-metadata.drd,0,1205,1587
-srcIP,0,805,1046
-sum_bytes,0,282,423
-sum_packets,0,423,564
