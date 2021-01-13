@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -444,7 +445,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 url
             );
             setupResponseReadFailure(msg, null);
-            throw new RE(msg);
+            throw new ResourceLimitExceededException(msg);
           }
         }
       };

@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  * following reasons: 1) The query is not supported yet. 2) The query is not something Druid would ever supports.
  * For these cases, the exact causes and details should also be documented in Druid user facing documents.
  *
- * As a {@link QueryException} it is expected to be serialied to a json response with a proper HTTP error code
+ * As a {@link QueryException} it is expected to be serialized to a json response with a proper HTTP error code
  * ({@link #STATUS_CODE}).
  */
 public class QueryUnsupportedException extends QueryException

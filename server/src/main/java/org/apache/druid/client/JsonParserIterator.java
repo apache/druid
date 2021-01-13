@@ -216,8 +216,11 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         );
       }
 
-      // The below is the list of exceptions that can be thrown in historicals and propagated to the broker.
+      // Note: this switch clause is to restore the 'type' information of QueryExceptions which is lost during
+      // JSON serialization. This is not a good way to restore the correct exception type. Rather, QueryException
+      // should store its type when it is serialized, so that we can know the exact type when it is deserialized.
       switch (queryException.getErrorCode()) {
+        // The below is the list of exceptions that can be thrown in historicals and propagated to the broker.
         case QueryTimeoutException.ERROR_CODE:
           return new QueryTimeoutException(
               queryException.getErrorCode(),

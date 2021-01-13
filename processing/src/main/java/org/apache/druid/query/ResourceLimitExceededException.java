@@ -26,9 +26,10 @@ import org.apache.druid.java.util.common.StringUtils;
 /**
  * Exception indicating that an operation failed because it exceeded some configured resource limit.
  *
- * This is a {@link BadQueryException} because it will likely a user's misbehavior when this exception is thrown.
- * Druid cluster operators set some set of resource limitations for some good reason. When a user query requires
- * too many resources, it will likely mean that the user query should be modified to not use excessive resources.
+ * This is a {@link BadQueryException} because it likely indicates a user's misbehavior when this exception is thrown.
+ * The resource limitations set by Druid cluster operators are typically less flexible than the parameters of
+ * a user query, so when a user query requires too many resources, the likely remedy is that the user query
+ * should be modified to use fewer resources, or to reduce query volume.
  */
 public class ResourceLimitExceededException extends BadQueryException
 {
