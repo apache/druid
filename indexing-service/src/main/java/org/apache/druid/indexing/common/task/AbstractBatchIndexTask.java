@@ -69,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -271,7 +272,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    *
    * @return whether the lock was acquired
    */
-  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals) throws IOException
+  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals)
+      throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
@@ -378,7 +380,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     final Iterator<Interval> intervalIterator;
     final Granularity segmentGranularity = getSegmentGranularity();
     if (segmentGranularity == null) {
-      intervalIterator = intervals.iterator();
+      Set<Interval> uniqueIntervals = new HashSet<>(intervals);
+      ArrayList<Interval> condensedIntervals = JodaUtils.condenseIntervals(() -> uniqueIntervals.iterator());
+      intervalIterator = condensedIntervals.iterator();
     } else {
       IntervalsByGranularity intervalsByGranularity = new IntervalsByGranularity(intervals, segmentGranularity);
       intervalIterator = intervalsByGranularity.granularityIntervalsIterator();
