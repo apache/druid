@@ -34,16 +34,20 @@ import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
@@ -76,6 +80,7 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -490,7 +495,6 @@ public class QueryResourceTest
     EasyMock.verify(smileRequest);
   }
 
-
   @Test
   public void testBadQuery() throws IOException
   {
@@ -501,7 +505,29 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
-    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    QueryException e = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(BadJsonQueryException.ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(BadJsonQueryException.ERROR_CLASS, e.getErrorClass());
+  }
+
+  @Test
+  public void testResourceLimitExceeded() throws IOException
+  {
+    ByteArrayInputStream badQuery = EasyMock.createMock(ByteArrayInputStream.class);
+    EasyMock.expect(badQuery.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+            .andThrow(new ResourceLimitExceededException("You require too much of something"));
+    EasyMock.replay(badQuery, testServletRequest);
+    Response response = queryResource.doPost(
+        badQuery,
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    QueryException e = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(ResourceLimitExceededException.ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(ResourceLimitExceededException.class.getName(), e.getErrorClass());
   }
 
   @Test
@@ -520,13 +546,7 @@ public class QueryResourceTest
     );
     Assert.assertNotNull(response);
     Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
-    QueryUnsupportedException ex;
-    try {
-      ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryUnsupportedException.class);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    QueryException ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
     Assert.assertEquals(errorMessage, ex.getMessage());
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, ex.getErrorCode());
   }

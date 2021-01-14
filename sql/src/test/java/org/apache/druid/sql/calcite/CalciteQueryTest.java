@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.runtime.CalciteContextException;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -107,13 +105,14 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.sql.SqlPlanningException;
+import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -121,7 +120,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
@@ -3721,18 +3719,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnionAllTablesColumnCountMismatch() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM numfoo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM numfoo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
@@ -3968,52 +3973,73 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnionAllThreeTablesColumnCountMismatch1() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
   public void testUnionAllThreeTablesColumnCountMismatch2() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
   public void testUnionAllThreeTablesColumnCountMismatch3() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo UNION ALL SELECT * from numfoo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo UNION ALL SELECT * from numfoo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
@@ -12895,16 +12921,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testTimeExtractWithTooFewArguments() throws Exception
   {
     // Regression test for https://github.com/apache/druid/pull/7710.
-    expectedException.expect(ValidationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(CalciteContextException.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments"
-            )
-        )
-    );
-    testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+    try {
+      testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test

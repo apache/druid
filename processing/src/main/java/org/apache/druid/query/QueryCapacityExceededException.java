@@ -17,17 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryException;
 
 /**
- * This exception is for {@link QueryResource} and SqlResource to surface when a query is cast away by
- * {@link QueryScheduler}.
+ * This exception is for QueryResource and SqlResource to surface when a query is cast away after
+ * it hits a resource limit. It is currently used in 2 places:
+ *
+ * <ul>
+ *   <li>When the query is rejected by QueryScheduler.</li>
+ *   <li>When the query cannot acquire enough merge buffers for groupBy v2</li>
+ * </ul>
  *
  * As a {@link QueryException} it is expected to be serialied to a json response, but will be mapped to
  * {@link #STATUS_CODE} instead of the default HTTP 500 status.
@@ -52,13 +56,24 @@ public class QueryCapacityExceededException extends QueryException
     super(ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null);
   }
 
+  /**
+   * This method sets hostName unlike constructors because this can be called in historicals
+   * while those constructors are only used in brokers.
+   */
+  public static QueryCapacityExceededException withErrorMessageAndResolvedHost(String errorMessage)
+  {
+    return new QueryCapacityExceededException(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+  }
+
   @JsonCreator
   public QueryCapacityExceededException(
       @JsonProperty("error") String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass)
+      @JsonProperty("errorClass") String errorClass,
+      @JsonProperty("host") String host
+  )
   {
-    super(errorCode, errorMessage, errorClass, null);
+    super(errorCode, errorMessage, errorClass, host);
   }
 
   @VisibleForTesting

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.net.InetAddress;
 
 /**
  * Base serializable error response
@@ -35,7 +36,7 @@ public class QueryException extends RuntimeException
   private final String errorClass;
   private final String host;
 
-  public QueryException(Throwable cause, String errorCode, String errorClass, String host)
+  protected QueryException(Throwable cause, String errorCode, String errorClass, String host)
   {
     super(cause == null ? null : cause.getMessage(), cause);
     this.errorCode = errorCode;
@@ -44,7 +45,7 @@ public class QueryException extends RuntimeException
   }
 
   @JsonCreator
-  public QueryException(
+  protected QueryException(
       @JsonProperty("error") @Nullable String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
       @JsonProperty("errorClass") @Nullable String errorClass,
@@ -81,5 +82,16 @@ public class QueryException extends RuntimeException
   public String getHost()
   {
     return host;
+  }
+
+  @Nullable
+  protected static String resolveHostname()
+  {
+    try {
+      return InetAddress.getLocalHost().getCanonicalHostName();
+    }
+    catch (Exception e) {
+      return null;
+    }
   }
 }

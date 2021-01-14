@@ -17,31 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+package org.apache.druid.query;
 
 /**
- * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
- * take care of sending the response.
+ * An abstract class for all query exceptions that should return a bad request status code (400).
+ *
+ * See {@code BadRequestException} for non-query requests.
  */
-public class ForbiddenException extends RuntimeException
+public abstract class BadQueryException extends QueryException
 {
-  public ForbiddenException()
+  public static final int STATUS_CODE = 400;
+
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
-    super("Unauthorized.");
+    super(errorCode, errorMessage, errorClass, null);
   }
 
-  @JsonCreator
-  public ForbiddenException(@JsonProperty("errorMessage") String msg)
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass, String host)
   {
-    super(msg);
-  }
-
-  @JsonProperty
-  public String getErrorMessage()
-  {
-    return super.getMessage();
+    super(errorCode, errorMessage, errorClass, host);
   }
 }
