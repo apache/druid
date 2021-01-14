@@ -239,8 +239,7 @@ public class OrFilterTest extends BaseFilterTest
   }
 
   @Test
-  public void
-  testThreeFilterFirstMatchesSomeSecondLiterallyTrueThirdMatchesNone()
+  public void testThreeFilterFirstMatchesSomeSecondLiterallyTrueThirdMatchesNone()
   {
     assertFilterMatches(
         new AndDimFilter(
