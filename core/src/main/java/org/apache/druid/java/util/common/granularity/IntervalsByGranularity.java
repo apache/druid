@@ -79,8 +79,8 @@ public class IntervalsByGranularity
     @Override
     public boolean hasNext()
     {
-      while (true) {
-        if (currentIterator != null) {
+      if (currentIterator != null) {
+        while (true) {
           if (currentIterator.hasNext()) {
             return true;
           } else if (currentInterval < sortedIntervals.size() - 1) {
