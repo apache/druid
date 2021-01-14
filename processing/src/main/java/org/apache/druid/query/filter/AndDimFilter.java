@@ -26,16 +26,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class AndDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
@@ -73,26 +72,15 @@ public class AndDimFilter extends AbstractOptimizableDimFilter implements DimFil
   @Override
   public DimFilter optimize()
   {
-    List<DimFilter> elements = DimFilters.optimize(fields)
-                                         .stream()
-                                         .filter(filter -> !(filter instanceof TrueDimFilter))
-                                         .collect(Collectors.toList());
-    if (elements.isEmpty()) {
-      // All elements were TrueDimFilter after optimization
-      return TrueDimFilter.instance();
-    } else if (elements.size() == 1) {
-      return elements.get(0);
-    } else if (elements.stream().anyMatch(filter -> filter instanceof FalseDimFilter)) {
-      return FalseDimFilter.instance();
-    } else {
-      return new AndDimFilter(elements);
-    }
+    // Don't do anything special here; we'll collapse things in "toFilter".
+    // This allows us to share code with Filters.and(...), which works on Filter, not DimFilter.
+    return this;
   }
 
   @Override
   public Filter toFilter()
   {
-    return new AndFilter(Filters.toFilters(fields));
+    return Filters.and(Filters.toFilters(fields));
   }
 
   @Override

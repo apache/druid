@@ -27,14 +27,12 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.filter.OrFilter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -81,26 +79,15 @@ public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilt
   @Override
   public DimFilter optimize()
   {
-    List<DimFilter> elements = DimFilters.optimize(fields)
-                                         .stream()
-                                         .filter(filter -> !(filter instanceof FalseDimFilter))
-                                         .collect(Collectors.toList());
-    if (elements.isEmpty()) {
-      // All elements were FalseDimFilter after optimization
-      return FalseDimFilter.instance();
-    } else if (elements.size() == 1) {
-      return elements.get(0);
-    } else if (elements.stream().anyMatch(filter -> filter instanceof TrueDimFilter)) {
-      return TrueDimFilter.instance();
-    } else {
-      return new OrDimFilter(elements);
-    }
+    // Don't do anything special here; we'll collapse things in "toFilter".
+    // This allows us to share code with Filters.or(...), which works on Filter, not DimFilter.
+    return this;
   }
 
   @Override
   public Filter toFilter()
   {
-    return new OrFilter(Filters.toFilters(fields));
+    return Filters.or(Filters.toFilters(fields));
   }
 
   @Override
