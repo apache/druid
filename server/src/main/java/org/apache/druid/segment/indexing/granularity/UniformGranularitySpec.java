@@ -21,29 +21,23 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.segment.indexing.LookupIntervalBuckets;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.List;
 
-public class UniformGranularitySpec implements GranularitySpec
+public class UniformGranularitySpec extends BaseGranularitySpec
 {
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
   private static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
 
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
-  private final Boolean rollup;
-  private final List<Interval> inputIntervals;
   private final IntervalsByGranularity intervalsByGranularity;
-  private final LookupIntervalBuckets buckets;
+  protected LookupIntervalBuckets lookupTableBucketByDateTime;
 
   @JsonCreator
   public UniformGranularitySpec(
@@ -53,19 +47,12 @@ public class UniformGranularitySpec implements GranularitySpec
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
   {
+    super(inputIntervals, rollup);
     this.queryGranularity = queryGranularity == null ? DEFAULT_QUERY_GRANULARITY : queryGranularity;
-    this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
-
-    if (inputIntervals != null) {
-      this.inputIntervals = ImmutableList.copyOf(inputIntervals);
-    } else {
-      this.inputIntervals = Collections.emptyList();
-    }
     intervalsByGranularity = new IntervalsByGranularity(this.inputIntervals, segmentGranularity);
-    buckets = new LookupIntervalBuckets(bucketIntervals());
+    lookupTableBucketByDateTime = new LookupIntervalBuckets(bucketIntervals());
   }
-
 
   public UniformGranularitySpec(
       Granularity segmentGranularity,
@@ -77,21 +64,10 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
+  @JsonProperty("intervals")
   public Iterable<Interval> bucketIntervals()
   {
     return () -> intervalsByGranularity.granularityIntervalsIterator();
-  }
-
-  @Override
-  public List<Interval> inputIntervals()
-  {
-    return inputIntervals == null ? ImmutableList.of() : ImmutableList.copyOf(inputIntervals);
-  }
-
-  @Override
-  public Optional<Interval> bucketInterval(DateTime dt)
-  {
-    return buckets.bucketInterval(dt);
   }
 
   @Override
@@ -102,23 +78,10 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
-  @JsonProperty("rollup")
-  public boolean isRollup()
-  {
-    return rollup;
-  }
-
-  @Override
   @JsonProperty("queryGranularity")
   public Granularity getQueryGranularity()
   {
     return queryGranularity;
-  }
-
-  @JsonProperty("intervals")
-  public Optional<List<Interval>> getIntervals()
-  {
-    return Optional.fromNullable(inputIntervals);
   }
 
   @Override
@@ -139,7 +102,7 @@ public class UniformGranularitySpec implements GranularitySpec
     if (!queryGranularity.equals(that.queryGranularity)) {
       return false;
     }
-    if (!rollup.equals(that.rollup)) {
+    if (isRollup() != that.isRollup()) {
       return false;
     }
 
@@ -176,6 +139,12 @@ public class UniformGranularitySpec implements GranularitySpec
   public GranularitySpec withIntervals(List<Interval> inputIntervals)
   {
     return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals);
+  }
+
+  @Override
+  protected LookupIntervalBuckets getLookupTableBuckets()
+  {
+    return lookupTableBucketByDateTime;
   }
 
 }

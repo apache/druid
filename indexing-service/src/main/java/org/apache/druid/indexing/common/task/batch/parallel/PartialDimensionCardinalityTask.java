@@ -129,7 +129,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     if (!getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
       return tryTimeChunkLock(
           new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-          getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
+          getIngestionSchema().getDataSchema().getGranularitySpec().condensedInputIntervals()
       );
     } else {
       return true;

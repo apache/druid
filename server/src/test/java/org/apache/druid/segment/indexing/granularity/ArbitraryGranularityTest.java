@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -131,6 +132,8 @@ public class ArbitraryGranularityTest
         Optional.absent(),
         spec.bucketInterval(DateTimes.of("2012-01-05T00Z"))
     );
+
+    Assert.assertEquals(spec.condensedInputIntervals(), JodaUtils.condenseIntervals(spec.bucketIntervals()));
   }
 
   @Test

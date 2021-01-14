@@ -54,6 +54,11 @@ public interface GranularitySpec
   List<Interval> inputIntervals();
 
   /**
+   * Returns the inputIntervals after they are condensed
+   */
+  List<Interval> condensedInputIntervals();
+
+  /**
    * Time-grouping interval corresponding to some instant, if any.
    *
    * @param dt instant to return time interval for

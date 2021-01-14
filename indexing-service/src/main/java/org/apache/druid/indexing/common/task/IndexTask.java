@@ -232,7 +232,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
+        ingestionSchema.dataSchema.getGranularitySpec().condensedInputIntervals()
     );
   }
 

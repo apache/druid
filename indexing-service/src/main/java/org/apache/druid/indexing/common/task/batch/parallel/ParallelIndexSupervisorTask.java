@@ -352,7 +352,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+        ingestionSchema.getDataSchema().getGranularitySpec().condensedInputIntervals()
     );
   }
 
@@ -820,7 +820,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private static <S extends PartitionStat, L extends PartitionLocation>
-      Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
+  Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
       Map<String, ? extends GeneratedPartitionsReport<S>> subTaskIdToReport,
       BiFunction<String, S, L> createPartitionLocationFunction
   )
