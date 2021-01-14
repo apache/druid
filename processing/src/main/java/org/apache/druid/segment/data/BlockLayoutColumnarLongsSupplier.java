@@ -82,7 +82,9 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
           @Override
           protected void loadBuffer(int bufferNum)
           {
-            holder.close();
+            if (holder != null) {
+              holder.close();
+            }
             holder = singleThreadedLongBuffers.get(bufferNum);
             buffer = holder.get();
             // asLongBuffer() makes the longBuffer's position = 0
@@ -189,7 +191,9 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 
     protected void loadBuffer(int bufferNum)
     {
-      holder.close();
+      if (holder != null) {
+        holder.close();
+      }
       holder = singleThreadedLongBuffers.get(bufferNum);
       buffer = holder.get();
       currBufferNum = bufferNum;

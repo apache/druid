@@ -167,7 +167,9 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
 
     protected void loadBuffer(int bufferNum)
     {
-      holder.close();
+      if (holder != null) {
+        holder.close();
+      }
       holder = singleThreadedDoubleBuffers.get(bufferNum);
       // asDoubleBuffer() makes the doubleBuffer's position = 0
       doubleBuffer = holder.get().asDoubleBuffer();

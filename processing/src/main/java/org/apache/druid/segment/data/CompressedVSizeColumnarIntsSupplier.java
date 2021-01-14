@@ -432,7 +432,9 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
     protected void loadBuffer(int bufferNum)
     {
-      holder.close();
+      if (holder != null) {
+        holder.close();
+      }
       holder = singleThreadedBuffers.get(bufferNum);
       ByteBuffer bb = holder.get();
       ByteOrder byteOrder = bb.order();

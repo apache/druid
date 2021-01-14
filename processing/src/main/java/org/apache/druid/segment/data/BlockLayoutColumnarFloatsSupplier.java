@@ -167,7 +167,9 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
 
     protected void loadBuffer(int bufferNum)
     {
-      holder.close();
+      if (holder != null) {
+        holder.close();
+      }
       holder = singleThreadedFloatBuffers.get(bufferNum);
       // asFloatBuffer() makes the floatBuffer's position = 0
       floatBuffer = holder.get().asFloatBuffer();
