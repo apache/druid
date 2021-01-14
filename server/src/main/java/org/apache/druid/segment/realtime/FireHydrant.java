@@ -42,8 +42,6 @@ import java.util.function.Function;
  */
 public class FireHydrant
 {
-  // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
-  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 3000;
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
   private volatile IncrementalIndex index;

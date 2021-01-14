@@ -102,6 +102,15 @@ import java.util.stream.Collectors;
 
 public class AppenderatorImpl implements Appenderator
 {
+  // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER = 1000;
+  public static final int ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER = 700;
+  public static final int ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER = 600;
+  // Rough estimate of memory footprint of empty Sink based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
+  // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+
   private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
   private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
@@ -633,12 +642,17 @@ public class AppenderatorImpl implements Appenderator
     if (bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
       // We are still over maxBytesTuningConfig even after persisting.
       // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
-      log.makeAlert("Persist no longer free up memory")
+      String errorMessage = String.format("Task uses up too much heap memory. Persist can no longer free up memory. Objects that "
+                                          + "cannot be freed up from intermediet persist include Sinks, Memory Mapped Hydrants, "
+                                          + "and other overhead created while ingesting/pervious persistings. "
+                                          + "numSinks[%d] numHydrantsAcrossAllSinks[%d] totalRows[%d]",
+                                          sinks.size(),
+                                          sinks.values().stream().mapToInt(Iterables::size).sum(),
+                                          getTotalRowCount());
+      log.makeAlert(errorMessage)
          .addData("dataSource", schema.getDataSource())
-         .addData("numSinks", sinks.size())
-         .addData("numHydrantsAcrossAllSinks", sinks.values().stream().mapToInt(Iterables::size).sum())
          .emit();
-      throw new RuntimeException("Ingestion run out of available memory as persist can no longer free up any memory.");
+      throw new RuntimeException(errorMessage);
     }
     return future;
   }
@@ -1198,7 +1212,10 @@ public class AppenderatorImpl implements Appenderator
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
       bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
       for (FireHydrant hydrant : sink) {
-        bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+        // Decrement memory used by all Memory Mapped Hydrant
+        if (!hydrant.equals(sink.getCurrHydrant())) {
+          bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+        }
       }
       totalRows.addAndGet(-sink.getNumRows());
     }
@@ -1415,15 +1432,15 @@ public class AppenderatorImpl implements Appenderator
     // These calculations are approximated from actual heap dumps.
     // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
-    return Integer.BYTES + (4 * Short.BYTES) + FireHydrant.ROUGH_OVERHEAD_PER_HYDRANT +
-           (hydrant.getSegmentNumDimensionColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
-           (hydrant.getSegmentNumMetricColumns() * ColumnHolder.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-           ColumnHolder.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+    return Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT +
+           (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
+           (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+           ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
   }
 
   private int calculateSinkMemoryInUsed(Sink sink)
   {
     // Rough estimate of memory footprint of empty Sink based on actual heap dumps
-    return Sink.ROUGH_OVERHEAD_PER_SINK;
+    return ROUGH_OVERHEAD_PER_SINK;
   }
 }
