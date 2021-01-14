@@ -647,11 +647,6 @@ public class Filters
       this.filter = filter;
     }
 
-    public Filter getFilter()
-    {
-      return filter;
-    }
-
     @Override
     public boolean equals(Object o)
     {

@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
@@ -79,9 +80,16 @@ public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilt
   @Override
   public DimFilter optimize()
   {
-    // Don't do anything special here; we'll collapse things in "toFilter".
-    // This allows us to share code with Filters.or(...), which works on Filter, not DimFilter.
-    return this;
+    // This method optimizes children, but doesn't do any special AND-related stuff like flattening or duplicate
+    // removal. That will happen in "toFilter", which allows us to share code with Filters.or(...).
+
+    final List<DimFilter> newFields = DimFilters.optimize(fields);
+
+    if (newFields.size() == 1) {
+      return newFields.get(0);
+    } else {
+      return new OrDimFilter(newFields);
+    }
   }
 
   @Override
