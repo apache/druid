@@ -159,8 +159,8 @@ public class SqlLifecycle
     }
   }
 
-  public PlannerContext plan(AuthenticationResult authenticationResult)
-      throws ValidationException, RelConversionException, SqlParseException
+  private PlannerContext plan(AuthenticationResult authenticationResult)
+      throws RelConversionException
   {
     synchronized (lock) {
       transition(State.INITIALIZED, State.PLANNED);
@@ -168,12 +168,19 @@ public class SqlLifecycle
         this.plannerContext = planner.getPlannerContext();
         this.plannerResult = planner.plan(sql);
       }
+      // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
+      catch (SqlParseException e) {
+        throw new SqlPlanningException(e);
+      }
+      catch (ValidationException e) {
+        throw new SqlPlanningException(e);
+      }
       return plannerContext;
     }
   }
 
-  public PlannerContext plan(HttpServletRequest req)
-      throws SqlParseException, RelConversionException, ValidationException
+  private PlannerContext plan(HttpServletRequest req)
+      throws RelConversionException
   {
     synchronized (lock) {
       this.req = req;
@@ -225,7 +232,7 @@ public class SqlLifecycle
   }
 
   public PlannerContext planAndAuthorize(final AuthenticationResult authenticationResult)
-      throws SqlParseException, RelConversionException, ValidationException
+      throws RelConversionException
   {
     PlannerContext plannerContext = plan(authenticationResult);
     Access access = authorize();
@@ -236,7 +243,7 @@ public class SqlLifecycle
   }
 
   public PlannerContext planAndAuthorize(final HttpServletRequest req)
-      throws SqlParseException, RelConversionException, ValidationException
+      throws RelConversionException
   {
     PlannerContext plannerContext = plan(req);
     Access access = authorize();
@@ -260,7 +267,7 @@ public class SqlLifecycle
       Map<String, Object> queryContext,
       List<SqlParameter> parameters,
       AuthenticationResult authenticationResult
-  ) throws ValidationException, RelConversionException, SqlParseException
+  ) throws RelConversionException
   {
     Sequence<Object[]> result;
 

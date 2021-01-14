@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -39,7 +40,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
+public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>
 {
   private static final String TYPE = "index_kafka";
 
@@ -122,7 +123,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   }
 
   @Override
-  protected SeekableStreamIndexTaskRunner<Integer, Long> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<Integer, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new IncrementalPublishingKafkaIndexTaskRunner(

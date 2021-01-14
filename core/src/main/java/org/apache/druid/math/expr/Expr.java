@@ -265,6 +265,13 @@ public interface Expr
     boolean[] getNullVector(String name);
 
     int getCurrentVectorSize();
+
+    /**
+     * Returns an integer that uniquely identifies the current position of the underlying vector offset, if this
+     * binding is backed by a segment. This is useful for caching: it is safe to assume nothing has changed in the
+     * offset so long as the id remains the same. See also: ReadableVectorOffset (in druid-processing)
+     */
+    int getCurrentVectorId();
   }
 
   /**

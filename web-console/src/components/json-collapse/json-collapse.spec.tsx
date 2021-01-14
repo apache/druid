@@ -17,6 +17,7 @@
  */
 
 import { shallow } from 'enzyme';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { JsonCollapse } from './json-collapse';
@@ -24,7 +25,7 @@ import { JsonCollapse } from './json-collapse';
 describe('JsonCollapse', () => {
   it('matches snapshot', () => {
     const jsonCollapse = shallow(
-      <JsonCollapse buttonText={'test'} stringValue={JSON.stringify({ name: 'test' })} />,
+      <JsonCollapse buttonText={'test'} stringValue={JSONBig.stringify({ name: 'test' })} />,
     );
     expect(jsonCollapse).toMatchSnapshot();
   });

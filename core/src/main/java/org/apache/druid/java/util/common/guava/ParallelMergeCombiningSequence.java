@@ -47,7 +47,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
@@ -786,7 +785,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
           if (thisTimeoutNanos < 0) {
-            throw new RE(new TimeoutException("QueuePusher timed out offering data"));
+            throw new QueryTimeoutException("QueuePusher timed out offering data");
           }
           success = queue.offer(item, thisTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {
@@ -1133,7 +1132,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
           if (thisTimeoutNanos < 0) {
-            throw new RE(new TimeoutException("BlockingQueue cursor timed out waiting for data"));
+            throw new QueryTimeoutException("BlockingQueue cursor timed out waiting for data");
           }
           resultBatch = queue.poll(thisTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {

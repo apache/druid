@@ -26,6 +26,7 @@ import {
   SqlRef,
   trimString,
 } from 'druid-query-toolkit';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
@@ -47,7 +48,7 @@ function stringifyValue(value: unknown): string {
     case 'object':
       if (!value) return String(value);
       if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
-      return JSON.stringify(value);
+      return JSONBig.stringify(value);
 
     default:
       return String(value);

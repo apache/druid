@@ -398,10 +398,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {
-    // In this case, the intervals to lock must be aligned with segmentGranularity if it's defined
+    // The given intervals are first converted to align with segment granularity. This is because,
+    // when an overwriting task finds a version for a given input row, it expects the interval
+    // associated to each version to be equal or larger than the time bucket where the input row falls in.
+    // See ParallelIndexSupervisorTask.findVersion().
     final Set<Interval> uniqueIntervals = new HashSet<>();
-    for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
-      final Granularity segmentGranularity = getSegmentGranularity();
+    final Granularity segmentGranularity = getSegmentGranularity();
+    for (Interval interval : intervals) {
       if (segmentGranularity == null) {
         uniqueIntervals.add(interval);
       } else {
@@ -409,7 +412,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
     }
 
-    for (Interval interval : uniqueIntervals) {
+    // Condense intervals to avoid creating too many locks.
+    for (Interval interval : JodaUtils.condenseIntervals(uniqueIntervals)) {
       final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
       if (lock == null) {
         return false;
