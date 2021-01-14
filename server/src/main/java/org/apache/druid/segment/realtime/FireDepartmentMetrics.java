@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.realtime;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -134,7 +136,19 @@ public class FireDepartmentMetrics
 
   public void markProcessingDone()
   {
-    this.completionTime.compareAndSet(DEFAULT_COMPLETION_TIME, System.currentTimeMillis());
+    markProcessingDone(System.currentTimeMillis());
+  }
+
+  @VisibleForTesting
+  void markProcessingDone(long timestamp)
+  {
+    this.completionTime.compareAndSet(DEFAULT_COMPLETION_TIME, timestamp);
+  }
+
+  @VisibleForTesting
+  long completionTime()
+  {
+    return completionTime.get();
   }
 
   public long processed()
