@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -38,6 +37,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
@@ -45,7 +45,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -56,6 +55,7 @@ import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -706,6 +706,26 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testCannotParse() throws Exception
+  {
+    final QueryException exception = doPost(
+        new SqlQuery(
+            "FROM druid.foo",
+            ResultFormat.OBJECT,
+            false,
+            null,
+            null
+        )
+    ).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorClass(), exception.getErrorClass());
+    Assert.assertTrue(exception.getMessage().contains("Encountered \"FROM\" at line 1, column 1."));
+    checkSqlRequestLog(false);
+  }
+
+  @Test
   public void testCannotValidate() throws Exception
   {
     final QueryException exception = doPost(
@@ -719,8 +739,8 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
-    Assert.assertEquals(ValidationException.class.getName(), exception.getErrorClass());
+    Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(exception.getMessage().contains("Column 'dim4' not found in any table"));
     checkSqlRequestLog(false);
   }
@@ -757,7 +777,7 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.RESOURCE_LIMIT_EXCEEDED);
+    Assert.assertEquals(exception.getErrorCode(), ResourceLimitExceededException.ERROR_CODE);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
     checkSqlRequestLog(false);
   }

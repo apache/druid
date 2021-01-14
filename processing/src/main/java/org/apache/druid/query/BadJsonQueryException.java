@@ -17,38 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
-import org.apache.druid.java.util.metrics.MonitorSchedulerConfig;
-import org.joda.time.Duration;
-import org.joda.time.Period;
+import com.fasterxml.jackson.core.JsonParseException;
 
-/**
- */
-public class DruidMonitorSchedulerConfig extends MonitorSchedulerConfig
+public class BadJsonQueryException extends BadQueryException
 {
-  @JsonProperty
-  private String schedulerClassName = BasicMonitorScheduler.class.getName();
+  public static final String ERROR_CODE = "Json parse failed";
+  public static final String ERROR_CLASS = JsonParseException.class.getName();
 
-  @JsonProperty
-  private Period emissionPeriod = new Period("PT1M");
-
-  public String getSchedulerClassName()
+  public BadJsonQueryException(JsonParseException e)
   {
-    return schedulerClassName;
+    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
   }
 
-  @JsonProperty
-  public Period getEmissionPeriod()
+  @JsonCreator
+  private BadJsonQueryException(
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass
+  )
   {
-    return emissionPeriod;
-  }
-
-  @Override
-  public Duration getEmitterPeriod()
-  {
-    return emissionPeriod.toStandardDuration();
+    super(errorCode, errorMessage, errorClass);
   }
 }

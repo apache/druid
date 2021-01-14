@@ -17,38 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
-import org.apache.druid.java.util.metrics.MonitorSchedulerConfig;
-import org.joda.time.Duration;
-import org.joda.time.Period;
+package org.apache.druid.query;
 
 /**
+ * An abstract class for all query exceptions that should return a bad request status code (400).
+ *
+ * See {@code BadRequestException} for non-query requests.
  */
-public class DruidMonitorSchedulerConfig extends MonitorSchedulerConfig
+public abstract class BadQueryException extends QueryException
 {
-  @JsonProperty
-  private String schedulerClassName = BasicMonitorScheduler.class.getName();
+  public static final int STATUS_CODE = 400;
 
-  @JsonProperty
-  private Period emissionPeriod = new Period("PT1M");
-
-  public String getSchedulerClassName()
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
-    return schedulerClassName;
+    super(errorCode, errorMessage, errorClass, null);
   }
 
-  @JsonProperty
-  public Period getEmissionPeriod()
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass, String host)
   {
-    return emissionPeriod;
-  }
-
-  @Override
-  public Duration getEmitterPeriod()
-  {
-    return emissionPeriod.toStandardDuration();
+    super(errorCode, errorMessage, errorClass, host);
   }
 }
