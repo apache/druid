@@ -53,6 +53,10 @@ To run all tests from a test group using docker and mvn run the following comman
 ```
   mvn verify -P integration-tests -Dgroups=<test_group>
 ```
+For instance, to run the tests for group `append-ingestion` do:
+```
+  mvn verify -P integration-tests -Dgroups=append-ingestion
+```
 
 To run only a single test using mvn run the following command:
 ```
@@ -69,6 +73,28 @@ Druid's configuration (using Docker) can be overrided by providing -Doverride.co
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case.
 Note that when bringing up docker containers through mvn and -Doverride.config.path is provided, additional
 Druid routers for security group integration test (permissive tls, no client auth tls, custom check tls) will not be started.   
+
+### Troubleshooting
+Early in the integration test, the scripts need to generate some RAS keys. If the key generation fails because of a an error then check that
+your environment does not report more that one IP address. For instance, if you are on a mac you may use the following commands:
+```
+$ hostname
+mylaptop
+
+$ host mylaptop
+mylaptop has address 198.105.254.23
+mylaptop has address 198.105.244.23
+Host mylaptop not found: 3(NXDOMAIN)
+```
+
+If you see a situation like the one above, when calling `host` on your hostname and you get more than one IP address in return then you can try changing your DNS. Some DNS actually return more than one IP for any unresolved domains. In this case, change your DNS and try the commands above until you don't see more than one IP (no IP's is also ok). This is what I get in my mac now after having the issue above and changing the DNS:
+```
+$ host mylaptop
+Host mylaptop not found: 3(NXDOMAIN)
+```
+
+And now things should work.
+
 
 ## Docker compose
 
