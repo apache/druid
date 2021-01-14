@@ -20,52 +20,37 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.Sets;
-import io.timeandspace.cronscheduler.CronScheduler;
-import io.timeandspace.cronscheduler.CronTask;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 
 /**
  */
-public class MonitorScheduler
+public abstract class MonitorScheduler
 {
-  
-  private static final Logger log = new Logger(MonitorScheduler.class);
-  
   private final MonitorSchedulerConfig config;
   private final ServiceEmitter emitter;
   private final Set<Monitor> monitors;
   private final Object lock = new Object();
-  private final CronScheduler scheduler;
-  private final ExecutorService executorService;
 
   private volatile boolean started = false;
   
-  public MonitorScheduler(
+  MonitorScheduler(
       MonitorSchedulerConfig config,
-      CronScheduler scheduler,
       ServiceEmitter emitter,
-      List<Monitor> monitors,
-      ExecutorService executorService
+      List<Monitor> monitors
   )
   {
     this.config = config;
-    this.scheduler = scheduler;
     this.emitter = emitter;
     this.monitors = Sets.newHashSet(monitors);
-    this.executorService = executorService;
   }
 
   @LifecycleStart
@@ -131,59 +116,23 @@ public class MonitorScheduler
     }
   }
 
-  private void startMonitor(final Monitor monitor)
-  {
-    synchronized (lock) {
-      monitor.start();
-      long rate = config.getEmitterPeriod().getMillis();
-      Future<?> scheduledFuture = scheduler.scheduleAtFixedRate(
-          rate,
-          rate,
-          TimeUnit.MILLISECONDS,
-          new CronTask()
-          {
-            private volatile Future<Boolean> monitorFuture = null;
-            @Override
-            public void run(long scheduledRunTimeMillis)
-            {
-              try {
-                if (monitorFuture != null && monitorFuture.isDone()
-                    && !(monitorFuture.get() && hasMonitor(monitor))) {
-                  removeMonitor(monitor);
-                  monitor.getScheduledFuture().cancel(false);
-                  log.debug("Stopped rescheduling %s (delay %s)", this, rate);
-                  return;
-                }
-                log.trace("Running %s (period %s)", this, rate);
-                monitorFuture = executorService.submit(new Callable<Boolean>()
-                {
-                  @Override
-                  public Boolean call()
-                  {
-                    try {
-                      return monitor.monitor(emitter);
-                    }
-                    catch (Throwable e) {
-                      log.error(e, "Uncaught exception.");
-                      return Boolean.FALSE;
-                    }
-                  }
-                });
-              }
-              catch (Throwable e) {
-                log.error(e, "Uncaught exception.");
-              }
-            }
-          });
-      monitor.setScheduledFuture(scheduledFuture);
-    }
-  }
-
-  private boolean hasMonitor(final Monitor monitor)
+  boolean hasMonitor(final Monitor monitor)
   {
     synchronized (lock) {
       return monitors.contains(monitor);
     }
   }
-  
+
+  MonitorSchedulerConfig getConfig()
+  {
+    return config;
+  }
+
+  ServiceEmitter getEmitter()
+  {
+    return emitter;
+  }
+
+  @GuardedBy("lock")
+  abstract void startMonitor(Monitor monitor);
 }
