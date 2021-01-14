@@ -600,7 +600,7 @@ public class IndexIO
                   return deserializeColumn(mapper, colBuffer, smooshedFiles);
                 }
                 catch (IOException | RuntimeException e) {
-                  log.warn(e, "Throw exceptions when deserialize column [%s].", columnName);
+                  log.warn(e, "Throw exception when deserialize column [%s].", columnName);
                   loadFailed.execute();
                   throw Throwables.propagate(e);
                 }
@@ -622,7 +622,7 @@ public class IndexIO
                 return deserializeColumn(mapper, timeBuffer, smooshedFiles);
               }
               catch (IOException | RuntimeException e) {
-                log.warn(e, "Throw exceptions when deserialize column [%s]", ColumnHolder.TIME_COLUMN_NAME);
+                log.warn(e, "Throw exception when deserialize column [%s]", ColumnHolder.TIME_COLUMN_NAME);
                 loadFailed.execute();
                 throw Throwables.propagate(e);
               }
