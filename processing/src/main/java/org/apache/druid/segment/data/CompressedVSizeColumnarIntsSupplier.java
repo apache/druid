@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
