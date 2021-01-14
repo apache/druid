@@ -78,8 +78,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             // Sub tasks would run forever
             new TestInputSource(Pair.of(new TestInput(Integer.MAX_VALUE, TaskState.SUCCESS), 4)),
             new NoopInputFormat(),
-            false,
-            InputSourceSecurityConfig.ALLOW_ALL
+            false
         )
     );
     getIndexingServiceClient().runTask(task.getId(), task);
@@ -111,8 +110,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
                 Pair.of(new TestInput(Integer.MAX_VALUE, TaskState.FAILED), 3)
             ),
             new NoopInputFormat(),
-            false,
-            InputSourceSecurityConfig.ALLOW_ALL
+            false
         )
     );
     final TaskActionClient actionClient = createActionClient(task);
@@ -327,8 +325,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
                   null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
-                  getIngestionSchema().getIOConfig().isAppendToExisting(),
-                  InputSourceSecurityConfig.ALLOW_ALL
+                  getIngestionSchema().getIOConfig().isAppendToExisting()
               ),
               getIngestionSchema().getTuningConfig()
           ),

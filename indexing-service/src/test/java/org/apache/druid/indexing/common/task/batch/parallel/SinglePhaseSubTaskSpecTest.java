@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -56,8 +55,7 @@ public class SinglePhaseSubTaskSpecTest
               null,
               new LocalInputSource(new File("baseDir"), "filter"),
               new JsonInputFormat(null, null, null),
-              null,
-              InputSourceSecurityConfig.ALLOW_ALL
+              null
           ),
           null
       ),

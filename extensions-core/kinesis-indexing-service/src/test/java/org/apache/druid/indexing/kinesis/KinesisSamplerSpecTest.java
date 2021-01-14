@@ -29,7 +29,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -304,7 +303,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         AWSCredentialsConfig awsCredentialsConfig
     )
     {
-      super(ingestionSpec, samplerConfig, inputSourceSampler, awsCredentialsConfig, InputSourceSecurityConfig.ALLOW_ALL);
+      super(ingestionSpec, samplerConfig, inputSourceSampler, awsCredentialsConfig);
     }
 
     @Override

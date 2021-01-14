@@ -27,7 +27,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -222,8 +221,7 @@ class ParallelIndexTestingFactory
         null,
         inputSource,
         inputFormat,
-        false,
-        InputSourceSecurityConfig.ALLOW_ALL
+        false
     );
 
     return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);

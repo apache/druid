@@ -23,7 +23,6 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.Task;
@@ -98,9 +97,8 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
             firehoseFactory,
             inputSource,
             ingestionSchema.getIOConfig().getInputFormat(),
-            ingestionSchema.getIOConfig().isAppendToExisting(),
+            ingestionSchema.getIOConfig().isAppendToExisting()
             // Security is already checked in baseInputSource
-            InputSourceSecurityConfig.ALLOW_ALL
         ),
         ingestionSchema.getTuningConfig()
     );

@@ -468,8 +468,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               null,
               new SettableSplittableLocalInputSource(inputDir, "test_*", splittableInputSource),
               DEFAULT_INPUT_FORMAT,
-              appendToExisting,
-              InputSourceSecurityConfig.ALLOW_ALL
+              appendToExisting
           ),
           tuningConfig
       );
@@ -497,8 +496,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           ),
           new ParallelIndexIOConfig(
               new LocalFirehoseFactory(inputDir, "test_*", null),
-              appendToExisting,
-              InputSourceSecurityConfig.ALLOW_ALL
+              appendToExisting
           ),
           tuningConfig
       );

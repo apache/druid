@@ -191,8 +191,7 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new InlineInputSource("test"),
           new JsonInputFormat(null, null, null),
-          appendToExisting,
-          InputSourceSecurityConfig.ALLOW_ALL
+          appendToExisting
       );
       final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
           null,

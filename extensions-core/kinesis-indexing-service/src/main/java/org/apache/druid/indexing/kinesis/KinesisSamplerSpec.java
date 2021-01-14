@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
@@ -43,11 +42,10 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
       @JsonProperty("spec") final KinesisSupervisorSpec ingestionSpec,
       @JsonProperty("samplerConfig") @Nullable final SamplerConfig samplerConfig,
       @JacksonInject InputSourceSampler inputSourceSampler,
-      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
-      @JacksonInject InputSourceSecurityConfig securityConfig
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
   )
   {
-    super(ingestionSpec, samplerConfig, inputSourceSampler, securityConfig);
+    super(ingestionSpec, samplerConfig, inputSourceSampler);
 
     this.awsCredentialsConfig = awsCredentialsConfig;
   }

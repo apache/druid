@@ -596,8 +596,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             retryPolicyFactory
         ),
         null,
-        false,
-        InputSourceSecurityConfig.ALLOW_ALL
+        false
     );
   }
 
