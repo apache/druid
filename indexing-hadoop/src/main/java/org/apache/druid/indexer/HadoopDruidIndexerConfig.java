@@ -315,7 +315,7 @@ public class HadoopDruidIndexerConfig
   {
     Iterable<Interval> bucketIntervals = schema.getDataSchema().getGranularitySpec().bucketIntervals();
     if (bucketIntervals.iterator().hasNext()) {
-      return Optional.of(JodaUtils.condenseIntervals(schema.getDataSchema().getGranularitySpec().bucketIntervals()));
+      return Optional.of(JodaUtils.condenseIntervals(bucketIntervals));
     } else {
       return Optional.absent();
     }
