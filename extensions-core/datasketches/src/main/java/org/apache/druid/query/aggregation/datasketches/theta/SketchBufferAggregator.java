@@ -19,206 +19,84 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.datasketches.Family;
-import org.apache.datasketches.memory.WritableMemory;
-import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
-import org.apache.druid.query.aggregation.BaseBufferAggregator;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
 
-public abstract class SketchBufferAggregator implements BaseBufferAggregator
+public class SketchBufferAggregator implements BufferAggregator
 {
-  private final int size;
-  private final int maxIntermediateSize;
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
+  private final BaseObjectColumnValueSelector selector;
+  private final SketchBufferAggregatorHelper helper;
 
-  protected SketchBufferAggregator(int size, int maxIntermediateSize)
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
-    this.size = size;
-    this.maxIntermediateSize = maxIntermediateSize;
+    this.selector = selector;
+    this.helper = new SketchBufferAggregatorHelper(size, maxIntermediateSize);
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    createNewUnion(buf, position, false);
+    helper.init(buf, position);
   }
 
   @Override
+  public void aggregate(ByteBuffer buf, int position)
+  {
+    Object update = selector.getObject();
+    if (update == null) {
+      return;
+    }
+
+    Union union = helper.getOrCreateUnion(buf, position);
+    SketchAggregator.updateUnion(union, update);
+  }
+
+
+  @Nullable
+  @Override
   public Object get(ByteBuffer buf, int position)
   {
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
-    Union union = unionMap != null ? unionMap.get(position) : null;
-    if (union == null) {
-      return SketchHolder.EMPTY;
-    }
-    //in the code below, I am returning SetOp.getResult(true, null)
-    //"true" returns an ordered sketch but slower to compute than unordered sketch.
-    //however, advantage of ordered sketch is that they are faster to "union" later
-    //given that results from the aggregator will be combined further, it is better
-    //to return the ordered sketch here
-    return SketchHolder.of(union.getResult(true, null));
+    return helper.get(buf, position);
   }
 
-  protected Union getOrCreateUnion(ByteBuffer buf, int position)
+  @Override
+  public float getFloat(ByteBuffer buf, int position)
   {
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
-    Union union = unionMap != null ? unionMap.get(position) : null;
-    if (union != null) {
-      return union;
-    }
-    return createNewUnion(buf, position, true);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
-  private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
+  @Override
+  public long getLong(ByteBuffer buf, int position)
   {
-    WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
-    Union union = isWrapped
-                  ? (Union) SetOperation.wrap(mem)
-                  : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
-    if (unionMap == null) {
-      unionMap = new Int2ObjectOpenHashMap<>();
-      unions.put(buf, unionMap);
-    }
-    unionMap.put(position, union);
-    return union;
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
   public void close()
   {
-    unions.clear();
-    memCache.clear();
+    helper.close();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 
   @Override
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    createNewUnion(newBuffer, newPosition, true);
-    Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
-    if (unionMap != null) {
-      unionMap.remove(oldPosition);
-      if (unionMap.isEmpty()) {
-        unions.remove(oldBuffer);
-        memCache.remove(oldBuffer);
-      }
-    }
-  }
-
-  private WritableMemory getMemory(ByteBuffer buffer)
-  {
-    WritableMemory mem = memCache.get(buffer);
-    if (mem == null) {
-      mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
-      memCache.put(buffer, mem);
-    }
-    return mem;
-  }
-
-  public static class Buffer extends SketchBufferAggregator implements BufferAggregator
-  {
-    private final BaseObjectColumnValueSelector selector;
-
-    public Buffer(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
-    {
-      super(size, maxIntermediateSize);
-      this.selector = selector;
-    }
-
-    @Override
-    public void aggregate(ByteBuffer buf, int position)
-    {
-      Object update = selector.getObject();
-      if (update == null) {
-        return;
-      }
-
-      Union union = getOrCreateUnion(buf, position);
-      SketchAggregator.updateUnion(union, update);
-    }
-
-    @Override
-    public float getFloat(ByteBuffer buf, int position)
-    {
-      throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public long getLong(ByteBuffer buf, int position)
-    {
-      throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public double getDouble(ByteBuffer buf, int position)
-    {
-      throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("selector", selector);
-    }
-  }
-
-  public static class Vector extends SketchBufferAggregator implements VectorAggregator
-  {
-    private final VectorObjectSelector selector;
-
-    public Vector(VectorObjectSelector selector, int size, int maxIntermediateSize)
-    {
-      super(size, maxIntermediateSize);
-      this.selector = selector;
-    }
-
-    @Override
-    public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
-    {
-      final Union union = getOrCreateUnion(buf, position);
-      final Object[] vector = selector.getObjectVector();
-
-      for (int i = startRow; i < endRow; i++) {
-        final Object o = vector[i];
-        if (o != null) {
-          SketchAggregator.updateUnion(union, o);
-        }
-      }
-    }
-
-    @Override
-    public void aggregate(
-        final ByteBuffer buf,
-        final int numRows,
-        final int[] positions,
-        @Nullable final int[] rows,
-        final int positionOffset
-    )
-    {
-      final Object[] vector = selector.getObjectVector();
-
-      for (int i = 0; i < numRows; i++) {
-        final Object o = vector[rows != null ? rows[i] : i];
-
-        if (o != null) {
-          final int position = positions[i] + positionOffset;
-          final Union union = getOrCreateUnion(buf, position);
-          SketchAggregator.updateUnion(union, o);
-        }
-      }
-    }
+    helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 }

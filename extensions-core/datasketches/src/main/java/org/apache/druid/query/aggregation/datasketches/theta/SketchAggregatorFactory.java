@@ -78,14 +78,14 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchBufferAggregator.Buffer(selector, size, getMaxIntermediateSizeWithNulls());
+    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
 
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     final VectorObjectSelector selector = selectorFactory.makeObjectSelector(fieldName);
-    return new SketchBufferAggregator.Vector(selector, size, getMaxIntermediateSizeWithNulls());
+    return new SketchVectorAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
 
   @Override
