@@ -31,9 +31,13 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -74,7 +78,20 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
+    return new SketchBufferAggregator.Buffer(selector, size, getMaxIntermediateSizeWithNulls());
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    final VectorObjectSelector selector = selectorFactory.makeObjectSelector(fieldName);
+    return new SketchBufferAggregator.Vector(selector, size, getMaxIntermediateSizeWithNulls());
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override

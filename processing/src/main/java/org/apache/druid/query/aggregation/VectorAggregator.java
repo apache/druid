@@ -27,19 +27,14 @@ import java.nio.ByteBuffer;
  * methods (namely, "aggregate" and "get") do not take the actual input values to aggregate, because it is assumed that
  * the VectorAggregator was given something that it can use to get at the current batch of data.
  *
- * None of the methods in this class are annotated with
+ * Unlike {@link BufferAggregator}, none of the methods in this class are annotated with
  * {@link org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop} because vectorized query engines do not use
  * monomorphic-processing-style specialization.
  *
- * @see BufferAggregator, the vectorized version.
+ * @see BufferAggregator, the nonvectorized version.
  */
-public interface VectorAggregator
+public interface VectorAggregator extends BaseBufferAggregator
 {
-  /**
-   * Same as {@link BufferAggregator#init}.
-   */
-  void init(ByteBuffer buf, int position);
-
   /**
    * Aggregate a range of rows into a single aggregation slot.
    *
@@ -65,22 +60,4 @@ public interface VectorAggregator
    * @param positionOffset an offset to apply to each value from "positions"
    */
   void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset);
-
-  /**
-   * Same as {@link BufferAggregator#get}.
-   */
-  @Nullable
-  Object get(ByteBuffer buf, int position);
-
-  /**
-   * Same as {@link BufferAggregator#relocate}.
-   */
-  default void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
-  {
-  }
-
-  /**
-   * Release any resources used by the aggregator.
-   */
-  void close();
 }
