@@ -21,6 +21,7 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
@@ -28,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 public class IntervalsByGranularityTest
@@ -94,6 +96,56 @@ public class IntervalsByGranularityTest
 
 
   }
+
+  @Test
+  public void testSimpleEliminateRepeated()
+  {
+    final List<Interval> inputIntervals = ImmutableList.of(
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        inputIntervals,
+        Granularities.MONTH
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(Intervals.of("2012-01-01T00Z/2012-02-01T00Z")),
+        ImmutableList.copyOf(intervals.granularityIntervalsIterator())
+    );
+
+  }
+
+  @Test
+  public void testALittleMoreComplexEliminateRepeated()
+  {
+    final List<Interval> inputIntervals = ImmutableList.of(
+        Intervals.of("2015-01-08T00Z/2015-01-11T00Z"),
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z"),
+        Intervals.of("2007-03-08T00Z/2007-04-11T00Z")
+    );
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        inputIntervals,
+        Granularities.MONTH
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            Intervals.of("2007-03-01T00Z/2007-04-01T00Z"),
+            Intervals.of("2007-04-01T00Z/2007-05-01T00Z"),
+            Intervals.of("2012-01-01T00Z/2012-02-01T00Z"),
+            Intervals.of("2015-01-01T00Z/2015-02-01T00Z")
+        ),
+        ImmutableList.copyOf(intervals.granularityIntervalsIterator())
+    );
+
+  }
+
 
   private long getCount(Iterator<Interval> granularityIntervalIterator)
   {

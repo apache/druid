@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.common.granularity;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
@@ -67,29 +69,57 @@ public class IntervalsByGranularity
   {
     private final List<Interval> sortedIntervals;
     private int currentInterval;
-    private volatile Iterator<Interval> currentIterator;
+    private volatile PeekingIterator<Interval> currentIterator;
+    private Interval previous;
 
     public IntervalIterator(List<Interval> sortedIntervals)
     {
       this.sortedIntervals = sortedIntervals;
       this.currentInterval = 0;
-      currentIterator = granularity.getIterable(sortedIntervals.get(currentInterval)).iterator();
+      currentIterator =
+          Iterators.peekingIterator(granularity.getIterable(sortedIntervals.get(currentInterval)).iterator());
     }
 
     @Override
     public boolean hasNext()
     {
       if (currentIterator != null) {
+        boolean advance = false;
         while (true) {
-          if (currentIterator.hasNext()) {
-            return true;
-          } else if (currentInterval < sortedIntervals.size() - 1) {
-            currentIterator = granularity.getIterable(sortedIntervals.get(++currentInterval)).iterator();
-            continue;
-          } else {
-            break;
+
+          // is it time to move to the next iterator?
+          if (advance) {
+            if (currentInterval < sortedIntervals.size() - 1) {
+              currentIterator =
+                  Iterators.peekingIterator(granularity.getIterable(sortedIntervals.get(++currentInterval)).iterator());
+              advance = false;
+            } else {
+              break;
+            }
           }
-        }
+
+          // check if this iterator has more elements:
+          if (currentIterator.hasNext()) {
+
+            // drop all subsequent intervals that are the same as the previous...
+            while (previous != null && previous.equals(currentIterator.peek())) {
+              currentIterator.next(); // drop it like it's hot
+              if (!currentIterator.hasNext()) {
+                advance = true;
+                break;
+              }
+            }
+            if (advance) {
+              continue; // no more here, get to the next iterator...
+            }
+
+            return true; // there are more
+
+          } else {
+            advance = true; // no more
+          }
+
+        } // while true
       }
       return false;
     }
@@ -100,7 +130,8 @@ public class IntervalsByGranularity
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
-      return currentIterator.next();
+      previous = currentIterator.next();
+      return previous;
     }
 
     @Override

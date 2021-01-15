@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
@@ -386,7 +385,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (segmentGranularity == null) {
         uniqueIntervals.add(interval);
       } else {
-        Iterables.addAll(uniqueIntervals, segmentGranularity.getIterable(interval));
+        uniqueIntervals.add(segmentGranularity.getCondensedBucket(interval));
       }
     }
 

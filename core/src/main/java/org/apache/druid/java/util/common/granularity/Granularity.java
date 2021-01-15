@@ -147,6 +147,17 @@ public abstract class Granularity implements Cacheable
     return new Interval(start, increment(start));
   }
 
+  /**
+   * Return a lazy Iterable of the condensed intervals
+   */
+  public final Interval getCondensedBucket(Interval interval)
+  {
+    Interval retVal = null;
+
+    return retVal;
+  }
+
+
   // Used by the toDate implementations.
   final Integer[] getDateValues(String filePath, Formatter formatter)
   {
