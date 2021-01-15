@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 
 import java.util.List;
 
@@ -39,6 +40,8 @@ public interface SupervisorSpec
    * Create a new {@link Supervisor} instance.
    */
   Supervisor createSupervisor();
+
+  SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor);
 
   List<String> getDataSources();
 

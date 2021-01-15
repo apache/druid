@@ -1201,7 +1201,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected void collectLag(ArrayList<Long> lags)
+    public void collectLag(ArrayList<Long> lags)
     {
     }
   }
@@ -1247,7 +1247,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected void collectLag(ArrayList<Long> lags)
+    public void collectLag(ArrayList<Long> lags)
     {
     }
 

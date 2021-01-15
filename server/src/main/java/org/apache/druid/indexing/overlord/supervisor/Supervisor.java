@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 public interface Supervisor
 {
@@ -64,4 +66,18 @@ public interface Supervisor
    * @param checkpointMetadata metadata for the sequence to currently checkpoint
    */
   void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata);
+
+  /**
+   * Collect maxLag, totalLag, avgLag into ArrayList<Long> lags
+   * Only support Kafka ingestion so far.
+   * @param lags , Notice : The order of values is maxLag, totalLag and avgLag.
+   */
+  void collectLag(ArrayList<Long> lags);
+
+  /**
+   * use for autoscaler
+   */
+  Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction);
+
+  Map getSupervisorTaskInfos();
 }

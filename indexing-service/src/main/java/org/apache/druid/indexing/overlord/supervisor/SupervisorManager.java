@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -45,6 +46,8 @@ public class SupervisorManager
 
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisors = new ConcurrentHashMap<>();
+  // SupervisorTaskAutoscaler could be null
+  private final ConcurrentHashMap<String, SupervisorTaskAutoscaler> autoscalers = new ConcurrentHashMap<>();
   private final Object lock = new Object();
 
   private volatile boolean started = false;
@@ -146,12 +149,17 @@ public class SupervisorManager
       for (String id : supervisors.keySet()) {
         try {
           supervisors.get(id).lhs.stop(false);
+          SupervisorTaskAutoscaler autoscaler = autoscalers.get(id);
+          if (autoscaler != null) {
+            autoscaler.stop();
+          }
         }
         catch (Exception e) {
           log.warn(e, "Caught exception while stopping supervisor [%s]", id);
         }
       }
       supervisors.clear();
+      autoscalers.clear();
       started = false;
     }
 
@@ -193,6 +201,10 @@ public class SupervisorManager
     }
 
     supervisor.lhs.reset(dataSourceMetadata);
+    SupervisorTaskAutoscaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.reset();
+    }
     return true;
   }
 
@@ -244,6 +256,12 @@ public class SupervisorManager
     pair.lhs.stop(true);
     supervisors.remove(id);
 
+    SupervisorTaskAutoscaler autoscler = autoscalers.get(id);
+    if (autoscler != null) {
+      autoscler.stop();
+      autoscalers.remove(id);
+    }
+
     return true;
   }
 
@@ -288,9 +306,15 @@ public class SupervisorManager
     }
 
     Supervisor supervisor;
+    SupervisorTaskAutoscaler autoscaler;
     try {
       supervisor = spec.createSupervisor();
+      autoscaler = spec.createAutoscaler(supervisor);
+
       supervisor.start();
+      if (autoscaler != null) {
+        autoscaler.start();
+      }
     }
     catch (Exception e) {
       // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
@@ -301,6 +325,7 @@ public class SupervisorManager
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));
+    autoscalers.put(id, autoscaler);
     return true;
   }
 }

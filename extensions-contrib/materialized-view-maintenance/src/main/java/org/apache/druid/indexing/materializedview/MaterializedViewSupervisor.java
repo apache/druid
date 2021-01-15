@@ -62,6 +62,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 public class MaterializedViewSupervisor implements Supervisor
@@ -280,6 +281,23 @@ public class MaterializedViewSupervisor implements Supervisor
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     // do nothing
+  }
+
+  @Override
+  public void collectLag(ArrayList<Long> lags)
+  {
+  }
+
+  @Override
+  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+  {
+    return null;
+  }
+
+  @Override
+  public Map getSupervisorTaskInfos()
+  {
+    return null;
   }
 
   /**

@@ -332,7 +332,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   }
 
   @Override
-  protected void collectLag(ArrayList<Long> lags)
+  public void collectLag(ArrayList<Long> lags)
   {
     Map<Integer, Long> partitionRecordLag = getPartitionRecordLag();
     if (partitionRecordLag == null) {

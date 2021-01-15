@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.DummyAutoScaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 
 import java.util.List;
 import java.util.Objects;
@@ -50,6 +52,12 @@ public class TestSupervisorSpec implements SupervisorSpec
   public Supervisor createSupervisor()
   {
     return null;
+  }
+
+  @Override
+  public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
+  {
+    return new DummyAutoScaler(supervisor, null);
   }
 
   @Override

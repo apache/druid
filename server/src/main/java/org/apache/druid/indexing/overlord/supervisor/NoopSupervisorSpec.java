@@ -23,11 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 
 /**
  * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
@@ -154,7 +157,30 @@ public class NoopSupervisorSpec implements SupervisorSpec
       {
 
       }
+
+      @Override
+      public void collectLag(ArrayList<Long> lags)
+      {
+      }
+
+      @Override
+      public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+      {
+        return null;
+      }
+
+      @Override
+      public Map getSupervisorTaskInfos()
+      {
+        return null;
+      }
     };
+  }
+
+  @Override
+  public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
+  {
+    return null;
   }
 
   @Override

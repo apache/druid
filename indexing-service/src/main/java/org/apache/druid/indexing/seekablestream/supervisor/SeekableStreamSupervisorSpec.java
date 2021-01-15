@@ -32,6 +32,9 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.DefaultAutoScaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.DummyAutoScaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -150,6 +153,27 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   @Override
   public abstract Supervisor createSupervisor();
+
+  /**
+   * need to notice that autoScaler would be null which means autoscale is dissable.
+   * @param supervisor
+   * @return
+   */
+  @Override
+  public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
+  {
+    String dataSource = getId();
+    SupervisorTaskAutoscaler autoScaler = new DummyAutoScaler(supervisor, dataSource);
+    Map<String, Object> dynamicAllocationTasksProperties = ingestionSchema.getIOConfig().getDynamicAllocationTasksProperties();
+    if (dynamicAllocationTasksProperties != null && !dynamicAllocationTasksProperties.isEmpty() && Boolean.parseBoolean(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("enableDynamicAllocationTasks", false)))) {
+      String autoScalerStrategy = String.valueOf(dynamicAllocationTasksProperties.getOrDefault("autoScalerStrategy", "lagBased"));
+
+      switch (autoScalerStrategy) {
+        default: autoScaler = new DefaultAutoScaler(supervisor, dataSource, dynamicAllocationTasksProperties, this);
+      }
+    }
+    return autoScaler;
+  }
 
   @Override
   public List<String> getDataSources()
