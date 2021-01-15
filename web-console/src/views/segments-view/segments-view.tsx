@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { SqlExpression, SqlRef } from 'druid-query-toolkit';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -36,6 +36,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
+import { Api } from '../../singletons';
 import {
   addFilter,
   compact,
@@ -50,8 +51,8 @@ import {
   QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
+import { Capabilities, CapabilitiesMode } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './segments-view.scss';
@@ -254,7 +255,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             queryParts.push(
               'ORDER BY ' +
                 query.sorted
-                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .map((sort: any) => `${JSONBig.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                   .join(', '),
             );
           }
@@ -271,7 +272,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             queryParts.push(
               'ORDER BY ' +
                 query.sorted
-                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .map((sort: any) => `${JSONBig.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                   .join(', '),
             );
           }
@@ -295,11 +296,14 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsNoSqlQueryManager = new QueryManager({
       processQuery: async () => {
-        const datasourceList = (await axios.get('/druid/coordinator/v1/metadata/datasources')).data;
+        const datasourceList = (await Api.instance.get(
+          '/druid/coordinator/v1/metadata/datasources',
+        )).data;
         const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
           datasourceList.map(async (d: string) => {
-            const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
-              .segments;
+            const segments = (await Api.instance.get(
+              `/druid/coordinator/v1/datasources/${Api.encodePath(d)}?full`,
+            )).data.segments;
 
             return segments.map(
               (segment: any): SegmentQueryResultRow => {
@@ -634,8 +638,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.delete(
-            `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
+          const resp = await Api.instance.delete(
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              terminateDatasourceId,
+            )}/segments/${Api.encodePath(terminateSegmentId)}`,
             {},
           );
           return resp.data;
@@ -740,7 +746,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           {this.renderSegmentsTable()}
         </div>
         {this.renderTerminateSegmentAction()}
-        {segmentTableActionDialogId && (
+        {segmentTableActionDialogId && datasourceTableActionDialogId && (
           <SegmentTableActionDialog
             segmentId={segmentTableActionDialogId}
             datasourceId={datasourceTableActionDialogId}

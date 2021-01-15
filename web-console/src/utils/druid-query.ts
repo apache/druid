@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-import { AxiosResponse } from 'axios';
+import axios, { AxiosResponse } from 'axios';
+
+import { Api } from '../singletons';
 
 import { assemble } from './general';
 import { RowColumn } from './query-cursor';
@@ -213,7 +214,7 @@ export class DruidError extends Error {
 export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
   let runeResultResp: AxiosResponse<any>;
   try {
-    runeResultResp = await axios.post('/druid/v2', runeQuery);
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -223,7 +224,7 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
 export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
   let sqlResultResp: AxiosResponse<any>;
   try {
-    sqlResultResp = await axios.post('/druid/v2/sql', sqlQueryPayload);
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

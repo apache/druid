@@ -66,6 +66,9 @@ public interface InputEntity
    * Opens an {@link InputStream} on the input entity directly.
    * This is the basic way to read the given entity.
    *
+   * The behavior of this method is only defined fort the first call to open().
+   * The behavior of subsequent calls is undefined and may vary between implementations.
+   *
    * @see #fetch
    */
   InputStream open() throws IOException;

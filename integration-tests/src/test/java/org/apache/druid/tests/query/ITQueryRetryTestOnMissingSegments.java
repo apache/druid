@@ -191,20 +191,20 @@ public class ITQueryRetryTestOnMissingSegments
 
     switch (expectation) {
       case ALL_SUCCESS:
-        Assert.assertEquals(ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN, querySuccess);
-        Assert.assertEquals(0, queryFailure);
-        Assert.assertEquals(ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN, resultMatches);
-        Assert.assertEquals(0, resultMismatches);
+        Assert.assertEquals(querySuccess, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(queryFailure, 0);
+        Assert.assertEquals(resultMatches, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(resultMismatches, 0);
         break;
       case QUERY_FAILURE:
         Assert.assertTrue(querySuccess > 0, "At least one query is expected to succeed.");
         Assert.assertTrue(queryFailure > 0, "At least one query is expected to fail.");
         Assert.assertEquals(querySuccess, resultMatches);
-        Assert.assertEquals(0, resultMismatches);
+        Assert.assertEquals(resultMismatches, 0);
         break;
       case INCORRECT_RESULT:
-        Assert.assertEquals(ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN, querySuccess);
-        Assert.assertEquals(0, queryFailure);
+        Assert.assertEquals(querySuccess, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(queryFailure, 0);
         Assert.assertTrue(resultMatches > 0, "At least one query is expected to return correct results.");
         Assert.assertTrue(resultMismatches > 0, "At least one query is expected to return less results.");
         break;

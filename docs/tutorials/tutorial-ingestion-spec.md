@@ -27,7 +27,7 @@ sidebar_label: "Writing an ingestion spec"
 This tutorial will guide the reader through the process of defining an ingestion spec, pointing out key considerations and guidelines.
 
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine.
+the [single-machine quickstart](index.md) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md), [Tutorial: Querying data](../tutorials/tutorial-query.md), and [Tutorial: Rollup](../tutorials/tutorial-rollup.md).
 

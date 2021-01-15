@@ -61,6 +61,9 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   private BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
   private boolean initialized = false;
 
+  private boolean hasIterated = false;
+  private int offsetHeapIterableSize = 0;
+
   public LimitedBufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final Grouper.KeySerde<KeyType> keySerde,
@@ -145,6 +148,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   @Override
   public void newBucketHook(int bucketOffset)
   {
+    checkHeapAlreadyIterated();
     heapIndexUpdater.updateHeapIndexForOffset(bucketOffset, -1);
     if (!sortHasNonGroupingFields) {
       offsetHeap.addOffset(bucketOffset);
@@ -160,6 +164,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   @Override
   public void afterAggregateHook(int bucketOffset)
   {
+    checkHeapAlreadyIterated();
     if (sortHasNonGroupingFields) {
       int heapIndex = heapIndexUpdater.getHeapIndexForOffset(bucketOffset);
 
@@ -181,6 +186,8 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     keySerde.reset();
     offsetHeap.reset();
     heapIndexUpdater.setHashTableBuffer(hashTable.getTableBuffer());
+    hasIterated = false;
+    offsetHeapIterableSize = 0;
   }
 
   @Override
@@ -318,41 +325,93 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   private CloseableIterator<Entry<KeyType>> makeHeapIterator()
   {
     final int initialHeapSize = offsetHeap.getHeapSize();
-    return new CloseableIterator<Entry<KeyType>>()
-    {
-      int curr = 0;
 
-      @Override
-      public boolean hasNext()
+    // the first iteration destroys the heap, but writes out the sorted array in reverse
+    if (!hasIterated) {
+      hasIterated = true;
+      offsetHeapIterableSize = initialHeapSize;
+      return new CloseableIterator<Entry<KeyType>>()
       {
-        return curr < initialHeapSize;
-      }
+        int curr = 0;
 
-      @Override
-      public Grouper.Entry<KeyType> next()
-      {
-        if (curr >= initialHeapSize) {
-          throw new NoSuchElementException();
+        @Override
+        public boolean hasNext()
+        {
+          return curr < initialHeapSize;
         }
-        final int offset = offsetHeap.removeMin();
-        final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
-        curr++;
 
-        return entry;
-      }
+        @Override
+        public Grouper.Entry<KeyType> next()
+        {
+          if (curr >= initialHeapSize) {
+            throw new NoSuchElementException();
+          }
+          final int offset = offsetHeap.removeMin();
+          final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
+          curr++;
+          // write out offset to end of heap, which is no longer used after removing min
+          offsetHeap.setAt(initialHeapSize - curr, offset);
 
-      @Override
-      public void remove()
+          return entry;
+        }
+
+        @Override
+        public void remove()
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close()
+        {
+          // do nothing
+        }
+      };
+    } else {
+      // subsequent iterations just walk the buffer backwards
+      return new CloseableIterator<Entry<KeyType>>()
       {
-        throw new UnsupportedOperationException();
-      }
+        int curr = offsetHeapIterableSize - 1;
 
-      @Override
-      public void close()
-      {
-        // do nothing
-      }
-    };
+        @Override
+        public boolean hasNext()
+        {
+          return curr >= 0;
+        }
+
+        @Override
+        public Grouper.Entry<KeyType> next()
+        {
+          if (curr < 0) {
+            throw new NoSuchElementException();
+          }
+          final int offset = offsetHeap.getAt(curr);
+          final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
+          curr--;
+
+          return entry;
+        }
+
+        @Override
+        public void remove()
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close()
+        {
+          // do nothing
+        }
+      };
+    }
+  }
+
+  private void checkHeapAlreadyIterated()
+  {
+    if (hasIterated) {
+      throw new IllegalStateException("attempted to add offset after grouper was iterated");
+    }
   }
 
   private Comparator<Integer> makeHeapComparator()

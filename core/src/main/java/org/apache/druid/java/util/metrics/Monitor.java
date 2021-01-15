@@ -21,8 +21,6 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
-import java.util.concurrent.Future;
-
 
 /**
  */
@@ -38,8 +36,4 @@ public interface Monitor
    * @return true if this monitor needs to continue monitoring. False otherwise.
    */
   boolean monitor(ServiceEmitter emitter);
-
-  Future<?> getScheduledFuture();
-  
-  void setScheduledFuture(Future<?> scheduledFuture);
 }

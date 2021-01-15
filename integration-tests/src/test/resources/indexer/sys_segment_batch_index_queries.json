@@ -11,7 +11,7 @@
   },
   {
     "query": {
-      "query": "SELECT server_type FROM sys.servers WHERE tier IS NOT NULL"
+      "query": "SELECT server_type FROM sys.servers WHERE tier IS NOT NULL AND server_type <> 'indexer'"
     },
     "expectedResults": [
       {

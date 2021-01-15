@@ -77,7 +77,7 @@
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.6.0</apache.kafka.version>
+        <apache.kafka.version>2.7.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.17.0</avatica.version>
@@ -93,6 +93,7 @@
         <jetty.version>9.4.34.v20201102</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
+        <jackson.databind.version>2.10.5.1</jackson.databind.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
         <mysql.version>5.1.48</mysql.version>
@@ -111,16 +112,16 @@
         <powermock.version>2.0.2</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
+        <jacoco.version>0.8.5</jacoco.version>
         <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
              If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
              see http://curator.apache.org/zk-compatibility.html -->
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.30.10</com.google.apis.client.version>
-        <com.google.http.client.version>1.37.0</com.google.http.client.version>
-        <com.google.apis.compute.version>v1-rev20201005-${com.google.apis.client.version}</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20200927-${com.google.apis.client.version}</com.google.apis.storage.version>
+        <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
+        <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
+        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -146,6 +147,7 @@
         <module>cloud/aws-common</module>
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
+        <module>extensions-core/kubernetes-extensions</module>
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -167,6 +169,7 @@
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/ec2-extensions</module>
         <module>extensions-core/s3-extensions</module>
+        <module>extensions-core/druid-aws-rds-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
@@ -452,7 +455,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
+                <version>${jackson.databind.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -1169,12 +1172,12 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client</artifactId>
-                <version>${com.google.http.client.version}</version>
+                <version>${com.google.apis.client.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
-                <version>${com.google.http.client.version}</version>
+                <version>${com.google.apis.client.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.fasterxml.jackson.core</groupId>
@@ -1268,7 +1271,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.5</version>
+                <version>${jacoco.version}</version>
                 <configuration>
                     <excludes>
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->

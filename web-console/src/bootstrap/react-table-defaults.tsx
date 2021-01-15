@@ -24,37 +24,39 @@ import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
-export const NoData = React.memo(function NoData(props) {
+const NoData = React.memo(function NoData(props) {
   const { children } = props;
   if (!children) return null;
   return <div className="rt-noData">{children}</div>;
 });
 
-Object.assign(ReactTableDefaults, {
-  className: '-striped -highlight',
-  defaultFilterMethod: (filter: Filter, row: any) => {
-    const id = filter.pivotId || filter.id;
-    return booleanCustomTableFilter(filter, row[id]);
-  },
-  LoadingComponent: Loader,
-  loadingText: '',
-  NoDataComponent: NoData,
-  FilterComponent: makeTextFilter(),
-  PaginationComponent: ReactTableCustomPagination,
-  AggregatedComponent: (opt: any) => {
-    const { subRows, column } = opt;
-    const previewValues = subRows
-      .filter((d: any) => typeof d[column.id] !== 'undefined')
-      .map((row: any) => row[column.id]);
-    const previewCount = countBy(previewValues);
-    return (
-      <span>
-        {Object.keys(previewCount)
-          .sort()
-          .map(v => `${v} (${previewCount[v]})`)
-          .join(', ')}
-      </span>
-    );
-  },
-  defaultPageSize: 20,
-});
+export function bootstrapReactTable() {
+  Object.assign(ReactTableDefaults, {
+    className: '-striped -highlight',
+    defaultFilterMethod: (filter: Filter, row: any) => {
+      const id = filter.pivotId || filter.id;
+      return booleanCustomTableFilter(filter, row[id]);
+    },
+    LoadingComponent: Loader,
+    loadingText: '',
+    NoDataComponent: NoData,
+    FilterComponent: makeTextFilter(),
+    PaginationComponent: ReactTableCustomPagination,
+    AggregatedComponent: (opt: any) => {
+      const { subRows, column } = opt;
+      const previewValues = subRows
+        .filter((d: any) => typeof d[column.id] !== 'undefined')
+        .map((row: any) => row[column.id]);
+      const previewCount = countBy(previewValues);
+      return (
+        <span>
+          {Object.keys(previewCount)
+            .sort()
+            .map(v => `${v} (${previewCount[v]})`)
+            .join(', ')}
+        </span>
+      );
+    },
+    defaultPageSize: 20,
+  });
+}

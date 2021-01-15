@@ -17,15 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.client.indexing;
 
-/**
- * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
- */
-public class InsufficientResourcesException extends RuntimeException
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+public interface SamplerSpec
 {
-  public InsufficientResourcesException(String message)
-  {
-    super(message);
-  }
+  SamplerResponse sample();
 }

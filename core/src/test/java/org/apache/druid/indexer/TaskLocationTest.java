@@ -17,12 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.sampler;
+package org.apache.druid.indexer;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface SamplerSpec
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class TaskLocationTest
 {
-  SamplerResponse sample();
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(TaskLocation.class).usingGetClass().verify();
+  }
 }

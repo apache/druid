@@ -75,7 +75,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(ImmutableMap.<Long, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
     Assert.assertEquals(new IndexSpec(), actual.getIndexSpec());
     Assert.assertEquals(new IndexSpec(), actual.getIndexSpecForIntermediatePersists());
-    Assert.assertEquals(100, actual.getRowFlushBoundary());
+    Assert.assertEquals(100, actual.getMaxRowsInMemory());
     Assert.assertEquals(true, actual.isLeaveIntermediate());
     Assert.assertEquals(true, actual.isCleanupOnFailure());
     Assert.assertEquals(true, actual.isOverwriteFiles());

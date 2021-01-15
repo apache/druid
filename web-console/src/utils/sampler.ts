@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
+import * as JSONBig from 'json-bigint-native';
 
 import {
   DimensionsSpec,
@@ -34,6 +34,7 @@ import {
   TransformSpec,
   upgradeSpec,
 } from '../druid-models';
+import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import {
@@ -128,7 +129,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
     type: 'inline',
-    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+    data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
@@ -181,7 +182,7 @@ export function headerAndRowsFromSampleResponse(
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
-    statusResp = await axios.get(`/proxy/overlord/status`);
+    statusResp = await Api.instance.get(`/proxy/overlord/status`);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -197,7 +198,7 @@ export async function postToSampler(
 
   let sampleResp: any;
   try {
-    sampleResp = await axios.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -277,6 +278,7 @@ export async function sampleForConnect(
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
       pattern: '(.*)',
+      listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
   }

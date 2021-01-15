@@ -27,7 +27,7 @@ title: "String comparators"
 > language. For information about functions available in SQL, refer to the
 > [SQL documentation](sql.md#scalar-functions).
 
-These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.md), [SearchQuery](./searchquery.md), GroupByQuery's [LimitSpec](./limitspec.md), and [BoundFilter](./filters.html#bound-filter).
+These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.md), [SearchQuery](./searchquery.md), GroupByQuery's [LimitSpec](./limitspec.md), and [BoundFilter](./filters.md#bound-filter).
 
 ## Lexicographic
 Sorts values by converting Strings to their UTF-8 byte array representations and comparing lexicographically, byte-by-byte.

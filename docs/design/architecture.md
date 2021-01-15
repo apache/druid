@@ -118,7 +118,7 @@ to the [metadata store](#metadata-storage). This entry is a self-describing bit 
 things like the schema of the segment, its size, and its location on deep storage. These entries are what the
 Coordinator uses to know what data *should* be available on the cluster.
 
-For details on the segment file format, please see [segment files](segments.html).
+For details on the segment file format, please see [segment files](segments.md).
 
 For details on modeling your data in Druid, see [schema design](../ingestion/schema-design.md).
 
@@ -229,9 +229,9 @@ publish in an all-or-nothing manner:
 that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
 discarded, and Druid will resume ingestion from the last committed set of stream offsets. This ensures exactly-once
 publishing behavior.
-- [Hadoop-based batch ingestion](../ingestion/hadoop.html). Each task publishes all segment metadata in a single
+- [Hadoop-based batch ingestion](../ingestion/hadoop.md). Each task publishes all segment metadata in a single
 transaction.
-- [Native batch ingestion](../ingestion/native-batch.html). In parallel mode, the supervisor task publishes all segment
+- [Native batch ingestion](../ingestion/native-batch.md). In parallel mode, the supervisor task publishes all segment
 metadata in a single transaction after the subtasks are finished. In simple (single-task) mode, the single task
 publishes all segment metadata in a single transaction after it is complete.
 
@@ -244,11 +244,11 @@ ingestion will not cause duplicate data to be ingested:
 - Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and
 [Kinesis](../development/extensions-core/kinesis-ingestion.md) are idempotent due to the fact that stream offsets and
 segment metadata are stored together and updated in lock-step.
-- [Hadoop-based batch ingestion](../ingestion/hadoop.html) is idempotent unless one of your input sources
+- [Hadoop-based batch ingestion](../ingestion/hadoop.md) is idempotent unless one of your input sources
 is the same Druid datasource that you are ingesting into. In this case, running the same task twice is non-idempotent,
 because you are adding to existing data instead of overwriting it.
-- [Native batch ingestion](../ingestion/native-batch.html) is idempotent unless
-[`appendToExisting`](../ingestion/native-batch.html) is true, or one of your input sources is the same Druid datasource
+- [Native batch ingestion](../ingestion/native-batch.md) is idempotent unless
+[`appendToExisting`](../ingestion/native-batch.md) is true, or one of your input sources is the same Druid datasource
 that you are ingesting into. In either of these two cases, running the same task twice is non-idempotent, because you
 are adding to existing data instead of overwriting it.
 

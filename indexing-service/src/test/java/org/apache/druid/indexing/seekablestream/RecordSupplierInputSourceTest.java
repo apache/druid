@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -97,7 +98,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     Assert.assertTrue(supplier.isClosed());
   }
 
-  private static class RandomCsvSupplier implements RecordSupplier<Integer, Integer>
+  private static class RandomCsvSupplier implements RecordSupplier<Integer, Integer, ByteEntity>
   {
     private static final int STR_LEN = 8;
 
@@ -134,7 +135,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 
     @NotNull
     @Override
-    public List<OrderedPartitionableRecord<Integer, Integer>> poll(long timeout)
+    public List<OrderedPartitionableRecord<Integer, Integer, ByteEntity>> poll(long timeout)
     {
       final long sleepTime = random.nextInt((int) timeout);
       try {
@@ -147,12 +148,12 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
         return Collections.emptyList();
       } else {
         final int numRecords = random.nextInt(8); // can be 0
-        final List<OrderedPartitionableRecord<Integer, Integer>> records = new ArrayList<>(numRecords);
+        final List<OrderedPartitionableRecord<Integer, Integer, ByteEntity>> records = new ArrayList<>(numRecords);
         for (int i = 0; i < numRecords; i++) {
           final int partitionId = random.nextInt(partitionToOffset.size());
           final int offset = partitionToOffset.get(partitionId);
           final int numBytes = random.nextInt(3); // can be 0
-          final List<byte[]> bytes = IntStream
+          final List<ByteEntity> bytes = IntStream
               .range(0, numBytes)
               .mapToObj(j -> {
                 final List<String> columns = new ArrayList<>(NUM_COLS);
@@ -160,7 +161,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
                 for (int k = 0; k < NUM_COLS - 1; k++) {
                   columns.add(RandomStringUtils.random(STR_LEN, true, false));
                 }
-                return StringUtils.toUtf8(String.join(",", columns));
+                return new ByteEntity(StringUtils.toUtf8(String.join(",", columns)));
               })
               .collect(Collectors.toList());
           records.add(new OrderedPartitionableRecord<>("topic", partitionId, offset, bytes));

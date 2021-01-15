@@ -38,6 +38,7 @@ import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -336,7 +337,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
     class QueryableSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector, IdLookup
     {
       private final int[] vector = new int[offset.getMaxVectorSize()];
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
 
       @Override
       public int[] getRowVector()
@@ -409,7 +410,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
     class QueryableMultiValueDimensionVectorSelector implements MultiValueDimensionVectorSelector, IdLookup
     {
       private final IndexedInts[] vector = new IndexedInts[offset.getMaxVectorSize()];
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
 
       @Override
       public IndexedInts[] getRowVector()
@@ -496,7 +497,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       {
         private final int[] vector = new int[offset.getMaxVectorSize()];
         private final String[] strings = new String[offset.getMaxVectorSize()];
-        private int id = ReadableVectorOffset.NULL_ID;
+        private int id = ReadableVectorInspector.NULL_ID;
 
         @Override
 

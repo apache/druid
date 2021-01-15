@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 export const LocalStorageKeys = {
   CAPABILITIES_OVERRIDE: 'capabilities-override' as 'capabilities-override',
   INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
@@ -48,7 +50,7 @@ export function localStorageSet(key: LocalStorageKeys, value: string): void {
 }
 
 export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
-  localStorageSet(key, JSON.stringify(value));
+  localStorageSet(key, JSONBig.stringify(value));
 }
 
 export function localStorageGet(key: LocalStorageKeys): string | undefined {

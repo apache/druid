@@ -709,7 +709,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         ZkEnablementConfig.ENABLED
     );
 
-    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0);
+    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0, "TEST");
     // before initialization
     Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
     Assert.assertNull(c.getBalancerExec());

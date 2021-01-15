@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -112,7 +113,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private SeekableStreamIndexTaskClientFactory taskClientFactory;
   private SeekableStreamSupervisorSpec spec;
   private SeekableStreamIndexTaskClient indexTaskClient;
-  private RecordSupplier<String, String> recordSupplier;
+  private RecordSupplier<String, String, ByteEntity> recordSupplier;
 
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private SupervisorStateManagerConfig supervisorConfig;
@@ -130,7 +131,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     taskClientFactory = createMock(SeekableStreamIndexTaskClientFactory.class);
     spec = createMock(SeekableStreamSupervisorSpec.class);
     indexTaskClient = createMock(SeekableStreamIndexTaskClient.class);
-    recordSupplier = (RecordSupplier<String, String>) createMock(RecordSupplier.class);
+    recordSupplier = (RecordSupplier<String, String, ByteEntity>) createMock(RecordSupplier.class);
 
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
 
@@ -941,7 +942,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     };
   }
 
-  private class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String, String>
+  private class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
   {
     public TestSeekableStreamIndexTask(
         String id,
@@ -965,13 +966,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
+    protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
     {
       return null;
     }
 
     @Override
-    protected RecordSupplier<String, String> newTaskRecordSupplier()
+    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier()
     {
       return recordSupplier;
     }
@@ -983,7 +984,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
   }
 
-  private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String>
+  private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
   {
     private BaseTestSeekableStreamSupervisor()
     {
@@ -1053,7 +1054,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected List<SeekableStreamIndexTask<String, String>> createIndexTasks(
+    protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
         int replicas,
         String baseSequenceName,
         ObjectMapper sortingMapper,
@@ -1127,7 +1128,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected RecordSupplier<String, String> setupRecordSupplier()
+    protected RecordSupplier<String, String, ByteEntity> setupRecordSupplier()
     {
       return SeekableStreamSupervisorStateTest.this.recordSupplier;
     }

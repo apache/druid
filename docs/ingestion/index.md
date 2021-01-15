@@ -81,7 +81,7 @@ use the cluster resource of the existing cluster for batch ingestion.
 
 This table compares the three available options:
 
-| **Method** | [Native batch (parallel)](native-batch.html#parallel-task) | [Hadoop-based](hadoop.html) | [Native batch (simple)](native-batch.html#simple-task) |
+| **Method** | [Native batch (parallel)](native-batch.md#parallel-task) | [Hadoop-based](hadoop.md) | [Native batch (simple)](native-batch.md#simple-task) |
 |---|-----|--------------|------------|
 | **Task type** | `index_parallel` | `index_hadoop` | `index`  |
 | **Parallel?** | Yes, if `inputFormat` is splittable and `maxNumConcurrentSubTasks` > 1 in `tuningConfig`. See [data format documentation](./data-formats.md) for details. | Yes, always. | No. Each task is single-threaded. |
@@ -106,7 +106,7 @@ offers a unique data modeling system that bears similarity to both relational an
 Druid schemas must always include a primary timestamp. The primary timestamp is used for
 [partitioning and sorting](#partitioning) your data. Druid queries are able to rapidly identify and retrieve data
 corresponding to time ranges of the primary timestamp column. Druid is also able to use the primary timestamp column
-for time-based [data management operations](data-management.html) such as dropping time chunks, overwriting time chunks,
+for time-based [data management operations](data-management.md) such as dropping time chunks, overwriting time chunks,
 and time-based retention rules.
 
 The primary timestamp is parsed based on the [`timestampSpec`](#timestampspec). In addition, the
@@ -186,7 +186,7 @@ Tips for maximizing rollup:
 
 - Generally, the fewer dimensions you have, and the lower the cardinality of your dimensions, the better rollup ratios
 you will achieve.
-- Use [sketches](schema-design.html#sketches) to avoid storing high cardinality dimensions, which harm rollup ratios.
+- Use [sketches](schema-design.md#sketches) to avoid storing high cardinality dimensions, which harm rollup ratios.
 - Adjusting `queryGranularity` at ingestion time (for example, using `PT5M` instead of `PT1M`) increases the
 likelihood of two rows in Druid having matching timestamps, and can improve your rollup ratios.
 - It can be beneficial to load the same data into more than one Druid datasource. Some users choose to create a "full"
@@ -218,8 +218,8 @@ The following table shows how each method handles rollup:
 
 |Method|How it works|
 |------|------------|
-|[Native batch](native-batch.html)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
-|[Hadoop](hadoop.html)|Always perfect.|
+|[Native batch](native-batch.md)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
+|[Hadoop](hadoop.md)|Always perfect.|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Always best-effort.|
 |[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Always best-effort.|
 
@@ -258,7 +258,7 @@ storage size decreases - and it also tends to improve query performance as well.
 
 Not all ingestion methods support an explicit partitioning configuration, and not all have equivalent levels of
 flexibility. As of current Druid versions, If you are doing initial ingestion through a less-flexible method (like
-Kafka) then you can use [reindexing techniques](data-management.html#compaction-and-reindexing) to repartition your data after it
+Kafka) then you can use [reindexing techniques](data-management.md#compaction-and-reindexing) to repartition your data after it
 is initially ingested. This is a powerful technique: you can use it to ensure that any data older than a certain
 threshold is optimally partitioned, even as you continuously add new data from a stream.
 
@@ -266,10 +266,10 @@ The following table shows how each ingestion method handles partitioning:
 
 |Method|How it works|
 |------|------------|
-|[Native batch](native-batch.html)|Configured using [`partitionsSpec`](native-batch.html#partitionsspec) inside the `tuningConfig`.|
-|[Hadoop](hadoop.html)|Configured using [`partitionsSpec`](hadoop.html#partitionsspec) inside the `tuningConfig`.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.html#compaction-and-reindexing) to repartition after initial ingestion.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.html#compaction-and-reindexing) to repartition after initial ingestion.|
+|[Native batch](native-batch.md)|Configured using [`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`.|
+|[Hadoop](hadoop.md)|Configured using [`partitionsSpec`](hadoop.md#partitionsspec) inside the `tuningConfig`.|
+|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.md#compaction-and-reindexing) to repartition after initial ingestion.|
+|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.md#compaction-and-reindexing) to repartition after initial ingestion.|
 
 > Note that, of course, one way to partition data is to load it into separate datasources. This is a perfectly viable
 > approach and works very well when the number of datasources does not lead to excessive per-datasource overheads. If
@@ -283,7 +283,7 @@ The following table shows how each ingestion method handles partitioning:
 
 ## Ingestion specs
 
-No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.html) or
+No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.md) or
 ongoing "supervisors" (which run and supervise a set of tasks over time). In any case, part of the task or supervisor
 definition is an _ingestion spec_.
 
@@ -359,7 +359,7 @@ You can also load data visually, without the need to write an ingestion spec, us
 available in Druid's [web console](../operations/druid-console.md). Druid's visual data loader supports
 [Kafka](../development/extensions-core/kafka-ingestion.md),
 [Kinesis](../development/extensions-core/kinesis-ingestion.md), and
-[native batch](native-batch.html) mode.
+[native batch](native-batch.md) mode.
 
 ## `dataSchema`
 
@@ -406,7 +406,7 @@ An example `dataSchema` is:
 ### `dataSource`
 
 The `dataSource` is located in `dataSchema` → `dataSource` and is simply the name of the
-[datasource](../design/architecture.html#datasources-and-segments) that data will be written to. An example
+[datasource](../design/architecture.md#datasources-and-segments) that data will be written to. An example
 `dataSource` is:
 
 ```
@@ -526,7 +526,7 @@ An example `metricsSpec` is:
 The `granularitySpec` is located in `dataSchema` → `granularitySpec` and is responsible for configuring
 the following operations:
 
-1. Partitioning a datasource into [time chunks](../design/architecture.html#datasources-and-segments) (via `segmentGranularity`).
+1. Partitioning a datasource into [time chunks](../design/architecture.md#datasources-and-segments) (via `segmentGranularity`).
 2. Truncating the timestamp, if desired (via `queryGranularity`).
 3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
 4. Specifying whether ingestion-time [rollup](#rollup) should be used or not (via `rollup`).
@@ -551,7 +551,7 @@ A `granularitySpec` can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type | Either `uniform` or `arbitrary`. In most cases you want to use `uniform`.| `uniform` |
-| segmentGranularity | [Time chunking](../design/architecture.html#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br><br>Ignored if `type` is set to `arbitrary`.| `day` |
+| segmentGranularity | [Time chunking](../design/architecture.md#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br><br>Ignored if `type` is set to `arbitrary`.| `day` |
 | queryGranularity | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br><br>Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
 | rollup | Whether to use ingestion-time [rollup](#rollup) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
 | intervals | A list of intervals describing what time chunks of segments should be created. If `type` is set to `uniform`, this list will be broken up and rounded-off based on the `segmentGranularity`. If `type` is set to `arbitrary`, this list will be used as-is.<br><br>If `null` or not provided, batch ingestion tasks will generally determine which time chunks to output based on what timestamps are found in the input data.<br><br>If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks will throw away any records with timestamps outside of the specified intervals.<br><br>Ignored for any form of streaming ingestion. | `null` |
