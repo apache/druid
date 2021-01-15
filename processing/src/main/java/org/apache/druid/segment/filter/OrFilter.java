@@ -212,7 +212,13 @@ public class OrFilter implements BooleanFilter
       {
         ReadableVectorMatch currentMatch = baseMatchers[0].match(mask);
 
+        // Initialize currentMask = mask, then progressively remove rows from the mask as we find matches for them.
+        // This isn't necessary for correctness (we could use the original "mask" on every call to "match") but it
+        // allows for short-circuiting on a row-by-row basis.
         currentMask.copyFrom(mask);
+
+        // Initialize retVal = currentMatch, the rows matched by the first matcher. We'll add more as we loop over
+        // the rest of the matchers.
         retVal.copyFrom(currentMatch);
 
         for (int i = 1; i < baseMatchers.length; i++) {
@@ -224,6 +230,11 @@ public class OrFilter implements BooleanFilter
           currentMask.removeAll(currentMatch);
           currentMatch = baseMatchers[i].match(currentMask);
           retVal.addAll(currentMatch, scratch);
+
+          if (currentMatch == currentMask) {
+            // baseMatchers[i] matched every remaining row. Short-circuit out.
+            break;
+          }
         }
 
         assert retVal.isValid(mask);
