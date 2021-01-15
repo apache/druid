@@ -69,6 +69,7 @@ import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
+import org.apache.druid.server.coordinator.duty.EmitPrimaryReplicantLoaderStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.LogUsedSegments;
 import org.apache.druid.server.coordinator.duty.MarkAsUnusedOvershadowedSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
@@ -700,7 +701,8 @@ public class DruidCoordinator
   {
     return ImmutableList.of(
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(DruidCoordinator.this)
+        new RunRules(DruidCoordinator.this),
+        new EmitPrimaryReplicantLoaderStatsAndMetrics(DruidCoordinator.this)
     );
   }
 

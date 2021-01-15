@@ -54,7 +54,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     this.coordinator = coordinator;
   }
 
-  private void emitTieredStat(
+  protected void emitTieredStat(
       final ServiceEmitter emitter,
       final String metricName,
       final String tier,
