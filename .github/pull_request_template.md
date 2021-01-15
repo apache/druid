@@ -57,4 +57,4 @@ This PR has:
 - [ ] added integration tests.
 - [ ] been tested in a test Druid cluster.
 
-Please remove this line after you read. Please avoid using force pushes and rebasing after you submit this PR since these make it difficult for reviewers to see what you've changed in response to their reviews. See [the contributing doc](https://github.com/apache/druid/blob/master/CONTRIBUTING.md#if-your-pull-request-shows-conflicts-with-master) for more details.
+<!-- Once you open a PR, please _avoid using force pushes and rebasing_ since these make it difficult for reviewers to see what you've changed in response to their reviews. See [the contributing doc](https://github.com/apache/druid/blob/master/CONTRIBUTING.md#if-your-pull-request-shows-conflicts-with-master) for more details. -->
