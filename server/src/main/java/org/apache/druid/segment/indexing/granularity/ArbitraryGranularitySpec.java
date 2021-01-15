@@ -71,7 +71,6 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
   }
 
   @Override
-  @JsonProperty("intervals")
   public Iterable<Interval> bucketIntervals()
   {
     return () -> lookupTableBucketByDateTime.iterator();

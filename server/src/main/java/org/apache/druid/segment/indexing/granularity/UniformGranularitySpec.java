@@ -64,7 +64,6 @@ public class UniformGranularitySpec extends BaseGranularitySpec
   }
 
   @Override
-  @JsonProperty("intervals")
   public Iterable<Interval> bucketIntervals()
   {
     return () -> intervalsByGranularity.granularityIntervalsIterator();

@@ -208,6 +208,11 @@ public class ArbitraryGranularityTest
           ImmutableList.copyOf(spec.bucketIntervals()),
           ImmutableList.copyOf(rtSpec.bucketIntervals())
       );
+      Assert.assertEquals(
+          "Round-trip",
+          ImmutableList.copyOf(spec.inputIntervals()),
+          ImmutableList.copyOf(rtSpec.inputIntervals())
+      );
     }
     catch (Exception e) {
       throw new RuntimeException(e);
