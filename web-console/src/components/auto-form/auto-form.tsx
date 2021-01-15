@@ -122,7 +122,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     for (const field of fields) {
       const fieldValue = deepGet(model, field.name);
-      const fieldValueDefined = typeof fieldValue !== 'undefined';
+      const fieldValueDefined = fieldValue != null;
       const fieldThatIsDefined = definedFields[field.name];
       if (fieldThatIsDefined) {
         if (fieldThatIsDefined === field) {
