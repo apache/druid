@@ -54,10 +54,6 @@ public class PrometheusEmitter implements Emitter
   private PushGateway pushGateway;
   private String identifier;
 
-  private static ScheduledExecutorService PUSHGATE_WAY_EXECUTOR_SERVICE =
-          Executors.newSingleThreadScheduledExecutor(
-                  new BasicThreadFactory.Builder().namingPattern("Metric-Pusher-%d").daemon(true).build());
-
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
     return new PrometheusEmitter(config);
@@ -87,7 +83,6 @@ public class PrometheusEmitter implements Emitter
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       pushGateway = new PushGateway(config.getPushGatewayAddress());
-      PUSHGATE_WAY_EXECUTOR_SERVICE.scheduleAtFixedRate(this::pushMetric, 1L, 5L, TimeUnit.MINUTES);
     }
 
   }
