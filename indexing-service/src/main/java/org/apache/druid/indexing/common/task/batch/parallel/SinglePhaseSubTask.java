@@ -153,7 +153,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   {
     return determineLockGranularityAndTryLock(
         new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec().condensedInputIntervals()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 

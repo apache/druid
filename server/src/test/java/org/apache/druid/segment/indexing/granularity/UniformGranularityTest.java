@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.Interval;
@@ -130,8 +129,6 @@ public class UniformGranularityTest
         Optional.of(Intervals.of("2012-01-08T00Z/2012-01-09T00Z")),
         spec.bucketInterval(DateTimes.of("2012-01-08T01Z"))
     );
-
-    Assert.assertEquals(spec.condensedInputIntervals(), JodaUtils.condenseIntervals(spec.bucketIntervals()));
 
   }
 

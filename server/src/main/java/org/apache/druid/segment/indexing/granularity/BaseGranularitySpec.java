@@ -22,7 +22,6 @@ package org.apache.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.indexing.LookupIntervalBuckets;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -33,9 +32,7 @@ import java.util.List;
 abstract class BaseGranularitySpec implements GranularitySpec
 {
   protected List<Interval> inputIntervals;
-  private List<Interval> condensedInputIntervals;
   protected final Boolean rollup;
-
 
   public BaseGranularitySpec(List<Interval> inputIntervals, Boolean rollup)
   {
@@ -52,15 +49,6 @@ abstract class BaseGranularitySpec implements GranularitySpec
   public List<Interval> inputIntervals()
   {
     return inputIntervals;
-  }
-
-  @Override
-  public List<Interval> condensedInputIntervals()
-  {
-    if (condensedInputIntervals == null) {
-      condensedInputIntervals = JodaUtils.condenseIntervals(inputIntervals);
-    }
-    return condensedInputIntervals;
   }
 
   @Override
