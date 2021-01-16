@@ -46,7 +46,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -152,7 +154,13 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         throw new ParseException(e, "Descriptor not found in class path or malformed URL:" + descriptorFilePath);
       }
       try {
-        fin = url.openConnection().getInputStream();
+        URLConnection urlConnection = url.openConnection();
+        if (url.getUserInfo() != null) {
+          String basicAuth = "Basic " + Base64.getEncoder().encodeToString(
+                                            url.getUserInfo().getBytes());
+          urlConnection.setRequestProperty("Authorization", basicAuth);
+        }
+        fin = urlConnection.getInputStream();
       }
       catch (IOException e) {
         throw new ParseException(e, "Cannot read descriptor file: " + url);
