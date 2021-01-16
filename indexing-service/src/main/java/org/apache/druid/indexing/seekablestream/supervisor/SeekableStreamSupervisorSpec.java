@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -36,6 +37,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.DefaultAutoScale
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.DummyAutoScaler;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -157,18 +159,20 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   /**
    * need to notice that autoScaler would be null which means autoscale is dissable.
    * @param supervisor
-   * @return
+   * @return autoScaler, disable autoscale will return dummyAutoScaler and enable autoscale wiil return defaultAutoScaler by default.
    */
   @Override
+  @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED", justification = "using siwtch(String)")
   public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
   {
     String dataSource = getId();
     SupervisorTaskAutoscaler autoScaler = new DummyAutoScaler(supervisor, dataSource);
     Map<String, Object> dynamicAllocationTasksProperties = ingestionSchema.getIOConfig().getDynamicAllocationTasksProperties();
     if (dynamicAllocationTasksProperties != null && !dynamicAllocationTasksProperties.isEmpty() && Boolean.parseBoolean(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("enableDynamicAllocationTasks", false)))) {
-      String autoScalerStrategy = String.valueOf(dynamicAllocationTasksProperties.getOrDefault("autoScalerStrategy", "lagBased"));
+      String autoScalerStrategy = String.valueOf(dynamicAllocationTasksProperties.getOrDefault("autoScalerStrategy", "default"));
 
-      switch (autoScalerStrategy) {
+      // will thorw 'Return value of String.hashCode() ignored : RV_RETURN_VALUE_IGNORED' just Suppress it.
+      switch (StringUtils.toLowerCase(autoScalerStrategy)) {
         default: autoScaler = new DefaultAutoScaler(supervisor, dataSource, dynamicAllocationTasksProperties, this);
       }
     }

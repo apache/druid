@@ -314,6 +314,7 @@ public class SupervisorManager
       supervisor.start();
       if (autoscaler != null) {
         autoscaler.start();
+        autoscalers.put(id, autoscaler);
       }
     }
     catch (Exception e) {
@@ -325,7 +326,6 @@ public class SupervisorManager
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));
-    autoscalers.put(id, autoscaler);
     return true;
   }
 }
