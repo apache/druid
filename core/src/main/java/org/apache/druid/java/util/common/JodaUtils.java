@@ -29,6 +29,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
+ *
  */
 public class JodaUtils
 {
@@ -50,15 +51,25 @@ public class JodaUtils
         sortedIntervals.add(interval);
       }
     }
+    return condenseIntervals(sortedIntervals.iterator());
+  }
 
-    if (sortedIntervals.isEmpty()) {
-      return new ArrayList<>();
+  /**
+   * Caller needs to insure that sortedIntervals is sorted in ascending order
+   *
+   * @param sortedIntervals
+   * @return Condensed intervals
+   */
+  public static ArrayList<Interval> condenseIntervals(Iterator<Interval> sortedIntervals)
+  {
+    ArrayList<Interval> retVal = new ArrayList<>();
+    if (!sortedIntervals.hasNext()) {
+      return retVal;
     }
 
-    Iterator<Interval> intervalsIter = sortedIntervals.iterator();
-    Interval currInterval = intervalsIter.next();
-    while (intervalsIter.hasNext()) {
-      Interval next = intervalsIter.next();
+    Interval currInterval = sortedIntervals.next();
+    while (sortedIntervals.hasNext()) {
+      Interval next = sortedIntervals.next();
 
       if (currInterval.abuts(next)) {
         currInterval = new Interval(currInterval.getStart(), next.getEnd());

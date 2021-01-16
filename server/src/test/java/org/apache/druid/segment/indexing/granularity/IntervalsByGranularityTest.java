@@ -21,6 +21,7 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
@@ -76,6 +77,21 @@ public class IntervalsByGranularityTest
     Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
     long count = getCount(granularityIntervals);
     Assert.assertTrue(count == 61);
+  }
+
+
+  @Test
+  public void testCondenseDoesNotMaterialize()
+  {
+    Interval first = Intervals.of("2012-01-01T00Z/P1Y");
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        ImmutableList.of(first),
+        Granularity.fromString("SECOND")
+    );
+    Assert.assertEquals(
+        ImmutableList.of(Intervals.of("2012-01-01T00Z/2013-01-01T00Z")),
+        JodaUtils.condenseIntervals(intervals.granularityIntervalsIterator())
+    );
   }
 
   @Test

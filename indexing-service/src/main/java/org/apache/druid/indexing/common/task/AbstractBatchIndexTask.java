@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -379,18 +380,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     // when an overwriting task finds a version for a given input row, it expects the interval
     // associated to each version to be equal or larger than the time bucket where the input row falls in.
     // See ParallelIndexSupervisorTask.findVersion().
-    final Set<Interval> uniqueIntervals = new HashSet<>();
+    final Set<Interval> uniqueCondensedIntervals = new HashSet<>();
     final Granularity segmentGranularity = getSegmentGranularity();
-    for (Interval interval : intervals) {
-      if (segmentGranularity == null) {
-        uniqueIntervals.add(interval);
-      } else {
-        uniqueIntervals.add(segmentGranularity.getCondensedBucket(interval));
-      }
+    if (segmentGranularity == null) {
+      uniqueCondensedIntervals.addAll(JodaUtils.condenseIntervals(intervals));
+    } else {
+      IntervalsByGranularity intervalsByGranularity = new IntervalsByGranularity(intervals, segmentGranularity);
+      // the following is calling a condense that does not materialize the intervals:
+      uniqueCondensedIntervals.addAll(JodaUtils.condenseIntervals(intervalsByGranularity.granularityIntervalsIterator()));
     }
 
-    // Condense intervals to avoid creating too many locks.
-    for (Interval interval : JodaUtils.condenseIntervals(uniqueIntervals)) {
+    // Intervals are already condensed to avoid creating too many locks.
+    for (Interval interval : uniqueCondensedIntervals) {
       final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
       if (lock == null) {
         return false;
