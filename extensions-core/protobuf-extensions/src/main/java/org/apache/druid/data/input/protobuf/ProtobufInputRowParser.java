@@ -48,6 +48,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -157,7 +158,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         URLConnection urlConnection = url.openConnection();
         if (url.getUserInfo() != null) {
           String basicAuth = "Basic " + Base64.getEncoder().encodeToString(
-                                            url.getUserInfo().getBytes());
+                                            url.getUserInfo().getBytes(StandardCharsets.UTF_8));
           urlConnection.setRequestProperty("Authorization", basicAuth);
         }
         fin = urlConnection.getInputStream();
