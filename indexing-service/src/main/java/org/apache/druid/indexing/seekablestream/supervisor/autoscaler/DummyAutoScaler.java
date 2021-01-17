@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.supervisor.autoscaler;
+package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 
 public class DummyAutoScaler implements SupervisorTaskAutoscaler
 {
