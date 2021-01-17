@@ -339,7 +339,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
 
-  private class TesstSeekableStreamSupervisorSpec extends SeekableStreamSupervisorSpec
+  private static class TesstSeekableStreamSupervisorSpec extends SeekableStreamSupervisorSpec
   {
     private SeekableStreamSupervisor supervisor;
     private String id;
