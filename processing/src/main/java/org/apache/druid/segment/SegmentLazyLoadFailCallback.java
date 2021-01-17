@@ -17,20 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.segment.loading;
+package org.apache.druid.segment;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.timeline.DataSegment;
-
-import java.io.File;
-
-/**
- * Factory that loads segment files from the disk and creates {@link Segment} object
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MMappedQueryableSegmentizerFactory.class)
-public interface SegmentizerFactory
+public interface SegmentLazyLoadFailCallback
 {
-  Segment factorize(DataSegment segment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+  void execute();
+  SegmentLazyLoadFailCallback NOOP = () -> {};
 }
