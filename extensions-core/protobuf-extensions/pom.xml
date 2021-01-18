@@ -33,6 +33,10 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
+  <properties>
+    <confluent.version>6.0.1</confluent.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -52,19 +56,20 @@
       <exclusions>
         <exclusion>
           <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
+          <artifactId>protobuf-java</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
-      <artifactId>kafka-schema-registry-client</artifactId>
-      <version>6.0.1</version>
-    </dependency>
-    <dependency>
-      <groupId>io.confluent</groupId>
       <artifactId>kafka-protobuf-serializer</artifactId>
-      <version>6.0.1</version>
+      <version>${confluent.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>protobuf-java-util</artifactId>
+          <groupId>com.google.protobuf</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
