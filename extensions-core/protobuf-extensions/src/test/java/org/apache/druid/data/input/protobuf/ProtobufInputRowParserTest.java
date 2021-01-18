@@ -31,7 +31,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.js.JavaScriptConfig;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
@@ -53,6 +52,7 @@ public class ProtobufInputRowParserTest
 
   private ParseSpec parseSpec;
   private ParseSpec flatParseSpec;
+  private FileBasedProtobufBytesDecoder decoder;
 
   @Before
   public void setUp()
@@ -90,60 +90,14 @@ public class ProtobufInputRowParserTest
             null,
             null
     );
-  }
-
-  @Test
-  public void testShortMessageType()
-  {
-    //configure parser with desc file, and specify which file name to use
-    @SuppressWarnings("unused") // expected to create parser without exception
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
-    parser.initDescriptor();
-  }
-
-
-  @Test
-  public void testLongMessageType()
-  {
-    //configure parser with desc file, and specify which file name to use
-    @SuppressWarnings("unused") // expected to create parser without exception
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
-    parser.initDescriptor();
-  }
-
-
-  @Test(expected = ParseException.class)
-  public void testBadProto()
-  {
-    //configure parser with desc file
-    @SuppressWarnings("unused") // expected exception
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "BadName");
-    parser.initDescriptor();
-  }
-
-  @Test(expected = ParseException.class)
-  public void testMalformedDescriptorUrl()
-  {
-    //configure parser with non existent desc file
-    @SuppressWarnings("unused") // expected exception
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "file:/nonexist.desc", "BadName");
-    parser.initDescriptor();
-  }
-
-  @Test
-  public void testSingleDescriptorNoMessageType()
-  {
-    // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
-    @SuppressWarnings("unused") // expected to create parser without exception
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", null);
-    parser.initDescriptor();
+    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
   }
 
   @Test
   public void testParseNestedData() throws Exception
   {
     //configure parser with desc file
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, decoder);
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
@@ -194,7 +148,7 @@ public class ProtobufInputRowParserTest
   public void testParseFlatData() throws Exception
   {
     //configure parser with desc file
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(flatParseSpec, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(flatParseSpec, decoder);
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
@@ -247,7 +201,7 @@ public class ProtobufInputRowParserTest
         "func",
         new JavaScriptConfig(false)
     );
-    final ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
+    final ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, decoder);
 
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");

@@ -57,9 +57,14 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.github.os72</groupId>
-      <artifactId>protobuf-dynamic</artifactId>
-      <version>0.9.3</version>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-schema-registry-client</artifactId>
+      <version>6.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-protobuf-serializer</artifactId>
+      <version>6.0.1</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -96,6 +101,11 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
