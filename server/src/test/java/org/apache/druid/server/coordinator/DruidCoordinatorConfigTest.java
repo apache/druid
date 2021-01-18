@@ -49,6 +49,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPrimaryReplicantLoaderPeriod());
     Assert.assertFalse(config.isLoadPrimaryReplicantSeparately());
+    Assert.assertEquals(1, config.getDutiesRunnableExecutorThreadPoolSize());
 
     //with non-defaults
     Properties props = new Properties();
@@ -64,6 +65,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
     props.setProperty("druid.coordinator.period.primaryReplicantLoaderPeriod", "PT5s");
     props.setProperty("druid.coordinator.loadPrimaryReplicantSeparately", "true");
+    props.setProperty("druid.coordinator.dutiesRunnableExecutor.threadPoolSize", "5");
 
     factory = Config.createFactory(props);
     config = factory.build(DruidCoordinatorConfig.class);
@@ -78,5 +80,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.millis(100), config.getLoadQueuePeonRepeatDelay());
     Assert.assertEquals(new Duration("PT5s"), config.getCoordinatorPrimaryReplicantLoaderPeriod());
     Assert.assertTrue(config.isLoadPrimaryReplicantSeparately());
+    Assert.assertEquals(5, config.getDutiesRunnableExecutorThreadPoolSize());
   }
 }

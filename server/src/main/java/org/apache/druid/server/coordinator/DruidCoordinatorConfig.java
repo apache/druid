@@ -27,6 +27,10 @@ import org.skife.config.Default;
  */
 public abstract class DruidCoordinatorConfig
 {
+  @Config("druid.coordinator.dutiesRunnableExecutor.threadPoolSize")
+  @Default("1")
+  public abstract int getDutiesRunnableExecutorThreadPoolSize();
+
   @Config("druid.coordinator.startDelay")
   @Default("PT300s")
   public abstract Duration getCoordinatorStartDelay();

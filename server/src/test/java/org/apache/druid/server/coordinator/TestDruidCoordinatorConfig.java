@@ -34,6 +34,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final int coordinatorKillMaxSegments;
   private final Duration coordinatorPrimaryReplicantLoaderPeriod;
   private final boolean loadPrimaryReplicantSeparately;
+  private final int dutiesRunnableExecutorThreadPoolSize;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -45,7 +46,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       int coordinatorKillMaxSegments,
       Duration getLoadQueuePeonRepeatDelay,
       Duration coordinatorPrimaryReplicantLoaderPeriod,
-      boolean loadPrimaryReplicantSeparately
+      boolean loadPrimaryReplicantSeparately,
+      int dutiesRunnableExecutorThreadPoolSize
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -58,6 +60,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
     this.coordinatorPrimaryReplicantLoaderPeriod = coordinatorPrimaryReplicantLoaderPeriod;
     this.loadPrimaryReplicantSeparately = loadPrimaryReplicantSeparately;
+    this.dutiesRunnableExecutorThreadPoolSize = dutiesRunnableExecutorThreadPoolSize;
   }
 
   @Override
@@ -118,5 +121,11 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorPrimaryReplicantLoaderPeriod()
   {
     return coordinatorPrimaryReplicantLoaderPeriod;
+  }
+
+  @Override
+  public int getDutiesRunnableExecutorThreadPoolSize()
+  {
+    return dutiesRunnableExecutorThreadPoolSize;
   }
 }

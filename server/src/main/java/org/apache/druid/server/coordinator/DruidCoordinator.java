@@ -256,7 +256,14 @@ public class DruidCoordinator
     this.self = self;
     this.indexingServiceDuties = indexingServiceDuties;
 
-    this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
+    if (config == null) {
+      this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
+    } else {
+      this.exec = scheduledExecutorFactory.create(
+          config.getDutiesRunnableExecutorThreadPoolSize(),
+          "Coordinator-Exec--%d"
+      );
+    }
 
     this.loadManagementPeons = loadQueuePeonMap;
     this.factory = factory;

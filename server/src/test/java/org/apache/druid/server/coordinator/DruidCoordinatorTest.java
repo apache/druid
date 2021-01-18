@@ -166,7 +166,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         10,
         new Duration("PT0s"),
         Duration.ZERO,
-        loadPrimaryReplicantSeparately
+        loadPrimaryReplicantSeparately,
+        1
     );
     pathChildrenCache = new PathChildrenCache(
         curator,
