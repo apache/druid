@@ -17,35 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.aws.rds;
 
-import org.apache.druid.segment.vector.VectorSizeInspector;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
 
-public class TrueVectorMatcher implements VectorValueMatcher
+import java.util.List;
+
+public class AWSRDSModule implements DruidModule
 {
-  private final VectorSizeInspector vectorSizeInspector;
-
-  public TrueVectorMatcher(VectorSizeInspector vectorSizeInspector)
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    this.vectorSizeInspector = vectorSizeInspector;
+    return ImmutableList.of(
+        new SimpleModule("DruidAwsRdsExtentionsModule").registerSubtypes(
+            new NamedType(AWSRDSTokenPasswordProvider.class, "aws-rds-token")
+        )
+    );
   }
 
   @Override
-  public ReadableVectorMatch match(ReadableVectorMatch mask)
+  public void configure(Binder binder)
   {
-    // The given mask is all true for its valid selections.
-    return mask;
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return vectorSizeInspector.getMaxVectorSize();
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return vectorSizeInspector.getCurrentVectorSize();
   }
 }

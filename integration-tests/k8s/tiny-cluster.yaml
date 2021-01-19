@@ -26,6 +26,12 @@ spec:
   podLabels:
     environment: stage
     release: alpha
+  podAnnotations:
+    dummy: k8s_extn_needs_atleast_one_annotation
+  readinessProbe:
+    httpGet:
+      path: /status/health
+      port: 8088
   securityContext:
     fsGroup: 0
     runAsUser: 0
@@ -60,10 +66,15 @@ spec:
     </Configuration>
   common.runtime.properties: |
 
-    # Zookeeper
-    druid.zk.service.host=tiny-cluster-zk-0.tiny-cluster-zk
-    druid.zk.paths.base=/druid
-    druid.zk.service.compress=false
+    #
+    # Zookeeper-less Druid Cluster
+    #
+    druid.zk.service.enabled=false
+    druid.discovery.type=k8s
+    druid.discovery.k8s.clusterIdentifier=druid-it
+    druid.serverview.type=http
+    druid.coordinator.loadqueuepeon.type=http
+    druid.indexer.runner.type=httpRemote
 
     # Metadata Store
     druid.metadata.storage.type=derby
@@ -79,13 +90,30 @@ spec:
     #
     # Extensions
     #
-    druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches"]
+    druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-extensions"]
 
     #
     # Service discovery
     #
     druid.selectors.indexing.serviceName=druid/overlord
     druid.selectors.coordinator.serviceName=druid/coordinator
+
+    druid.indexer.logs.type=file
+    druid.indexer.logs.directory=/druid/data/task-logs
+    druid.indexer.task.baseDir=/druid/data/task-base
+
+    druid.lookup.enableLookupSyncOnStartup=false
+
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+
   nodes:
     brokers:
       # Optionally specify for running broker as Deployment
@@ -174,7 +202,6 @@ spec:
         druid.coordinator.asOverlord.enabled=true
         druid.coordinator.asOverlord.overlordService=druid/overlord
         druid.indexer.queue.startDelay=PT30S
-        druid.indexer.runner.type=local
       extra.jvm.options: |-
         -Xmx800m
         -Xms800m
@@ -237,16 +264,16 @@ spec:
 
     routers:
       nodeType: "router"
-      druid.port: 8888
+      druid.port: 8088
       services:
         - spec:
             type: NodePort
             ports:
               - name: router-service-port
                 nodePort: 30400
-                port: 8888
+                port: 8088
                 protocol: TCP
-                targetPort: 8888
+                targetPort: 8088
           selector:
             nodeSpecUniqueStr: druid-tiny-cluster-routers
           metadata:
@@ -258,7 +285,7 @@ spec:
       replicas: 1
       runtime.properties: |
         druid.service=druid/router
-        druid.plaintextPort=8888
+        druid.plaintextPort=8088
 
         # HTTP proxy
         druid.router.http.numConnections=50

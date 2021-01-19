@@ -51,6 +51,7 @@ import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -282,7 +283,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     final SegmentLoader loader = new SegmentLoaderFactory(getIndexIO(), getObjectMapper())
         .manufacturate(tempSegmentDir);
     try {
-      return loader.getSegment(dataSegment, false);
+      return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
