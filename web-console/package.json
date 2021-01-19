@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
