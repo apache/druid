@@ -460,6 +460,21 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
   }
 
+  @Test
+  public void testRecoverableException_ClockSkewedError()
+  {
+    AmazonServiceException ex = new AmazonServiceException(null);
+    ex.setErrorCode("RequestExpired");
+    Assert.assertTrue(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testNonRecoverableException_RuntimeException()
+  {
+    AmazonClientException ex = new AmazonClientException(new RuntimeException());
+    Assert.assertFalse(KinesisRecordSupplier.isClientExceptionRecoverable(ex));
+  }
+
 
   @Test
   public void testSeek()
