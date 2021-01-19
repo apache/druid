@@ -216,4 +216,10 @@ public class ArbitraryGranularityTest
       throw new RuntimeException(e);
     }
   }
+
+  @Test
+  public void testNullInputIntervals() {
+    final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, null);
+    Assert.assertFalse(spec.bucketIntervals().iterator().hasNext());
+  }
 }

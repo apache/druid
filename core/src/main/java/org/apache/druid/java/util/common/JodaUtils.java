@@ -39,8 +39,6 @@ public class JodaUtils
 
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
-    ArrayList<Interval> retVal = new ArrayList<>();
-
     final SortedSet<Interval> sortedIntervals;
 
     if (intervals instanceof SortedSet) {

@@ -60,7 +60,7 @@ public class LookupIntervalBuckets
 
   private TreeSet<Interval> materializedIntervals()
   {
-    if (intervalIterable.iterator().hasNext() && intervals.isEmpty()) {
+    if (intervalIterable != null && intervalIterable.iterator().hasNext() && intervals.isEmpty()) {
       Iterators.addAll(intervals, intervalIterable.iterator());
     }
     return intervals;
