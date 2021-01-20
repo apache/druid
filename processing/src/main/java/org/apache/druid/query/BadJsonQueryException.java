@@ -19,13 +19,27 @@
 
 package org.apache.druid.query;
 
-/**
- * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
- */
-public class InsufficientResourcesException extends RuntimeException
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParseException;
+
+public class BadJsonQueryException extends BadQueryException
 {
-  public InsufficientResourcesException(String message)
+  public static final String ERROR_CODE = "Json parse failed";
+  public static final String ERROR_CLASS = JsonParseException.class.getName();
+
+  public BadJsonQueryException(JsonParseException e)
   {
-    super(message);
+    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
+  }
+
+  @JsonCreator
+  private BadJsonQueryException(
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass
+  )
+  {
+    super(errorCode, errorMessage, errorClass);
   }
 }

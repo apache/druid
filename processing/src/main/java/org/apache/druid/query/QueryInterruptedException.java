@@ -45,8 +45,7 @@ public class QueryInterruptedException extends QueryException
 {
   public static final String QUERY_INTERRUPTED = "Query interrupted";
   public static final String QUERY_CANCELLED = "Query cancelled";
-  public static final String RESOURCE_LIMIT_EXCEEDED = "Resource limit exceeded";
-  public static final String UNAUTHORIZED = "Unauthorized request.";
+  public static final String UNAUTHORIZED = "Unauthorized request";
   public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
   public static final String TRUNCATED_RESPONSE_CONTEXT = "Truncated response context";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
@@ -98,8 +97,6 @@ public class QueryInterruptedException extends QueryException
       return QUERY_INTERRUPTED;
     } else if (e instanceof CancellationException) {
       return QUERY_CANCELLED;
-    } else if (e instanceof ResourceLimitExceededException) {
-      return RESOURCE_LIMIT_EXCEEDED;
     } else if (e instanceof UnsupportedOperationException) {
       return UNSUPPORTED_OPERATION;
     } else if (e instanceof TruncatedResponseContextException) {
