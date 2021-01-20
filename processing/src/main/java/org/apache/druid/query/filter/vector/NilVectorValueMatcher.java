@@ -20,7 +20,7 @@
 package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.VectorSizeInspector;
 
 import javax.annotation.Nullable;
 
@@ -29,9 +29,9 @@ import javax.annotation.Nullable;
  */
 public class NilVectorValueMatcher implements VectorValueMatcherFactory
 {
-  private final ReadableVectorInspector vectorInspector;
+  private final VectorSizeInspector vectorInspector;
 
-  public NilVectorValueMatcher(final ReadableVectorInspector vectorInspector)
+  public NilVectorValueMatcher(final VectorSizeInspector vectorInspector)
   {
     this.vectorInspector = vectorInspector;
   }

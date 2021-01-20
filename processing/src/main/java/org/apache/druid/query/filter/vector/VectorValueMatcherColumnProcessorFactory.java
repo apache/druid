@@ -91,6 +91,6 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
       final VectorObjectSelector selector
   )
   {
-    return null;
+    return new NilVectorValueMatcher(selector);
   }
 }
