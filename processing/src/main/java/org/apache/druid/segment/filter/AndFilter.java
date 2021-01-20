@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -39,6 +40,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -49,12 +52,18 @@ public class AndFilter implements BooleanFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
-  private final List<Filter> filters;
+  private final LinkedHashSet<Filter> filters;
 
-  public AndFilter(List<Filter> filters)
+  public AndFilter(LinkedHashSet<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty AndFilter");
     this.filters = filters;
+  }
+
+  @VisibleForTesting
+  public AndFilter(List<Filter> filters)
+  {
+    this(new LinkedHashSet<>(filters));
   }
 
   public static <T> ImmutableBitmap getBitmapIndex(
@@ -69,7 +78,7 @@ public class AndFilter implements BooleanFilter
   private static <T> T getBitmapResult(
       BitmapIndexSelector selector,
       BitmapResultFactory<T> bitmapResultFactory,
-      List<Filter> filters
+      Collection<Filter> filters
   )
   {
     if (filters.size() == 1) {
@@ -157,7 +166,7 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public List<Filter> getFilters()
+  public LinkedHashSet<Filter> getFilters()
   {
     return filters;
   }

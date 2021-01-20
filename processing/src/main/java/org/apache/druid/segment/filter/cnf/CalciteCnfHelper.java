@@ -29,7 +29,9 @@ import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.TrueFilter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +44,7 @@ public class CalciteCnfHelper
 {
   public static Filter pull(Filter rex)
   {
-    final List<Filter> operands;
+    final LinkedHashSet<Filter> operands;
     if (rex instanceof AndFilter) {
       operands = ((AndFilter) rex).getFilters();
       return and(pullList(operands));
@@ -69,7 +71,7 @@ public class CalciteCnfHelper
     }
   }
 
-  private static List<Filter> pullList(List<Filter> nodes)
+  private static List<Filter> pullList(Collection<Filter> nodes)
   {
     final List<Filter> list = new ArrayList<>();
     for (Filter node : nodes) {
@@ -83,7 +85,7 @@ public class CalciteCnfHelper
     return list;
   }
 
-  private static Map<Filter, Filter> commonFactors(List<Filter> nodes)
+  private static Map<Filter, Filter> commonFactors(Collection<Filter> nodes)
   {
     final Map<Filter, Filter> map = new LinkedHashMap<>();
     int i = 0;

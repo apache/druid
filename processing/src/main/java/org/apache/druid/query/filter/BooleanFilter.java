@@ -23,14 +23,20 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public interface BooleanFilter extends Filter
 {
   ValueMatcher[] EMPTY_VALUE_MATCHER_ARRAY = new ValueMatcher[0];
 
-  List<Filter> getFilters();
+  /**
+   * Returns the child filters for this filter.
+   *
+   * This is a LinkedHashSet because we don't want duplicates, but the order is also important in some cases (such
+   * as when filters are provided in an order that encourages short-circuiting.)
+   */
+  LinkedHashSet<Filter> getFilters();
 
   /**
    * Get a ValueMatcher that applies this filter to row values.

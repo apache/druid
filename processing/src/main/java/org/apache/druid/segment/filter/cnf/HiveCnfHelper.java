@@ -125,7 +125,7 @@ public class HiveCnfHelper
         // do we need to flatten?
         if (child.getClass() == root.getClass() && !(child instanceof NotFilter)) {
           boolean first = true;
-          List<Filter> grandKids = ((BooleanFilter) child).getFilters();
+          List<Filter> grandKids = new ArrayList<>(((BooleanFilter) child).getFilters());
           for (Filter grandkid : grandKids) {
             // for the first grandkid replace the original parent
             if (first) {
@@ -161,7 +161,7 @@ public class HiveCnfHelper
       List<Filter> nonAndList
   )
   {
-    List<Filter> children = ((AndFilter) andList.get(0)).getFilters();
+    List<Filter> children = new ArrayList<>(((AndFilter) andList.get(0)).getFilters());
     if (result.isEmpty()) {
       for (Filter child : children) {
         List<Filter> a = new ArrayList<>(nonAndList);

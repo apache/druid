@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -31,7 +32,6 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.BitmapIndexSelector;
-import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
@@ -53,13 +53,13 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -509,7 +509,7 @@ public class Filters
       return Optional.empty();
     }
 
-    final List<Filter> filtersToUse = flattenAndChildren(filters);
+    final LinkedHashSet<Filter> filtersToUse = flattenAndChildren(filters);
 
     if (filtersToUse.isEmpty()) {
       assert !filters.isEmpty();
@@ -519,7 +519,7 @@ public class Filters
       // AND of FALSE with anything is FALSE.
       return Optional.of(FalseFilter.instance());
     } else if (filtersToUse.size() == 1) {
-      return Optional.of(filtersToUse.get(0));
+      return Optional.of(Iterables.getOnlyElement(filtersToUse));
     } else {
       return Optional.of(new AndFilter(filtersToUse));
     }
@@ -550,7 +550,7 @@ public class Filters
       return Optional.empty();
     }
 
-    final List<Filter> filtersToUse = flattenOrChildren(filters);
+    final LinkedHashSet<Filter> filtersToUse = flattenOrChildren(filters);
 
     if (filtersToUse.isEmpty()) {
       assert !filters.isEmpty();
@@ -560,7 +560,7 @@ public class Filters
       // OR of TRUE with anything is TRUE.
       return Optional.of(TrueFilter.instance());
     } else if (filtersToUse.size() == 1) {
-      return Optional.of(filtersToUse.get(0));
+      return Optional.of(Iterables.getOnlyElement(filtersToUse));
     } else {
       return Optional.of(new OrFilter(filtersToUse));
     }
@@ -581,7 +581,7 @@ public class Filters
     // - or a single non-AND subfilter which cannot be split further
     List<Filter> normalizedOrClauses;
     if (normalizedFilter instanceof AndFilter) {
-      normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
+      normalizedOrClauses = new ArrayList<>(((AndFilter) normalizedFilter).getFilters());
     } else {
       normalizedOrClauses = Collections.singletonList(normalizedFilter);
     }
@@ -598,15 +598,14 @@ public class Filters
   /**
    * Flattens children of an AND, removes duplicates, and removes literally-true filters.
    */
-  private static List<Filter> flattenAndChildren(final List<Filter> filters)
+  private static LinkedHashSet<Filter> flattenAndChildren(final Collection<Filter> filters)
   {
-    final List<Filter> retVal = new ArrayList<>();
-    final Set<EquivalenceCheckedFilter> seenFilters = new HashSet<>();
+    final LinkedHashSet<Filter> retVal = new LinkedHashSet<>();
 
     for (Filter child : filters) {
       if (child instanceof AndFilter) {
         retVal.addAll(flattenAndChildren(((AndFilter) child).getFilters()));
-      } else if (!(child instanceof TrueFilter) && seenFilters.add(new EquivalenceCheckedFilter(child))) {
+      } else if (!(child instanceof TrueFilter)) {
         retVal.add(child);
       }
     }
@@ -617,73 +616,18 @@ public class Filters
   /**
    * Flattens children of an OR, removes duplicates, and removes literally-false filters.
    */
-  private static List<Filter> flattenOrChildren(final List<Filter> filters)
+  private static LinkedHashSet<Filter> flattenOrChildren(final Collection<Filter> filters)
   {
-    final List<Filter> retVal = new ArrayList<>();
-    final Set<EquivalenceCheckedFilter> seenFilters = new HashSet<>();
+    final LinkedHashSet<Filter> retVal = new LinkedHashSet<>();
 
     for (Filter child : filters) {
       if (child instanceof OrFilter) {
         retVal.addAll(flattenOrChildren(((OrFilter) child).getFilters()));
-      } else if (!(child instanceof FalseFilter) && seenFilters.add(new EquivalenceCheckedFilter(child))) {
+      } else if (!(child instanceof FalseFilter)) {
         retVal.add(child);
       }
     }
 
     return retVal;
-  }
-
-  /**
-   * Wraps a {@link Filter} in an object whose {@link #equals} and {@link #hashCode} methods are overridden to
-   * ignore order of children for {@link AndFilter} and {@link OrFilter}. Useful for deduplication in
-   * {@link #flattenAndChildren} and {@link #flattenOrChildren}.
-   */
-  private static class EquivalenceCheckedFilter
-  {
-    private final Filter filter;
-
-    EquivalenceCheckedFilter(Filter filter)
-    {
-      this.filter = filter;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      EquivalenceCheckedFilter that = (EquivalenceCheckedFilter) o;
-
-      if (filter instanceof BooleanFilter && filter.getClass().equals(that.filter.getClass())) {
-        // Order of children doesn't matter for equivalence.
-        final Set<Filter> ourFilterSet = new HashSet<>(((BooleanFilter) filter).getFilters());
-        final Set<Filter> theirFilterSet = new HashSet<>(((BooleanFilter) that.filter).getFilters());
-        return ourFilterSet.equals(theirFilterSet);
-      } else {
-        return filter.equals(that.filter);
-      }
-    }
-
-    @Override
-    public int hashCode()
-    {
-      if (filter instanceof BooleanFilter) {
-        // Order of children doesn't matter for equivalence.
-        final List<Filter> children = ((BooleanFilter) filter).getFilters();
-        int hc = 0;
-
-        for (Filter child : children) {
-          hc += child.hashCode();
-        }
-
-        return hc;
-      } else {
-        return filter.hashCode();
-      }
-    }
   }
 }
