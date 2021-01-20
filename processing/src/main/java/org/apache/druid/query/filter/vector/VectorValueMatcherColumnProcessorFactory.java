@@ -86,7 +86,7 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   }
 
   @Override
-  public VectorValueMatcherFactory makeComplexProcessor(
+  public VectorValueMatcherFactory makeObjectProcessor(
       final ColumnCapabilities capabilities,
       final VectorObjectSelector selector
   )

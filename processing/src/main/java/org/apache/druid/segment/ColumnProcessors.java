@@ -336,7 +336,7 @@ public class ColumnProcessors
       case DOUBLE:
         return processorFactory.makeDoubleProcessor(capabilities, valueSelectorFn.apply(selectorFactory));
       case COMPLEX:
-        return processorFactory.makeComplexProcessor(capabilities, objectSelectorFn.apply(selectorFactory));
+        return processorFactory.makeObjectProcessor(capabilities, objectSelectorFn.apply(selectorFactory));
       default:
         throw new ISE("Unsupported type[%s]", capabilities.getType());
     }

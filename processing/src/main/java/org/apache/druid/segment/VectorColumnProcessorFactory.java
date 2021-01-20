@@ -76,5 +76,5 @@ public interface VectorColumnProcessorFactory<T>
   /**
    * Called when {@link ColumnCapabilities#getType()} is COMPLEX.
    */
-  T makeComplexProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector);
+  T makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector);
 }

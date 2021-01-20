@@ -42,17 +42,13 @@ public class NilGroupByVectorColumnSelector implements GroupByVectorColumnSelect
   }
 
   @Override
-  public void writeKeys(
-      WritableMemory keySpace, int keySize, int keyOffset, int startRow, int endRow
-  )
+  public void writeKeys(WritableMemory keySpace, int keySize, int keyOffset, int startRow, int endRow)
   {
     // Nothing to do.
   }
 
   @Override
-  public void writeKeyToResultRow(
-      Memory keyMemory, int keyOffset, ResultRow resultRow, int resultRowPosition
-  )
+  public void writeKeyToResultRow(Memory keyMemory, int keyOffset, ResultRow resultRow, int resultRowPosition)
   {
     resultRow.set(resultRowPosition, null);
   }

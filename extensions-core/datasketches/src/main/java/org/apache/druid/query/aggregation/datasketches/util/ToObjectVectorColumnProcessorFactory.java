@@ -133,7 +133,7 @@ public class ToObjectVectorColumnProcessorFactory implements VectorColumnProcess
   }
 
   @Override
-  public Supplier<Object[]> makeComplexProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+  public Supplier<Object[]> makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
   {
     return selector::getObjectVector;
   }

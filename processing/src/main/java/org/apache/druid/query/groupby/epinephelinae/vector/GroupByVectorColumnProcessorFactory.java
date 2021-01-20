@@ -105,7 +105,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   }
 
   @Override
-  public GroupByVectorColumnSelector makeComplexProcessor(
+  public GroupByVectorColumnSelector makeObjectProcessor(
       final ColumnCapabilities capabilities,
       final VectorObjectSelector selector
   )
