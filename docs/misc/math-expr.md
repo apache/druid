@@ -121,8 +121,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |atan|atan(x) returns the arc tangent of x|
 |bitwiseAnd|bitwiseAnd(x,y) returns the result of x & y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |bitwiseComplement|bitwiseComplement(x) returns the result of ~x. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
-|bitwiseConvertDoubleToLongBits|bitwiseConvertDoubleToLongBits(x) will convert the IEEE 754 floating-point "double" bits of a double value into a long, or implicitly cast the value to a double if the input is a long.|
-|bitwiseConvertLongBitsToDouble|bitwiseConvertLongBitsToDouble(x) will convert a long to the IEEE 754 floating-point "double" specified by the bits stored in the long. A double input will be implicitly cast to a long|
+|bitwiseConvertDoubleToLongBits|bitwiseConvertDoubleToLongBits(x) converts the bits of an IEEE 754 floating-point double value to a long. If the input is not a double, it is implicitly cast to a double prior to conversion|
+|bitwiseConvertLongBitsToDouble|bitwiseConvertLongBitsToDouble(x) converts a long to the IEEE 754 floating-point double specified by the bits stored in the long. If the input is not a long, it is implicitly cast to a long prior to conversion|
 |bitwiseOr|bitwiseOr(x,y) returns the result of x [PIPE] y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x << y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x >> y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
