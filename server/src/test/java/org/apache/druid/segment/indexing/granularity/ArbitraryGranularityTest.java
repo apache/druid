@@ -218,7 +218,8 @@ public class ArbitraryGranularityTest
   }
 
   @Test
-  public void testNullInputIntervals() {
+  public void testNullInputIntervals()
+  {
     final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, null);
     Assert.assertFalse(spec.bucketIntervals().iterator().hasNext());
   }
