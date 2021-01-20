@@ -20,11 +20,13 @@
 package org.apache.druid.segment.incremental.oak;
 
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
+import org.junit.Ignore;
 
 /**
  * This class wraps Oak relevant benchmarks and adds additional static initialization
  * to add Oak to the available incremental indexes.
  */
+@Ignore
 public class OakBenchmarks
 {
   public static void initModule()
