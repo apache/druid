@@ -21,20 +21,33 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.query.aggregation.datasketches.util.ToObjectVectorColumnProcessorFactory;
+import org.apache.druid.segment.ColumnProcessors;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.function.Supplier;
 
 public class SketchVectorAggregator implements VectorAggregator
 {
-  private final VectorObjectSelector selector;
+  private final Supplier<Object[]> toObjectProcessor;
   private final SketchBufferAggregatorHelper helper;
 
-  public SketchVectorAggregator(VectorObjectSelector selector, int size, int maxIntermediateSize)
+  public SketchVectorAggregator(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      String column,
+      int size,
+      int maxIntermediateSize
+  )
   {
-    this.selector = selector;
     this.helper = new SketchBufferAggregatorHelper(size, maxIntermediateSize);
+    this.toObjectProcessor =
+        ColumnProcessors.makeVectorProcessor(
+            column,
+            ToObjectVectorColumnProcessorFactory.INSTANCE,
+            columnSelectorFactory
+        );
   }
 
   @Override
@@ -47,7 +60,7 @@ public class SketchVectorAggregator implements VectorAggregator
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
     final Union union = helper.getOrCreateUnion(buf, position);
-    final Object[] vector = selector.getObjectVector();
+    final Object[] vector = toObjectProcessor.get();
 
     for (int i = startRow; i < endRow; i++) {
       final Object o = vector[i];
@@ -66,7 +79,7 @@ public class SketchVectorAggregator implements VectorAggregator
       final int positionOffset
   )
   {
-    final Object[] vector = selector.getObjectVector();
+    final Object[] vector = toObjectProcessor.get();
 
     for (int i = 0; i < numRows; i++) {
       final Object o = vector[rows != null ? rows[i] : i];
@@ -78,6 +91,7 @@ public class SketchVectorAggregator implements VectorAggregator
       }
     }
   }
+
   @Override
   public Object get(ByteBuffer buf, int position)
   {
