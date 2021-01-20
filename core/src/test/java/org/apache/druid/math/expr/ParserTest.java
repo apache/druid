@@ -59,11 +59,16 @@ public class ParserTest extends InitializedNullHandlingTest
     validateLiteral("'hello'", ExprType.STRING, "hello");
     validateLiteral("'hello \\uD83E\\uDD18'", ExprType.STRING, "hello \uD83E\uDD18");
     validateLiteral("1", ExprType.LONG, 1L);
+    validateLiteral("1.", ExprType.DOUBLE, 1.0, false);
     validateLiteral("1.234", ExprType.DOUBLE, 1.234);
     validateLiteral("1e10", ExprType.DOUBLE, 1.0E10, false);
     validateLiteral("1e-10", ExprType.DOUBLE, 1.0E-10, false);
     validateLiteral("1E10", ExprType.DOUBLE, 1.0E10, false);
     validateLiteral("1E-10", ExprType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.E10", ExprType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.E-10", ExprType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.e10", ExprType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.e-10", ExprType.DOUBLE, 1.0E-10, false);
     validateLiteral("1.1e10", ExprType.DOUBLE, 1.1E10, false);
     validateLiteral("1.1e-10", ExprType.DOUBLE, 1.1E-10, false);
     validateLiteral("1.1E10", ExprType.DOUBLE, 1.1E10);
