@@ -133,7 +133,8 @@ public class AppenderatorTester implements AutoCloseable
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters
-  ) {
+  )
+  {
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
   }
 
