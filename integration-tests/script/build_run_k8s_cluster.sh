@@ -17,7 +17,7 @@
 set -e
 
 if ($BUILD_DRUID_CLSUTER); then
-  export DRUID_HOME = $(dirname "$PWD")
+  export DRUID_HOME=$(dirname "$PWD")
 
   cd $DRUID_HOME
   bash ./integration-tests/script/stop_k8s_cluster.sh
