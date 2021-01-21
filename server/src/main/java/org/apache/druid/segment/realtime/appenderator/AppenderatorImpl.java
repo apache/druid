@@ -643,13 +643,18 @@ public class AppenderatorImpl implements Appenderator
     if (!skipBytesInMemoryOverheadCheck && bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
       // We are still over maxBytesTuningConfig even after persisting.
       // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
-      String errorMsg = StringUtils.format("Task uses up too much heap memory. Persist can no longer free up memory. Objects that "
-                                               + "cannot be freed up from intermediet persist include Sinks, Memory Mapped Hydrants, "
-                                               + "and other overhead created while ingesting/pervious persistings. "
-                                               + "numSinks[%d] numHydrantsAcrossAllSinks[%d] totalRows[%d]",
-                                               sinks.size(),
-                                               sinks.values().stream().mapToInt(Iterables::size).sum(),
-                                               getTotalRowCount());
+      String errorMsg = StringUtils.format("Failing task as task uses up too much heap memory. "
+                                           + "Persist can no longer free up memory. Objects that "
+                                           + "cannot be freed up from intermediet persist include Sinks, Memory Mapped Hydrants, "
+                                           + "and other overhead created while ingesting/pervious persistings. "
+                                           + "This check, along with calculation and consideration of overhead objects' "
+                                           + "memory can be disabled by setting skipBytesInMemoryOverheadCheck to true "
+                                           + "in the tuningConfig of the ingestionSpec "
+                                           + "(note that doing so can result in OOME). "
+                                           + "numSinks[%d] numHydrantsAcrossAllSinks[%d] totalRows[%d]",
+                                           sinks.size(),
+                                           sinks.values().stream().mapToInt(Iterables::size).sum(),
+                                           getTotalRowCount());
       log.makeAlert(errorMsg)
          .addData("dataSource", schema.getDataSource())
          .emit();
