@@ -25,7 +25,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexMultiValueSpecTest;
 import org.apache.druid.segment.incremental.IncrementalIndexRowCompTest;
 import org.apache.druid.segment.incremental.IncrementalIndexRowSizeTest;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapterTest;
-import org.apache.druid.segment.incremental.IncrementalIndexTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -36,7 +35,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     OakDummyInitTest.class,
     org.apache.druid.segment.data.IncrementalIndexTest.class,
-    IncrementalIndexTest.class,
+    org.apache.druid.segment.incremental.IncrementalIndexTest.class,
     IncrementalIndexStorageAdapterTest.class,
     IncrementalIndexRowSizeTest.class,
     IncrementalIndexRowCompTest.class,
@@ -44,6 +43,6 @@ import org.junit.runners.Suite;
     IncrementalIndexIngestionTest.class,
     IncrementalIndexAdapterTest.class,
 })
-public class OakTestSuite
+public class TestSuite
 {
 }
