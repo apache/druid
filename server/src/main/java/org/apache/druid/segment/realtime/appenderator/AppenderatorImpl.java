@@ -134,6 +134,7 @@ public class AppenderatorImpl implements Appenderator
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
+  private final boolean skipBytesInMemoryOverheadCheck;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -208,6 +209,7 @@ public class AppenderatorImpl implements Appenderator
     }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
+    skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
   }
 
   @Override
@@ -638,20 +640,20 @@ public class AppenderatorImpl implements Appenderator
 
     // bytesCurrentlyInMemory can change while persisting due to concurrent ingestion.
     // Hence, we use bytesInMemoryBeforePersist to determine the change of this persist
-    if (bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
+    if (!skipBytesInMemoryOverheadCheck && bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
       // We are still over maxBytesTuningConfig even after persisting.
       // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
-      String errorMessage = String.format("Task uses up too much heap memory. Persist can no longer free up memory. Objects that "
-                                          + "cannot be freed up from intermediet persist include Sinks, Memory Mapped Hydrants, "
-                                          + "and other overhead created while ingesting/pervious persistings. "
-                                          + "numSinks[%d] numHydrantsAcrossAllSinks[%d] totalRows[%d]",
-                                          sinks.size(),
-                                          sinks.values().stream().mapToInt(Iterables::size).sum(),
-                                          getTotalRowCount());
-      log.makeAlert(errorMessage)
+      String errorMsg = StringUtils.format("Task uses up too much heap memory. Persist can no longer free up memory. Objects that "
+                                               + "cannot be freed up from intermediet persist include Sinks, Memory Mapped Hydrants, "
+                                               + "and other overhead created while ingesting/pervious persistings. "
+                                               + "numSinks[%d] numHydrantsAcrossAllSinks[%d] totalRows[%d]",
+                                               sinks.size(),
+                                               sinks.values().stream().mapToInt(Iterables::size).sum(),
+                                               getTotalRowCount());
+      log.makeAlert(errorMsg)
          .addData("dataSource", schema.getDataSource())
          .emit();
-      throw new RuntimeException(errorMessage);
+      throw new RuntimeException(errorMsg);
     }
     return future;
   }
@@ -1428,6 +1430,9 @@ public class AppenderatorImpl implements Appenderator
 
   private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
   {
+    if (skipBytesInMemoryOverheadCheck) {
+      return 0;
+    }
     // These calculations are approximated from actual heap dumps.
     // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
@@ -1439,6 +1444,9 @@ public class AppenderatorImpl implements Appenderator
 
   private int calculateSinkMemoryInUsed(Sink sink)
   {
+    if (skipBytesInMemoryOverheadCheck) {
+      return 0;
+    }
     // Rough estimate of memory footprint of empty Sink based on actual heap dumps
     return ROUGH_OVERHEAD_PER_SINK;
   }

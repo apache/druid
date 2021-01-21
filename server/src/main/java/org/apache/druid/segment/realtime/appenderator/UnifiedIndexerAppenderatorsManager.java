@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -410,6 +411,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public long getMaxBytesInMemory()
     {
       return newMaxBytesInMemory;
+    }
+
+    @Override
+    public boolean isSkipBytesInMemoryOverheadCheck()
+    {
+      return baseConfig.isSkipBytesInMemoryOverheadCheck();
     }
 
     @Override
