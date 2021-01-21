@@ -25,21 +25,30 @@ apt-get update
 apt-get install -y wget
 
 # MySQL (Metadata store)
-apt-get install -y mysql-server
+apt-get install -y default-mysql-server
 
 # Supervisor
 apt-get install -y supervisor
 
 # Zookeeper
 
+install_zk() {
+  wget -q -O /tmp/$ZK_TAR.tar.gz "https://archive.apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
+  tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
+  cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
+  rm /tmp/$ZK_TAR.tar.gz
+}
+
+ZK_VERSION=3.4.14
+ZK_TAR=zookeeper-$ZK_VERSION
+install_zk
+
 ZK_VERSION=3.5.9
 ZK_TAR=apache-zookeeper-$ZK_VERSION-bin
+install_zk
 
-wget -q -O /tmp/$ZK_TAR.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
-tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
-cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
+# set default ZK version
 ln -s /usr/local/$ZK_TAR /usr/local/zookeeper
-rm /tmp/$ZK_TAR.tar.gz
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
