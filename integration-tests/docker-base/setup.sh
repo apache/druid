@@ -32,11 +32,8 @@ apt-get install -y supervisor
 
 # Zookeeper
 
-#ZK_VERSION=3.5.8
-#ZK_TAR=apache-zookeeper-$ZK_VERSION-bin
-
-ZK_VERISON=3.4.14
-ZK_TAR=zookeeper-$ZK_VERSION
+ZK_VERSION=3.5.9
+ZK_TAR=apache-zookeeper-$ZK_VERSION-bin
 
 wget -q -O /tmp/$ZK_TAR.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
 tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
