@@ -17,8 +17,13 @@
 set -e
 
 if ($BUILD_DRUID_CLSUTER); then
-  sudo /usr/local/bin/minikube delete
-  sudo rm -rf `pwd`/tmp
-  docker ps
+  echo "Start to setup k8s cluster"
+  bash ./script/setup_k8s_cluster.sh
+
+  echo "Start to setup druid operator on k8s"
+  bash ./script/setup_druid_operator_on_k8s.sh
+
+  echo "Start to setup druid on k8s"
+  bash ./script/setup_druid_on_k8s.sh
 fi
 
