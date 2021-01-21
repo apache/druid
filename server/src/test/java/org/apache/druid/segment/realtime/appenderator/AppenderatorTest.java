@@ -43,6 +43,7 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -154,6 +155,107 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testMaxBytesInMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
+  {
+    try (
+        final AppenderatorTester tester = new AppenderatorTester(
+            100,
+            1024,
+            null,
+            true,
+            new SimpleRowIngestionMeters(),
+            true
+        )
+    ) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      Assert.assertEquals(
+          182 + nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
+      Assert.assertEquals(
+          182 + nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+    }
+  }
+
+  @Test
+  public void testMaxBytesInMemoryInMultipleSinksWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
+  {
+    try (
+        final AppenderatorTester tester = new AppenderatorTester(
+            100,
+            1024,
+            null,
+            true,
+            new SimpleRowIngestionMeters(),
+            true
+        )
+    ) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      Assert.assertEquals(182 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
+      Assert.assertEquals(
+          364 + 2 * nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+    }
+  }
+
+  @Test
   public void testMaxBytesInMemory() throws Exception
   {
     try (final AppenderatorTester tester = new AppenderatorTester(100, 10000, true)) {
@@ -260,9 +362,9 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = RuntimeException.class)
-  public void testTaskShouldFailAsPersistCannotFreeAnyMoreMemory() throws Exception
+  public void testTaskFailAsPersistCannotFreeAnyMoreMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 300, true)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 10, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -286,6 +388,56 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+    }
+  }
+
+  @Test
+  public void testTaskDoesNotFailAsExceededMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
+  {
+    try (
+        final AppenderatorTester tester = new AppenderatorTester(
+            100,
+            10,
+            null,
+            true,
+            new SimpleRowIngestionMeters(),
+            true
+        )
+    ) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      // Expected 0 since we persisted after the add
+      Assert.assertEquals(
+          0,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      // Expected 0 since we persisted after the add
+      Assert.assertEquals(
+          0,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
     }
   }
 
