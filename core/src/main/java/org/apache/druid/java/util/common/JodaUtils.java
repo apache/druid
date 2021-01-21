@@ -37,6 +37,15 @@ public class JodaUtils
   public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
   public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
 
+  /**
+   * This method will not materialize the input intervals if they represent
+   * a SortedSet (i.e. implement that interface). If not, the method internally
+   * creates a sorted set and populates it with them thus materializing the
+   * intervals in the input.
+   *
+   * @param intervals The Iterable object containing the intervals to condense
+   * @return The condensed intervals
+   */
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
     final SortedSet<Interval> sortedIntervals;
@@ -53,10 +62,16 @@ public class JodaUtils
   }
 
   /**
-   * Caller needs to insure that sortedIntervals is sorted in ascending order
+   * This method does not materialize the intervals represented by the
+   * sortedIntervals iterator. However, caller needs to insure that sortedIntervals
+   * is already sorted in ascending order.
+   * It avoids materialization by incrementally condensing the intervals by
+   * starting from the first and looking for "adjacent" intervals. This is
+   * possible since intervals in the Iterator are in ascending order (as
+   * guaranteed by the caller).
    *
-   * @param sortedIntervals
-   * @return Condensed intervals
+   * @param sortedIntervals The iterator object containing the intervals to condense
+   * @return The condensed intervals
    */
   public static ArrayList<Interval> condenseIntervals(Iterator<Interval> sortedIntervals)
   {

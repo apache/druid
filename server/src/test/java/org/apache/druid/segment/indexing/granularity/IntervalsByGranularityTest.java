@@ -81,8 +81,11 @@ public class IntervalsByGranularityTest
 
 
   @Test
-  public void testCondenseDoesNotMaterialize()
+  public void testCondenseForManyIntervals()
   {
+    // This method attempts to test that there are no issues when condensed is called
+    // with an iterator pointing to millions of intervals (since the version of condensed
+    // used here takes an interval iterator and does not materialize intervals)
     Interval first = Intervals.of("2012-01-01T00Z/P1Y");
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         ImmutableList.of(first),
