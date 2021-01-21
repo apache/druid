@@ -31,6 +31,7 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.oak.OakIncrementalIndexModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -68,7 +69,7 @@ public class IndexIngestionBenchmark
   @Param({"none", "moderate", "high"})
   private String rollupOpportunity;
 
-  @Param({"onheap", "offheap"})
+  @Param({"onheap", "offheap", "oak"})
   private String indexType;
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
@@ -76,6 +77,8 @@ public class IndexIngestionBenchmark
 
   static {
     NullHandling.initializeForTests();
+    // Register OakIncrementalIndex
+    IncrementalIndexCreator.JSON_MAPPER.registerModule(OakIncrementalIndexModule.JACKSON_MODULE);
   }
 
   private AppendableIndexSpec appendableIndexSpec;
