@@ -1223,7 +1223,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
           skipBytesInMemoryOverheadCheck != null ? skipBytesInMemoryOverheadCheck : DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
-      getPartitionsSpec(
+          getPartitionsSpec(
               forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
               partitionsSpec,
               maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,
