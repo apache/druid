@@ -19,7 +19,6 @@ set -e
 export KUBECTL="sudo /usr/local/bin/kubectl"
 
 # setup client keystore
-cd integration-tests
 ./docker/tls/generate-client-certs-and-keystores.sh
 rm -rf docker/client_tls
 cp -r client_tls docker/client_tls
