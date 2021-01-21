@@ -17,13 +17,18 @@
 set -e
 
 if ($BUILD_DRUID_CLSUTER); then
+  export DRUID_HOME = $(dirname "$PWD")
+
+  cd $DRUID_HOME
+  bash ./integration-tests/script/stop_k8s_cluster.sh
+
   echo "Start to setup k8s cluster"
-  bash ./script/setup_k8s_cluster.sh
+  bash ./integration-tests/script/setup_k8s_cluster.sh
 
   echo "Start to setup druid operator on k8s"
-  bash ./script/setup_druid_operator_on_k8s.sh
+  bash ./integration-tests/script/setup_druid_operator_on_k8s.sh
 
   echo "Start to setup druid on k8s"
-  bash ./script/setup_druid_on_k8s.sh
+  bash ./integration-tests/script/setup_druid_on_k8s.sh
 fi
 
