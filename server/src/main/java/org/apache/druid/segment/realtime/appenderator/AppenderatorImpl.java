@@ -645,7 +645,7 @@ public class AppenderatorImpl implements Appenderator
       // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
       String errorMsg = StringUtils.format("Failing task as task uses up too much heap memory. "
                                            + "Persist can no longer free up memory. Objects that "
-                                           + "cannot be freed up from intermediet persist include Sinks, Memory Mapped Hydrants, "
+                                           + "cannot be freed up from intermediate persist include Sinks, Memory Mapped Hydrants, "
                                            + "and other overhead created while ingesting/pervious persistings. "
                                            + "This check, along with calculation and consideration of overhead objects' "
                                            + "memory can be disabled by setting skipBytesInMemoryOverheadCheck to true "
