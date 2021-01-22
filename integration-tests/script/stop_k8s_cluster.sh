@@ -19,6 +19,8 @@ set -e
 if ($BUILD_DRUID_CLSUTER); then
 
   sudo /usr/local/bin/minikube delete
+  sudo rm -rf $DRUID_HOME/tmp
+  sudo rm -rf $DRUID_HOME/druid-operator
   docker ps
 
 fi
