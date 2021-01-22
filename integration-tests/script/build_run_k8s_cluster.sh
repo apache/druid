@@ -18,12 +18,12 @@ set -e
 
 if ($BUILD_DRUID_CLSUTER); then
 
-  DRUID_HOME=$(dirname "$PWD")
+  DRUID_HOME_DIR=$(dirname "$PWD")
   minikubeFile="/usr/local/bin/minikube*"
-  cd $DRUID_HOME
+  cd $DRUID_HOME_DIR
 
   if [ ! -f "$minikubeFile" ]; then
-    bash ./integration-tests/script/stop_k8s_cluster.sh
+    bash ./integration-tests/script/stop_k8s_cluster.sh DRUID_HOME_DIR
   fi
 
   echo "Start to setup k8s cluster"
