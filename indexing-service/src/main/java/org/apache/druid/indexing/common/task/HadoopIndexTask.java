@@ -34,7 +34,6 @@ import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopDruidIndexerJob;
 import org.apache.druid.indexer.HadoopIngestionSpec;
-import org.apache.druid.indexer.HadoopyShardSpec;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
@@ -393,12 +392,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // counts via MapReduce.
       if (indexerSchema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)) {
         // Gather the aggregate number of shards in the intervals being indexed
-        int aggregateBuckets = 0;
-        for (List<HadoopyShardSpec> specList : indexerSchema.getTuningConfig().getShardSpecs().values()) {
-          for (HadoopyShardSpec shardSpec : specList) {
-            aggregateBuckets += shardSpec.getShardNum();
-          }
-        }
+        int aggregateBuckets = indexerSchema.getTuningConfig().getShardSpecs().size();
         // Abort task if aggregate number of segments is greater than limit specified in TuningConfig.
         if (aggregateBuckets > indexerSchema.getTuningConfig().getMaxAggregateSegmentIntervalShardsPermitted()) {
           errorMsg = "HadoopIndexTask Failed! The aggregate number of segments that will be created ["
