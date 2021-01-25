@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './ascii-escape';
-export * from './druid-query';
-export * from './druid-lookup';
-export * from './query-state';
-export * from './query-manager';
-export * from './query-cursor';
-export * from './local-storage-keys';
-export * from './column-metadata';
-export * from './object-change';
-export * from './capabilities';
+export function escapeAsciiControlCharacters(str: string): string {
+  return str.replace(
+    /[\x00-\x1f]/g,
+    c => `\\x${(256 + c.charCodeAt(0)).toString(16).substr(1, 2)}`,
+  );
+}
+
+export function unescapeAsciiControlCharacters(str: string): string {
+  return str.replace(/\\x[0-1][0-9a-f]/gi, c => String.fromCharCode(parseInt(c.substr(2, 2), 16)));
+}

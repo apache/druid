@@ -113,14 +113,16 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'delimiter',
     type: 'string',
     defaultValue: '\t',
+    suggestions: ['\t', '|', '#'],
     defined: (p: InputFormat) => p.type === 'tsv',
     info: <>A custom delimiter for data values.</>,
   },
   {
     name: 'listDelimiter',
     type: 'string',
+    defaultValue: '\x01',
+    suggestions: ['\x01', '\x00'],
     defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv', 'regex'),
-    placeholder: '(optional, default = ctrl+A)',
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
