@@ -45,9 +45,8 @@ install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff ${MAV
 
 stages:
   - name: test  # jobs that do not specify a stage get this default value
-    if: type != cron && type != it
-  - name: it
     if: type != cron
+  - name: it
   - name: cron
     if: type = cron
 
