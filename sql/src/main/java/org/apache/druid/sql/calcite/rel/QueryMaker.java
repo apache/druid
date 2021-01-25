@@ -148,7 +148,7 @@ public class QueryMaker
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, null);
+    final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, null, true);
 
     //noinspection unchecked
     final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();

@@ -793,6 +793,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"lookup"},
+            new Object[]{"view"},
             new Object[]{"druid"},
             new Object[]{"sys"},
             new Object[]{"INFORMATION_SCHEMA"}
@@ -817,8 +818,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
-            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
-            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
@@ -828,6 +827,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"view", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
 
@@ -848,8 +852,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
-            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
-            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
@@ -859,6 +861,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"view", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
   }
@@ -920,10 +927,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
-        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'aview'",
+        + "WHERE TABLE_SCHEMA = 'view' AND TABLE_NAME = 'aview'",
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"dim1_firstchar", "VARCHAR", "YES"}
+        )
+    );
+  }
+
+  @Test
+  public void testInformationSchemaColumnsOnAnotherView() throws Exception
+  {
+    testQuery(
+        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
+        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
+        + "WHERE TABLE_SCHEMA = 'view' AND TABLE_NAME = 'cview'",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"dim1_firstchar", "VARCHAR", "YES"},
+            new Object[]{"dim2", "VARCHAR", "YES"},
+            new Object[]{"l2", "BIGINT", useDefault ? "NO" : "YES"}
         )
     );
   }
@@ -1026,6 +1049,67 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 9999.0f,
                 NullHandling.defaultDoubleValue(),
                 "\"AQAAAQAAAALFBA==\""
+            },
+            new Object[]{
+                timestamp("2000-01-02"),
+                1L,
+                "forbidden",
+                "a",
+                1234.0f,
+                NullHandling.defaultDoubleValue(),
+                "\"AQAAAQAAAALFBA==\""
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenView() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM view.restrictedView",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                .filters(selector("dim2", "a", null))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "dim2", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-02"),
+                "forbidden",
+                "a",
+                1234.0f
+            }
+        )
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM view.restrictedView",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(selector("dim2", "a", null))
+                .columns("__time", "dim1", "dim2", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-02"),
+                "forbidden",
+                "a",
+                1234.0f
             }
         )
     );
@@ -5125,7 +5209,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCountStarOnView() throws Exception
   {
     testQuery(
-        "SELECT COUNT(*) FROM druid.aview WHERE dim1_firstchar <> 'z'",
+        "SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5141,6 +5225,85 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{2L}
+        )
+    );
+  }
+
+  @Test
+  public void testConfusedView() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(and(
+                      selector("dim2", "a", null),
+                      not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                  ))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        )
+    );
+  }
+
+  @Test
+  public void testViewAndJoin() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COUNT(*) FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                        join(
+                            new QueryDataSource(
+                                newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
+                                                     .intervals(querySegmentSpec(Filtration.eternity()))
+                                                     .columns("dim1", "dim2")
+                                                     .filters(selector("dim2", "a", null))
+                                                     .context(QUERY_CONTEXT_DEFAULT)
+                                                     .build()
+                            ),
+                            new QueryDataSource(
+                                newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE3)
+                                                     .intervals(querySegmentSpec(Filtration.eternity()))
+                                                     .columns("dim2")
+                                                     .context(QUERY_CONTEXT_DEFAULT)
+                                                     .build()
+                            ),
+                            "j0.",
+                            "(\"dim2\" == \"j0.dim2\")",
+                            JoinType.INNER
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
+                                                 .intervals(querySegmentSpec(Filtration.eternity()))
+                                                 .columns("dim2")
+                                                 .context(QUERY_CONTEXT_DEFAULT)
+                                                 .build()
+                        ),
+                        "_j0.",
+                        "('a' == \"_j0.dim2\")",
+                        JoinType.INNER
+                    )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1))))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{8L}
         )
     );
   }
@@ -5167,7 +5330,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + ", signature=[{a0:LONG}])\n";
 
     testQuery(
-        "EXPLAIN PLAN FOR SELECT COUNT(*) FROM aview WHERE dim1_firstchar <> 'z'",
+        "EXPLAIN PLAN FOR SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'",
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
@@ -8829,7 +8992,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testFilterOnCurrentTimestampOnView() throws Exception
   {
     testQuery(
-        "SELECT * FROM bview",
+        "SELECT * FROM view.bview",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -8854,7 +9017,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
-        "SELECT * FROM bview",
+        "SELECT * FROM view.bview",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()

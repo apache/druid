@@ -17,24 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.inject.Inject;
+import org.apache.calcite.schema.Schema;
 
-public enum ResourceType
+public class NamedViewSchema implements NamedSchema
 {
-  DATASOURCE,
-  VIEW,
-  CONFIG,
-  STATE;
+  public static final String NAME = "view";
+  private final ViewSchema viewSchema;
 
-  @JsonCreator
-  public static ResourceType fromString(String name)
+  @Inject
+  NamedViewSchema(ViewSchema viewSchema)
   {
-    if (name == null) {
-      return null;
-    }
-    return valueOf(StringUtils.toUpperCase(name));
+    this.viewSchema = viewSchema;
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return NAME;
+  }
+
+  @Override
+  public Schema getSchema()
+  {
+    return viewSchema;
   }
 }
