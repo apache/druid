@@ -563,13 +563,23 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else {
       final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
+      Worker worker;
       if (zkWorker == null) {
+        //if we shutdown for zk connect unstable, we can't expect to fetch worker from 'findWorkerRunningTask'
+        // try fetch from  runningTasks,
+        RemoteTaskRunnerWorkItem workItem = runningTasks.get(taskId);
+        worker = workItem.getWorker();
+      } else {
+        worker = zkWorker.getWorker();
+      }
+
+      if (worker == null) {
         log.info("Can't shutdown! No worker running task %s", taskId);
         return;
       }
       URL url = null;
       try {
-        url = TaskRunnerUtils.makeWorkerURL(zkWorker.getWorker(), "/druid/worker/v1/task/%s/shutdown", taskId);
+        url = TaskRunnerUtils.makeWorkerURL(worker, "/druid/worker/v1/task/%s/shutdown", taskId);
         final StatusResponseHolder response = httpClient.go(
             new Request(HttpMethod.POST, url),
             StatusResponseHandler.getInstance(),
@@ -578,7 +588,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
         log.info(
             "Sent shutdown message to worker: %s, status %s, response: %s",
-            zkWorker.getWorker().getHost(),
+            worker.getHost(),
             response.getStatus(),
             response.getContent()
         );
@@ -592,7 +602,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         throw new RE(e, "Interrupted posting shutdown to [%s] for task [%s]", url, taskId);
       }
       catch (Exception e) {
-        throw new RE(e, "Error in handling post to [%s] for task [%s]", zkWorker.getWorker().getHost(), taskId);
+        throw new RE(e, "Error in handling post to [%s] for task [%s]", worker.getHost(), taskId);
       }
     }
   }
@@ -920,7 +930,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       Stopwatch timeoutStopwatch = Stopwatch.createStarted();
       while (!isWorkerRunningTask(theZkWorker, task.getId())) {
         final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
-        statusLock.wait(waitMs);
+        statusLock.wait(waitMs/3);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
         if (elapsed >= waitMs) {
           log.makeAlert(
