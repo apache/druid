@@ -565,11 +565,9 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker
-      before_script: export DRUID_HOME=`pwd`
       env: CONFIG_FILE='k8s_run_config_file.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest' POD_NAME=int-test POD_NAMESPACE=default BUILD_DRUID_CLSUTER=true
       script: &run_integration_test_k8s
         - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLSUTER}
-      after_script: integration-tests/script/stop_k8s_cluster.sh
       after_failure: &integration_test_diags_k8s
         - for v in broker middlemanager router coordinator historical ; do
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";

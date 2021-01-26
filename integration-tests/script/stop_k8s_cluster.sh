@@ -18,6 +18,9 @@ set -e
 
 if ($BUILD_DRUID_CLSUTER); then
 
+  DRUID_HOME=$(dirname `pwd`)
+  echo "DRUID_HOME $DRUID_HOME"
+
   sudo /usr/local/bin/minikube delete
   sudo rm -rf $DRUID_HOME/tmp
   sudo rm -rf $DRUID_HOME/druid-operator
