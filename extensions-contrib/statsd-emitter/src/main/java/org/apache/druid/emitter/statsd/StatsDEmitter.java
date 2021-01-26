@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.timgroup.statsd.Event.AlertType;
 import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
 import org.apache.druid.java.util.common.StringUtils;
@@ -57,12 +58,12 @@ public class StatsDEmitter implements Emitter
 
   static StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
-    NonBlockingStatsDClient client = new NonBlockingStatsDClient(
-        config.getPrefix(),
-        config.getHostname(),
-        config.getPort(),
-        config.isDogstatsd() ? config.getDogstatsdConstantTags().toArray(new String[0]) : EMPTY_ARRAY,
-        new StatsDClientErrorHandler()
+    NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+        .prefix(config.getPrefix())
+        .hostname(config.getHostname())
+        .port(config.getPort())
+        .constantTags(config.isDogstatsd() ? config.getDogstatsdConstantTags().toArray(new String[0]) : EMPTY_ARRAY)
+        .errorHandler(new StatsDClientErrorHandler()
         {
           private int exceptionCount = 0;
 
@@ -74,8 +75,8 @@ public class StatsDEmitter implements Emitter
             }
             exceptionCount += 1;
           }
-        }
-    );
+        })
+        .build();
     return new StatsDEmitter(config, mapper, client);
   }
 
