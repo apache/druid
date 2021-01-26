@@ -17,11 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.segment.indexing.granularity;
+package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
@@ -29,6 +27,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -165,6 +164,29 @@ public class IntervalsByGranularityTest
 
   }
 
+  @Test(expected = UnsupportedOperationException.class)
+  public void testRemoveThrowsException()
+  {
+    final List<Interval> inputIntervals = ImmutableList.of(
+        Intervals.of("2015-01-08T00Z/2015-01-11T00Z")
+    );
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        inputIntervals,
+        Granularities.MONTH
+    );
+    intervals.granularityIntervalsIterator().remove();
+  }
+
+  @Test
+  public void testEmptyInput()
+  {
+    final List<Interval> inputIntervals = Collections.emptyList();
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        inputIntervals,
+        Granularities.MONTH
+    );
+    Assert.assertFalse(intervals.granularityIntervalsIterator().hasNext());
+  }
 
   private long getCount(Iterator<Interval> granularityIntervalIterator)
   {
