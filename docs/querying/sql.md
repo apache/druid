@@ -219,6 +219,18 @@ at execution time. To use dynamic parameters, replace any literal in the query w
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
 which they are passed. Parameters are supported in both the [HTTP POST](#http-post) and [JDBC](#jdbc) APIs.
 
+Please note that in certain cases, dynamic parameters used in expressions can cause type inference issues which can cause the query to fail. The following query is one such case:
+
+```sql
+SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', ?, '%')
+```
+
+In these cases, the solution would be to explicitly provide the type of the dynamic parameter using the `CAST` keyword. The above example can be fixed as:
+
+```
+SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
+```
+
 ## Data types
 
 ### Standard types
