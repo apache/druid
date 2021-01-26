@@ -300,7 +300,14 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Override
   public Granularity getSegmentGranularity()
   {
-    return segmentGranularity;
+    return granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
+  }
+
+  @JsonProperty
+  @Nullable
+  public GranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
   }
 
   @Nullable
@@ -360,7 +367,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         partitionConfigurationManager,
         dimensionsSpec,
         metricsSpec,
-        segmentGranularity,
+        granularitySpec == null ? null : granularitySpec.getSegmentGranularity(),
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory
