@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -40,30 +39,28 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
+ *
  */
 public class OrFilter implements BooleanFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
-  private final Set<Filter> filters;
+  private final LinkedHashSet<Filter> filters;
 
-  @VisibleForTesting
-  public OrFilter(List<Filter> filters)
-  {
-    this(new HashSet<>(filters));
-  }
-
-  public OrFilter(Set<Filter> filters)
+  public OrFilter(LinkedHashSet<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
-
     this.filters = filters;
+  }
+
+  public OrFilter(List<Filter> filters)
+  {
+    this(new LinkedHashSet<>(filters));
   }
 
   @Override
@@ -140,7 +137,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public Set<Filter> getFilters()
+  public LinkedHashSet<Filter> getFilters()
   {
     return filters;
   }

@@ -151,7 +151,7 @@ name: AWS RDS SDK for Java
 license_category: source
 module: extensions/druid-aws-rds-extensions
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-rds
 
@@ -3583,10 +3583,11 @@ name: AWS SDK for Java
 license_category: binary
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-kinesis
   - com.amazonaws: aws-java-sdk-sts
+  - com.amazonaws: jmespath-java  
 
 ---
 

@@ -147,6 +147,7 @@ public class BoundFilter implements Filter
   {
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
   }
+
   @Override
   public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
@@ -311,6 +312,12 @@ public class BoundFilter implements Filter
   public int hashCode()
   {
     return Objects.hash(boundDimFilter, extractionFn, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return boundDimFilter.toString();
   }
 
   @VisibleForTesting
