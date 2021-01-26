@@ -643,22 +643,26 @@ public class AppenderatorImpl implements Appenderator
     if (!skipBytesInMemoryOverheadCheck && bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
       // We are still over maxBytesTuningConfig even after persisting.
       // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
-      String errorMsg = StringUtils.format("Failing task as task uses up too much heap memory. "
-                                           + "Persist can no longer free up memory. Objects that "
-                                           + "cannot be freed up from intermediate persist include Sinks, Memory Mapped Hydrants, "
-                                           + "and other overhead created while ingesting/pervious persistings. "
-                                           + "This check, along with calculation and consideration of overhead objects' "
-                                           + "memory can be disabled by setting skipBytesInMemoryOverheadCheck to true "
-                                           + "in the tuningConfig of the ingestionSpec "
-                                           + "(note that doing so can result in OOME). "
-                                           + "numSinks[%d] numHydrantsAcrossAllSinks[%d] totalRows[%d]",
-                                           sinks.size(),
-                                           sinks.values().stream().mapToInt(Iterables::size).sum(),
-                                           getTotalRowCount());
-      log.makeAlert(errorMsg)
+      final String alertMessage = StringUtils.format(
+          "Task has exceeded safe estimated heap usage limits, failing "
+          + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])",
+          sinks.size(),
+          sinks.values().stream().mapToInt(Iterables::size).sum(),
+          getTotalRowCount()
+      );
+      final String errorMessage = StringUtils.format(
+          "%s.\nThis can occur when the overhead from too many intermediary segment persists becomes to "
+          + "great to have enough space to process additional input rows. This check, along with metering the overhead "
+          + "of these objects to factor into the 'maxBytesInMemory' computation, can be disabled by setting "
+          + "'skipBytesInMemoryOverheadCheck' to 'true' (note that doing so might allow the task to naturally encounter "
+          + "a 'java.lang.OutOfMemoryError'). Otherwise, user can increase 'maxBytesInMemory' to allocate more heap "
+          + "which will allow more intermediary segment persists.",
+          alertMessage
+      );
+      log.makeAlert(alertMessage)
          .addData("dataSource", schema.getDataSource())
          .emit();
-      throw new RuntimeException(errorMsg);
+      throw new RuntimeException(errorMessage);
     }
     return future;
   }
