@@ -568,7 +568,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         //if we shutdown for zk connect unstable, we can't expect to fetch worker from 'findWorkerRunningTask'
         // try fetch from  runningTasks,
         RemoteTaskRunnerWorkItem workItem = runningTasks.get(taskId);
-        worker = workItem.getWorker();
+        worker = workItem != null ? workItem.getWorker() : null;
       } else {
         worker = zkWorker.getWorker();
       }
@@ -930,7 +930,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       Stopwatch timeoutStopwatch = Stopwatch.createStarted();
       while (!isWorkerRunningTask(theZkWorker, task.getId())) {
         final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
-        statusLock.wait(waitMs/3);
+        statusLock.wait(waitMs / 3);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
         if (elapsed >= waitMs) {
           log.makeAlert(
