@@ -17,35 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.segment;
 
-import org.apache.druid.segment.vector.VectorSizeInspector;
-
-public class TrueVectorMatcher implements VectorValueMatcher
+public interface SegmentLazyLoadFailCallback
 {
-  private final VectorSizeInspector vectorSizeInspector;
-
-  public TrueVectorMatcher(VectorSizeInspector vectorSizeInspector)
-  {
-    this.vectorSizeInspector = vectorSizeInspector;
-  }
-
-  @Override
-  public ReadableVectorMatch match(ReadableVectorMatch mask)
-  {
-    // The given mask is all true for its valid selections.
-    return mask;
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return vectorSizeInspector.getMaxVectorSize();
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return vectorSizeInspector.getCurrentVectorSize();
-  }
+  void execute();
+  SegmentLazyLoadFailCallback NOOP = () -> {};
 }
