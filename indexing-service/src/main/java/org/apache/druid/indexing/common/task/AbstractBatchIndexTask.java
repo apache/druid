@@ -69,7 +69,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -380,19 +379,26 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     // when an overwriting task finds a version for a given input row, it expects the interval
     // associated to each version to be equal or larger than the time bucket where the input row falls in.
     // See ParallelIndexSupervisorTask.findVersion().
-    final Set<Interval> uniqueCondensedIntervals = new HashSet<>();
+    final Iterator<Interval> intervalIterator;
     final Granularity segmentGranularity = getSegmentGranularity();
     if (segmentGranularity == null) {
-      uniqueCondensedIntervals.addAll(JodaUtils.condenseIntervals(intervals));
+      intervalIterator = JodaUtils.condenseIntervals(intervals).iterator();
     } else {
       IntervalsByGranularity intervalsByGranularity = new IntervalsByGranularity(intervals, segmentGranularity);
       // the following is calling a condense that does not materialize the intervals:
-      uniqueCondensedIntervals.addAll(JodaUtils.condenseIntervals(intervalsByGranularity.granularityIntervalsIterator()));
+      intervalIterator = JodaUtils.condensedIntervalsIterator(intervalsByGranularity.granularityIntervalsIterator());
     }
 
     // Intervals are already condensed to avoid creating too many locks.
-    for (Interval interval : uniqueCondensedIntervals) {
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
+    // Intervals are also sorted and thus it's safe to compare only the previous interval and current one for dedup.
+    Interval prev = null;
+    while (intervalIterator.hasNext()) {
+      final Interval cur = intervalIterator.next();
+      if (prev != null && cur.equals(prev)) {
+        continue;
+      }
+      prev = cur;
+      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
       if (lock == null) {
         return false;
       }

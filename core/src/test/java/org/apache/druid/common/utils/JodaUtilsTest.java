@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  */
 public class JodaUtilsTest
 {
@@ -75,6 +76,40 @@ public class JodaUtilsTest
         Intervals.of("2011-03-05/2011-03-06")
     );
 
+    List<Interval> expected = Arrays.asList(
+        Intervals.of("2011-01-01/2011-01-03"),
+        Intervals.of("2011-02-01/2011-02-08"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06")
+    );
+
+    List<Interval> actual = JodaUtils.condenseIntervals(intervals);
+
+    Assert.assertEquals(
+        expected,
+        actual
+    );
+
+  }
+
+
+  @Test
+  public void testCondenseIntervalsSimpleSortedIterator()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-02/2011-01-03"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-02-01/2011-02-02"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06")
+    );
+    intervals.sort(JodaUtils.INTERVALS_COMPARATOR_INCREASING_ORDER);
+
+    List<Interval> actual = JodaUtils.condenseIntervals(intervals.iterator());
     Assert.assertEquals(
         Arrays.asList(
             Intervals.of("2011-01-01/2011-01-03"),
@@ -83,7 +118,128 @@ public class JodaUtilsTest
             Intervals.of("2011-03-03/2011-03-04"),
             Intervals.of("2011-03-05/2011-03-06")
         ),
-        JodaUtils.condenseIntervals(intervals)
+        actual
+    );
+
+  }
+
+  @Test
+  public void testCondenseIntervalsSimpleSortedIteratorOverlapping()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-02-01/2011-03-10"),
+        Intervals.of("2011-01-02/2011-02-03"),
+        Intervals.of("2011-01-07/2015-01-19"),
+        Intervals.of("2011-01-15/2011-01-19"),
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-02-01/2011-03-10")
+    );
+
+    intervals.sort(JodaUtils.INTERVALS_COMPARATOR_INCREASING_ORDER);
+
+    Assert.assertEquals(
+        Collections.singletonList(
+            Intervals.of("2011-01-01/2015-01-19")
+        ),
+        JodaUtils.condenseIntervals(intervals.iterator())
+    );
+  }
+
+  @Test
+  public void testCondenseIntervalsSimplSortedIteratorOverlappingWithNulls()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-01-02/2011-02-03"),
+        Intervals.of("2011-02-01/2011-03-10"),
+        null,
+        Intervals.of("2011-03-07/2011-04-19"),
+        Intervals.of("2011-04-01/2015-01-19"),
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList(
+            Intervals.of("2011-01-02/2015-01-19")
+        ),
+        JodaUtils.condenseIntervals(intervals.iterator())
+    );
+  }
+
+  @Test
+  public void testCondenseIntervalsSimplSortedIteratorOverlappingWithNullFirstAndLast()
+  {
+    List<Interval> intervals = Arrays.asList(
+        null,
+        Intervals.of("2011-01-02/2011-02-03"),
+        Intervals.of("2011-02-01/2011-03-10"),
+        Intervals.of("2011-03-07/2011-04-19"),
+        Intervals.of("2011-04-01/2015-01-19"),
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList(
+            Intervals.of("2011-01-02/2015-01-19")
+        ),
+        JodaUtils.condenseIntervals(intervals.iterator())
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCondenseIntervalsSimpleUnsortedIterator()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-02/2011-01-03"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-02-01/2011-02-02"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06")
+    );
+    JodaUtils.condenseIntervals(intervals.iterator());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCondenseIntervalsSimpleUnsortedIteratorSmallestAtEnd()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-02-01/2011-02-04"),
+        Intervals.of("2011-03-01/2011-03-04"),
+        Intervals.of("2010-01-01/2010-03-04")
+    );
+    JodaUtils.condenseIntervals(intervals.iterator());
+  }
+
+  @Test
+  public void testCondenseIntervalsIteratorWithDups()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-02-04/2011-02-05"),
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-02/2011-01-03"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-02-01/2011-02-02"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06")
+    );
+    intervals.sort(JodaUtils.INTERVALS_COMPARATOR_INCREASING_ORDER);
+
+    Assert.assertEquals(
+        Arrays.asList(
+            Intervals.of("2011-01-01/2011-01-03"),
+            Intervals.of("2011-02-01/2011-02-08"),
+            Intervals.of("2011-03-01/2011-03-02"),
+            Intervals.of("2011-03-03/2011-03-04"),
+            Intervals.of("2011-03-05/2011-03-06")
+        ),
+        JodaUtils.condenseIntervals(intervals.iterator())
     );
   }
 

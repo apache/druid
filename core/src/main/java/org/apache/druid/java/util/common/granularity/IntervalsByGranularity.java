@@ -22,7 +22,7 @@ package org.apache.druid.java.util.common.granularity;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ public class IntervalsByGranularity
     intervalSet.addAll(intervals);
     this.sortedIntervals = new ArrayList<>(intervals.size());
     this.sortedIntervals.addAll(intervalSet);
-    this.sortedIntervals.sort(Comparators.intervalsByStartThenEnd());
+    this.sortedIntervals.sort(JodaUtils.INTERVALS_COMPARATOR_INCREASING_ORDER);
 
     this.granularity = granularity;
   }

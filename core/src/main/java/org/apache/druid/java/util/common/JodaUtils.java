@@ -19,12 +19,17 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
+import org.apache.commons.compress.utils.Lists;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -36,6 +41,7 @@ public class JodaUtils
   // limit intervals such that duration millis fits in a long
   public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
   public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
+  public static final Comparator INTERVALS_COMPARATOR_INCREASING_ORDER = Comparators.intervalsByStartThenEnd();
 
   /**
    * This method will not materialize the input intervals if they represent
@@ -53,7 +59,7 @@ public class JodaUtils
     if (intervals instanceof SortedSet) {
       sortedIntervals = (SortedSet<Interval>) intervals;
     } else {
-      sortedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+      sortedIntervals = new TreeSet<>(INTERVALS_COMPARATOR_INCREASING_ORDER);
       for (Interval interval : intervals) {
         sortedIntervals.add(interval);
       }
@@ -64,43 +70,102 @@ public class JodaUtils
   /**
    * This method does not materialize the intervals represented by the
    * sortedIntervals iterator. However, caller needs to insure that sortedIntervals
-   * is already sorted in ascending order.
+   * is already sorted in ascending order (you may use the INTERVALS_COMPARATOR_INCREASING_ORDER
+   * provided in this class to sort the input).
    * It avoids materialization by incrementally condensing the intervals by
    * starting from the first and looking for "adjacent" intervals. This is
    * possible since intervals in the Iterator are in ascending order (as
    * guaranteed by the caller).
+   * <p>
+   * *
    *
    * @param sortedIntervals The iterator object containing the intervals to condense
-   * @return The condensed intervals
+   * @return The condensed intervals. By construction the condensed intervals are sorted
+   * in ascending order and contain no repeated elements. The iterator can contain nulls
+   * but they will be skipped if it does.
+   * @throws IllegalArgumentException if sortedIntervals is not sorted in ascending order
    */
   public static ArrayList<Interval> condenseIntervals(Iterator<Interval> sortedIntervals)
   {
-    ArrayList<Interval> retVal = new ArrayList<>();
-    if (!sortedIntervals.hasNext()) {
-      return retVal;
+    return Lists.newArrayList(condensedIntervalsIterator(sortedIntervals));
+  }
+
+
+  /**
+   * This method does not materialize the intervals represented by the
+   * sortedIntervals iterator. However, caller needs to insure that sortedIntervals
+   * is already sorted in ascending order (you may use the INTERVALS_COMPARATOR_INCREASING_ORDER
+   * provided in this class to sort the input).
+   * It avoids materialization by incrementally condensing the intervals by
+   * starting from the first and looking for "adjacent" intervals. This is
+   * possible since intervals in the Iterator are in ascending order (as
+   * guaranteed by the caller).
+   * <p>
+   * *
+   *
+   * @param sortedIntervals The iterator object containing the intervals to condense
+   * @return An iterator for the condensed intervals. By construction the condensed intervals are sorted
+   * in ascending order and contain no repeated elements. The iterator can contain nulls,
+   * they will be skipped if it does.
+   * @throws IllegalArgumentException if sortedIntervals is not sorted in ascending order
+   */
+  public static Iterator<Interval> condensedIntervalsIterator(Iterator<Interval> sortedIntervals)
+  {
+
+    if (sortedIntervals == null || !sortedIntervals.hasNext()) {
+      return Iterators.emptyIterator();
     }
 
-    Interval currInterval = sortedIntervals.next();
-    while (sortedIntervals.hasNext()) {
-      Interval next = sortedIntervals.next();
+    final PeekingIterator<Interval> peekingIterator = Iterators.peekingIterator(sortedIntervals);
+    return new Iterator<Interval>()
+    {
+      private Interval previous;
 
-      if (currInterval.abuts(next)) {
-        currInterval = new Interval(currInterval.getStart(), next.getEnd());
-      } else if (currInterval.overlaps(next)) {
-        DateTime nextEnd = next.getEnd();
-        DateTime currEnd = currInterval.getEnd();
-        currInterval = new Interval(
-            currInterval.getStart(),
-            nextEnd.isAfter(currEnd) ? nextEnd : currEnd
-        );
-      } else {
-        retVal.add(currInterval);
-        currInterval = next;
+      @Override
+      public boolean hasNext()
+      {
+        // throw away nulls:
+        while (peekingIterator.hasNext() && peekingIterator.peek() == null) {
+          peekingIterator.next();
+        }
+        return peekingIterator.hasNext();
       }
-    }
-    retVal.add(currInterval);
 
-    return retVal;
+      @Override
+      public Interval next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+
+        Interval currInterval = peekingIterator.next();
+        // check sorted ascending:
+        if (previous != null && previous.isAfter(currInterval)) {
+          throw new IllegalArgumentException("sortedIntervals must be sorted in ascending order!");
+        }
+        previous = currInterval;
+
+        while (hasNext()) {
+          Interval next = peekingIterator.peek();
+
+          if (currInterval.abuts(next)) {
+            currInterval = new Interval(currInterval.getStart(), next.getEnd());
+            peekingIterator.next();
+          } else if (currInterval.overlaps(next)) {
+            DateTime nextEnd = next.getEnd();
+            DateTime currEnd = currInterval.getEnd();
+            currInterval = new Interval(
+                currInterval.getStart(),
+                nextEnd.isAfter(currEnd) ? nextEnd : currEnd
+            );
+            peekingIterator.next();
+          } else {
+            break;
+          }
+        }
+        return currInterval;
+      }
+    };
   }
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
