@@ -348,6 +348,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             null,
             1
         ),
+        null,
         null
     );
     compactionResource.submitCompactionConfig(compactionConfig);

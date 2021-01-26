@@ -831,6 +831,7 @@ public class CompactSegmentsTest
                   null,
                   null
               ),
+              null,
               null
           )
       );

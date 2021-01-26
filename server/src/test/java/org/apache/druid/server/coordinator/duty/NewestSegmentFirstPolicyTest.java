@@ -556,6 +556,7 @@ public class NewestSegmentFirstPolicyTest
         null,
         skipOffsetFromLatest,
         null,
+        null,
         null
     );
   }

@@ -113,6 +113,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
+        null,
         ImmutableMap.of("key", "value")
     );
 
@@ -283,6 +284,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
+        null,
         new HashMap<>()
     );
 

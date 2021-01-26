@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -295,6 +296,11 @@ public class CompactSegments implements CoordinatorDuty
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            new ClientCompactionTaskQueryGranularitySpec(
+                config.getGranularitySpec().getSegmentGranularity(),
+                config.getGranularitySpec().getQueryGranularity(),
+                config.getGranularitySpec().isRollup()
+            ),
             newAutoCompactionContext(config.getTaskContext())
         );
 

@@ -56,6 +56,7 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -79,6 +80,7 @@ public class DataSourceCompactionConfigTest
         500L,
         30,
         new Period(3600),
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -122,6 +124,7 @@ public class DataSourceCompactionConfigTest
             null,
             null
         ),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -164,6 +167,7 @@ public class DataSourceCompactionConfigTest
             null,
             null
         ),
+        null,
         ImmutableMap.of("key", "val")
     );
 
