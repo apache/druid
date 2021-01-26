@@ -19,7 +19,7 @@ set -e
 if ($BUILD_DRUID_CLSUTER); then
 
   DRUID_HOME=$(dirname `pwd`)
-  echo "DRUID_HOME $DRUID_HOME"
+  echo "SET DRUID_HOME: $DRUID_HOME"
   minikubeFile="/usr/local/bin/minikube*"
   minikubeFile2="/usr/local/bin/minikube"
 
