@@ -112,6 +112,11 @@
       <artifactId>aws-java-sdk-s3</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-sts</artifactId>
+      <scope>provided</scope>
+    </dependency>    
     <!-- Tests -->
     <dependency>
       <groupId>org.apache.druid</groupId>

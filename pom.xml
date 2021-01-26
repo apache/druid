@@ -110,7 +110,7 @@
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
         <mockito.version>3.2.4</mockito.version>
         <powermock.version>2.0.2</powermock.version>
-        <aws.sdk.version>1.11.199</aws.sdk.version>
+        <aws.sdk.version>1.11.884</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.5</jacoco.version>
         <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
@@ -264,6 +264,11 @@
                 <artifactId>aws-java-sdk-s3</artifactId>
                 <version>${aws.sdk.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-sts</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>            
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
@@ -1293,7 +1298,9 @@
 
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
-                    </excludes>
+
+                        <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>                      
+                  </excludes>
                 </configuration>
                 <executions>
                     <execution>
