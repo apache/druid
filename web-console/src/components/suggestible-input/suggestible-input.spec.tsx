@@ -30,4 +30,17 @@ describe('suggestible input', () => {
     const { container } = render(suggestibleInput);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('matches snapshot with escaped value', () => {
+    const suggestibleInput = (
+      <SuggestibleInput
+        value={`Here are some chars \t\r\n lol`}
+        onValueChange={() => {}}
+        suggestions={['a', 'b', 'c']}
+      />
+    );
+
+    const { container } = render(suggestibleInput);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });

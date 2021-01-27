@@ -30,7 +30,7 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React, { useRef } from 'react';
 
-import { escapeAsciiControlCharacters, unescapeAsciiControlCharacters } from '../../utils';
+import { escapeControlCharacters, unescapeControlCharacters } from '../../utils';
 
 export interface SuggestionGroup {
   group: string;
@@ -69,10 +69,10 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
   return (
     <InputGroup
       className={classNames('suggestible-input', className)}
-      value={escapeAsciiControlCharacters(value as string)}
+      value={escapeControlCharacters(value as string)}
       defaultValue={defaultValue as string}
       onChange={(e: any) => {
-        onValueChange(unescapeAsciiControlCharacters(e.target.value));
+        onValueChange(unescapeControlCharacters(e.target.value));
       }}
       onFocus={(e: any) => {
         lastFocusValue.current = e.target.value;
@@ -101,7 +101,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
                     return (
                       <MenuItem
                         key={suggestion}
-                        text={escapeAsciiControlCharacters(suggestion)}
+                        text={escapeControlCharacters(suggestion)}
                         onClick={() => handleSuggestionSelect(suggestion)}
                       />
                     );

@@ -17,9 +17,9 @@
  */
 
 export * from './general';
-export * from './ascii-escape';
 export * from './druid-query';
 export * from './druid-lookup';
+export * from './escape';
 export * from './query-state';
 export * from './query-manager';
 export * from './query-cursor';
