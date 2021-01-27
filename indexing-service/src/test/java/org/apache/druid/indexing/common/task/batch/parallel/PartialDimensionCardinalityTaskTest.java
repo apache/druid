@@ -404,7 +404,7 @@ public class PartialDimensionCardinalityTaskTest
 
     PartialDimensionCardinalityTaskBuilder withDimensions(List<String> dims)
     {
-      this.dataSchema = dataSchema.withDimensionSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims)));
+      this.dataSchema = dataSchema.withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims)));
       return this;
     }
 

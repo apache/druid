@@ -300,7 +300,7 @@ public class DataSchema
     );
   }
 
-  public DataSchema withDimensionSpec(DimensionsSpec dimensionsSpec)
+  public DataSchema withDimensionsSpec(DimensionsSpec dimensionsSpec)
   {
     return new DataSchema(
         dataSource,

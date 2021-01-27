@@ -567,7 +567,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                           new AggregatorFactory[]{aggFactory}, gSpec,
                                           transSpec, parserMap, jsonMapper
     );
-    DataSchema newSchema = oldSchema.withDimensionSpec(newDimSpec);
+    DataSchema newSchema = oldSchema.withDimensionsSpec(newDimSpec);
     Assert.assertSame(oldSchema.getDataSource(), newSchema.getDataSource());
     Assert.assertSame(oldSchema.getTimestampSpec(), newSchema.getTimestampSpec());
     Assert.assertSame(newDimSpec, newSchema.getDimensionsSpec());
