@@ -112,7 +112,6 @@ public class IntervalsByGranularityTest
     long count = getCount(granularityIntervals);
     Assert.assertTrue(count == 78537600);
 
-
   }
 
   @Test
@@ -164,6 +163,47 @@ public class IntervalsByGranularityTest
 
   }
 
+  @Test
+  public void testOverlapping()
+  {
+    List<Interval> inputIntervals = ImmutableList.of(
+        Intervals.of("2013-01-01T00Z/2013-01-11T00Z"),
+        Intervals.of("2013-01-05T00Z/2013-01-08T00Z"),
+        Intervals.of("2013-01-07T00Z/2013-01-15T00Z")
+    );
+
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        inputIntervals,
+        Granularity.fromString("DAY")
+    );
+
+    // get count:
+    Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
+    long count = getCount(granularityIntervals);
+    Assert.assertTrue(count == 14);
+  }
+
+
+  @Test
+  public void testWithGranularity()
+  {
+    List<Interval> inputIntervals = ImmutableList.of(
+        Intervals.of("2013-01-01T00Z/2013-01-10T00Z"),
+        Intervals.of("2013-01-15T00Z/2013-01-20T00Z"),
+        Intervals.of("2013-02-07T00Z/2013-02-15T00Z")
+    );
+
+    IntervalsByGranularity intervals = new IntervalsByGranularity(
+        inputIntervals,
+        Granularity.fromString("MONTH")
+    );
+
+    // get count:
+    Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
+    long count = getCount(granularityIntervals);
+    Assert.assertTrue(count == 2);
+  }
+
   @Test(expected = UnsupportedOperationException.class)
   public void testRemoveThrowsException()
   {
@@ -196,7 +236,7 @@ public class IntervalsByGranularityTest
     while (granularityIntervalIterator.hasNext()) {
       current = granularityIntervalIterator.next();
       if (previous != null) {
-        Assert.assertTrue(previous.getEndMillis() <= current.getStartMillis());
+        Assert.assertTrue(previous+ "," + current,previous.getEndMillis() <= current.getStartMillis());
       }
       previous = current;
       count++;

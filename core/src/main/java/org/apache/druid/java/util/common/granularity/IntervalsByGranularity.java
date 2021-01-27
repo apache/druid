@@ -39,17 +39,17 @@ import java.util.NoSuchElementException;
  */
 public class IntervalsByGranularity
 {
-  private final List<Interval> sortedIntervals;
+  private final List<Interval> sortedNonOverlappingIntervals;
   private final Granularity granularity;
 
   public IntervalsByGranularity(Collection<Interval> intervals, Granularity granularity)
   {
-    // eliminate dups & sort intervals:
-    HashSet<Interval> intervalSet = Sets.newHashSetWithExpectedSize(intervals.size());
-    intervalSet.addAll(intervals);
-    this.sortedIntervals = new ArrayList<>(intervals.size());
-    this.sortedIntervals.addAll(intervalSet);
-    this.sortedIntervals.sort(JodaUtils.INTERVALS_COMPARATOR_INCREASING_ORDER);
+    // eliminate dups, sort intervals:
+    List<Interval> inputIntervals = new ArrayList<>(intervals.size());
+    inputIntervals.addAll(intervals);
+    inputIntervals.sort(JodaUtils.INTERVALS_COMPARATOR_INCREASING_ORDER);
+    // now condense them to avoid overlapping (and eliminate dups--done inside condense)
+    this.sortedNonOverlappingIntervals = JodaUtils.condenseIntervals(inputIntervals);
 
     this.granularity = granularity;
   }
@@ -57,10 +57,10 @@ public class IntervalsByGranularity
   public Iterator<Interval> granularityIntervalsIterator()
   {
     Iterator<Interval> ite;
-    if (sortedIntervals.isEmpty()) {
+    if (sortedNonOverlappingIntervals.isEmpty()) {
       ite = Collections.emptyIterator();
     } else {
-      ite = new IntervalIterator(sortedIntervals);
+      ite = new IntervalIterator(sortedNonOverlappingIntervals);
     }
     return ite;
   }
@@ -68,16 +68,16 @@ public class IntervalsByGranularity
   private class IntervalIterator implements Iterator<Interval>
   {
     private final List<Interval> sortedIntervals;
-    private int currentInterval;
+    private int currentIntervalIndex;
     private volatile PeekingIterator<Interval> currentIterator;
     private Interval previous;
 
     public IntervalIterator(List<Interval> sortedIntervals)
     {
       this.sortedIntervals = sortedIntervals;
-      this.currentInterval = 0;
+      this.currentIntervalIndex = 0;
       currentIterator =
-          Iterators.peekingIterator(granularity.getIterable(sortedIntervals.get(currentInterval)).iterator());
+          Iterators.peekingIterator(granularity.getIterable(sortedIntervals.get(currentIntervalIndex)).iterator());
     }
 
     @Override
@@ -89,9 +89,10 @@ public class IntervalsByGranularity
 
           // is it time to move to the next iterator?
           if (advance) {
-            if (currentInterval < sortedIntervals.size() - 1) {
+            if (currentIntervalIndex < sortedIntervals.size() - 1) {
               currentIterator =
-                  Iterators.peekingIterator(granularity.getIterable(sortedIntervals.get(++currentInterval)).iterator());
+                  Iterators.peekingIterator(granularity.getIterable(sortedIntervals.get(++currentIntervalIndex))
+                                                       .iterator());
               advance = false;
             } else {
               break;
@@ -102,6 +103,13 @@ public class IntervalsByGranularity
           if (currentIterator.hasNext()) {
 
             // drop all subsequent intervals that are the same as the previous...
+            // this can happen when condense left intervals that did not overlap but
+            // when a larger granularity is applied then they become equal
+            // imagine input is 2013-01-01T00Z/2013-01-10T00Z, 2013-01-15T00Z/2013-01-20T00Z
+            // condense will leave these two intervals as is but when
+            // the iterator for the two intervals say with MONTH granularity is called the
+            // intervals returned will be 2013-01-01T00:00:00.000Z/2013-02-01T00:00:00.000Z
+            // thus dups can be created given the right conditions....
             while (previous != null && previous.equals(currentIterator.peek())) {
               currentIterator.next(); // drop it like it's hot
               if (!currentIterator.hasNext()) {
@@ -109,12 +117,11 @@ public class IntervalsByGranularity
                 break;
               }
             }
+
             if (advance) {
               continue; // no more here, get to the next iterator...
             }
-
             return true; // there are more
-
           } else {
             advance = true; // no more
           }
