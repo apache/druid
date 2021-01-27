@@ -163,8 +163,8 @@ public class IntervalsByGranularityTest
 
   }
 
-  @Test
-  public void testOverlapping()
+  @Test(expected = IAE.class)
+  public void testOverlappingShouldThrow()
   {
     List<Interval> inputIntervals = ImmutableList.of(
         Intervals.of("2013-01-01T00Z/2013-01-11T00Z"),
@@ -176,11 +176,6 @@ public class IntervalsByGranularityTest
         inputIntervals,
         Granularity.fromString("DAY")
     );
-
-    // get count:
-    Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
-    long count = getCount(granularityIntervals);
-    Assert.assertTrue(count == 14);
   }
 
 

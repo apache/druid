@@ -27,7 +27,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
@@ -41,7 +40,6 @@ public class JodaUtils
   // limit intervals such that duration millis fits in a long
   public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
   public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
-  public static final Comparator INTERVALS_COMPARATOR_INCREASING_ORDER = Comparators.intervalsByStartThenEnd();
 
   /**
    * This method will not materialize the input intervals if they represent
@@ -59,7 +57,7 @@ public class JodaUtils
     if (intervals instanceof SortedSet) {
       sortedIntervals = (SortedSet<Interval>) intervals;
     } else {
-      sortedIntervals = new TreeSet<>(INTERVALS_COMPARATOR_INCREASING_ORDER);
+      sortedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
       for (Interval interval : intervals) {
         sortedIntervals.add(interval);
       }
@@ -70,8 +68,7 @@ public class JodaUtils
   /**
    * This method does not materialize the intervals represented by the
    * sortedIntervals iterator. However, caller needs to insure that sortedIntervals
-   * is already sorted in ascending order (you may use the INTERVALS_COMPARATOR_INCREASING_ORDER
-   * provided in this class to sort the input).
+   * is already sorted in ascending order (use the Comparators.intervalsByStartThenEnd()).
    * It avoids materialization by incrementally condensing the intervals by
    * starting from the first and looking for "adjacent" intervals. This is
    * possible since intervals in the Iterator are in ascending order (as
@@ -94,8 +91,7 @@ public class JodaUtils
   /**
    * This method does not materialize the intervals represented by the
    * sortedIntervals iterator. However, caller needs to insure that sortedIntervals
-   * is already sorted in ascending order (you may use the INTERVALS_COMPARATOR_INCREASING_ORDER
-   * provided in this class to sort the input).
+   * is already sorted in ascending order (use the Comparators.intervalsByStartThenEnd()).
    * It avoids materialization by incrementally condensing the intervals by
    * starting from the first and looking for "adjacent" intervals. This is
    * possible since intervals in the Iterator are in ascending order (as
@@ -140,9 +136,8 @@ public class JodaUtils
 
         Interval currInterval = peekingIterator.next();
         // check sorted ascending:
-        if (previous != null && previous.isAfter(currInterval)) {
-          throw new IllegalArgumentException("sortedIntervals must be sorted in ascending order!");
-        }
+        verifyAscendingSortOrder(previous, currInterval);
+
         previous = currInterval;
 
         while (hasNext()) {
@@ -166,6 +161,41 @@ public class JodaUtils
         return currInterval;
       }
     };
+  }
+
+  /**
+   * Verify whether an iterable of intervals contains overlapping intervals
+   *
+   * @param intervals An interval iterable sorted using Comparators.intervalsByStartThenEnd()
+   * @return true if the iterable contains at least two overlapping intervals, false otherwise.
+   * @throws IAE when at least an element is null or when the iterable is not sorted
+   */
+  public static boolean containOverlappingIntervals(Iterable<Interval> intervals)
+  {
+    if (intervals == null) {
+      return false;
+    }
+    boolean retVal = false;
+    Interval previous = null;
+    for (Interval current : intervals) {
+      if (current == null) {
+        throw new IAE("Intervals should not contain nulls");
+      }
+      verifyAscendingSortOrder(previous, current);
+      if (previous != null && previous.overlaps(current)) {
+        retVal = true;
+        break;
+      }
+      previous = current;
+    }
+    return retVal;
+  }
+
+  private static void verifyAscendingSortOrder(Interval previous, Interval current)
+  {
+    if (previous != null && previous.isAfter(current)) {
+      throw new IAE("Adjacent intervals are not sorted [%s,%s]", previous, current);
+    }
   }
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
@@ -226,4 +256,6 @@ public class JodaUtils
         return max;
     }
   }
+
+
 }
