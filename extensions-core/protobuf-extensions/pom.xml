@@ -37,6 +37,13 @@
     <confluent.version>6.0.1</confluent.version>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>confluent</id>
+      <url>https://packages.confluent.io/maven/</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
