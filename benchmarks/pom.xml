@@ -209,25 +209,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.6</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <finalName>${uberjar.name}</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>assembly.xml</descriptor>
-              <archive>
-                <manifest>
-                  <mainClass>org.openjdk.jmh.Main</mainClass>
-                </manifest>
-              </archive>
-            </configuration>
-          </execution>
-        </executions>
+        <version>3.1.0</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.owasp</groupId>
