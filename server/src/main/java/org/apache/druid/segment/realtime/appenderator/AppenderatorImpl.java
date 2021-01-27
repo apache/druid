@@ -655,8 +655,9 @@ public class AppenderatorImpl implements Appenderator
           + "great to have enough space to process additional input rows. This check, along with metering the overhead "
           + "of these objects to factor into the 'maxBytesInMemory' computation, can be disabled by setting "
           + "'skipBytesInMemoryOverheadCheck' to 'true' (note that doing so might allow the task to naturally encounter "
-          + "a 'java.lang.OutOfMemoryError'). Otherwise, user can increase 'maxBytesInMemory' to allocate more heap "
-          + "which will allow more intermediary segment persists.",
+          + "a 'java.lang.OutOfMemoryError'). Alternatively, 'maxBytesInMemory' can be increased which will cause an "
+          + "increase in heap footprint, but will allow for more intermediary segment persists to occur before "
+          + "reaching this condition.",
           alertMessage
       );
       log.makeAlert(alertMessage)
