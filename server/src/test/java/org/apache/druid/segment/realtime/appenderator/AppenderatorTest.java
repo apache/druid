@@ -154,9 +154,18 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxBytesInMemory() throws Exception
+  public void testMaxBytesInMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 1024, true)) {
+    try (
+        final AppenderatorTester tester = new AppenderatorTester(
+            100,
+            1024,
+            null,
+            true,
+            new SimpleRowIngestionMeters(),
+            true
+        )
+    ) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -197,9 +206,18 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxBytesInMemoryInMultipleSinks() throws Exception
+  public void testMaxBytesInMemoryInMultipleSinksWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 1024, true)) {
+    try (
+        final AppenderatorTester tester = new AppenderatorTester(
+            100,
+            1024,
+            null,
+            true,
+            new SimpleRowIngestionMeters(),
+            true
+        )
+    ) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -233,6 +251,377 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       );
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+    }
+  }
+
+  @Test
+  public void testMaxBytesInMemory() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 10000, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      // Still under maxSizeInBytes after the add. Hence, we do not persist yet
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      int sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // We do multiple more adds to the same sink to cause persist.
+      for (int i = 0; i < 26; i++) {
+        appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
+      }
+      sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      // currHydrant size is 0 since we just persist all indexes to disk.
+      currentInMemoryIndexSize = 0;
+      // We are now over maxSizeInBytes after the add. Hence, we do a persist.
+      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
+      // 1 dimension columns, 2 metric column, 1 time column.
+      int mappedIndexSize = 1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                            AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                            AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // Add a single row after persisted
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
+      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // We do multiple more adds to the same sink to cause persist.
+      for (int i = 0; i < 5; i++) {
+        appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
+      }
+      // currHydrant size is 0 since we just persist all indexes to disk.
+      currentInMemoryIndexSize = 0;
+      // We are now over maxSizeInBytes after the add. Hence, we do a persist.
+      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
+      // 1 dimension columns, 2 metric column, 1 time column. However, we have two indexes now from the two pervious
+      // persists.
+      mappedIndexSize = 2 * (1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                            AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                            AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+    }
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testTaskFailAsPersistCannotFreeAnyMoreMemory() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 10, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+    }
+  }
+
+  @Test
+  public void testTaskDoesNotFailAsExceededMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
+  {
+    try (
+        final AppenderatorTester tester = new AppenderatorTester(
+            100,
+            10,
+            null,
+            true,
+            new SimpleRowIngestionMeters(),
+            true
+        )
+    ) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      // Expected 0 since we persisted after the add
+      Assert.assertEquals(
+          0,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      // Expected 0 since we persisted after the add
+      Assert.assertEquals(
+          0,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+    }
+  }
+
+  @Test
+  public void testTaskCleanupInMemoryCounterAfterCloseWithRowInMemory() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 10000, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+
+      // Still under maxSizeInBytes after the add. Hence, we do not persist yet
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      int sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // Close with row still in memory (no persist)
+      appenderator.close();
+
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+    }
+  }
+
+  @Test
+  public void testMaxBytesInMemoryInMultipleSinks() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 31100, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
+
+      // Still under maxSizeInBytes after the add. Hence, we do not persist yet
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      int sinkSizeOverhead = 2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
+      Assert.assertEquals(
+          (2 * currentInMemoryIndexSize) + sinkSizeOverhead,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // We do multiple more adds to the same sink to cause persist.
+      for (int i = 0; i < 49; i++) {
+        appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
+        appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
+      }
+      sinkSizeOverhead = 2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      // currHydrant size is 0 since we just persist all indexes to disk.
+      currentInMemoryIndexSize = 0;
+      // We are now over maxSizeInBytes after the add. Hence, we do a persist.
+      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
+      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
+      // 1 dimension columns, 2 metric column, 1 time column.
+      int mappedIndexSize = 2 * (1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                            AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                            AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // Add a single row after persisted to sink 0
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
+      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          0,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+      // Now add a single row to sink 1
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bob", 1), committerSupplier);
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
+      Assert.assertEquals(
+          (2 * currentInMemoryIndexSize) + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+
+      // We do multiple more adds to the both sink to cause persist.
+      for (int i = 0; i < 34; i++) {
+        appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
+        appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
+      }
+      // currHydrant size is 0 since we just persist all indexes to disk.
+      currentInMemoryIndexSize = 0;
+      // We are now over maxSizeInBytes after the add. Hence, we do a persist.
+      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
+      Assert.assertEquals(
+          currentInMemoryIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
+      // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
+      // 1 dimension columns, 2 metric column, 1 time column. However, we have two indexes now from the two pervious
+      // persists.
+      mappedIndexSize = 2 * (2 * (1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                             AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                             AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER));
+      Assert.assertEquals(
+          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
     }
   }
 
@@ -273,8 +662,9 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
+      int sinkSizeOverhead = 2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
-          364 + 2 * nullHandlingOverhead,
+          (364 + 2 * nullHandlingOverhead) + sinkSizeOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
       );
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
@@ -486,7 +876,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testVerifyRowIngestionMetrics() throws Exception
   {
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    try (final AppenderatorTester tester = new AppenderatorTester(5, 1000L, null, false, rowIngestionMeters)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(5, 10000L, null, false, rowIngestionMeters)) {
       final Appenderator appenderator = tester.getAppenderator();
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", "invalid_met"), Committers.nilSupplier());
