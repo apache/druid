@@ -140,7 +140,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Set<SegmentIdWithShardSpec> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames);
 
-    final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transformAsync(
+    final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transform(
         pushInBackground(null, requestedSegmentIdsForSequences, false),
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::dropInBackground,
         Execs.directExecutor()

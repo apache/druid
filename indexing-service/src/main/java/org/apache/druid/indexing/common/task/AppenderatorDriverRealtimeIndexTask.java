@@ -670,7 +670,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    pendingHandoffs.add(Futures.transformAsync(
+    pendingHandoffs.add(Futures.transform(
         publishFuture,
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff,
         Execs.directExecutor()

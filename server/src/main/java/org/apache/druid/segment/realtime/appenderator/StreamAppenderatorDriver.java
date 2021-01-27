@@ -273,7 +273,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     final List<SegmentIdWithShardSpec> theSegments = getSegmentIdsWithShardSpecs(sequenceNames);
 
-    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transformAsync(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
@@ -390,7 +390,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    return Futures.transformAsync(
+    return Futures.transform(
         publish(publisher, committer, sequenceNames),
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff,
         Execs.directExecutor()
