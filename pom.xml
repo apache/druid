@@ -1719,7 +1719,7 @@
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.6</version>
+                    <version>1.11.0</version>
                     <configuration>
                         <nodeVersion>v10.13.0</nodeVersion>
                         <npmVersion>6.4.1</npmVersion>
