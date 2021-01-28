@@ -45,7 +45,7 @@ public interface GranularitySpec
    *
    * @return Iterable of all time groups
    */
-  Iterable<Interval> bucketIntervals();
+  Iterable<Interval> sortedBucketIntervals();
 
 
 

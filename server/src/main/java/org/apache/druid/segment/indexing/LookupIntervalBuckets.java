@@ -30,7 +30,7 @@ import java.util.Iterator;
 import java.util.TreeSet;
 
 /**
- * This is a helper class to facilitate sharing the code for bucketIntervals among
+ * This is a helper class to facilitate sharing the code for sortedBucketIntervals among
  * the various GranularitySpec implementations. In particular, the UniformGranularitySpec
  * needs to avoid materializing the intervals when the need to traverse them arises.
  */

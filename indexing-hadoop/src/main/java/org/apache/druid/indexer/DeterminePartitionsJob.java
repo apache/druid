@@ -212,7 +212,7 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.setOutputKeyClass(BytesWritable.class);
       dimSelectionJob.setOutputValueClass(Text.class);
       dimSelectionJob.setOutputFormatClass(DeterminePartitionsDimSelectionOutputFormat.class);
-      dimSelectionJob.setNumReduceTasks(Iterators.size(config.getGranularitySpec().bucketIntervals().iterator()));
+      dimSelectionJob.setNumReduceTasks(Iterators.size(config.getGranularitySpec().sortedBucketIntervals().iterator()));
       JobHelper.setupClasspath(
           JobHelper.distributedClassPath(config.getWorkingPath()),
           JobHelper.distributedClassPath(config.makeIntermediatePath()),
@@ -447,7 +447,7 @@ public class DeterminePartitionsJob implements Jobby
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
-      for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals()) {
+      for (final Interval bucketInterval : config.getGranularitySpec().sortedBucketIntervals()) {
         timeIndexBuilder.put(bucketInterval.getStartMillis(), idx);
         idx++;
       }

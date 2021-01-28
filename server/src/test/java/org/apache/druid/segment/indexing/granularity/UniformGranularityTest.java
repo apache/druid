@@ -76,7 +76,7 @@ public class UniformGranularityTest
             Intervals.of("2012-01-09T00Z/P1D"),
             Intervals.of("2012-01-10T00Z/P1D")
         ),
-        Lists.newArrayList(spec.bucketIntervals())
+        Lists.newArrayList(spec.sortedBucketIntervals())
     );
 
 
@@ -163,9 +163,9 @@ public class UniformGranularityTest
     try {
       final GranularitySpec rtSpec = JOSN_MAPPER.readValue(JOSN_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals(
-          "Round-trip bucketIntervals",
-          ImmutableList.copyOf(spec.bucketIntervals()),
-          ImmutableList.copyOf(rtSpec.bucketIntervals().iterator())
+          "Round-trip sortedBucketIntervals",
+          ImmutableList.copyOf(spec.sortedBucketIntervals()),
+          ImmutableList.copyOf(rtSpec.sortedBucketIntervals().iterator())
       );
       Assert.assertEquals(
           "Round-trip granularity",
@@ -284,9 +284,9 @@ public class UniformGranularityTest
         )
     );
 
-    Assert.assertTrue(spec.bucketIntervals().iterator().hasNext());
+    Assert.assertTrue(spec.sortedBucketIntervals().iterator().hasNext());
 
-    final Iterable<Interval> intervals = spec.bucketIntervals();
+    final Iterable<Interval> intervals = spec.sortedBucketIntervals();
     ArrayList<Long> actualIntervals = new ArrayList<>();
     for (Interval interval : intervals) {
       actualIntervals.add(interval.toDurationMillis());
@@ -323,7 +323,7 @@ public class UniformGranularityTest
 
     Assert.assertTrue(spec != null);
 
-    int count = Iterators.size(spec.bucketIntervals().iterator());
+    int count = Iterators.size(spec.sortedBucketIntervals().iterator());
     // account for three leap years...
     Assert.assertEquals(3600 * 24 * 365 * 10 + 3 * 24 * 3600, count);
   }

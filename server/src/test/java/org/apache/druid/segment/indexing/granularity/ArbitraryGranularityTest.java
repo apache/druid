@@ -77,7 +77,7 @@ public class ArbitraryGranularityTest
             Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
             Intervals.of("2012-02-01T00Z/2012-03-01T00Z")
         ),
-        Lists.newArrayList(spec.bucketIntervals())
+        Lists.newArrayList(spec.sortedBucketIntervals())
     );
 
     Assert.assertEquals(
@@ -203,8 +203,8 @@ public class ArbitraryGranularityTest
       final GranularitySpec rtSpec = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals(
           "Round-trip",
-          ImmutableList.copyOf(spec.bucketIntervals()),
-          ImmutableList.copyOf(rtSpec.bucketIntervals())
+          ImmutableList.copyOf(spec.sortedBucketIntervals()),
+          ImmutableList.copyOf(rtSpec.sortedBucketIntervals())
       );
       Assert.assertEquals(
           "Round-trip",
@@ -221,6 +221,6 @@ public class ArbitraryGranularityTest
   public void testNullInputIntervals()
   {
     final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, null);
-    Assert.assertFalse(spec.bucketIntervals().iterator().hasNext());
+    Assert.assertFalse(spec.sortedBucketIntervals().iterator().hasNext());
   }
 }

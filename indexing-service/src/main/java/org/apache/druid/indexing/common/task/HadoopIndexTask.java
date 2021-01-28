@@ -188,7 +188,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    Iterable<Interval> intervals = spec.getDataSchema().getGranularitySpec().bucketIntervals();
+    Iterable<Interval> intervals = spec.getDataSchema().getGranularitySpec().sortedBucketIntervals();
     if (intervals.iterator().hasNext()) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(intervals)
@@ -374,7 +374,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
-              indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals()
+              indexerSchema.getDataSchema().getGranularitySpec().sortedBucketIntervals()
           )
       );
       final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT_MILLIS);

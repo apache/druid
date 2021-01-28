@@ -632,7 +632,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @Nonnull DynamicPartitionsSpec partitionsSpec
   )
   {
-    final Iterable<Interval> intervals = granularitySpec.bucketIntervals();
+    final Iterable<Interval> intervals = granularitySpec.sortedBucketIntervals();
     final int numBucketsPerInterval = 1;
     final LinearPartitionAnalysis partitionAnalysis = new LinearPartitionAnalysis(partitionsSpec);
     intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));

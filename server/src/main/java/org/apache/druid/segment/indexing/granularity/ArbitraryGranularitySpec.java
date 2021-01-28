@@ -50,7 +50,7 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
     lookupTableBucketByDateTime = new LookupIntervalBuckets(inputIntervals);
 
     // Ensure intervals are non-overlapping (but they may abut each other)
-    final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(bucketIntervals().iterator());
+    final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(sortedBucketIntervals().iterator());
     while (intervalIterator.hasNext()) {
       final Interval currentInterval = intervalIterator.next();
       if (intervalIterator.hasNext()) {
@@ -71,7 +71,7 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
   }
 
   @Override
-  public Iterable<Interval> bucketIntervals()
+  public Iterable<Interval> sortedBucketIntervals()
   {
     return () -> lookupTableBucketByDateTime.iterator();
   }

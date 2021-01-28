@@ -51,7 +51,7 @@ public class UniformGranularitySpec extends BaseGranularitySpec
     this.queryGranularity = queryGranularity == null ? DEFAULT_QUERY_GRANULARITY : queryGranularity;
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
     intervalsByGranularity = new IntervalsByGranularity(this.inputIntervals, segmentGranularity);
-    lookupTableBucketByDateTime = new LookupIntervalBuckets(bucketIntervals());
+    lookupTableBucketByDateTime = new LookupIntervalBuckets(sortedBucketIntervals());
   }
 
   public UniformGranularitySpec(
@@ -64,7 +64,7 @@ public class UniformGranularitySpec extends BaseGranularitySpec
   }
 
   @Override
-  public Iterable<Interval> bucketIntervals()
+  public Iterable<Interval> sortedBucketIntervals()
   {
     return () -> intervalsByGranularity.granularityIntervalsIterator();
   }

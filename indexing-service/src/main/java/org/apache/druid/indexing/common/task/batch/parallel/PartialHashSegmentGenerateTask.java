@@ -193,7 +193,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       // We only care about the intervals in intervalToNumShardsOverride here.
       intervalToNumShardsOverride.forEach(partitionAnalysis::updateBucket);
     } else {
-      final Iterable<Interval> intervals = granularitySpec.bucketIntervals();
+      final Iterable<Interval> intervals = granularitySpec.sortedBucketIntervals();
       final int numBucketsPerInterval = partitionsSpec.getNumShards() == null
                                         ? 1
                                         : partitionsSpec.getNumShards();
