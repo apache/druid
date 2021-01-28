@@ -584,7 +584,7 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services_useExtensionClassloaderFirst
         - docker
-      env: IT_TEST='-Dit.test=ITNestedQueryPushDownTest' OVERRIDE_CONFIG_PATH="-Doverride.config.path=integration-tests/docker/environment-configs/extension-classloader-override"
+      env: IT_TEST='-Dit.test=ITNestedQueryPushDownTest' OVERRIDE_CONFIG_PATH="-Doverride.config.path=environment-configs/extension-classloader-override"
       script: &run_integration_test_useExtensionClassloaderFirst
         - ${MVN} verify -pl integration-tests -P integration-tests ${IT_TEST} ${OVERRIDE_CONFIG_PATH} ${MAVEN_SKIP}
       after_failure: &integration_test_diags_useExtensionClassloaderFirst
