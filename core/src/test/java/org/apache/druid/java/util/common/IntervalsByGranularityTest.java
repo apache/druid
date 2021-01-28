@@ -231,7 +231,7 @@ public class IntervalsByGranularityTest
     while (granularityIntervalIterator.hasNext()) {
       current = granularityIntervalIterator.next();
       if (previous != null) {
-        Assert.assertTrue(previous+ "," + current,previous.getEndMillis() <= current.getStartMillis());
+        Assert.assertTrue(previous + "," + current, previous.getEndMillis() <= current.getStartMillis());
       }
       previous = current;
       count++;

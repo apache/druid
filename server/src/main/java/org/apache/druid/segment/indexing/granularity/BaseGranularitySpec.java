@@ -66,7 +66,10 @@ abstract class BaseGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public TreeSet<Interval> materializedBucketIntervals() { return getLookupTableBuckets().materializedIntervals(); }
+  public TreeSet<Interval> materializedBucketIntervals()
+  {
+    return getLookupTableBuckets().materializedIntervals();
+  }
 
   protected abstract LookupIntervalBuckets getLookupTableBuckets();
 
