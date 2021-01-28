@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
 
 abstract class BaseGranularitySpec implements GranularitySpec
 {
@@ -63,6 +64,9 @@ abstract class BaseGranularitySpec implements GranularitySpec
   {
     return getLookupTableBuckets().bucketInterval(dt);
   }
+
+  @Override
+  public TreeSet<Interval> materializedBucketIntervals() { return getLookupTableBuckets().materializedIntervals(); }
 
   protected abstract LookupIntervalBuckets getLookupTableBuckets();
 

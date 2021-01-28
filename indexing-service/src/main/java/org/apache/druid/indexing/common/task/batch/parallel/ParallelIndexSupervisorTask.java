@@ -27,7 +27,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -1039,7 +1038,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final Iterable<Interval> bucketIntervals = granularitySpec.bucketIntervals();
+    // This method is called whenever subtasks need to allocate a new segment via the supervisor task.
+    // As a result, this code is never called in the Overlord. For now using the materialized intervals
+    // here is ok for performance reasons
+    final Set<Interval> materializedBucketIntervals = granularitySpec.materializedBucketIntervals();
 
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
     final List<TaskLock> locks = toolbox
@@ -1055,7 +1057,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Interval interval;
     String version;
-    if (bucketIntervals.iterator().hasNext()) {
+    if (!materializedBucketIntervals.isEmpty()) {
       // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
       // This is because we should have gotten all required locks up front when the task starts up.
       final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
@@ -1064,7 +1066,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
 
       interval = maybeInterval.get();
-      if (!Iterators.contains(bucketIntervals.iterator(), interval)) {
+      if (!materializedBucketIntervals.contains(interval)) {
         throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
       }
 

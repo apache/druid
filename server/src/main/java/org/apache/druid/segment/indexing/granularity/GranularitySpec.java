@@ -27,6 +27,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.TreeSet;
 
 /**
  * Tells the indexer how to group events based on timestamp. The events may then be further partitioned based
@@ -46,6 +47,8 @@ public interface GranularitySpec
    */
   Iterable<Interval> bucketIntervals();
 
+
+
   /**
    * Returns user provided intervals as-is state. used for configuring granular path spec
    *
@@ -60,6 +63,14 @@ public interface GranularitySpec
    * @return optional time interval
    */
   Optional<Interval> bucketInterval(DateTime dt);
+
+  /**
+   * This is a helper method for areas of the code, not in the overlord, were for performance
+   * reasons might need the materialized set of bucket intervals
+   * @return A fast lookup, ordered set, of the materialized bucket interval
+   *
+   */
+  TreeSet<Interval> materializedBucketIntervals();
 
   Granularity getSegmentGranularity();
 

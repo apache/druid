@@ -29,11 +29,19 @@ import org.joda.time.Interval;
 import java.util.Iterator;
 import java.util.TreeSet;
 
+/**
+ * This is a helper class to facilitate sharing the code for bucketIntervals among
+ * the various GranularitySpec implementations. In particular, the UniformGranularitySpec
+ * needs to avoid materializing the intervals when the need to traverse them arises.
+ */
 public class LookupIntervalBuckets
 {
   private final Iterable<Interval> intervalIterable;
   private final TreeSet<Interval> intervals;
 
+  /**
+   * @param intervalIterable The intervals to materialize
+   */
   public LookupIntervalBuckets(Iterable<Interval> intervalIterable)
   {
     this.intervalIterable = intervalIterable;
@@ -43,6 +51,12 @@ public class LookupIntervalBuckets
     this.intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
   }
 
+  /**
+   * Returns a bucket interval using a fast lookup into an efficient data structure
+   * where all the intervals have been materialized
+   * @param dt The date time to lookup
+   * @return An Optional containing the interval for the given DateTime if it exists
+   */
   public Optional<Interval> bucketInterval(DateTime dt)
   {
     final Interval interval = materializedIntervals().floor(new Interval(dt, DateTimes.MAX));
@@ -53,12 +67,21 @@ public class LookupIntervalBuckets
     }
   }
 
+  /**
+   *
+   * @return An iterator to traverse the materialized intervals. The traversal will be done in
+   * order as dictated by Comparators.intervalsByStartThenEnd()
+   */
   public Iterator<Interval> iterator()
   {
     return materializedIntervals().iterator();
   }
 
-  private TreeSet<Interval> materializedIntervals()
+  /**
+   * Helper method to avoid collecting the intervals from the iterator
+   * @return The TreeSet of materialized intervals
+   */
+  public TreeSet<Interval> materializedIntervals()
   {
     if (intervalIterable != null && intervalIterable.iterator().hasNext() && intervals.isEmpty()) {
       Iterators.addAll(intervals, intervalIterable.iterator());
