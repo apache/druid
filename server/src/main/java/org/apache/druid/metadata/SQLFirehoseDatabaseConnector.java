@@ -64,7 +64,7 @@ public abstract class SQLFirehoseDatabaseConnector
 
   protected BasicDataSource getDatasource(MetadataStorageConnectorConfig connectorConfig)
   {
-    BasicDataSource dataSource = new BasicDataSource();
+    BasicDataSource dataSource = new BasicDataSourceExt(connectorConfig);
     dataSource.setUsername(connectorConfig.getUser());
     dataSource.setPassword(connectorConfig.getPassword());
     String uri = connectorConfig.getConnectURI();

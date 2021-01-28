@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
@@ -47,11 +48,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.END_OF_SHARD_MARKER;
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.EXPIRED_MARKER;
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER;
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
@@ -90,7 +96,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                          x.getSequenceNumber(),
                                                                                          Collections
                                                                                              .singletonList(
-                                                                                                 toByteArray(
+                                                                                                 new ByteEntity(
                                                                                                      x.getData()))
                                                                                      ))
                                                                                      .collect(
@@ -103,7 +109,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                          x.getSequenceNumber(),
                                                                                          Collections
                                                                                              .singletonList(
-                                                                                                 toByteArray(
+                                                                                                 new ByteEntity(
                                                                                                      x.getData()))
                                                                                      ))
                                                                                      .collect(
@@ -233,11 +239,11 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   // filter out EOS markers
-  private static List<OrderedPartitionableRecord<String, String>> cleanRecords(List<OrderedPartitionableRecord<String, String>> records)
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> cleanRecords(List<OrderedPartitionableRecord<String, String, ByteEntity>> records)
   {
     return records.stream()
                   .filter(x -> !x.getSequenceNumber()
-                                 .equals(KinesisSequenceNumber.END_OF_SHARD_MARKER))
+                                 .equals(END_OF_SHARD_MARKER))
                   .collect(Collectors.toList());
   }
 
@@ -307,7 +313,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -395,7 +401,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
             POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -474,7 +480,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -639,7 +645,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    OrderedPartitionableRecord<String, String> firstRecord = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
+    OrderedPartitionableRecord<String, String, ByteEntity> firstRecord = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
 
     Assert.assertEquals(
         ALL_RECORDS.get(7),
@@ -657,7 +663,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
 
 
-    OrderedPartitionableRecord<String, String> record2 = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
+    OrderedPartitionableRecord<String, String, ByteEntity> record2 = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
 
     Assert.assertEquals(ALL_RECORDS.get(9), record2);
     // only one partition in this test. second results come from getRecordsResult0, which has SHARD0_LAG_MILLIS
@@ -732,7 +738,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -804,14 +810,14 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID0),
         EasyMock.anyString(),
-        EasyMock.anyString()
+        EasyMock.or(EasyMock.matches("\\d+"), EasyMock.isNull())
     )).andReturn(getShardIteratorResult0).anyTimes();
 
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID1),
         EasyMock.anyString(),
-        EasyMock.anyString()
+        EasyMock.or(EasyMock.matches("\\d+"), EasyMock.isNull())
     )).andReturn(getShardIteratorResult1).anyTimes();
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
@@ -864,31 +870,21 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(SHARDS_LAG_MILLIS, timeLag);
 
-    Map<String, String> offsts = ImmutableMap.of(
+    Map<String, String> offsets = ImmutableMap.of(
         SHARD_ID1, SHARD1_RECORDS.get(0).getSequenceNumber(),
         SHARD_ID0, SHARD0_RECORDS.get(0).getSequenceNumber()
     );
-    Map<String, Long> independentTimeLag = recordSupplier.getPartitionsTimeLag(STREAM, offsts);
+    Map<String, Long> independentTimeLag = recordSupplier.getPartitionsTimeLag(STREAM, offsets);
     Assert.assertEquals(SHARDS_LAG_MILLIS, independentTimeLag);
+
+    // Verify that kinesis apis are not called for custom sequence numbers
+    for (String sequenceNum : Arrays.asList(NO_END_SEQUENCE_NUMBER, END_OF_SHARD_MARKER, EXPIRED_MARKER)) {
+      offsets = ImmutableMap.of(
+          SHARD_ID1, sequenceNum,
+          SHARD_ID0, sequenceNum
+      );
+      Assert.assertEquals(Collections.emptyMap(), recordSupplier.getPartitionsTimeLag(STREAM, offsets));
+    }
     verifyAll();
   }
-
-  /**
-   * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
-   * array itself. Does not modify position or limit of the buffer.
-   */
-  private static byte[] toByteArray(final ByteBuffer buffer)
-  {
-    if (buffer.hasArray()
-        && buffer.arrayOffset() == 0
-        && buffer.position() == 0
-        && buffer.array().length == buffer.limit()) {
-      return buffer.array();
-    } else {
-      final byte[] retVal = new byte[buffer.remaining()];
-      buffer.duplicate().get(retVal);
-      return retVal;
-    }
-  }
-
 }

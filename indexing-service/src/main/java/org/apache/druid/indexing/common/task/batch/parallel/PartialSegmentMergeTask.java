@@ -26,7 +26,6 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -34,7 +33,6 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -80,9 +78,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   private final PartialSegmentMergeIOConfig<P> ioConfig;
   private final int numAttempts;
   private final String supervisorTaskId;
-  private final IndexingServiceClient indexingServiceClient;
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
-  private final ShuffleClient shuffleClient;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -94,10 +89,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       PartialSegmentMergeIOConfig<P> ioConfig,
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
-      final Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      ShuffleClient shuffleClient
+      final Map<String, Object> context
   )
   {
     super(
@@ -109,12 +101,13 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         context
     );
 
+    Preconditions.checkArgument(
+        !dataSchema.getGranularitySpec().inputIntervals().isEmpty(),
+        "Missing intervals in granularitySpec"
+    );
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.supervisorTaskId = supervisorTaskId;
-    this.indexingServiceClient = indexingServiceClient;
-    this.taskClientFactory = taskClientFactory;
-    this.shuffleClient = shuffleClient;
   }
 
   @JsonProperty
@@ -157,7 +150,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       final String mustBeNull = intervalToVersion.put(lock.getInterval(), lock.getVersion());
       if (mustBeNull != null) {
         throw new ISE(
-            "WTH? Two versions([%s], [%s]) for the same interval[%s]?",
+            "Unexpected state: Two versions([%s], [%s]) for the same interval[%s]",
             lock.getVersion(),
             mustBeNull,
             lock.getInterval()
@@ -174,8 +167,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
     fetchStopwatch.stop();
     LOG.info("Fetch took [%s] seconds", fetchTime);
 
-    final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
-        new ClientBasedTaskInfoProvider(indexingServiceClient),
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
+        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
         getId(),
         1, // always use a single http thread
         getTuningConfig().getChatHandlerTimeout(),
@@ -224,7 +217,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         );
         FileUtils.forceMkdir(partitionDir);
         for (P location : entryPerBucketId.getValue()) {
-          final File zippedFile = shuffleClient.fetchSegmentFile(partitionDir, supervisorTaskId, location);
+          final File zippedFile = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
           try {
             final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
             FileUtils.forceMkdir(unzippedDir);
@@ -286,7 +279,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
                 new DataSegment(
                     getDataSource(),
                     interval,
-                    Preconditions.checkNotNull(intervalToVersion.get(interval), "version for interval[%s]", interval),
+                    Preconditions.checkNotNull(
+                        ParallelIndexSupervisorTask.findVersion(intervalToVersion, interval),
+                        "version for interval[%s]",
+                        interval
+                    ),
                     null, // will be filled in the segmentPusher
                     mergedFileAndDimensionNames.rhs,
                     metricNames,
@@ -296,7 +293,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
                 ),
                 false
             ),
-            exception -> exception instanceof Exception,
+            exception -> !(exception instanceof NullPointerException) && exception instanceof Exception,
             5
         );
         pushedSegments.add(segment);
@@ -342,7 +339,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
               dataSchema.getAggregators(),
               outDir,
               tuningConfig.getIndexSpec(),
-              tuningConfig.getSegmentWriteOutMediumFactory()
+              tuningConfig.getSegmentWriteOutMediumFactory(),
+              tuningConfig.getMaxColumnsToMerge()
           )
       );
 

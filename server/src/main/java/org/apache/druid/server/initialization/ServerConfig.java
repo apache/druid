@@ -20,12 +20,16 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
@@ -56,7 +60,8 @@ public class ServerConfig
       @NotNull Period unannouncePropagationDelay,
       int inflateBufferSize,
       int compressionLevel,
-      boolean enableForwardedRequestCustomizer
+      boolean enableForwardedRequestCustomizer,
+      @NotNull List<String> allowedHttpMethods
   )
   {
     this.numThreads = numThreads;
@@ -64,7 +69,7 @@ public class ServerConfig
     this.enableRequestLimit = enableRequestLimit;
     this.maxIdleTime = maxIdleTime;
     this.defaultQueryTimeout = defaultQueryTimeout;
-    this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxScatterGatherBytes = HumanReadableBytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
@@ -73,6 +78,7 @@ public class ServerConfig
     this.inflateBufferSize = inflateBufferSize;
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
+    this.allowedHttpMethods = allowedHttpMethods;
   }
 
   public ServerConfig()
@@ -100,8 +106,9 @@ public class ServerConfig
   private long defaultQueryTimeout = TimeUnit.MINUTES.toMillis(5);
 
   @JsonProperty
-  @Min(1)
-  private long maxScatterGatherBytes = Long.MAX_VALUE;
+  @NotNull
+  @HumanReadableBytesRange(min = 1)
+  private HumanReadableBytes maxScatterGatherBytes = HumanReadableBytes.valueOf(Long.MAX_VALUE);
 
   @JsonProperty
   @Min(1)
@@ -134,6 +141,10 @@ public class ServerConfig
   @JsonProperty
   private boolean enableForwardedRequestCustomizer = false;
 
+  @JsonProperty
+  @NotNull
+  private List<String> allowedHttpMethods = ImmutableList.of();
+
   public int getNumThreads()
   {
     return numThreads;
@@ -161,7 +172,7 @@ public class ServerConfig
 
   public long getMaxScatterGatherBytes()
   {
-    return maxScatterGatherBytes;
+    return maxScatterGatherBytes.getBytes();
   }
 
   public int getMaxSubqueryRows()
@@ -204,6 +215,12 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  @NotNull
+  public List<String> getAllowedHttpMethods()
+  {
+    return allowedHttpMethods;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -218,7 +235,7 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
@@ -227,7 +244,8 @@ public class ServerConfig
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
            maxIdleTime.equals(that.maxIdleTime) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
-           unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
+           unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
+           allowedHttpMethods.equals(that.allowedHttpMethods);
   }
 
   @Override
@@ -247,7 +265,8 @@ public class ServerConfig
         unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
-        enableForwardedRequestCustomizer
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods
     );
   }
 
@@ -269,6 +288,7 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
+           ", allowedMethods=" + allowedHttpMethods +
            '}';
   }
 

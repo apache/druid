@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -76,10 +77,10 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
 
         if (s == null) {
           // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
-          return ExprEval.of(false, ExprType.LONG);
+          return ExprEval.ofLongBoolean(false);
         } else {
           final Matcher matcher = pattern.matcher(s);
-          return ExprEval.of(matcher.find(), ExprType.LONG);
+          return ExprEval.ofLongBoolean(matcher.find());
         }
       }
 
@@ -88,6 +89,13 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new RegexpLikeExpr(newArg));
+      }
+
+      @Nullable
+      @Override
+      public ExprType getOutputType(InputBindingInspector inspector)
+      {
+        return ExprType.LONG;
       }
 
       @Override

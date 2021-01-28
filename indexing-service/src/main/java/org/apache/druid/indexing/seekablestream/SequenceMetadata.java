@@ -32,6 +32,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 
@@ -182,8 +183,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   boolean canHandle(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
-      OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
+      OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, ?> record
   )
   {
     lock.lock();
@@ -239,7 +240,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   Supplier<Committer> getCommitterSupplier(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
       String stream,
       Map<PartitionIdType, SequenceOffsetType> lastPersistedOffsets
   )
@@ -303,7 +304,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   TransactionalSegmentPublisher createPublisher(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
       TaskToolbox toolbox,
       boolean useTransaction
   )
@@ -318,12 +319,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   private class SequenceMetadataTransactionalSegmentPublisher
       implements TransactionalSegmentPublisher
   {
-    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
+    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner;
     private final TaskToolbox toolbox;
     private final boolean useTransaction;
 
     public SequenceMetadataTransactionalSegmentPublisher(
-        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
         TaskToolbox toolbox,
         boolean useTransaction
     )
@@ -341,7 +342,10 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     ) throws IOException
     {
       if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
-        throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+        throw new ISE(
+            "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
+            SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptySegments)
+        );
       }
       final Map commitMetaMap = (Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata");
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> finalPartitions =
@@ -353,7 +357,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       // Sanity check, we should only be publishing things that match our desired end state.
       if (!getEndOffsets().equals(finalPartitions.getPartitionSequenceNumberMap())) {
         throw new ISE(
-            "WTF?! Driver for sequence [%s], attempted to publish invalid metadata[%s].",
+            "Driver for sequence[%s] attempted to publish invalid metadata[%s].",
             SequenceMetadata.this.toString(),
             commitMetadata
         );

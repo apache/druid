@@ -79,6 +79,11 @@ public class PortFinder
     usedPorts.remove(port);
   }
 
+  public synchronized int findUsedPortCount()
+  {
+    return usedPorts.size();
+  }
+
   private int chooseFromCandidates()
   {
     for (int port : candidatePorts) {

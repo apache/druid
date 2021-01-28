@@ -19,7 +19,7 @@
 
 package org.apache.druid.testing.utils;
 
-import org.apache.druid.indexer.TaskIdUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -29,14 +29,12 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class KafkaEventWriter implements StreamEventWriter
 {
-  private static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
   private final KafkaProducer<String, byte[]> producer;
   private final boolean txnEnabled;
   private final List<Future<RecordMetadata>> pendingWriteRecords = new ArrayList<>();
@@ -44,7 +42,6 @@ public class KafkaEventWriter implements StreamEventWriter
   public KafkaEventWriter(IntegrationTestingConfig config, boolean txnEnabled)
   {
     Properties properties = new Properties();
-    addFilteredProperties(config, properties);
     properties.setProperty("bootstrap.servers", config.getKafkaHost());
     properties.setProperty("acks", "all");
     properties.setProperty("retries", "3");
@@ -53,8 +50,9 @@ public class KafkaEventWriter implements StreamEventWriter
     this.txnEnabled = txnEnabled;
     if (txnEnabled) {
       properties.setProperty("enable.idempotence", "true");
-      properties.setProperty("transactional.id", TaskIdUtils.getRandomId());
+      properties.setProperty("transactional.id", IdUtils.getRandomId());
     }
+    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     this.producer = new KafkaProducer<>(
         properties,
         new StringSerializer(),
@@ -133,15 +131,6 @@ public class KafkaEventWriter implements StreamEventWriter
     pendingWriteRecords.clear();
     if (e != null) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private void addFilteredProperties(IntegrationTestingConfig config, Properties properties)
-  {
-    for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
-      if (entry.getKey().startsWith(TEST_PROPERTY_PREFIX)) {
-        properties.setProperty(entry.getKey().substring(TEST_PROPERTY_PREFIX.length()), entry.getValue());
-      }
     }
   }
 }

@@ -147,13 +147,12 @@ public class GrouperBufferComparatorUtils
         int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
         if (aggIndex >= 0) {
           final StringComparator stringComparator = orderSpec.getDimensionComparator();
-          final String typeName = aggregatorFactories[aggIndex].getTypeName();
+          final ValueType valueType = aggregatorFactories[aggIndex].getType();
           final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
 
           aggCount++;
 
-          final ValueType valueType = ValueType.fromString(typeName);
-          if (!ValueType.isNumeric(valueType)) {
+          if (!valueType.isNumeric()) {
             throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
           }
 

@@ -21,11 +21,10 @@ package org.apache.druid.indexing.overlord.http.security;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
-import org.apache.druid.indexer.TaskIdUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,7 +38,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
 
 /**
@@ -70,19 +68,12 @@ public class TaskResourceFilter extends AbstractResourceFilter
                .get(
                    Iterables.indexOf(
                        request.getPathSegments(),
-                       new Predicate<PathSegment>()
-                       {
-                         @Override
-                         public boolean apply(PathSegment input)
-                         {
-                           return "task".equals(input.getPath());
-                         }
-                       }
+                       input -> "task".equals(input.getPath())
                    ) + 1
                ).getPath()
     );
-    taskId = StringUtils.urlDecode(taskId);
-    TaskIdUtils.validateId("taskId", taskId);
+
+    IdUtils.validateId("taskId", taskId);
 
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {

@@ -51,7 +51,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return HllSketchModule.BUILD_TYPE_NAME;
   }

@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -43,6 +44,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class BatchAppenderatorDriverTest extends EasyMockSupport
@@ -74,6 +76,10 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   private AppenderatorTester appenderatorTester;
   private BatchAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Before
   public void setup()
@@ -116,7 +122,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, makeOkPublisher()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -150,7 +156,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     }
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, makeOkPublisher()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(

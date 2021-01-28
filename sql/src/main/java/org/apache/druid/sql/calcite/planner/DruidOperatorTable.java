@@ -37,6 +37,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.ApproxCountDistinctSqlAg
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
@@ -61,6 +62,7 @@ import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
@@ -129,6 +131,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new MaxSqlAggregator())
           .add(new SumSqlAggregator())
           .add(new SumZeroSqlAggregator())
+          .add(new GroupingSqlAggregator())
           .build();
 
 
@@ -181,6 +184,8 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
           .add(new LPadOperatorConversion())
           .add(new RPadOperatorConversion())
+          .add(ContainsOperatorConversion.caseSensitive())
+          .add(ContainsOperatorConversion.caseInsensitive())
           .build();
 
   private static final List<SqlOperatorConversion> VALUE_COERCION_OPERATOR_CONVERSIONS =

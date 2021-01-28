@@ -16,23 +16,70 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
 import { CompactionDialog } from './compaction-dialog';
 
-describe('compaction dialog', () => {
-  it('matches snapshot', () => {
-    const compactionDialog = (
+describe('CompactionDialog', () => {
+  it('matches snapshot without compactionConfig', () => {
+    const compactionDialog = shallow(
       <CompactionDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
-        datasource={'test'}
-        compactionConfig={{}}
-      />
+        datasource={'test1'}
+        compactionConfig={undefined}
+      />,
     );
-    render(compactionDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with compactionConfig (dynamic partitionsSpec)', () => {
+    const compactionDialog = shallow(
+      <CompactionDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource={'test1'}
+        compactionConfig={{
+          dataSource: 'test1',
+          tuningConfig: { partitionsSpec: { type: 'dynamic' } },
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with compactionConfig (hashed partitionsSpec)', () => {
+    const compactionDialog = shallow(
+      <CompactionDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource={'test1'}
+        compactionConfig={{
+          dataSource: 'test1',
+          tuningConfig: { partitionsSpec: { type: 'hashed' } },
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with compactionConfig (single_dim partitionsSpec)', () => {
+    const compactionDialog = shallow(
+      <CompactionDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource={'test1'}
+        compactionConfig={{
+          dataSource: 'test1',
+          tuningConfig: { partitionsSpec: { type: 'single_dim' } },
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
   });
 });

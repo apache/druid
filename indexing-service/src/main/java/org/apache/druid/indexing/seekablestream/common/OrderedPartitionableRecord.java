@@ -21,9 +21,9 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.ByteEntity;
 
 import javax.validation.constraints.NotNull;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -35,18 +35,18 @@ import java.util.stream.Collectors;
  * @param <PartitionIdType>    partition id
  * @param <SequenceOffsetType> sequence number
  */
-public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
+public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
 {
   private final String stream;
   private final PartitionIdType partitionId;
   private final SequenceOffsetType sequenceNumber;
-  private final List<byte[]> data;
+  private final List<RecordType> data;
 
   public OrderedPartitionableRecord(
       String stream,
       PartitionIdType partitionId,
       SequenceOffsetType sequenceNumber,
-      List<byte[]> data
+      List<RecordType> data
   )
   {
     Preconditions.checkNotNull(stream, "stream");
@@ -73,8 +73,17 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
     return sequenceNumber;
   }
 
+  /**
+   * Returns a list of ByteEntities representing this record
+   *
+   * This method will always return the same list of ByteEntity instances.
+   * Since each ByteEntity can only be read once (unless care is taking to reset its buffer positions), it
+   * is not advised to call this method multiple times, or iterating over the list more than once.
+   *
+   * @return the list of ByteEntity object for this record
+   */
   @NotNull
-  public List<byte[]> getData()
+  public List<? extends ByteEntity> getData()
   {
     return data;
   }
@@ -94,14 +103,14 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    OrderedPartitionableRecord<?, ?> that = (OrderedPartitionableRecord<?, ?>) o;
+    OrderedPartitionableRecord<?, ?, ? extends ByteEntity> that = (OrderedPartitionableRecord<?, ?, ? extends ByteEntity>) o;
 
     if (data.size() != that.data.size()) {
       return false;
     }
 
     for (int i = 0; i < data.size(); i++) {
-      if (!Arrays.equals(data.get(i), that.data.get(i))) {
+      if (!data.get(i).getBuffer().equals(that.data.get(i).getBuffer())) {
         return false;
       }
     }
@@ -114,7 +123,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
   @Override
   public int hashCode()
   {
-    final int hashOfData = data.stream().map(Arrays::hashCode).collect(Collectors.toList()).hashCode();
+    final int hashOfData = data.stream().map(e -> e.getBuffer().hashCode()).collect(Collectors.toList()).hashCode();
     return Objects.hash(stream, partitionId, sequenceNumber, hashOfData);
   }
 }

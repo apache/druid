@@ -136,6 +136,18 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       )
   );
 
+  // missing 'dim3' because makeDefaultSchemaRow does not expect to set it...
+  static final RowSignature DEFAULT_ROW_SIGNATURE =
+      RowSignature.builder()
+                  .add("dim0", ValueType.STRING)
+                  .add("dim1", ValueType.STRING)
+                  .add("dim2", ValueType.STRING)
+                  .add("timeDim", ValueType.STRING)
+                  .add("d0", ValueType.DOUBLE)
+                  .add("f0", ValueType.FLOAT)
+                  .add("l0", ValueType.LONG)
+                  .build();
+
   static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
       makeDefaultSchemaRow("0", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
       makeDefaultSchemaRow("1", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
@@ -151,25 +163,27 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       .build();
 
   static InputRow makeDefaultSchemaRow(
-      @Nullable String dim0,
-      @Nullable String dim1,
-      @Nullable List<String> dim2,
-      @Nullable String timeDim,
-      @Nullable Double d0,
-      @Nullable Float f0,
-      @Nullable Long l0
+      @Nullable Object... elements
   )
   {
-    // for row selector to work correctly as part of the test matrix, default value coercion needs to happen to columns
-    Map<String, Object> mapRow = Maps.newHashMapWithExpectedSize(6);
-    mapRow.put("dim0", NullHandling.nullToEmptyIfNeeded(dim0));
-    mapRow.put("dim1", NullHandling.nullToEmptyIfNeeded(dim1));
-    mapRow.put("dim2", dim2 != null ? dim2 : NullHandling.defaultStringValue());
-    mapRow.put("timeDim", NullHandling.nullToEmptyIfNeeded(timeDim));
-    mapRow.put("d0", d0 != null ? d0 : NullHandling.defaultDoubleValue());
-    mapRow.put("f0", f0 != null ? f0 : NullHandling.defaultFloatValue());
-    mapRow.put("l0", l0 != null ? l0 : NullHandling.defaultLongValue());
-    return DEFAULT_PARSER.parseBatch(mapRow).get(0);
+    return makeSchemaRow(DEFAULT_PARSER, DEFAULT_ROW_SIGNATURE, elements);
+  }
+
+
+  static InputRow makeSchemaRow(
+      final InputRowParser<Map<String, Object>> parser,
+      final RowSignature signature,
+      @Nullable Object... elements
+  )
+  {
+    Preconditions.checkArgument(signature.size() == elements.length);
+    Map<String, Object> mapRow = Maps.newHashMapWithExpectedSize(signature.size());
+    for (int i = 0; i < signature.size(); i++) {
+      final String columnName = signature.getColumnName(i);
+      final Object value = elements[i];
+      mapRow.put(columnName, value);
+    }
+    return parser.parseBatch(mapRow).get(0);
   }
 
 
@@ -183,6 +197,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   protected final boolean cnf;
   protected final boolean optimize;
   protected final String testName;
+
+  // 'rowBasedWithoutTypeSignature' does not handle numeric null default values correctly, is equivalent to
+  // druid.generic.useDefaultValueForNull being set to false, regardless of how it is actually set.
+  // In other words, numeric null values will be treated as nulls instead of the default value
+  protected final boolean canTestNumericNullsAsDefaultValues;
 
   protected StorageAdapter adapter;
 
@@ -208,6 +227,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     this.finisher = finisher;
     this.cnf = cnf;
     this.optimize = optimize;
+    this.canTestNumericNullsAsDefaultValues =
+        NullHandling.replaceWithDefault() && !testName.contains("finisher[rowBasedWithoutTypeSignature]");
   }
 
   @Before

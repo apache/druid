@@ -24,10 +24,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
@@ -41,10 +44,12 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -111,7 +116,7 @@ public class TaskToolboxTest
         () -> mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         NoopJoinableFactory.INSTANCE,
-        mockMonitorScheduler,
+        () -> mockMonitorScheduler,
         mockSegmentLoaderFactory,
         ObjectMapper,
         mockIndexIO,
@@ -124,6 +129,14 @@ public class TaskToolboxTest
         null,
         null,
         new NoopTestTaskReportFileWriter(),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        new DropwizardRowIngestionMetersFactory(),
+        new TestAppenderatorsManager(),
+        new NoopIndexingServiceClient(),
+        null,
+        null,
         null
     );
   }

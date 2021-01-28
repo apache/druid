@@ -19,8 +19,13 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,25 +38,43 @@ import java.nio.ByteBuffer;
 public class LongMinAggregationTest
 {
   private LongMinAggregatorFactory longMinAggFactory;
+  private LongMinAggregatorFactory longMinVectorAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
+  private VectorColumnSelectorFactory vectorColumnSelectorFactory;
   private TestLongColumnSelector selector;
 
-  private long[] values = {-9223372036854775802L, -9223372036854775803L, -9223372036854775806L, -9223372036854775805L};
+  private final long[] values = {-9223372036854775802L, -9223372036854775803L, -9223372036854775806L, -9223372036854775805L};
+  private final long[] longValues1 = {5L, 2L, 4L, 100L, 1L, 5L, -2L, -3L, 0L, 55L};
 
   public LongMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
     longMinAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, LongMinAggregatorFactory.class);
+
+    String vectorAggSpecJson = "{\"type\": \"longMin\", \"name\": \"lng\", \"fieldName\": \"lngFld\"}";
+    longMinVectorAggFactory = TestHelper.makeJsonMapper().readValue(vectorAggSpecJson, LongMinAggregatorFactory.class);
   }
 
   @Before
   public void setup()
   {
+    NullHandling.initializeForTests();
     selector = new TestLongColumnSelector(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
+
+    VectorValueSelector vectorValueSelector = EasyMock.createMock(VectorValueSelector.class);
+    EasyMock.expect(vectorValueSelector.getLongVector()).andReturn(longValues1).anyTimes();
+    EasyMock.expect(vectorValueSelector.getNullVector()).andReturn(null).anyTimes();
+    EasyMock.replay(vectorValueSelector);
+
+    vectorColumnSelectorFactory = EasyMock.createMock(VectorColumnSelectorFactory.class);
+    EasyMock.expect(vectorColumnSelectorFactory.getColumnCapabilities("lngFld"))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.LONG).setDictionaryEncoded(true)).anyTimes();
+    EasyMock.expect(vectorColumnSelectorFactory.makeValueSelector("lngFld")).andReturn(vectorValueSelector).anyTimes();
+    EasyMock.replay(vectorColumnSelectorFactory);
   }
 
   @Test
@@ -86,6 +109,33 @@ public class LongMinAggregationTest
     Assert.assertEquals(values[2], agg.getLong(buffer, 0));
     Assert.assertEquals((float) values[2], agg.getFloat(buffer, 0), 0.0001);
   }
+
+  @Test
+  public void testLongMinVectorAggregator()
+  {
+    // Some sanity.
+    Assert.assertTrue(longMinVectorAggFactory.canVectorize(vectorColumnSelectorFactory));
+    VectorValueSelector vectorValueSelector = longMinVectorAggFactory.vectorSelector(vectorColumnSelectorFactory);
+    Assert.assertEquals(longValues1, vectorValueSelector.getLongVector());
+
+    VectorAggregator vectorAggregator = longMinVectorAggFactory.factorizeVector(vectorColumnSelectorFactory);
+
+    final ByteBuffer buf = ByteBuffer.allocate(longMinAggFactory.getMaxIntermediateSizeWithNulls() * 2);
+    vectorAggregator.init(buf, 0);
+
+    vectorAggregator.aggregate(buf, 0, 0, 3);
+    Assert.assertEquals(longValues1[1], (long) vectorAggregator.get(buf, 0));
+
+    vectorAggregator.aggregate(buf, 1, 0, 3);
+    Assert.assertEquals(longValues1[1], (long) vectorAggregator.get(buf, 1));
+
+    vectorAggregator.aggregate(buf, 2, 3, 7);
+    Assert.assertEquals(longValues1[6], (long) vectorAggregator.get(buf, 2));
+
+    vectorAggregator.aggregate(buf, 0, 0, 10);
+    Assert.assertEquals(longValues1[7], (long) vectorAggregator.get(buf, 0));
+  }
+
 
   @Test
   public void testCombine()

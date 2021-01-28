@@ -171,7 +171,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         executorService.shutdown();
       }
       catch (SecurityException ex) {
-        log.wtf(ex, "I can't control my own threads!");
+        log.error(ex, "I can't control my own threads!");
       }
     }
 
@@ -233,7 +233,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         executorService.shutdownNow();
       }
       catch (SecurityException ex) {
-        log.wtf(ex, "I can't control my own threads!");
+        log.error(ex, "I can't control my own threads!");
       }
     }
   }
@@ -311,6 +311,36 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
+  }
+
+  @Override
+  public long getTotalTaskSlotCount()
+  {
+    return 1;
+  }
+
+  @Override
+  public long getIdleTaskSlotCount()
+  {
+    return runningItem == null ? 1 : 0;
+  }
+
+  @Override
+  public long getUsedTaskSlotCount()
+  {
+    return runningItem == null ? 0 : 1;
+  }
+
+  @Override
+  public long getLazyTaskSlotCount()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getBlacklistedTaskSlotCount()
+  {
+    return 0;
   }
 
   @Override

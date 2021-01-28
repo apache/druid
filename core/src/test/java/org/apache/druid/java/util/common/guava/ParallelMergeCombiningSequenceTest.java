@@ -23,7 +23,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.hamcrest.Matchers;
+import org.apache.druid.query.QueryTimeoutException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,7 +39,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
@@ -511,8 +510,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
     input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
+    expectedException.expect(QueryTimeoutException.class);
     expectedException.expectMessage("Sequence iterator timed out waiting for data");
 
     assertException(
@@ -534,11 +532,36 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
+    expectedException.expect(QueryTimeoutException.class);
     expectedException.expectMessage("Sequence iterator timed out");
     assertException(input, 8, 64, 1000, 500);
   }
+
+  @Test
+  public void testGracefulCloseOfYielderCancelsPool() throws Exception
+  {
+
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(nonBlockingSequence(10_000));
+    input.add(nonBlockingSequence(9_001));
+    input.add(nonBlockingSequence(7_777));
+    input.add(nonBlockingSequence(8_500));
+    input.add(nonBlockingSequence(5_000));
+    input.add(nonBlockingSequence(8_888));
+
+    assertResultWithEarlyClose(input, 128, 1024, 256, reportMetrics -> {
+      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      // 49166 is total set of results if yielder were fully processed, expect somewhere more than 0 but less than that
+      // this isn't super indicative of anything really, since closing the yielder would have triggered the baggage
+      // to run, which runs this metrics reporter function, while the actual processing could still be occuring on the
+      // pool in the background and the yielder still operates as intended if cancellation isn't in fact happening.
+      // other tests ensure that this is true though (yielder.next throwing an exception for example)
+      Assert.assertTrue(49166 > reportMetrics.getInputRows());
+      Assert.assertTrue(0 < reportMetrics.getInputRows());
+    });
+  }
+
 
   private void assertResult(List<Sequence<IntPair>> sequences) throws InterruptedException, IOException
   {
@@ -611,6 +634,87 @@ public class ParallelMergeCombiningSequenceTest
     Assert.assertEquals(0, pool.getRunningThreadCount());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
+    // cancellation trigger should not be set if sequence was fully yielded and close is called
+    // (though shouldn't actually matter even if it was...)
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+  }
+
+  private void assertResultWithEarlyClose(
+      List<Sequence<IntPair>> sequences,
+      int batchSize,
+      int yieldAfter,
+      int closeYielderAfter,
+      Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
+  )
+      throws InterruptedException, IOException
+  {
+    final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
+        new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
+        INT_PAIR_ORDERING,
+        INT_PAIR_MERGE_FN
+    );
+
+    final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
+        pool,
+        sequences,
+        INT_PAIR_ORDERING,
+        INT_PAIR_MERGE_FN,
+        true,
+        5000,
+        0,
+        TEST_POOL_SIZE,
+        yieldAfter,
+        batchSize,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+        reporter
+    );
+
+    Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
+    Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
+
+    IntPair prev = null;
+
+    int yields = 0;
+    while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
+      if (yields >= closeYielderAfter) {
+        parallelMergeCombineYielder.close();
+        combiningYielder.close();
+        break;
+      } else {
+        yields++;
+        Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+        Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+        prev = parallelMergeCombineYielder.get();
+        combiningYielder = combiningYielder.next(combiningYielder.get());
+        parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
+      }
+    }
+    // trying to next the yielder creates sadness for you
+    final String expectedExceptionMsg = "Already closed";
+    try {
+      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+      parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
+      // this should explode so the contradictory next statement should not be reached
+      Assert.assertTrue(false);
+    }
+    catch (RuntimeException rex) {
+      Assert.assertEquals(expectedExceptionMsg, rex.getMessage());
+    }
+
+    // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
+    Assert.assertTrue(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+    Assert.assertEquals(
+        expectedExceptionMsg,
+        parallelMergeCombineSequence.getCancellationGizmo().getRuntimeException().getMessage()
+    );
+
+    while (pool.getRunningThreadCount() > 0) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(0, pool.getRunningThreadCount());
+
+    Assert.assertFalse(combiningYielder.isDone());
+    Assert.assertFalse(parallelMergeCombineYielder.isDone());
   }
 
   private void assertException(List<Sequence<IntPair>> sequences) throws Exception

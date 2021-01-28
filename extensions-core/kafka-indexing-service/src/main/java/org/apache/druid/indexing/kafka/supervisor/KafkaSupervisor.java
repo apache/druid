@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.indexer.TaskIdUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -53,6 +53,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
@@ -74,7 +75,7 @@ import java.util.stream.Collectors;
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kafka offsets.
  */
-public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
+public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, KafkaRecordEntity>
 {
   public static final TypeReference<TreeMap<Integer, Map<Integer, Long>>> CHECKPOINTS_TYPE_REF =
       new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
@@ -121,7 +122,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
-  protected RecordSupplier<Integer, Long> setupRecordSupplier()
+  protected RecordSupplier<Integer, Long, KafkaRecordEntity> setupRecordSupplier()
   {
     return new KafkaRecordSupplier(spec.getIoConfig().getConsumerProperties(), sortingMapper);
   }
@@ -199,7 +200,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected List<SeekableStreamIndexTask<Integer, Long>> createIndexTasks(
+  protected List<SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>> createIndexTasks(
       int replicas,
       String baseSequenceName,
       ObjectMapper sortingMapper,
@@ -217,9 +218,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     // Kafka index task will pick up LegacyKafkaIndexTaskRunner without the below configuration.
     context.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
 
-    List<SeekableStreamIndexTask<Integer, Long>> taskList = new ArrayList<>();
+    List<SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-      String taskId = TaskIdUtils.getRandomIdWithPrefix(baseSequenceName);
+      String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KafkaIndexTask(
           taskId,
           new TaskResource(baseSequenceName, 1),
@@ -227,11 +228,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
-          null,
-          null,
-          rowIngestionMetersFactory,
-          sortingMapper,
-          null
+          sortingMapper
       ));
     }
     return taskList;

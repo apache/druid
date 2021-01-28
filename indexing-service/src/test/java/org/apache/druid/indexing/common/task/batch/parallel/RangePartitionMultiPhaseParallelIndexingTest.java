@@ -108,15 +108,16 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       0
   );
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, useMultiValueDim={3}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, useMultiValueDim={3}, intervalToIndex={4}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, !USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM},
-        new Object[]{LockGranularity.TIME_CHUNK, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM},
-        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM},
-        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 1, !USE_MULTIVALUE_DIM},  // will spawn subtask
-        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, USE_MULTIVALUE_DIM}  // expected to fail
+        new Object[]{LockGranularity.TIME_CHUNK, !USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
+        new Object[]{LockGranularity.TIME_CHUNK, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
+        new Object[]{LockGranularity.TIME_CHUNK, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, null},
+        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},
+        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 1, !USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX},  // will spawn subtask
+        new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX}  // expected to fail
     );
   }
 
@@ -132,17 +133,21 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
 
   private final int maxNumConcurrentSubTasks;
   private final boolean useMultivalueDim;
+  @Nullable
+  private final Interval intervalToIndex;
 
   public RangePartitionMultiPhaseParallelIndexingTest(
       LockGranularity lockGranularity,
       boolean useInputFormatApi,
       int maxNumConcurrentSubTasks,
-      boolean useMultivalueDim
+      boolean useMultivalueDim,
+      @Nullable Interval intervalToIndex
   )
   {
     super(lockGranularity, useInputFormatApi);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
     this.useMultivalueDim = useMultivalueDim;
+    this.intervalToIndex = intervalToIndex;
   }
 
   @Before
@@ -164,7 +169,15 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
             int rowIndex = i * DIM_FILE_CARDINALITY + d;
             String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
+
+            // This is the original row
             writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should not get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
           }
         }
       }
@@ -207,7 +220,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   @Test
   public void createsCorrectRangePartitions() throws Exception
   {
-    int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = runTestTask(
         new SingleDimensionPartitionsSpec(
             targetRowsPerSegment,
@@ -301,7 +314,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           DIMENSIONS_SPEC,
           INPUT_FORMAT,
           null,
-          INTERVAL_TO_INDEX,
+          intervalToIndex,
           inputDir,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
@@ -315,7 +328,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           null,
           null,
           PARSE_SPEC,
-          INTERVAL_TO_INDEX,
+          intervalToIndex,
           inputDir,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,

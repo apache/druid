@@ -159,10 +159,10 @@ topN queries can group on multi-value dimensions. When grouping on a multi-value
 from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
 there are rows. For example, a topN on the dimension `tags` with filter `"t1" AND "t3"` would match only row1, and
 generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
-your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
+your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
 improve performance.
 
-See [Multi-value dimensions](multi-value-dimensions.html) for more details.
+See [Multi-value dimensions](multi-value-dimensions.md) for more details.
 
 ## Aliasing
 

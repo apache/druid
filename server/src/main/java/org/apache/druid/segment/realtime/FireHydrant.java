@@ -20,12 +20,14 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -70,6 +72,26 @@ public class FireHydrant
     return adapter.get().getId();
   }
 
+  public int getSegmentNumDimensionColumns()
+  {
+    final Segment segment = adapter.get().getBaseSegment();
+    if (segment != null) {
+      final StorageAdapter storageAdapter = segment.asStorageAdapter();
+      return storageAdapter.getAvailableDimensions().size();
+    }
+    return 0;
+  }
+
+  public int getSegmentNumMetricColumns()
+  {
+    final Segment segment = adapter.get().getBaseSegment();
+    if (segment != null) {
+      final StorageAdapter storageAdapter = segment.asStorageAdapter();
+      return Iterables.size(storageAdapter.getAvailableMetrics());
+    }
+    return 0;
+  }
+
   public Interval getSegmentDataInterval()
   {
     return adapter.get().getDataInterval();
@@ -96,7 +118,7 @@ public class FireHydrant
           !newSegment.getId().equals(currentSegment.getId())) {
         // Sanity check: identifier should not change
         throw new ISE(
-            "WTF?! Cannot swap identifier[%s] -> [%s]!",
+            "Cannot swap identifier[%s] -> [%s]",
             currentSegment.getId(),
             newSegment.getId()
         );

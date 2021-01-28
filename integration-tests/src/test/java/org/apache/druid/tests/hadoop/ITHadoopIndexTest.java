@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -42,8 +43,8 @@ import java.util.function.Function;
  * 1) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
- * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
- *    at /batch_index/tsv/
+ * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
+ *    at /batch_index/hadoop_tsv/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
  * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with HDFS configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
@@ -74,6 +75,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         {new HashedPartitionsSpec(3, null, null)},
         {new HashedPartitionsSpec(null, 3, ImmutableList.of("page"))},
         {new HashedPartitionsSpec(null, 3, ImmutableList.of("page", "user"))},
+        {new HashedPartitionsSpec(null, 3, ImmutableList.of("page"), HashPartitionFunction.MURMUR3_32_ABS)},
         {new SingleDimensionPartitionsSpec(1000, null, null, false)},
         {new SingleDimensionPartitionsSpec(1000, null, "page", false)},
         {new SingleDimensionPartitionsSpec(1000, null, null, true)},

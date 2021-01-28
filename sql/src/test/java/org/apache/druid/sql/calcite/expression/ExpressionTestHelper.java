@@ -38,7 +38,9 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -283,11 +285,14 @@ class ExpressionTestHelper
     );
 
     final ValueMatcher matcher = expectedFilter.toFilter().makeMatcher(
-        RowBasedColumnSelectorFactory.create(
-            RowAdapters.standardRow(),
-            () -> new MapBasedRow(0L, bindings),
-            rowSignature,
-            false
+        new VirtualizedColumnSelectorFactory(
+            RowBasedColumnSelectorFactory.create(
+                RowAdapters.standardRow(),
+                () -> new MapBasedRow(0L, bindings),
+                rowSignature,
+                false
+            ),
+            VirtualColumns.create(virtualColumns)
         )
     );
 

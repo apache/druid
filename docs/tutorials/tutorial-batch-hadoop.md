@@ -27,8 +27,8 @@ sidebar_label: "Load from Apache Hadoop"
 This tutorial shows you how to load data files into Apache Druid using a remote Hadoop cluster.
 
 For this tutorial, we'll assume that you've already completed the previous
-[batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system and are using the
-`micro-quickstart` single-machine configuration as described in the [quickstart](index.html).
+[batch ingestion tutorial](tutorial-batch.md) using Druid's native batch ingestion system and are using the
+`micro-quickstart` single-machine configuration as described in the [quickstart](index.md).
 
 ## Install Docker
 
@@ -205,7 +205,7 @@ We've included a sample of Wikipedia edits from September 12, 2015 to get you st
 To load this data into Druid, you can submit an *ingestion task* pointing to the file. We've included
 a task that loads the `wikiticker-2015-09-12-sampled.json.gz` file included in the archive.
 
-Let's submit the `wikipedia-index-hadoop-.json` task:
+Let's submit the `wikipedia-index-hadoop.json` task:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json --url http://localhost:8081

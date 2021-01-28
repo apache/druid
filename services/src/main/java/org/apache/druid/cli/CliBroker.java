@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -33,6 +34,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
@@ -55,6 +57,7 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -66,11 +69,11 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.guice.SqlModule;
-import org.apache.druid.timeline.PruneLastCompactionState;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.Properties;
 
 @Command(
     name = "broker",
@@ -80,9 +83,17 @@ public class CliBroker extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker.class);
 
+  private boolean isZkEnabled = true;
+
   public CliBroker()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -101,7 +112,7 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
-          binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
+          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);
@@ -137,7 +148,9 @@ public class CliBroker extends ServerRunnable
           Jerseys.addResource(binder, HistoricalResource.class);
           Jerseys.addResource(binder, SegmentListerResource.class);
 
-          LifecycleModule.register(binder, ZkCoordinator.class);
+          if (isZkEnabled) {
+            LifecycleModule.register(binder, ZkCoordinator.class);
+          }
 
           bindNodeRoleAndAnnouncer(
               binder,

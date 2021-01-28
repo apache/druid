@@ -29,6 +29,7 @@ import org.skife.config.ConfigurationObjectFactory;
 import java.util.Map;
 
 /**
+ *
  */
 public class ConfigProvider<T> implements Provider<T>
 {
@@ -79,7 +80,7 @@ public class ConfigProvider<T> implements Provider<T>
   {
     try {
       // ConfigMagic handles a null replacements
-      Preconditions.checkNotNull(factory, "WTF!? Code misconfigured, inject() didn't get called.");
+      Preconditions.checkNotNull(factory, "Code misconfigured, inject() didn't get called.");
       return factory.buildWithReplacements(clazz, replacements);
     }
     catch (IllegalArgumentException e) {

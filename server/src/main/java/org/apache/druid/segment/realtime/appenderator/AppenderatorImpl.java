@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
@@ -62,14 +61,14 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
@@ -102,6 +101,15 @@ import java.util.stream.Collectors;
 
 public class AppenderatorImpl implements Appenderator
 {
+  // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER = 1000;
+  public static final int ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER = 700;
+  public static final int ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER = 600;
+  // Rough estimate of memory footprint of empty Sink based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
+  // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+
   private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
   private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
@@ -109,7 +117,6 @@ public class AppenderatorImpl implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final boolean storeCompactionState;
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
@@ -127,12 +134,15 @@ public class AppenderatorImpl implements Appenderator
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
+  private final boolean skipBytesInMemoryOverheadCheck;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
   private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
+  private final RowIngestionMeters rowIngestionMeters;
+  private final ParseExceptionHandler parseExceptionHandler;
   // Synchronize persisting commitMetadata so that multiple persist threads (if present)
   // and abandon threads do not step over each other
   private final Lock commitLock = new ReentrantLock();
@@ -164,7 +174,6 @@ public class AppenderatorImpl implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -172,13 +181,14 @@ public class AppenderatorImpl implements Appenderator
       @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache
+      Cache cache,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.storeCompactionState = storeCompactionState;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.dataSegmentPusher = Preconditions.checkNotNull(dataSegmentPusher, "dataSegmentPusher");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
@@ -187,6 +197,8 @@ public class AppenderatorImpl implements Appenderator
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
     this.texasRanger = sinkQuerySegmentWalker;
+    this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
+    this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -196,7 +208,8 @@ public class AppenderatorImpl implements Appenderator
       this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
     }
 
-    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
+    maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
+    skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
   }
 
   @Override
@@ -272,6 +285,12 @@ public class AppenderatorImpl implements Appenderator
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
 
+    if (addResult.isRowAdded()) {
+      rowIngestionMeters.incrementProcessed();
+    } else if (addResult.hasParseException()) {
+      parseExceptionHandler.handle(addResult.getParseException());
+    }
+
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
@@ -334,7 +353,7 @@ public class AppenderatorImpl implements Appenderator
         isPersistRequired = true;
       }
     }
-    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired, addResult.getParseException());
+    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
   }
 
   @Override
@@ -390,21 +409,17 @@ public class AppenderatorImpl implements Appenderator
     Sink retVal = sinks.get(identifier);
 
     if (retVal == null) {
-      final Map<String, Object> indexSpecMap = objectMapper.convertValue(
-          tuningConfig.getIndexSpec(),
-          new TypeReference<Map<String, Object>>() {}
-      );
       retVal = new Sink(
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
-          storeCompactionState ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
           identifier.getVersion(),
+          tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          tuningConfig.isReportParseExceptions(),
           null
       );
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -498,7 +513,7 @@ public class AppenderatorImpl implements Appenderator
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     throwPersistErrorIfExists();
-
+    long bytesInMemoryBeforePersist = bytesCurrentlyInMemory.get();
     final Map<String, Integer> currentHydrants = new HashMap<>();
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
@@ -524,7 +539,13 @@ public class AppenderatorImpl implements Appenderator
       }
 
       if (sink.swappable()) {
+        // After swapping the sink, we use memory mapped segment instead. However, the memory mapped segment still consumes memory.
+        // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
+        int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
+        bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
+
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
+
       }
     }
 
@@ -614,6 +635,36 @@ public class AppenderatorImpl implements Appenderator
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
+
+    log.info("Persisted rows[%,d] and bytes[%,d]", numPersistedRows, bytesPersisted);
+
+    // bytesCurrentlyInMemory can change while persisting due to concurrent ingestion.
+    // Hence, we use bytesInMemoryBeforePersist to determine the change of this persist
+    if (!skipBytesInMemoryOverheadCheck && bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
+      // We are still over maxBytesTuningConfig even after persisting.
+      // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
+      final String alertMessage = StringUtils.format(
+          "Task has exceeded safe estimated heap usage limits, failing "
+          + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])",
+          sinks.size(),
+          sinks.values().stream().mapToInt(Iterables::size).sum(),
+          getTotalRowCount()
+      );
+      final String errorMessage = StringUtils.format(
+          "%s.\nThis can occur when the overhead from too many intermediary segment persists becomes to "
+          + "great to have enough space to process additional input rows. This check, along with metering the overhead "
+          + "of these objects to factor into the 'maxBytesInMemory' computation, can be disabled by setting "
+          + "'skipBytesInMemoryOverheadCheck' to 'true' (note that doing so might allow the task to naturally encounter "
+          + "a 'java.lang.OutOfMemoryError'). Alternatively, 'maxBytesInMemory' can be increased which will cause an "
+          + "increase in heap footprint, but will allow for more intermediary segment persists to occur before "
+          + "reaching this condition.",
+          alertMessage
+      );
+      log.makeAlert(alertMessage)
+         .addData("dataSource", schema.getDataSource())
+         .emit();
+      throw new RuntimeException(errorMessage);
+    }
     return future;
   }
 
@@ -716,12 +767,12 @@ public class AppenderatorImpl implements Appenderator
     // Sanity checks
     for (FireHydrant hydrant : sink) {
       if (sink.isWritable()) {
-        throw new ISE("WTF?! Expected sink to be no longer writable before mergeAndPush. Segment[%s].", identifier);
+        throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
       }
 
       synchronized (hydrant) {
         if (!hydrant.hasSwapped()) {
-          throw new ISE("WTF?! Expected sink to be fully persisted before mergeAndPush. Segment[%s].", identifier);
+          throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
         }
       }
     }
@@ -769,7 +820,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getAggregators(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory(),
+            tuningConfig.getMaxColumnsToMerge()
         );
 
         mergeFinishTime = System.nanoTime();
@@ -965,21 +1017,24 @@ public class AppenderatorImpl implements Appenderator
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-persist", maxPendingPersists)
+          Execs.newBlockingSingleThreaded(
+              "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
+              maxPendingPersists
+          )
       );
     }
 
     if (pushExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-merge", 1)
+          Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-merge", 1)
       );
     }
 
     if (intermediateTempExecutor == null) {
       // use single threaded executor with SynchronousQueue so that all abandon operations occur sequentially
       intermediateTempExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded("[" + myId + "]-appenderator-abandon", 0)
+          Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-abandon", 0)
       );
     }
   }
@@ -1117,11 +1172,10 @@ public class AppenderatorImpl implements Appenderator
             identifier.getInterval(),
             schema,
             identifier.getShardSpec(),
-            null,
             identifier.getVersion(),
+            tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
-            tuningConfig.isReportParseExceptions(),
             null,
             hydrants
         );
@@ -1167,6 +1221,13 @@ public class AppenderatorImpl implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      for (FireHydrant hydrant : sink) {
+        // Decrement memory used by all Memory Mapped Hydrant
+        if (!hydrant.equals(sink.getCurrHydrant())) {
+          bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+        }
+      }
       totalRows.addAndGet(-sink.getNumRows());
     }
 
@@ -1375,5 +1436,28 @@ public class AppenderatorImpl implements Appenderator
            .emit();
       }
     }
+  }
+
+  private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
+  {
+    if (skipBytesInMemoryOverheadCheck) {
+      return 0;
+    }
+    // These calculations are approximated from actual heap dumps.
+    // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
+    // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
+    return Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT +
+           (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
+           (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+           ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+  }
+
+  private int calculateSinkMemoryInUsed(Sink sink)
+  {
+    if (skipBytesInMemoryOverheadCheck) {
+      return 0;
+    }
+    // Rough estimate of memory footprint of empty Sink based on actual heap dumps
+    return ROUGH_OVERHEAD_PER_SINK;
   }
 }

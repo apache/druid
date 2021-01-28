@@ -146,12 +146,6 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
     return new NumberedOverwritingPartitionChunk<>(partitionId, obj);
   }
 
-  @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    return true;
-  }
-
   @JsonProperty("partitionId")
   @Override
   public int getPartitionNum()

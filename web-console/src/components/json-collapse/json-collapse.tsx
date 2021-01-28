@@ -17,43 +17,29 @@
  */
 
 import { Button, Collapse, TextArea } from '@blueprintjs/core';
-import React from 'react';
+import * as JSONBig from 'json-bigint-native';
+import React, { useState } from 'react';
+
+import './json-collapse.scss';
 
 interface JsonCollapseProps {
   stringValue: string;
   buttonText: string;
 }
 
-interface JsonCollapseState {
-  isOpen: boolean;
-}
+export const JsonCollapse = React.memo(function JsonCollapse(props: JsonCollapseProps) {
+  const { stringValue, buttonText } = props;
+  const [isOpen, setIsOpen] = useState(false);
 
-export class JsonCollapse extends React.PureComponent<JsonCollapseProps, JsonCollapseState> {
-  constructor(props: any) {
-    super(props);
-    this.state = {
-      isOpen: false,
-    };
-  }
-
-  render(): JSX.Element {
-    const { stringValue, buttonText } = this.props;
-    const { isOpen } = this.state;
-    const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
-    return (
-      <div className="json-collapse">
-        <Button
-          minimal
-          active={isOpen}
-          onClick={() => this.setState({ isOpen: !isOpen })}
-          text={buttonText}
-        />
-        <div>
-          <Collapse isOpen={isOpen}>
-            <TextArea readOnly value={prettyValue} />
-          </Collapse>
-        </div>
+  const prettyValue = JSONBig.stringify(JSON.parse(stringValue), undefined, 2);
+  return (
+    <div className="json-collapse">
+      <div className="collapse-buttons">
+        <Button minimal active={isOpen} onClick={() => setIsOpen(!isOpen)} text={buttonText} />
       </div>
-    );
-  }
-}
+      <Collapse isOpen={isOpen}>
+        <TextArea readOnly value={prettyValue} />
+      </Collapse>
+    </div>
+  );
+});

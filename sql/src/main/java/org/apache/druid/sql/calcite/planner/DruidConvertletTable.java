@@ -149,7 +149,7 @@ public class DruidConvertletTable implements SqlRexConvertletTable
             )
         );
       } else {
-        throw new ISE("WTF?! Should not have got here, operator was: %s", operator);
+        throw new ISE("Should not have got here, operator was: %s", operator);
       }
     }
   }

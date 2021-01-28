@@ -25,13 +25,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +42,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.BiFunction;
 
 /**
@@ -113,6 +118,30 @@ public abstract class ResponseContext
             (oldValue, newValue) -> (boolean) oldValue || (boolean) newValue
     ),
     /**
+     * Map of most relevant query ID to remaining number of responses from query nodes.
+     * The value is initialized in {@code CachingClusteredClient} when it initializes the connection to the query nodes,
+     * and is updated whenever they respond (@code DirectDruidClient). {@code RetryQueryRunner} uses this value to
+     * check if the {@link #MISSING_SEGMENTS} is valid.
+     *
+     * Currently, the broker doesn't run subqueries in parallel, the remaining number of responses will be updated
+     * one by one per subquery. However, since it can be parallelized to run subqueries simultaneously, we store them
+     * in a ConcurrentHashMap.
+     *
+     * @see org.apache.druid.query.Query#getMostSpecificId
+     */
+    REMAINING_RESPONSES_FROM_QUERY_SERVERS(
+        "remainingResponsesFromQueryServers",
+            (totalRemainingPerId, idAndNumResponses) -> {
+              final ConcurrentHashMap<String, Integer> map = (ConcurrentHashMap<String, Integer>) totalRemainingPerId;
+              final NonnullPair<String, Integer> pair = (NonnullPair<String, Integer>) idAndNumResponses;
+              map.compute(
+                  pair.lhs,
+                  (id, remaining) -> remaining == null ? pair.rhs : remaining + pair.rhs
+              );
+              return map;
+            }
+    ),
+    /**
      * Lists missing segments.
      */
     MISSING_SEGMENTS(
@@ -170,9 +199,11 @@ public abstract class ResponseContext
     );
 
     /**
-     * TreeMap is used to have the natural ordering of its keys
+     * ConcurrentSkipListMap is used to have the natural ordering of its keys.
+     * Thread-safe structure is required since there is no guarantee that {@link #registerKey(BaseKey)}
+     * would be called only from class static blocks.
      */
-    private static final Map<String, BaseKey> REGISTERED_KEYS = new TreeMap<>();
+    private static final ConcurrentMap<String, BaseKey> REGISTERED_KEYS = new ConcurrentSkipListMap<>();
 
     static {
       for (BaseKey key : values()) {
@@ -184,14 +215,11 @@ public abstract class ResponseContext
      * Primary way of registering context keys.
      * @throws IllegalArgumentException if the key has already been registered.
      */
-    public static synchronized void registerKey(BaseKey key)
+    public static void registerKey(BaseKey key)
     {
-      Preconditions.checkArgument(
-          !REGISTERED_KEYS.containsKey(key.getName()),
-          "Key [%s] has already been registered as a context key",
-          key.getName()
-      );
-      REGISTERED_KEYS.put(key.getName(), key);
+      if (REGISTERED_KEYS.putIfAbsent(key.getName(), key) != null) {
+        throw new IAE("Key [%s] has already been registered as a context key", key.getName());
+      }
     }
 
     /**
@@ -200,12 +228,11 @@ public abstract class ResponseContext
      */
     public static BaseKey keyOf(String name)
     {
-      Preconditions.checkState(
-           REGISTERED_KEYS.containsKey(name),
-          "Key [%s] has not yet been registered as a context key",
-          name
-      );
-      return REGISTERED_KEYS.get(name);
+      BaseKey key = REGISTERED_KEYS.get(name);
+      if (key == null) {
+        throw new ISE("Key [%s] has not yet been registered as a context key", name);
+      }
+      return key;
     }
 
     /**
@@ -335,7 +362,7 @@ public abstract class ResponseContext
   {
     final String fullSerializedString = objectMapper.writeValueAsString(getDelegate());
     if (fullSerializedString.length() <= maxCharsNumber) {
-      return new SerializationResult(fullSerializedString, fullSerializedString);
+      return new SerializationResult(null, fullSerializedString);
     } else {
       // Indicates that the context is truncated during serialization.
       add(Key.TRUNCATED, true);
@@ -411,18 +438,22 @@ public abstract class ResponseContext
    */
   public static class SerializationResult
   {
+    @Nullable
     private final String truncatedResult;
     private final String fullResult;
 
-    SerializationResult(String truncatedResult, String fullResult)
+    SerializationResult(@Nullable String truncatedResult, String fullResult)
     {
       this.truncatedResult = truncatedResult;
       this.fullResult = fullResult;
     }
 
-    public String getTruncatedResult()
+    /**
+     * Returns the truncated result if it exists otherwise returns the full result.
+     */
+    public String getResult()
     {
-      return truncatedResult;
+      return isTruncated() ? truncatedResult : fullResult;
     }
 
     public String getFullResult()
@@ -430,9 +461,9 @@ public abstract class ResponseContext
       return fullResult;
     }
 
-    public Boolean isReduced()
+    public boolean isTruncated()
     {
-      return !truncatedResult.equals(fullResult);
+      return truncatedResult != null;
     }
   }
 }

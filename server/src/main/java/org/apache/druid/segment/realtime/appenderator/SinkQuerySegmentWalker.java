@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.CachingQueryRunner;
@@ -28,7 +29,9 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -40,7 +43,6 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -52,14 +54,13 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
@@ -89,7 +90,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ExecutorService queryExecutorService;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
@@ -113,7 +114,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
     this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
-    this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
@@ -149,12 +150,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final Optional<TableDataSource> baseTableDataSource = analysis.getBaseTableDataSource();
 
-    if (!baseTableDataSource.isPresent() || !dataSource.equals(baseTableDataSource.get().getName())) {
-      // Report error, since we somehow got a query for a datasource we can't handle.
-      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
-    }
+    // Sanity check: make sure the query is based on the table we're meant to handle.
+    analysis.getBaseTableDataSource()
+            .filter(ds -> dataSource.equals(ds.getName()))
+            .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
@@ -170,21 +170,17 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
 
-    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query)
+    // segmentMapFn maps each base Segment into a joined Segment if necessary.
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getPreJoinableClauses(),
+        cpuTimeAccumulator,
+        analysis.getBaseQuery().orElse(query)
     );
 
-    // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
-        analysis.getPreJoinableClauses(),
-        joinableFactory,
-        cpuTimeAccumulator,
-        joinFilterRewriteConfig,
-        query
-    );
+    // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
@@ -236,9 +232,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
                       if (hydrantDefinitelySwapped && cache.isLocal()) {
+                        StorageAdapter storageAdapter = segmentAndCloseable.lhs.asStorageAdapter();
+                        long segmentMinTime = storageAdapter.getMinTime().getMillis();
+                        long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
                         runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
+                            cacheKeyPrefix,
                             descriptor,
+                            actualDataInterval,
                             objectMapper,
                             cache,
                             toolChest,
@@ -299,6 +301,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         true
     );
+  }
+
+  @VisibleForTesting
+  String getDataSource()
+  {
+    return dataSource;
   }
 
   /**

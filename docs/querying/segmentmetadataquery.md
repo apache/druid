@@ -30,15 +30,18 @@ sidebar_label: "SegmentMetadata"
 
 Segment metadata queries return per-segment information about:
 
-* Cardinality of all columns in the segment
-* Min/max values of string type columns in the segment
-* Estimated byte size for the segment columns if they were stored in a flat format
 * Number of rows stored inside the segment
 * Interval the segment covers
-* Column type of all the columns in the segment
-* Estimated total segment byte size in if it was stored in a flat format
-* Is the segment rolled up
+* Estimated total segment byte size in if it was stored in a 'flat format' (e.g. a csv file)
 * Segment id
+* Is the segment rolled up
+* Detailed per column information such as:
+  - type
+  - cardinality
+  - min/max values
+  - presence of null values
+  - estimated 'flat format' byte size
+
 
 ```json
 {
@@ -68,10 +71,10 @@ The format of the result is:
   "id" : "some_id",
   "intervals" : [ "2013-05-13T00:00:00.000Z/2013-05-14T00:00:00.000Z" ],
   "columns" : {
-    "__time" : { "type" : "LONG", "hasMultipleValues" : false, "size" : 407240380, "cardinality" : null, "errorMessage" : null },
-    "dim1" : { "type" : "STRING", "hasMultipleValues" : false, "size" : 100000, "cardinality" : 1944, "errorMessage" : null },
-    "dim2" : { "type" : "STRING", "hasMultipleValues" : true, "size" : 100000, "cardinality" : 1504, "errorMessage" : null },
-    "metric1" : { "type" : "FLOAT", "hasMultipleValues" : false, "size" : 100000, "cardinality" : null, "errorMessage" : null }
+    "__time" : { "type" : "LONG", "hasMultipleValues" : false, "hasNulls": false, "size" : 407240380, "cardinality" : null, "errorMessage" : null },
+    "dim1" : { "type" : "STRING", "hasMultipleValues" : false, "hasNulls": false, "size" : 100000, "cardinality" : 1944, "errorMessage" : null },
+    "dim2" : { "type" : "STRING", "hasMultipleValues" : true, "hasNulls": true, "size" : 100000, "cardinality" : 1504, "errorMessage" : null },
+    "metric1" : { "type" : "FLOAT", "hasMultipleValues" : false, "hasNulls": false, "size" : 100000, "cardinality" : null, "errorMessage" : null }
   },
   "aggregators" : {
     "metric1" : { "type" : "longSum", "name" : "metric1", "fieldName" : "metric1" }
@@ -84,14 +87,14 @@ The format of the result is:
 } ]
 ```
 
-Dimension columns will have type `STRING`.
-Metric columns will have type `FLOAT` or `LONG` or name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
+Dimension columns will have type `STRING`, `FLOAT`, `DOUBLE`, or `LONG`.
+Metric columns will have type `FLOAT`, `DOUBLE`, or `LONG`, or the name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
 Timestamp column will have type `LONG`.
 
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.
 
-Only columns which are dimensions (i.e., have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+Only columns which are dictionary encoded (i.e., have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
 
 ## intervals
 
@@ -141,8 +144,8 @@ Types of column analyses are described below:
 
 ### cardinality
 
-* `cardinality` in the result will return the estimated floor of cardinality for each column. Only relevant for
-dimension columns.
+* `cardinality` in the result will return the size of the bitmap index or dictionary encoding for string dimensions, or null for other dimension types.
+ If `merge` was set, the result will be the max of this value across segments. Only relevant for dimension columns.
 
 ### minmax
 

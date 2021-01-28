@@ -50,7 +50,7 @@ Expressions can contain variables. Variable names may contain letters, digits, '
 
 For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-[Multi-value string dimensions](../querying/multi-value-dimensions.html) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
 
 
 The following built-in functions are available.
@@ -72,12 +72,14 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |concat|concat(expr, expr...) concatenate a list of strings|
-|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.md#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |regexp_like|regexp_like(expr, pattern) returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. |
+|contains_string|contains_string(expr, string) returns whether `expr` contains `string` as a substring. This method is case-sensitive.|
+|icontains_string|contains_string(expr, string) returns whether `expr` contains `string` as a substring. This method is case-insensitive.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
 |right|right(expr, length) returns the rightmost length characters from a string|
@@ -104,8 +106,8 @@ The following built-in functions are available.
 |timestamp_floor|timestamp_floor(expr, period, \[origin, [timezone\]\]) rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_shift|timestamp_shift(expr, period, step, \[timezone\]) shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_extract|timestamp_extract(expr, unit, \[timezone\]) extracts a time part from expr, returning it as a number. Unit can be EPOCH (number of seconds since 1970-01-01 00:00:00 UTC), SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00"|
-|timestamp_parse|timestamp_parse(string expr, \[pattern, [timezone\]\]) parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If the pattern is not provided, this parses time strings in either ISO8601 or SQL format. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as nulls.|
-|timestamp_format|timestamp_format(expr, \[pattern, \[timezone\]\]) formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
+|timestamp_parse|timestamp_parse(string expr, \[pattern, [timezone\]\]) parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat). If the pattern is not provided, this parses time strings in either ISO8601 or SQL format. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as nulls.|
+|timestamp_format|timestamp_format(expr, \[pattern, \[timezone\]\]) formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
 
 ## Math functions
 
@@ -187,7 +189,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
 
-### Reduction functions
+## Reduction functions
 
 Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
 arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
@@ -212,3 +214,16 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+
+
+## Vectorization Support
+A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
+
+supported features:
+* constants and identifiers are supported for any column type
+* `cast` is supported for numeric and string types
+* math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
+* time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* other: `parse_long` is supported for numeric and string types

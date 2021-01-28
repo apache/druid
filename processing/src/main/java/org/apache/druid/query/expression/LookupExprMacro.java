@@ -26,10 +26,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class LookupExprMacro implements ExprMacroTable.ExprMacro
@@ -92,6 +94,13 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new LookupExpr(newArg));
+      }
+
+      @Nullable
+      @Override
+      public ExprType getOutputType(InputBindingInspector inspector)
+      {
+        return ExprType.STRING;
       }
 
       @Override

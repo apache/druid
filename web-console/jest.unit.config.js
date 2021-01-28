@@ -28,4 +28,7 @@ module.exports = Object.assign(common, {
   "setupFilesAfterEnv": [
     "<rootDir>src/setup-tests.ts"
   ],
+  "testMatch": [
+    "**/src/**/?(*.)+(spec).(ts|tsx)"
+  ],
 });

@@ -22,12 +22,14 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class TaskLocation
 {
   private static final TaskLocation UNKNOWN = new TaskLocation(null, -1, -1);
 
+  @Nullable
   private final String host;
   private final int port;
   private final int tlsPort;
@@ -44,7 +46,7 @@ public class TaskLocation
 
   @JsonCreator
   public TaskLocation(
-      @JsonProperty("host") String host,
+      @JsonProperty("host") @Nullable String host,
       @JsonProperty("port") int port,
       @JsonProperty("tlsPort") int tlsPort
   )
@@ -54,6 +56,7 @@ public class TaskLocation
     this.tlsPort = tlsPort;
   }
 
+  @Nullable
   @JsonProperty
   public String getHost()
   {
@@ -73,6 +76,16 @@ public class TaskLocation
   }
 
   @Override
+  public String toString()
+  {
+    return "TaskLocation{" +
+           "host='" + host + '\'' +
+           ", port=" + port +
+           ", tlsPort=" + tlsPort +
+           '}';
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -81,29 +94,13 @@ public class TaskLocation
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     TaskLocation that = (TaskLocation) o;
-
-    return port == that.port && tlsPort == that.tlsPort &&
-           Objects.equals(host, that.host);
+    return port == that.port && tlsPort == that.tlsPort && Objects.equals(host, that.host);
   }
 
   @Override
   public int hashCode()
   {
-    int result = host.hashCode();
-    result = 31 * result + port;
-    result = 31 * result + tlsPort;
-    return result;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "TaskLocation{" +
-           "host='" + host + '\'' +
-           ", port=" + port +
-           ", tlsPort=" + tlsPort +
-           '}';
+    return Objects.hash(host, port, tlsPort);
   }
 }

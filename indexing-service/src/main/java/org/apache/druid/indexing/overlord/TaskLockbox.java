@@ -146,7 +146,7 @@ public class TaskLockbox
         final TaskLock savedTaskLock = Preconditions.checkNotNull(taskAndLock.rhs, "savedTaskLock");
         if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
           // "Impossible", but you never know what crazy stuff can be restored from storage.
-          log.warn("WTF?! Got lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
+          log.warn("Ignoring lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
           continue;
         }
 
@@ -775,6 +775,25 @@ public class TaskLockbox
     }
   }
 
+  public void unlockAll(Task task)
+  {
+    giant.lock();
+    try {
+      for (final TaskLockPosse taskLockPosse : findLockPossesForTask(task)) {
+        unlock(
+            task,
+            taskLockPosse.getTaskLock().getInterval(),
+            taskLockPosse.getTaskLock().getGranularity() == LockGranularity.SEGMENT
+            ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
+            : null
+        );
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   public void add(Task task)
   {
     giant.lock();
@@ -798,15 +817,7 @@ public class TaskLockbox
     try {
       try {
         log.info("Removing task[%s] from activeTasks", task.getId());
-        for (final TaskLockPosse taskLockPosse : findLockPossesForTask(task)) {
-          unlock(
-              task,
-              taskLockPosse.getTaskLock().getInterval(),
-              taskLockPosse.getTaskLock().getGranularity() == LockGranularity.SEGMENT
-              ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
-              : null
-          );
-        }
+        unlockAll(task);
       }
       finally {
         activeTasks.remove(task.getId());

@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -33,15 +34,23 @@ import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -71,6 +80,7 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -158,6 +168,15 @@ public class QueryResourceTest
 
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
+  private static final DruidNode DRUID_NODE = new DruidNode(
+      "broker",
+      "localhost",
+      true,
+      8082,
+      null,
+      true,
+      false
+  );
 
   private QueryResource queryResource;
   private QueryScheduler queryScheduler;
@@ -178,7 +197,12 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+  }
+
+  private QueryResource createQueryResource(ResponseContextConfig responseContextConfig)
+  {
+    return new QueryResource(
         new QueryLifecycleFactory(
             WAREHOUSE,
             TEST_SEGMENT_WALKER,
@@ -186,17 +210,18 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
         queryScheduler,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory()
+        responseContextConfig,
+        DRUID_NODE
     );
   }
-
 
   @After
   public void tearDown()
@@ -215,6 +240,150 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
+  }
+
+  @Test
+  public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
+  {
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(overrideConfig)
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    final List<Result<TimeBoundaryResultValue>> responses = JSON_MAPPER.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(0, responses.size());
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
+    Assert.assertEquals(overrideConfigValue, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+  }
+
+  @Test
+  public void testGoodQueryWithQueryConfigDoesNotOverrideQueryContext() throws IOException
+  {
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(overrideConfig)
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    Response response = queryResource.doPost(
+        // SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY context has overrideConfigKey with value of -1
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    final List<Result<TimeBoundaryResultValue>> responses = JSON_MAPPER.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(0, responses.size());
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
+    Assert.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+  }
+
+  @Test
+  public void testTruncatedResponseContextShouldFail() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    final QueryResource queryResource = createQueryResource(ResponseContextConfig.forTest(true, 0));
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertEquals(1, queryResource.getInterruptedQueryCount());
+    Assert.assertNotNull(response);
+    Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatus());
+    final String expectedException = new QueryInterruptedException(
+        new TruncatedResponseContextException("Serialized response context exceeds the max size[0]"),
+        DRUID_NODE.getHostAndPortToUse()
+    ).toString();
+    Assert.assertEquals(
+        expectedException,
+        JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryInterruptedException.class).toString()
+    );
+  }
+
+  @Test
+  public void testTruncatedResponseContextShouldSucceed() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    final QueryResource queryResource = createQueryResource(ResponseContextConfig.forTest(false, 0));
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
   }
 
   @Test
@@ -326,7 +495,6 @@ public class QueryResourceTest
     EasyMock.verify(smileRequest);
   }
 
-
   @Test
   public void testBadQuery() throws IOException
   {
@@ -337,7 +505,29 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
-    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    QueryException e = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(BadJsonQueryException.ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(BadJsonQueryException.ERROR_CLASS, e.getErrorClass());
+  }
+
+  @Test
+  public void testResourceLimitExceeded() throws IOException
+  {
+    ByteArrayInputStream badQuery = EasyMock.createMock(ByteArrayInputStream.class);
+    EasyMock.expect(badQuery.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+            .andThrow(new ResourceLimitExceededException("You require too much of something"));
+    EasyMock.replay(badQuery, testServletRequest);
+    Response response = queryResource.doPost(
+        badQuery,
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    QueryException e = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(ResourceLimitExceededException.ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(ResourceLimitExceededException.class.getName(), e.getErrorClass());
   }
 
   @Test
@@ -356,13 +546,7 @@ public class QueryResourceTest
     );
     Assert.assertNotNull(response);
     Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
-    QueryUnsupportedException ex;
-    try {
-      ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryUnsupportedException.class);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    QueryException ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
     Assert.assertEquals(errorMessage, ex.getMessage());
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, ex.getErrorCode());
   }
@@ -416,14 +600,16 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            authMapper
+            authMapper,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory()
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
     );
 
 
@@ -462,6 +648,64 @@ public class QueryResourceTest
         "druid",
         testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get("identity")
     );
+  }
+
+  @Test
+  public void testQueryTimeoutException() throws Exception
+  {
+    final QuerySegmentWalker timeoutSegmentWalker = new QuerySegmentWalker()
+    {
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+      {
+        throw new QueryTimeoutException();
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+      {
+        return getQueryRunnerForIntervals(null, null);
+      }
+    };
+
+    final QueryResource timeoutQueryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            timeoutSegmentWalker,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+    expectPermissiveHappyPathAuth();
+    Response response = timeoutQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(QueryTimeoutException.STATUS_CODE, response.getStatus());
+    QueryTimeoutException ex;
+    try {
+      ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryTimeoutException.class);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    Assert.assertEquals("Query Timed Out!", ex.getMessage());
+    Assert.assertEquals(QueryTimeoutException.ERROR_CODE, ex.getErrorCode());
+    Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
+
   }
 
   @Test(timeout = 60_000L)
@@ -530,14 +774,16 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            authMapper
+            authMapper,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory()
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -652,14 +898,16 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            authMapper
+            authMapper,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory()
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -909,14 +1157,16 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
         scheduler,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory()
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
     );
   }
 

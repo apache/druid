@@ -26,18 +26,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.util.Map;
 
-public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
+public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
   private static final String TYPE = "index_kinesis";
 
@@ -51,11 +48,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
   )
   {
     super(
@@ -65,27 +58,19 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         tuningConfig,
         ioConfig,
         context,
-        chatHandlerProvider,
-        authorizerMapper,
-        rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
-        appenderatorsManager
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
   @Override
-  protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new KinesisIndexTaskRunner(
         this,
         dataSchema.getParser(),
         authorizerMapper,
-        chatHandlerProvider,
-        savedParseExceptions,
-        rowIngestionMetersFactory,
-        appenderatorsManager,
         lockGranularityToUse
     );
   }

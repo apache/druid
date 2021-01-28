@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -37,6 +38,7 @@ import org.apache.druid.client.SingleServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -103,12 +105,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
   private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
-  private boolean serverAddedCountExpected = true;
 
   @Before
   public void setUp() throws Exception
   {
-    serverAddedCountExpected = true;
     druidServer = EasyMock.createMock(DruidServer.class);
     serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
@@ -189,7 +189,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -215,7 +215,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 
@@ -385,7 +386,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidServer
     );
     assignSegmentLatch.await();
-    Assert.assertTrue(serverAddedCountExpected);
 
     final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
     serviceEmitter.latch = coordinatorRunLatch;
@@ -486,7 +486,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(1, pathChildrenCacheCold, dataSegments, coldServer);
     assignSegmentLatchHot.await();
     assignSegmentLatchCold.await();
-    Assert.assertTrue(serverAddedCountExpected);
 
     final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
     serviceEmitter.latch = coordinatorRunLatch;
@@ -646,7 +645,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     assignSegmentLatchBroker1.await();
     assignSegmentLatchBroker2.await();
     assignSegmentLatchPeon.await();
-    Assert.assertTrue(serverAddedCountExpected);
 
     final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
     serviceEmitter.latch = coordinatorRunLatch;
@@ -670,6 +668,75 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.verify(metadataRuleManager);
   }
 
+  @Test
+  public void testBalancerThreadNumber()
+  {
+    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
+
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(dynamicConfig)).anyTimes();
+
+    ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
+    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
+
+    DruidCoordinator c = new DruidCoordinator(
+        null,
+        null,
+        configManager,
+        null,
+        null,
+        null,
+        () -> null,
+        null,
+        scheduledExecutorFactory,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        ZkEnablementConfig.ENABLED
+    );
+
+    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0, "TEST");
+    // before initialization
+    Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
+    Assert.assertNull(c.getBalancerExec());
+
+    // first initialization
+    duty.initBalancerExecutor();
+    System.out.println("c.getCachedBalancerThreadNumber(): " + c.getCachedBalancerThreadNumber());
+    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService firstExec = c.getBalancerExec();
+    Assert.assertNotNull(firstExec);
+
+    // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
+    duty.initBalancerExecutor();
+    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService secondExec = c.getBalancerExec();
+    Assert.assertNotNull(secondExec);
+    Assert.assertTrue(firstExec == secondExec);
+
+    // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
+    duty.initBalancerExecutor();
+    Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService thirdExec = c.getBalancerExec();
+    Assert.assertNotNull(thirdExec);
+    Assert.assertFalse(secondExec == thirdExec);
+    Assert.assertFalse(firstExec == thirdExec);
+  }
+
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,
                                                                                       PathChildrenCache pathChildrenCache,
                                                                                       Map<String, DataSegment> segments,
@@ -679,16 +746,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
     pathChildrenCache.getListenable().addListener(
         (CuratorFramework client, PathChildrenCacheEvent event) -> {
           if (CuratorUtils.isChildAdded(event)) {
-            if (countDownLatch.getCount() > 0) {
-              DataSegment segment = findSegmentRelatedToCuratorEvent(segments, event);
-              if (segment != null) {
+            DataSegment segment = findSegmentRelatedToCuratorEvent(segments, event);
+            if (segment != null && server.getSegment(segment.getId()) == null) {
+              if (countDownLatch.getCount() > 0) {
                 server.addDataSegment(segment);
                 curator.delete().guaranteed().forPath(event.getData().getPath());
+                countDownLatch.countDown();
+              } else {
+                Assert.fail("The segment path " + event.getData().getPath() + " is not expected");
               }
-              countDownLatch.countDown();
-            } else {
-              // The segment is assigned to the server more times than expected
-              serverAddedCountExpected = false;
             }
           }
         }

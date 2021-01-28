@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import net.jpountz.lz4.LZ4BlockInputStream;
@@ -98,6 +99,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.keyObjComparator = keySerdeFactory.objectComparator(false);
     this.defaultOrderKeyObjComparator = keySerdeFactory.objectComparator(true);
     if (limitSpec != null) {
+      // Sanity check; must not have "offset" at this point.
+      Preconditions.checkState(!limitSpec.isOffset(), "Cannot push down offsets");
+
       LimitedBufferHashGrouper<KeyType> limitGrouper = new LimitedBufferHashGrouper<>(
           bufferSupplier,
           keySerde,

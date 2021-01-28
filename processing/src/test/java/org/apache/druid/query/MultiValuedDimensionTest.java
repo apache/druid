@@ -63,6 +63,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -140,10 +141,10 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   @Before
   public void setup() throws Exception
   {
-    incrementalIndex = new IncrementalIndex.Builder()
+    incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(5000)
-        .buildOnheap();
+        .build();
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
@@ -183,10 +184,10 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         "UTF-8"
     );
 
-    incrementalIndexNullSampler = new IncrementalIndex.Builder()
+    incrementalIndexNullSampler = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(5000)
-        .buildOnheap();
+        .build();
 
     String[] rowsNullSampler = new String[]{
         "{\"time\":\"2011-01-13T00:00:00.000Z\",\"product\":\"product_1\",\"tags\":[],\"othertags\":[\"u1\", \"u2\"]}",
@@ -606,9 +607,16 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3t3", "count", 4L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t5t5", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t4t4", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7t7", "count", 2L)
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
+            "1970",
+            "texpr",
+            NullHandling.emptyToNullIfNeeded(""),
+            "count",
+            2L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t2", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto-self");

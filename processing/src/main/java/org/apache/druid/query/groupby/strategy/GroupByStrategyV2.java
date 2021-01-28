@@ -33,6 +33,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -40,9 +41,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.InsufficientResourcesException;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -62,6 +62,7 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
@@ -89,7 +90,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
-  private final Supplier<QueryConfig> queryConfigSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
@@ -99,7 +99,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByStrategyV2(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
-      Supplier<QueryConfig> queryConfigSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
       @Smile ObjectMapper spillMapper,
@@ -108,7 +107,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     this.processingConfig = processingConfig;
     this.configSupplier = configSupplier;
-    this.queryConfigSupplier = queryConfigSupplier;
     this.bufferPool = bufferPool;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
@@ -136,7 +134,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
         mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
       }
       if (mergeBufferHolders.isEmpty()) {
-        throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
+        throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
+            StringUtils.format(
+                "Cannot acquire %s merge buffers. Try again after current running queries are finished.",
+                requiredMergeBufferNum
+            )
+        );
       } else {
         return new GroupByQueryResource(mergeBufferHolders);
       }
@@ -225,7 +228,11 @@ public class GroupByStrategyV2 implements GroupByStrategy
         query.getPostAggregatorSpecs(),
         // Don't do "having" clause until the end of this method.
         null,
-        query.getLimitSpec(),
+        // Potentially pass limit down the stack (i.e. limit pushdown). Notes:
+        //   (1) Limit pushdown is only supported for DefaultLimitSpec.
+        //   (2) When pushing down a limit, it must be extended to include the offset (the offset will be applied
+        //       higher-up).
+        query.isApplyLimitPushDown() ? ((DefaultLimitSpec) query.getLimitSpec()).withOffsetToLimit() : null,
         query.getSubtotalsSpec(),
         query.getContext()
     ).withOverriddenContext(
@@ -390,7 +397,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
 
       List<String> queryDimNames = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
-                                                 .collect(Collectors.toList());
+                                                    .collect(Collectors.toList());
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;
@@ -404,27 +411,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // Iterate through each subtotalSpec, build results for it and add to subtotalsResults
       for (List<String> subtotalSpec : subtotals) {
         final ImmutableSet<String> dimsInSubtotalSpec = ImmutableSet.copyOf(subtotalSpec);
+        // Dimension spec including dimension name and output name
+        final List<DimensionSpec> subTotalDimensionSpec = new ArrayList<>(dimsInSubtotalSpec.size());
         final List<DimensionSpec> dimensions = query.getDimensions();
-        final List<DimensionSpec> newDimensions = new ArrayList<>();
 
-        for (int i = 0; i < dimensions.size(); i++) {
-          DimensionSpec dimensionSpec = dimensions.get(i);
+        for (DimensionSpec dimensionSpec : dimensions) {
           if (dimsInSubtotalSpec.contains(dimensionSpec.getOutputName())) {
-            newDimensions.add(
-                new DefaultDimensionSpec(
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputType()
-                )
-            );
-          } else {
-            // Insert dummy dimension so all subtotals queries have ResultRows with the same shape.
-            // Use a field name that does not appear in the main query result, to assure the result will be null.
-            String dimName = "_" + i;
-            while (query.getResultRowSignature().indexOf(dimName) >= 0) {
-              dimName = "_" + dimName;
-            }
-            newDimensions.add(DefaultDimensionSpec.of(dimName));
+            subTotalDimensionSpec.add(dimensionSpec);
           }
         }
 
@@ -438,15 +431,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
 
         GroupByQuery subtotalQuery = baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec)
-            .withDimensionSpecs(newDimensions);
+            .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subtotalSpec, subtotalQuery, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -458,7 +450,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
               baseSubtotalQuery,
               subtotalQuery,
-              resultSupplierOneFinal.results(subtotalSpec),
+              resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
               resource,
               spillMapper,
@@ -467,7 +459,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subtotalSpec, subtotalQuery, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
           );
         }
       }
@@ -485,7 +477,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
-      List<String> dimsToInclude,
+      List<DimensionSpec> dimsToInclude,
       GroupByQuery subtotalQuery,
       boolean closeOnSequenceRead
   )
@@ -574,8 +566,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         query,
         storageAdapter,
         bufferPool,
-        configSupplier.get().withOverrides(query),
-        queryConfigSupplier.get().withOverrides(query)
+        configSupplier.get().withOverrides(query)
     );
   }
 

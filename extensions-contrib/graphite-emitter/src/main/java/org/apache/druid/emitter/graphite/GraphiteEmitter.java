@@ -99,7 +99,7 @@ public class GraphiteEmitter implements Emitter
   public void emit(Event event)
   {
     if (!started.get()) {
-      throw new ISE("WTF emit was called while service is not started yet");
+      throw new ISE("Emit called unexpectedly before service start");
     }
     if (event instanceof ServiceMetricEvent) {
       final GraphiteEvent graphiteEvent = graphiteEventConverter.druidEventToGraphite((ServiceMetricEvent) event);
@@ -152,14 +152,14 @@ public class GraphiteEmitter implements Emitter
     {
       if (graphiteEmitterConfig.getProtocol().equals(GraphiteEmitterConfig.PLAINTEXT_PROTOCOL)) {
         graphite = new Graphite(
-          graphiteEmitterConfig.getHostname(),
-          graphiteEmitterConfig.getPort()
+            graphiteEmitterConfig.getHostname(),
+            graphiteEmitterConfig.getPort()
         );
       } else {
         graphite = new PickledGraphite(
-          graphiteEmitterConfig.getHostname(),
-          graphiteEmitterConfig.getPort(),
-          graphiteEmitterConfig.getBatchSize()
+            graphiteEmitterConfig.getHostname(),
+            graphiteEmitterConfig.getPort(),
+            graphiteEmitterConfig.getBatchSize()
         );
       }
       log.info("Using %s protocol.", graphiteEmitterConfig.getProtocol());

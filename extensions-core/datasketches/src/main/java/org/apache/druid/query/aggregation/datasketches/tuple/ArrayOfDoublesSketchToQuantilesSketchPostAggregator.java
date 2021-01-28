@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -41,11 +42,10 @@ import java.util.Objects;
  * The column number is optional (the default is 1).
  * The parameter k is optional (the default is defined in the sketch library).
  * The result is a quantiles sketch.
- * See <a href=https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html>Quantiles Sketch Overview</a>
+ * See <a href=https://datasketches.apache.org/docs/Quantiles/QuantilesOverview.html>Quantiles Sketch Overview</a>
  */
 public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
-
   private static final int DEFAULT_QUANTILES_SKETCH_SIZE = 128;
 
   private final int column;
@@ -82,6 +82,25 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
     return qs;
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .appendInt(column)
+        .appendInt(k)
+        .build();
+  }
+
+  /**
+   * actual type is {@link DoublesSketch}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
   @JsonProperty
   public int getColumn()
   {
@@ -106,22 +125,20 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     if (!super.equals(o)) {
       return false;
     }
-    if (!(o instanceof ArrayOfDoublesSketchToQuantilesSketchPostAggregator)) {
-      return false;
-    }
-    final ArrayOfDoublesSketchToQuantilesSketchPostAggregator that = (ArrayOfDoublesSketchToQuantilesSketchPostAggregator) o;
-    if (column != that.column) {
-      return false;
-    }
-    if (k != that.k) {
-      return false;
-    }
-    return true;
+    ArrayOfDoublesSketchToQuantilesSketchPostAggregator that = (ArrayOfDoublesSketchToQuantilesSketchPostAggregator) o;
+    return column == that.column &&
+           k == that.k;
   }
 
   @Override
@@ -129,15 +146,4 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
   {
     return Objects.hash(super.hashCode(), column, k);
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_CACHE_TYPE_ID)
-        .appendCacheable(getField())
-        .appendInt(column)
-        .appendInt(k)
-        .build();
-  }
-
 }

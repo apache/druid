@@ -37,7 +37,7 @@ Integration Testing Using Docker
 Before starting, if you don't already have docker on your machine, install it as described on 
 [Docker installation instructions](https://docs.docker.com/install/). Ensure that you 
 have at least 4GB of memory allocated to the docker engine. (You can verify it 
-under Preferences > Advanced.)
+under Preferences > Resources > Advanced.)
 
 Also set the `DOCKER_IP`
 environment variable to localhost on your system, as follows:
@@ -66,61 +66,89 @@ Integration tests can also be run with either Java 8 or Java 11 by adding -Djvm.
 can either be 8 or 11.
 
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
-The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
+The file must contain one property per line, the key must start with `druid_` and the format should be snake case.
+Note that when bringing up docker containers through mvn and -Doverride.config.path is provided, additional
+Druid routers for security group integration test (permissive tls, no client auth tls, custom check tls) will not be started.   
 
 ## Docker compose
 
-Docker compose yamls located in "docker" folder
+There are a few different Docker compose yamls located in "docker" folder. Before you can run any of these, you must
+build the Docker images. See "Manually bringing up Docker containers and running tests" below.
 
 docker-compose.base.yml - Base file that defines all containers for integration test
 
-docker-compose.yml - Defines minimal Druid cluster that can be used for non cluster tests
-    
-    docker-compose -f docker-compose.yml up
-    // DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
-    DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
+docker-compose.yml - Defines Druid cluster with default configuration that is used for running integration tests in Travis CI.
 
-docker-compose.override-env.yml - the same configuration as docker-compose.yml + override-env variable that needed to run cloud tests 
+```
+docker-compose -f docker-compose.yml up
+// DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
+DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
+```
 
-    // OVERRIDE_ENV - variable that must contains path to Druid configuration file 
-    OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
-    
+docker-compose.override-env.yml - Defines Druid cluster with default configuration plus any additional and/or overriden configurations from override-env file.
+
+```
+// OVERRIDE_ENV - variable that must contains path to Druid configuration file
+OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
+```
+
+docker-compose.security.yml - Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively. 
+This is meant to be use together with docker-compose.yml or docker-compose.override-env.yml and is only needed for the "security" group integration test. 
+
+```
+docker-compose -f docker-compose.yml -f docker-compose.security.yml up
+```
+
 docker-compose.druid-hadoop.yml - for starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial
 
-    docker-compose -f docker-compose.druid-hadoop.yml up
+```
+docker-compose -f docker-compose.druid-hadoop.yml up
+```
 
-## Manual bringing up docker containers and running tests
+## Manually bringing up Docker containers and running tests
 
 1. Build druid-cluster, druid-hadoop docker images. From root module run maven command:
 ```
-mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true
+mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true -Ddocker.build.hadoop=true
 ```
 
 2. Run druid cluster by docker-compose:
 
 ```
-- Basic Druid cluster:
+# Basic Druid cluster (skip this if running Druid cluster with override configs):
 docker-compose -f integration-tests/docker/docker-compose.yml up
-- Druid cluster with override env for cloud integration tests:
+
+# Druid cluster with override configs (skip this if running Basic Druid cluster):
 OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up
-- Druid hadoop:
+
+# Druid hadoop (if needed):
 docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up
+
+# Druid routers for security group integration test (if needed):
+docker-compose -f ${DOCKERDIR}/docker-compose.security.yml up
 ```
 
 3. Run maven command to execute tests with -Ddocker.build.skip=true -Ddocker.run.skip=true
+
+For example:
+
+```
+mvn verify -P integration-tests -pl integration-tests -Dit.test=ITIndexerTest -Ddocker.build.skip=true -Ddocker.run.skip=true
+```
 
 ## Tips & tricks for debugging and developing integration tests
 
 ### Useful mvn command flags
 
-- -Ddocker.build.skip=true to skip build druid containers. 
-If you do not apply any change to druid then you can do not rebuild druid. 
-This can save ~4 minutes to build druid cluster and druid hadoop.
+- -Ddocker.build.skip=true to skip building the containers.
+If you do not apply any change to Druid then you skip rebuilding the containers. This can save ~4 minutes.
 You need to build druid containers only once, after you can skip docker build step. 
 - -Ddocker.run.skip=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
 up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
 these containers already running if using this flag. Additionally, please make sure that the running containers
-are in the same state that the setup script (run_cluster.sh) would have brought it up in. 
+are in the same state that the setup script (run_cluster.sh) would have brought it up in.
+- -Ddocker.build.hadoop=true to build the hadoop image when either running integration tests or when building the integration test docker images without running the tests.
+- -Dstart.hadoop.docker=true to start hadoop container when you need to run IT tests that utilize local hadoop docker
 
 ### Debugging Druid while running tests
 
@@ -196,7 +224,7 @@ To run tests on any druid cluster that is already running, create a configuratio
        "middlemanager_host": "<middle_manager_ip>",
        "zookeeper_hosts": "<comma-separated list of zookeeper_ip:zookeeper_port>",
        "cloud_bucket": "<(optional) cloud_bucket for test data if running cloud integration test>",
-       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>",
+       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>"
     }
 
 Set the environment variable `CONFIG_FILE` to the name of the configuration file:
@@ -257,7 +285,7 @@ of the integration test run discussed above.  This is because druid
 test clusters might not, in general, have access to hadoop.
 This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage. 
 To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
-1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. 
+1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. If you have not already built the hadoop image, you will also need to add -Ddocker.build.hadoop=true to the mvn command.
 2) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
 
 Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with 
@@ -270,18 +298,28 @@ credentials/configs may need to be set in the same file as your Druid's Hadoop c
 If you are running ITHadoopIndexTest with your own Druid + Hadoop cluster, please follow the below steps:
 - Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
   located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
-- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
-  at /batch_index/tsv/
+- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
+  at /batch_index/hadoop_tsv/
 If using the Docker-based Hadoop container, the steps above are automatically done by the integration tests.
 
 When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.
 
-Run the test using mvn (using the bundled Docker-based Hadoop cluster):
+Option 1: Run the test using mvn (using the bundled Docker-based Hadoop cluster and building docker images at runtime):
 ```
-  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.hadoop=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
 ```
 
-Run the test using mvn (using config file for existing Hadoop cluster):
+Option 2: Run the test using mvn (using the bundled Docker-based hadoop cluster and not building images at runtime):
+```
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.skip=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+```
+
+Option 3: Run the test using mvn (using the bundled Docker-based hadoop cluster and when you have already started all containers)
+```
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Ddocker.run.skip=true -Ddocker.build.skip=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+```
+
+Option 4: Run the test using mvn (using config file for existing Hadoop cluster):
 ```
   mvn verify -P int-tests-config-file -Dit.test=ITHadoopIndexTest -Dextra.datasource.name.suffix=''
 ```
@@ -361,14 +399,29 @@ This will tell the test framework that the test class needs to be constructed us
 Refer ITIndexerTest as an example on how to use dependency Injection
 
 ### Running test methods in parallel
+
 By default, test methods in a test class will be run in sequential order one at a time. Test methods for a given test 
 class can be set to run in parallel (multiple test methods of each class running at the same time) by excluding
 the given class/package from the "AllSerializedTests" test tag section and including it in the "AllParallelizedTests" 
 test tag section in integration-tests/src/test/resources/testng.xml. TestNG uses two parameters, i.e.,
-`thread-count` and `data-provider-thread-count`, for parallel test execution, which are set to 2 for Druid integration tests.
+`thread-count` and `data-provider-thread-count`, for parallel test execution, which are both set to 2 for Druid integration tests.
+For test using parallel execution with data provider, you will also need to set `@DataProvider(parallel = true)`
+on your data provider method in your test class. Note that for test using parallel execution with data provider, the test
+class does not need to be in the "AllParallelizedTests" test tag section and if it is in the "AllParallelizedTests" 
+test tag section it will actually be run with `thread-count` times `data-provider-thread-count` threads.
 You may want to modify those values for faster execution.
 See https://testng.org/doc/documentation-main.html#parallel-running and https://testng.org/doc/documentation-main.html#parameters-dataproviders for details.
 Please be mindful when adding tests to the "AllParallelizedTests" test tag that the tests can run in parallel with
 other tests from the same class at the same time. i.e. test does not modify/restart/stop the druid cluster or other dependency containers,
 test does not use excessive memory starving other concurent task, test does not modify and/or use other task, 
 supervisor, datasource it did not create. 
+
+### Limitation of Druid cluster in Travis environment
+
+By default, integration tests are run in Travis environment on commits made to open PR. These integration test jobs are
+required to pass for a PR to be elligible to be merged. Here are known issues and limitations to the Druid docker cluster
+running in Travis machine that may cause the tests to fail:
+- Number of concurrent running tasks. Although the default Druid cluster config sets the maximum number of tasks (druid.worker.capacity) to 10,
+the actual maximum can be lower depending on the type of the tasks. For example, running 2 range partitioning compaction tasks with 2 subtasks each 
+(for a total of 6 tasks) concurrently can cause the cluster to intermittently fail. This can cause the Travis job to become stuck until it timeouts (50 minutes) 
+and/or terminates after 10 mins of not receiving new output.

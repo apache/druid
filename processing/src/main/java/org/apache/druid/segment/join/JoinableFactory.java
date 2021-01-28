@@ -26,7 +26,8 @@ import java.util.Optional;
 /**
  * Utility for creating {@link Joinable} objects.
  *
- * @see org.apache.druid.guice.DruidBinders#joinableFactoryBinder to register factories
+ * @see org.apache.druid.guice.DruidBinders#joinableFactoryMultiBinder to register factories
+ * @see org.apache.druid.guice.DruidBinders#joinableMappingBinder to register factory types with datasource types
  */
 public interface JoinableFactory
 {
@@ -42,8 +43,19 @@ public interface JoinableFactory
    *
    * @param dataSource the datasource to join on
    * @param condition  the condition to join on
-   *
    * @return a Joinable if this datasource + condition combo is joinable; empty if not
    */
   Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition);
+
+  /**
+   * Compute the cache key for a data source participating in join operation. This is done separately from {{@link #build(DataSource, JoinConditionAnalysis)}}
+   * which can be an expensive operation and can potentially be avoided if cached results can be used.
+   *
+   * @param dataSource the datasource to join on
+   * @param condition  the condition to join on
+   */
+  default Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
+  {
+    return Optional.empty();
+  }
 }

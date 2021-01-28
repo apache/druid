@@ -23,7 +23,7 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.vector.TrueVectorMatcher;
+import org.apache.druid.query.filter.vector.BooleanVectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class TrueFilter implements Filter
 {
@@ -57,13 +58,13 @@ public class TrueFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    return TrueValueMatcher.instance();
+    return BooleanValueMatcher.of(true);
   }
 
   @Override
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
-    return new TrueVectorMatcher(factory.getVectorSizeInspector());
+    return BooleanVectorValueMatcher.of(factory.getReadableVectorInspector(), true);
   }
 
   @Override

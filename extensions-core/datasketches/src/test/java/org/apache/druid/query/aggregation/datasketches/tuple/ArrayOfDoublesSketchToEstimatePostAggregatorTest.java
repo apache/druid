@@ -19,57 +19,128 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
+
 public class ArrayOfDoublesSketchToEstimatePostAggregatorTest
 {
-
   @Test
-  public void equalsAndHashCode()
+  public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator postAgg1 = new ArrayOfDoublesSketchToEstimatePostAggregator(
+    final PostAggregator there = new ArrayOfDoublesSketchToEstimatePostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
-    @SuppressWarnings("ObjectEqualsNull")
-    final boolean equalsNull = postAgg1.equals(null);
-    Assert.assertFalse(equalsNull);
-    @SuppressWarnings({"EqualsWithItself", "SelfEquals"})
-    final boolean equalsSelf = postAgg1.equals(postAgg1); 
-    Assert.assertTrue(equalsSelf);
-    Assert.assertEquals(postAgg1.hashCode(), postAgg1.hashCode());
-
-    // equals
-    final PostAggregator postAgg2 = new ArrayOfDoublesSketchToEstimatePostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0)
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    ArrayOfDoublesSketchToEstimatePostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        ArrayOfDoublesSketchToEstimatePostAggregator.class
     );
-    Assert.assertTrue(postAgg1.equals(postAgg2));
-    Assert.assertEquals(postAgg1.hashCode(), postAgg2.hashCode());
 
-    // same class, different field
-    final PostAggregator postAgg3 = new ArrayOfDoublesSketchToEstimatePostAggregator(
-        "a",
-        new ConstantPostAggregator("", 1)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg3));
-
-    // same class, different name
-    final PostAggregator postAgg4 = new ArrayOfDoublesSketchToEstimatePostAggregator(
-        "b",
-        new ConstantPostAggregator("", 0)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg4));
-
-    // different class, same parent, also not overriding equals and hashCode
-    final PostAggregator postAgg5 = new ArrayOfDoublesSketchToStringPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg5));
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
+  @Test
+  public void testToString()
+  {
+    PostAggregator postAgg = new ArrayOfDoublesSketchToEstimatePostAggregator(
+        "a",
+        new ConstantPostAggregator("", 0)
+    );
+
+    Assert.assertEquals(
+        "ArrayOfDoublesSketchToEstimatePostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testComparator()
+  {
+    ArrayOfDoublesUpdatableSketch s1 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
+                                                                                 .setNumberOfValues(2)
+                                                                                 .build();
+
+    s1.update("foo", new double[]{1.0, 2.0});
+    ArrayOfDoublesUpdatableSketch s2 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
+                                                                                 .setNumberOfValues(2)
+                                                                                 .build();
+    s2.update("foo", new double[]{2.0, 2.0});
+    s2.update("bar", new double[]{3.0, 4.0});
+    PostAggregator field1 = EasyMock.createMock(PostAggregator.class);
+    EasyMock.expect(field1.compute(EasyMock.anyObject(Map.class))).andReturn(s1).anyTimes();
+    PostAggregator field2 = EasyMock.createMock(PostAggregator.class);
+    EasyMock.expect(field2.compute(EasyMock.anyObject(Map.class))).andReturn(s2).anyTimes();
+    EasyMock.replay(field1, field2);
+
+    final ArrayOfDoublesSketchToEstimatePostAggregator postAgg1 = new ArrayOfDoublesSketchToEstimatePostAggregator(
+        "a",
+        field1
+    );
+    final ArrayOfDoublesSketchToEstimatePostAggregator postAgg2 = new ArrayOfDoublesSketchToEstimatePostAggregator(
+        "a",
+        field2
+    );
+    // estimate1 is 1.0, estimate2 is 2.0
+    Double estimate1 = postAgg1.compute(ImmutableMap.of());
+    Double estimate2 = postAgg2.compute(ImmutableMap.of());
+    Assert.assertEquals(-1, postAgg1.getComparator().compare(estimate1, estimate2));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ArrayOfDoublesSketchToEstimatePostAggregator.class)
+                  .withNonnullFields("name", "field")
+                  .withIgnoredFields("dependentFields")
+                  .usingGetClass()
+                  .verify();
+  }
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count")
+              )
+              .postAggregators(
+                  new ArrayOfDoublesSketchToEstimatePostAggregator(
+                      "a",
+                      new ConstantPostAggregator("", 0)
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ValueType.LONG)
+                    .add("a", ValueType.DOUBLE)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
+  }
 }

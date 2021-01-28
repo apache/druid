@@ -78,11 +78,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     super(dataSource, querySegmentSpec, descending, context, granularity);
 
+    // The below should be executed after context is initialized.
+    final String timestampField = getTimestampResultField();
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
-        ImmutableList.of(),
+        timestampField == null ? ImmutableList.of() : ImmutableList.of(timestampField),
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );

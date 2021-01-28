@@ -26,6 +26,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
@@ -38,7 +39,8 @@ import java.util.function.Function;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
 {
-  // The task specs here use the MaxSizeSplitHintSpec with maxSplitSize of 1. This is to create splits per file.
+  // This ingestion spec has a splitHintSpec of maxSplitSize of 1 to test whether or not the task can handle
+  // maxSplitSize of 1 properly.
   private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
@@ -51,7 +53,8 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
   public static Object[][] resources()
   {
     return new Object[][]{
-        {new HashedPartitionsSpec(null, 2, null)},
+        {new HashedPartitionsSpec(null, 2, null, HashPartitionFunction.MURMUR3_32_ABS)},
+        {new HashedPartitionsSpec(null, 2, null, null)},
         {new SingleDimensionPartitionsSpec(2, null, "namespace", false)}
     };
   }
