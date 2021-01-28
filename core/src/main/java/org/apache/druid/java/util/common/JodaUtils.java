@@ -19,15 +19,16 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -50,7 +51,7 @@ public class JodaUtils
    * @param intervals The Iterable object containing the intervals to condense
    * @return The condensed intervals
    */
-  public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
+  public static List<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
     final SortedSet<Interval> sortedIntervals;
 
@@ -62,31 +63,8 @@ public class JodaUtils
         sortedIntervals.add(interval);
       }
     }
-    return condenseIntervals(sortedIntervals.iterator());
+    return ImmutableList.copyOf(condensedIntervalsIterator(sortedIntervals.iterator()));
   }
-
-  /**
-   * This method does not materialize the intervals represented by the
-   * sortedIntervals iterator. However, caller needs to insure that sortedIntervals
-   * is already sorted in ascending order (use the Comparators.intervalsByStartThenEnd()).
-   * It avoids materialization by incrementally condensing the intervals by
-   * starting from the first and looking for "adjacent" intervals. This is
-   * possible since intervals in the Iterator are in ascending order (as
-   * guaranteed by the caller).
-   * <p>
-   * *
-   *
-   * @param sortedIntervals The iterator object containing the intervals to condense
-   * @return The condensed intervals. By construction the condensed intervals are sorted
-   * in ascending order and contain no repeated elements. The iterator can contain nulls
-   * but they will be skipped if it does.
-   * @throws IllegalArgumentException if sortedIntervals is not sorted in ascending order
-   */
-  public static ArrayList<Interval> condenseIntervals(Iterator<Interval> sortedIntervals)
-  {
-    return Lists.newArrayList(condensedIntervalsIterator(sortedIntervals));
-  }
-
 
   /**
    * This method does not materialize the intervals represented by the
@@ -103,7 +81,7 @@ public class JodaUtils
    * @return An iterator for the condensed intervals. By construction the condensed intervals are sorted
    * in ascending order and contain no repeated elements. The iterator can contain nulls,
    * they will be skipped if it does.
-   * @throws IllegalArgumentException if sortedIntervals is not sorted in ascending order
+   * @throws IAE if an element is null or if sortedIntervals is not sorted in ascending order
    */
   public static Iterator<Interval> condensedIntervalsIterator(Iterator<Interval> sortedIntervals)
   {
@@ -120,10 +98,6 @@ public class JodaUtils
       @Override
       public boolean hasNext()
       {
-        // throw away nulls:
-        while (peekingIterator.hasNext() && peekingIterator.peek() == null) {
-          peekingIterator.next();
-        }
         return peekingIterator.hasNext();
       }
 
@@ -135,6 +109,10 @@ public class JodaUtils
         }
 
         Interval currInterval = peekingIterator.next();
+        if (currInterval == null) {
+          throw new IAE("Element of intervals is null");
+        }
+
         // check sorted ascending:
         verifyAscendingSortOrder(previous, currInterval);
 
@@ -142,6 +120,9 @@ public class JodaUtils
 
         while (hasNext()) {
           Interval next = peekingIterator.peek();
+          if (next == null) {
+            throw new IAE("Element of intervals is null");
+          }
 
           if (currInterval.abuts(next)) {
             currInterval = new Interval(currInterval.getStart(), next.getEnd());

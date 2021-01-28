@@ -92,7 +92,7 @@ public class IntervalsByGranularityTest
     );
     Assert.assertEquals(
         ImmutableList.of(Intervals.of("2012-01-01T00Z/2013-01-01T00Z")),
-        JodaUtils.condenseIntervals(intervals.granularityIntervalsIterator())
+        ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.granularityIntervalsIterator()))
     );
   }
 

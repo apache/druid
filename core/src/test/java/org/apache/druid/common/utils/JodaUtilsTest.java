@@ -19,6 +19,7 @@
 
 package org.apache.druid.common.utils;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -111,7 +112,7 @@ public class JodaUtilsTest
     );
     intervals.sort(Comparators.intervalsByStartThenEnd());
 
-    List<Interval> actual = JodaUtils.condenseIntervals(intervals.iterator());
+    List<Interval> actual = ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()));
     Assert.assertEquals(
         Arrays.asList(
             Intervals.of("2011-01-01/2011-01-03"),
@@ -143,12 +144,12 @@ public class JodaUtilsTest
         Collections.singletonList(
             Intervals.of("2011-01-01/2015-01-19")
         ),
-        JodaUtils.condenseIntervals(intervals.iterator())
+        ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()))
     );
   }
 
-  @Test
-  public void testCondenseIntervalsSimplSortedIteratorOverlappingWithNulls()
+  @Test(expected = IAE.class)
+  public void testCondenseIntervalsSimplSortedIteratorOverlappingWithNullsShouldThrow()
   {
     List<Interval> intervals = Arrays.asList(
         Intervals.of("2011-01-02/2011-02-03"),
@@ -158,17 +159,11 @@ public class JodaUtilsTest
         Intervals.of("2011-04-01/2015-01-19"),
         null
     );
-
-    Assert.assertEquals(
-        Collections.singletonList(
-            Intervals.of("2011-01-02/2015-01-19")
-        ),
-        JodaUtils.condenseIntervals(intervals.iterator())
-    );
+    ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()));
   }
 
-  @Test
-  public void testCondenseIntervalsSimplSortedIteratorOverlappingWithNullFirstAndLast()
+  @Test(expected = IAE.class)
+  public void testCondenseIntervalsSimplSortedIteratorOverlappingWithNullFirstAndLastshouldThrow()
   {
     List<Interval> intervals = Arrays.asList(
         null,
@@ -178,13 +173,7 @@ public class JodaUtilsTest
         Intervals.of("2011-04-01/2015-01-19"),
         null
     );
-
-    Assert.assertEquals(
-        Collections.singletonList(
-            Intervals.of("2011-01-02/2015-01-19")
-        ),
-        JodaUtils.condenseIntervals(intervals.iterator())
-    );
+    ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -200,7 +189,7 @@ public class JodaUtilsTest
         Intervals.of("2011-03-03/2011-03-04"),
         Intervals.of("2011-03-05/2011-03-06")
     );
-    JodaUtils.condenseIntervals(intervals.iterator());
+    ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -212,7 +201,7 @@ public class JodaUtilsTest
         Intervals.of("2011-03-01/2011-03-04"),
         Intervals.of("2010-01-01/2010-03-04")
     );
-    JodaUtils.condenseIntervals(intervals.iterator());
+    ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()));
   }
 
   @Test
@@ -241,7 +230,7 @@ public class JodaUtilsTest
             Intervals.of("2011-03-03/2011-03-04"),
             Intervals.of("2011-03-05/2011-03-06")
         ),
-        JodaUtils.condenseIntervals(intervals.iterator())
+        ImmutableList.copyOf(JodaUtils.condensedIntervalsIterator(intervals.iterator()))
     );
   }
 
