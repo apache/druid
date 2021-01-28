@@ -17,15 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.segment.vector;
 
 /**
- * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
+ * Vector inspector that can supply a unique identifier of the vector to use with caching in addition to
+ * sizing information
  */
-public class InsufficientResourcesException extends RuntimeException
+public interface ReadableVectorInspector extends VectorSizeInspector
 {
-  public InsufficientResourcesException(String message)
-  {
-    super(message);
-  }
+  /**
+   * A marker value that will never be returned by "getId".
+   */
+  int NULL_ID = -1;
+
+  /**
+   * Returns an integer that uniquely identifies the current vector. This is useful for caching: it is safe to assume
+   * nothing has changed in the vector so long as the id remains the same.
+   */
+  int getId();
 }

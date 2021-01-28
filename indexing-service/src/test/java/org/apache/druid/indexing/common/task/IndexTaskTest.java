@@ -1306,6 +1306,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new HashedPartitionsSpec(2, null, null),
         INDEX_SPEC,
         null,
@@ -1437,6 +1438,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new DynamicPartitionsSpec(2, null),
         INDEX_SPEC,
         null,
@@ -1551,6 +1553,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
         null,
         null,
         null,
@@ -2003,6 +2006,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         maxRowsInMemory,
         maxBytesInMemory,
+        null,
         maxTotalRows,
         null,
         null,

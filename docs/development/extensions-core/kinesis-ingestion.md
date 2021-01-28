@@ -236,7 +236,7 @@ To authenticate with AWS, you must provide your AWS access key and AWS secret ke
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
 The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will
-look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance
+look for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance
 profile provider (in this order).
 
 ### Getting Supervisor Status Report

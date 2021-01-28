@@ -17,34 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.query;
 
-import org.apache.druid.segment.vector.VectorSizeInspector;
-
-public class FalseVectorMatcher implements VectorValueMatcher
+/**
+ * An abstract class for all query exceptions that should return a bad request status code (400).
+ *
+ * See {@code BadRequestException} for non-query requests.
+ */
+public abstract class BadQueryException extends QueryException
 {
-  private final VectorSizeInspector vectorSizeInspector;
+  public static final int STATUS_CODE = 400;
 
-  public FalseVectorMatcher(VectorSizeInspector vectorSizeInspector)
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
-    this.vectorSizeInspector = vectorSizeInspector;
+    super(errorCode, errorMessage, errorClass, null);
   }
 
-  @Override
-  public ReadableVectorMatch match(ReadableVectorMatch mask)
+  protected BadQueryException(String errorCode, String errorMessage, String errorClass, String host)
   {
-    return VectorMatch.allFalse();
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return vectorSizeInspector.getMaxVectorSize();
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return vectorSizeInspector.getCurrentVectorSize();
+    super(errorCode, errorMessage, errorClass, host);
   }
 }

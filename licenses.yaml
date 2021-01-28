@@ -151,7 +151,7 @@ name: AWS RDS SDK for Java
 license_category: source
 module: extensions/druid-aws-rds-extensions
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-rds
 
@@ -3583,10 +3583,11 @@ name: AWS SDK for Java
 license_category: binary
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-kinesis
   - com.amazonaws: aws-java-sdk-sts
+  - com.amazonaws: jmespath-java  
 
 ---
 
@@ -4968,16 +4969,6 @@ license_file_path: licenses/bin/d3-time.BSD3
 
 ---
 
-name: "debug"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: TJ Holowaychuk
-version: 3.1.0
-license_file_path: licenses/bin/debug.MIT
-
----
-
 name: "deep-equal"
 license_category: binary
 module: web-console
@@ -5051,7 +5042,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.5.10
+version: 1.13.1
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5146,16 +5137,6 @@ license_file_path: licenses/bin/is-arguments.MIT
 
 ---
 
-name: "is-buffer"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Feross Aboukhadijeh
-version: 2.0.3
-license_file_path: licenses/bin/is-buffer.MIT
-
----
-
 name: "is-date-object"
 license_category: binary
 module: web-console
@@ -5201,7 +5182,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Vadim Ogievetsky, Andrey Sidorov
-version: 1.0.0
+version: 1.1.0
 license_file_path: licenses/bin/json-bigint-native.MIT
 
 ---
@@ -5273,16 +5254,6 @@ license_name: MIT License
 copyright: StringEpsilon
 version: 0.3.2
 license_file_path: licenses/bin/mini-create-react-context.MIT
-
----
-
-name: "ms"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Zeit, Inc.
-version: 2.0.0
-license_file_path: licenses/bin/ms.MIT
 
 ---
 

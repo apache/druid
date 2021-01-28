@@ -207,6 +207,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,

@@ -33,9 +33,9 @@ import javax.annotation.Nullable;
 public interface VectorColumnSelectorFactory extends ColumnInspector
 {
   /**
-   * Returns a {@link VectorSizeInspector} for the {@link VectorCursor} that generated this object.
+   * Returns a {@link ReadableVectorInspector} for the {@link VectorCursor} that generated this object.
    */
-  VectorSizeInspector getVectorSizeInspector();
+  ReadableVectorInspector getReadableVectorInspector();
 
   /**
    * Returns the maximum vector size for the {@link VectorCursor} that generated this object.
@@ -44,7 +44,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    */
   default int getMaxVectorSize()
   {
-    return getVectorSizeInspector().getMaxVectorSize();
+    return getReadableVectorInspector().getMaxVectorSize();
   }
 
   /**
