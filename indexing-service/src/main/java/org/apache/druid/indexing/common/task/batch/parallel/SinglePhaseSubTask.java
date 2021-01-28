@@ -132,11 +132,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
-                                           && !ingestionSchema.getDataSchema()
-                                                              .getGranularitySpec()
-                                                              .bucketIntervals()
-                                                              .iterator()
-                                                              .hasNext();
+                                           && ingestionSchema.getDataSchema()
+                                                             .getGranularitySpec()
+                                                             .inputIntervals()
+                                                             .isEmpty();
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
@@ -292,7 +291,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
-    final boolean explicitIntervals = granularitySpec.bucketIntervals().iterator().hasNext();
+    final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
     final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
         toolbox,
         getId(),

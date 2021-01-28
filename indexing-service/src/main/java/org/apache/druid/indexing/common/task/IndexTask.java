@@ -454,10 +454,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final boolean determineIntervals = !ingestionSchema.getDataSchema()
-                                                         .getGranularitySpec()
-                                                         .bucketIntervals()
-                                                         .iterator().hasNext();
+      final boolean determineIntervals = ingestionSchema.getDataSchema()
+                                                        .getGranularitySpec()
+                                                        .inputIntervals()
+                                                        .isEmpty();
 
       final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
           ingestionSchema.getDataSchema().getParser()
@@ -593,7 +593,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     // Must determine intervals if unknown, since we acquire all locks before processing any data.
-    final boolean determineIntervals = !granularitySpec.bucketIntervals().iterator().hasNext();
+    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
     final boolean determineNumPartitions = partitionsSpec.needsDeterminePartitions(false);

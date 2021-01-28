@@ -309,7 +309,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
     String hadoopJobIdFile = getHadoopJobIdFileName();
     final ClassLoader loader = buildClassLoader(toolbox);
-    boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().iterator().hasNext();
+    boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
 
     HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,

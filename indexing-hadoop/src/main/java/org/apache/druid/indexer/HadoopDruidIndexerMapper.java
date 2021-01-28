@@ -83,7 +83,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
             throw new ParseException(errorMsg);
           }
 
-          if (!granularitySpec.bucketIntervals().iterator().hasNext()
+          if (granularitySpec.inputIntervals().isEmpty()
               || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
                                 .isPresent()) {
             innerMap(inputRow, context);

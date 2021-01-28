@@ -109,7 +109,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       groupByJob.setOutputValueClass(NullWritable.class);
       groupByJob.setOutputFormatClass(SequenceFileOutputFormat.class);
       groupByJob.setPartitionerClass(DetermineHashedPartitionsPartitioner.class);
-      if (!config.getSegmentGranularIntervals().iterator().hasNext()) {
+      if (config.getInputIntervals().isEmpty()) {
         groupByJob.setNumReduceTasks(1);
       } else {
         groupByJob.setNumReduceTasks(Iterators.size(config.getSegmentGranularIntervals().iterator()));
@@ -151,7 +151,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       log.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
       FileSystem fileSystem = null;
-      if (!config.getSegmentGranularIntervals().iterator().hasNext()) {
+      if (config.getInputIntervals().isEmpty()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
         fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
         if (!Utils.exists(groupByJob, fileSystem, intervalInfoPath)) {
@@ -378,7 +378,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     protected void setup(Context context)
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-      determineIntervals = !config.getSegmentGranularIntervals().iterator().hasNext();
+      determineIntervals = config.getInputIntervals().isEmpty();
     }
 
     @Override
@@ -479,7 +479,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
       this.config = config;
       HadoopDruidIndexerConfig hadoopConfig = HadoopDruidIndexerConfig.fromConfiguration(config);
-      if (hadoopConfig.getSegmentGranularIntervals().iterator().hasNext()) {
+      if (!hadoopConfig.getInputIntervals().isEmpty()) {
         determineIntervals = false;
         int reducerNumber = 0;
         ImmutableMap.Builder<LongWritable, Integer> builder = ImmutableMap.builder();
