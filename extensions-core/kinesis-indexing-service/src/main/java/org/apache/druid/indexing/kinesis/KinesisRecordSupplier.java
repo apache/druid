@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.kinesis;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
@@ -47,6 +46,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
@@ -62,7 +62,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -106,37 +105,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
    */
   private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
   private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
-
-  /**
-   * Checks whether an exception can be retried or not. Implementation is copied
-   * from {@link com.amazonaws.retry.PredefinedRetryPolicies.SDKDefaultRetryCondition} except deprecated methods
-   * have been replaced with their recent versions.
-   */
-  @VisibleForTesting
-  static boolean isClientExceptionRecoverable(AmazonClientException exception)
-  {
-    // Always retry on client exceptions caused by IOException
-    if (exception.getCause() instanceof IOException) {
-      return true;
-    }
-
-    // A special check carried forwarded from previous implementation.
-    if (exception instanceof AmazonServiceException
-        && "RequestTimeout".equals(((AmazonServiceException) exception).getErrorCode())) {
-      return true;
-    }
-
-    // This will retry for 5xx errors.
-    if (com.amazonaws.retry.RetryUtils.isRetryableServiceException(exception)) {
-      return true;
-    }
-
-    if (com.amazonaws.retry.RetryUtils.isThrottlingException(exception)) {
-      return true;
-    }
-
-    return com.amazonaws.retry.RetryUtils.isClockSkewError(exception);
-  }
 
   /**
    * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
@@ -391,7 +359,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           throw e;
         }
         catch (AmazonClientException e) {
-          if (isClientExceptionRecoverable(e)) {
+          if (AWSClientUtil.isClientExceptionRecoverable(e)) {
             log.warn(e, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
             scheduleBackgroundFetch(EXCEPTION_RETRY_DELAY_MS);
           } else {
@@ -838,7 +806,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               }
               if (throwable instanceof AmazonClientException) {
                 AmazonClientException ase = (AmazonClientException) throwable;
-                return isClientExceptionRecoverable(ase);
+                return AWSClientUtil.isClientExceptionRecoverable(ase);
               }
               return false;
             },

@@ -65,7 +65,7 @@ public class FireDepartmentMetricsTest
     metrics.reportMessageMaxTimestamp(10);
     long current = System.currentTimeMillis();
     metrics.markProcessingDone();
-    long completionTime = metrics.completionTime();
+    long completionTime = metrics.processingCompletionTime();
     Assert.assertTrue(
         "Completion time: " + completionTime,
         completionTime >= current && completionTime < (current + 10_000)
