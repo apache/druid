@@ -27,6 +27,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -87,7 +88,7 @@ public class JodaUtils
   {
 
     if (sortedIntervals == null || !sortedIntervals.hasNext()) {
-      return Iterators.emptyIterator();
+      return Collections.emptyIterator();
     }
 
     final PeekingIterator<Interval> peekingIterator = Iterators.peekingIterator(sortedIntervals);
