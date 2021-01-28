@@ -608,7 +608,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       log.warn("Asked to wait for availability for <= 0 seconds?! Requested waitTimeout: [%s]", waitTimeout);
       return false;
     }
-    log.info("Waiting for segments to be loaded by the cluster...");
+    log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
 
     SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
                                              .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource());
@@ -621,7 +621,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           new SegmentDescriptor(s.getInterval(), s.getVersion(), s.getShardSpec().getPartitionNum()),
           exec,
           () -> {
-            log.info(
+            log.debug(
                 "Confirmed availability for [%s]. Removing from list of segments to wait for",
                 s.getId()
             );
