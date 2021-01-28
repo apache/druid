@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.query.aggregation.SerializablePairLongDoubleSerde;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -150,7 +151,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new GenericFirstAggregateCombiner<SerializablePair<Long, Double>>(){};
+    return new GenericFirstAggregateCombiner(SerializablePairLongDouble.class);
   }
 
   @Override

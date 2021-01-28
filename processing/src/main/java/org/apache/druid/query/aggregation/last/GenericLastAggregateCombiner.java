@@ -25,19 +25,25 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.ParameterizedType;
 
 /**
  * This class is marked as abstract to prevent instantiation of this type directly,
  * because it relyes on type reflection to get the right class object of generic type
- *
+ * <p>
  * use it as follow:
- * AggregateCombiner combiner = new GenericFirstAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){};
- *
+ * AggregateCombiner combiner = new GenericLastAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){};
  */
-public abstract class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
+final public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>>
+    extends ObjectAggregateCombiner<T>
 {
   private T lastValue;
+
+  private final Class<T> pairClass;
+
+  public GenericLastAggregateCombiner(Class<T> pairClass)
+  {
+    this.pairClass = pairClass;
+  }
 
   @Override
   public final void reset(ColumnValueSelector selector)
@@ -50,7 +56,7 @@ public abstract class GenericLastAggregateCombiner<T extends SerializablePair<Lo
   {
     T newValue = (T) selector.getObject();
 
-    if (Longs.compare(((SerializablePair<Long, ?>) lastValue).lhs, ((SerializablePair<Long, ?>) newValue).lhs) < 0) {
+    if (Longs.compare(lastValue.lhs, newValue.lhs) < 0) {
       lastValue = newValue;
     }
   }
@@ -65,7 +71,6 @@ public abstract class GenericLastAggregateCombiner<T extends SerializablePair<Lo
   @Override
   public final Class<T> classOfObject()
   {
-    ParameterizedType parameterizedType = (ParameterizedType) this.getClass().getGenericSuperclass();
-    return (Class<T>) parameterizedType.getActualTypeArguments()[0];
+    return this.pairClass;
   }
 }

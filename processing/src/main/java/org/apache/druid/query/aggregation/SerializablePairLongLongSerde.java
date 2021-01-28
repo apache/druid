@@ -19,20 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
-import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -42,9 +28,14 @@ import java.nio.ByteBuffer;
  * The class is used on first/last Long aggregators to store the time and the first/last Long.
  * Long:Long -> Timestamp:Long
  */
-public class SerializablePairLongLongSerde extends ComplexMetricSerde
+public class SerializablePairLongLongSerde extends AbstractSerializablePairSerde<SerializablePairLongLong>
 {
   public static final String TYPE_NAME = "serializablePairLongLong";
+
+  public SerializablePairLongLongSerde()
+  {
+    super(SerializablePairLongLong.class);
+  }
 
   @Override
   public String getTypeName()
@@ -53,76 +44,21 @@ public class SerializablePairLongLongSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  protected SerializablePairLongLong toPairObject(ByteBuffer buffer, int numBytes)
   {
-    SerializablePair<Long, Long> pair = new SerializablePair<>(null, null);
-    final Class<SerializablePair<Long, Long>> pairClass = (Class<SerializablePair<Long, Long>>) pair.getClass();
-    return new ComplexMetricExtractor()
-    {
-      @Override
-      public Class<SerializablePair<Long, Long>> extractedClass()
-      {
-        return pairClass;
-      }
-
-      @Override
-      public Object extractValue(InputRow inputRow, String metricName)
-      {
-        return inputRow.getRaw(metricName);
-      }
-    };
+    final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+    long lhs = readOnlyBuffer.getLong();
+    long rhs = readOnlyBuffer.getLong();
+    return new SerializablePairLongLong(lhs, rhs);
   }
 
   @Override
-  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder columnBuilder)
+  protected byte[] pairToBytes(SerializablePairLongLong val)
   {
-    final GenericIndexed column = GenericIndexed.read(buffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
+    ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Long.BYTES);
+    bbuf.putLong(val.lhs);
+    bbuf.putLong(val.rhs);
+    return bbuf.array();
   }
 
-  @Override
-  public ObjectStrategy getObjectStrategy()
-  {
-    SerializablePair<Long, Long> pair = new SerializablePair<>(null, null);
-    final Class<SerializablePair<Long, Long>> pairClass = (Class<SerializablePair<Long, Long>>) pair.getClass();
-
-    return new ObjectStrategy<SerializablePair<Long, Long>>()
-    {
-      @Override
-      public int compare(@Nullable SerializablePair<Long, Long> o1, @Nullable SerializablePair<Long, Long> o2)
-      {
-        return Longs.compare(o1.lhs, o2.lhs);
-      }
-
-      @Override
-      public Class<SerializablePair<Long, Long>> getClazz()
-      {
-        return pairClass;
-      }
-
-      @Override
-      public SerializablePair<Long, Long> fromByteBuffer(ByteBuffer buffer, int numBytes)
-      {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        long lhs = readOnlyBuffer.getLong();
-        long rhs = readOnlyBuffer.getLong();
-        return new SerializablePair<Long, Long>(lhs, rhs);
-      }
-
-      @Override
-      public byte[] toBytes(SerializablePair<Long, Long> val)
-      {
-        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Long.BYTES);
-        bbuf.putLong(val.lhs);
-        bbuf.putLong(val.rhs);
-        return bbuf.array();
-      }
-    };
-  }
-
-  @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
-  }
 }

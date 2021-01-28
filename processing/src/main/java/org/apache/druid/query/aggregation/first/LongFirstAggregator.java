@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 public class LongFirstAggregator extends NumericFirstAggregator<BaseLongColumnValueSelector>
@@ -41,7 +41,7 @@ public class LongFirstAggregator extends NumericFirstAggregator<BaseLongColumnVa
   @Override
   public Object get()
   {
-    return new SerializablePair<>(firstTime, rhsNull ? null : firstValue);
+    return new SerializablePairLongLong(firstTime, rhsNull ? null : firstValue);
   }
 
   @Override

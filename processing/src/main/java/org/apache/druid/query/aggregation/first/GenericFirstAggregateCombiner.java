@@ -25,21 +25,26 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.ParameterizedType;
 
 /**
  * This class is used for FIRST aggregator
- *
+ * <p>
  * It's marked as abstract to prevent instantiation of this type directly.
  * it must be used it as follow:
- *
+ * <p>
  * AggregateCombiner combiner = new GenericFirstAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){
  * };
- *
  */
-public abstract class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
+final public class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>>
+    extends ObjectAggregateCombiner<T>
 {
+  private final Class<T> pairClass;
   private T firstValue;
+
+  public GenericFirstAggregateCombiner(Class<T> pairClass)
+  {
+    this.pairClass = pairClass;
+  }
 
   @Override
   public final void reset(ColumnValueSelector selector)
@@ -52,7 +57,7 @@ public abstract class GenericFirstAggregateCombiner<T extends SerializablePair<L
   {
     T newValue = (T) selector.getObject();
 
-    if (Longs.compare(((SerializablePair<Long, ?>) firstValue).lhs, ((SerializablePair<Long, ?>) newValue).lhs) > 0) {
+    if (Longs.compare(firstValue.lhs, newValue.lhs) > 0) {
       firstValue = newValue;
     }
   }
@@ -67,7 +72,6 @@ public abstract class GenericFirstAggregateCombiner<T extends SerializablePair<L
   @Override
   public final Class<T> classOfObject()
   {
-    ParameterizedType parameterizedType = (ParameterizedType) this.getClass().getGenericSuperclass();
-    return (Class<T>) parameterizedType.getActualTypeArguments()[0];
+    return this.pairClass;
   }
 }

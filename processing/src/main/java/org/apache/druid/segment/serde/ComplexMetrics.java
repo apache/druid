@@ -38,6 +38,14 @@ public class ComplexMetrics
   }
 
   /**
+   * Register a serde by its type name
+   */
+  public static void registerSerde(ComplexMetricSerde serde)
+  {
+    registerSerde(serde.getTypeName(), serde);
+  }
+
+  /**
    * Register a serde name -> ComplexMetricSerde mapping.
    *
    * <p>

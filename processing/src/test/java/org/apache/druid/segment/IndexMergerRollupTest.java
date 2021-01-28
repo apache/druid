@@ -156,7 +156,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   public void testFloatFirstRollup() throws Exception
   {
     testFirstLastRollup(
-        doubleEventsList,
+        floatEventsList,
         ImmutableList.of("d"),
         new FloatFirstAggregatorFactory("m", "m")
     );
@@ -166,7 +166,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   public void testFloatLastRollup() throws Exception
   {
     testFirstLastRollup(
-        doubleEventsList,
+        floatEventsList,
         ImmutableList.of("d"),
         new FloatLastAggregatorFactory("m", "m")
     );
@@ -176,7 +176,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   public void testLongFirstRollup() throws Exception
   {
     testFirstLastRollup(
-        doubleEventsList,
+        longEventsList,
         ImmutableList.of("d"),
         new LongFirstAggregatorFactory("m", "m")
     );
@@ -186,7 +186,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   public void testLongLastRollup() throws Exception
   {
     testFirstLastRollup(
-        doubleEventsList,
+        longEventsList,
         ImmutableList.of("d"),
         new LongLastAggregatorFactory("m", "m")
     );

@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongLongSerde;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -145,7 +146,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new GenericLastAggregateCombiner<SerializablePair<Long, Long>>(){};
+    return new GenericLastAggregateCombiner(SerializablePairLongLong.class);
   }
 
   @Override

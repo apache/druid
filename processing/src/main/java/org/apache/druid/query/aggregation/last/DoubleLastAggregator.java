@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
@@ -42,7 +42,7 @@ public class DoubleLastAggregator extends NumericLastAggregator<BaseDoubleColumn
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
+    return new SerializablePairLongDouble(lastTime, rhsNull ? null : lastValue);
   }
 
   @Override

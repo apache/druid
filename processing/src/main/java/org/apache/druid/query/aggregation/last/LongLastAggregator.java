@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 public class LongLastAggregator extends NumericLastAggregator<BaseLongColumnValueSelector>
@@ -41,7 +41,7 @@ public class LongLastAggregator extends NumericLastAggregator<BaseLongColumnValu
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
+    return new SerializablePairLongLong(lastTime, rhsNull ? null : lastValue);
   }
 
   @Override
