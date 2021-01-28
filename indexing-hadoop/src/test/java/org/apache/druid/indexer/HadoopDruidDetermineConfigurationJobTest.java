@@ -58,7 +58,7 @@ public class HadoopDruidDetermineConfigurationJobTest
     final HadoopDruidIndexerConfig config = Mockito.mock(HadoopDruidIndexerConfig.class);
     Mockito.when(config.isDeterminingPartitions()).thenReturn(false);
     Mockito.when(config.getPartitionsSpec()).thenReturn(partitionsSpec);
-    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(() -> intervals.iterator());
+    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(intervals);
     final ArgumentCaptor<Map<Long, List<HadoopyShardSpec>>> resultCaptor = ArgumentCaptor.forClass(Map.class);
     Mockito.doNothing().when(config).setShardSpecs(resultCaptor.capture());
 
@@ -98,7 +98,7 @@ public class HadoopDruidDetermineConfigurationJobTest
     final HadoopDruidIndexerConfig config = Mockito.mock(HadoopDruidIndexerConfig.class);
     Mockito.when(config.isDeterminingPartitions()).thenReturn(false);
     Mockito.when(config.getPartitionsSpec()).thenReturn(partitionsSpec);
-    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(() -> intervals.iterator());
+    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(intervals);
     final ArgumentCaptor<Map<Long, List<HadoopyShardSpec>>> resultCaptor = ArgumentCaptor.forClass(Map.class);
     Mockito.doNothing().when(config).setShardSpecs(resultCaptor.capture());
 
