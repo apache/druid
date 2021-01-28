@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
-import org.apache.druid.segment.indexing.LookupIntervalBuckets;
 import org.joda.time.Interval;
 
 import java.util.List;
