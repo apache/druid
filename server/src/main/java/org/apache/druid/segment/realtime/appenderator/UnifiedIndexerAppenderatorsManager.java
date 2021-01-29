@@ -413,6 +413,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public boolean isSkipBytesInMemoryOverheadCheck()
+    {
+      return baseConfig.isSkipBytesInMemoryOverheadCheck();
+    }
+
+    @Override
     public int getMaxPendingPersists()
     {
       return baseConfig.getMaxPendingPersists();

@@ -124,7 +124,7 @@ public class AppenderatorTester implements AutoCloseable
       final boolean enablePushFailure
   )
   {
-    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters());
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters(), false);
   }
 
   public AppenderatorTester(
@@ -133,6 +133,18 @@ public class AppenderatorTester implements AutoCloseable
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
+  }
+
+  public AppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final File basePersistDirectory,
+      final boolean enablePushFailure,
+      final RowIngestionMeters rowIngestionMeters,
+      final boolean skipBytesInMemoryOverheadCheck
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -165,6 +177,7 @@ public class AppenderatorTester implements AutoCloseable
         null,
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
+        skipBytesInMemoryOverheadCheck,
         null,
         null,
         basePersistDirectory,

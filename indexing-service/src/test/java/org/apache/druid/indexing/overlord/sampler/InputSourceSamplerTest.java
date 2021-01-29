@@ -29,6 +29,7 @@ import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -1475,10 +1476,10 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     return false;
   }
 
-  private static class TestRecordSupplier implements RecordSupplier
+  private static class TestRecordSupplier implements RecordSupplier<Integer, Long, ByteEntity>
   {
     private final List<String> jsonList;
-    private Set<Integer> partitions;
+    private final Set<Integer> partitions;
     private boolean polled;
 
     public TestRecordSupplier(List<String> jsonList)
@@ -1489,34 +1490,34 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public void assign(Set set)
+    public void assign(Set<StreamPartition<Integer>> set)
     {
     }
 
     @Override
-    public void seek(StreamPartition partition, Object sequenceNumber)
+    public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
     {
     }
 
     @Override
-    public void seekToEarliest(Set set)
+    public void seekToEarliest(Set<StreamPartition<Integer>> set)
     {
     }
 
     @Override
-    public void seekToLatest(Set set)
+    public void seekToLatest(Set<StreamPartition<Integer>> set)
     {
     }
 
     @Override
-    public Collection<StreamPartition> getAssignment()
+    public Collection<StreamPartition<Integer>> getAssignment()
     {
       return null;
     }
 
     @Nonnull
     @Override
-    public List<OrderedPartitionableRecord> poll(long timeout)
+    public List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> poll(long timeout)
     {
       if (polled) {
         try {
@@ -1529,35 +1530,37 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
       polled = true;
       return jsonList.stream()
-                     .map(jsonText -> new OrderedPartitionableRecord("topic",
-                                                                     0,
-                                                                     0,
-                                                                     Collections.singletonList(StringUtils.toUtf8(jsonText))))
+                     .map(jsonText -> new OrderedPartitionableRecord<>(
+                         "topic",
+                         0,
+                         0L,
+                         Collections.singletonList(new ByteEntity(StringUtils.toUtf8(jsonText)))
+                     ))
                      .collect(Collectors.toList());
     }
 
     @Nullable
     @Override
-    public Object getLatestSequenceNumber(StreamPartition partition)
+    public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
     {
       return null;
     }
 
     @Nullable
     @Override
-    public Object getEarliestSequenceNumber(StreamPartition partition)
+    public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
     {
       return null;
     }
 
     @Override
-    public Object getPosition(StreamPartition partition)
+    public Long getPosition(StreamPartition<Integer> partition)
     {
       return null;
     }
 
     @Override
-    public Set getPartitionIds(String stream)
+    public Set<Integer> getPartitionIds(String stream)
     {
       return partitions;
     }

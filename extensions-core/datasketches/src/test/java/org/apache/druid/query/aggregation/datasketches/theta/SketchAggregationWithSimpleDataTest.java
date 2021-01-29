@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -63,22 +64,26 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private final GroupByQueryConfig config;
+  private final QueryContexts.Vectorize vectorize;
 
   private SketchModule sm;
   private File s1;
   private File s2;
 
-  public SketchAggregationWithSimpleDataTest(GroupByQueryConfig config)
+  public SketchAggregationWithSimpleDataTest(GroupByQueryConfig config, String vectorize)
   {
     this.config = config;
+    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
+      for (String vectorize : new String[]{"false", "force"}) {
+        constructors.add(new Object[]{config, vectorize});
+      }
     }
     return constructors;
   }
@@ -130,14 +135,15 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
             tempFolder
         )
     ) {
-      final String groupByQueryString = readFileFromClasspathAsString("simple_test_data_group_by_query.json");
-      final GroupByQuery groupByQuery = (GroupByQuery) gpByQueryAggregationTestHelper
-          .getObjectMapper()
-          .readValue(groupByQueryString, Query.class);
+      final GroupByQuery groupByQuery = SketchAggregationTest.readQueryFromClasspath(
+          "simple_test_data_group_by_query.json",
+          gpByQueryAggregationTestHelper.getObjectMapper(),
+          vectorize
+      );
 
       Sequence<ResultRow> seq = gpByQueryAggregationTestHelper.runQueryOnSegments(
           ImmutableList.of(s1, s2),
-          groupByQueryString
+          groupByQuery
       );
 
       List<MapBasedRow> results = seq.map(row -> row.toMapBasedRow(groupByQuery)).toList();
@@ -225,7 +231,11 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
     Sequence seq = timeseriesQueryAggregationTestHelper.runQueryOnSegments(
         ImmutableList.of(s1, s2),
-        readFileFromClasspathAsString("timeseries_query.json")
+        (Query) SketchAggregationTest.readQueryFromClasspath(
+            "timeseries_query.json",
+            timeseriesQueryAggregationTestHelper.getObjectMapper(),
+            vectorize
+        )
     );
 
     Result<TimeseriesResultValue> result = (Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList());
@@ -251,7 +261,11 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
     Sequence seq = topNQueryAggregationTestHelper.runQueryOnSegments(
         ImmutableList.of(s1, s2),
-        readFileFromClasspathAsString("topn_query.json")
+        (Query) SketchAggregationTest.readQueryFromClasspath(
+            "topn_query.json",
+            topNQueryAggregationTestHelper.getObjectMapper(),
+            vectorize
+        )
     );
 
     Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(seq.toList());
@@ -278,7 +292,11 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
     Sequence seq = topNQueryAggregationTestHelper.runQueryOnSegments(
         ImmutableList.of(s1, s2),
-        readFileFromClasspathAsString("topn_query_sketch_const.json")
+        (Query) SketchAggregationTest.readQueryFromClasspath(
+            "topn_query_sketch_const.json",
+            topNQueryAggregationTestHelper.getObjectMapper(),
+            vectorize
+        )
     );
 
     Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(seq.toList());

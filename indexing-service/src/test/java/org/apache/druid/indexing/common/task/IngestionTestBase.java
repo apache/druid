@@ -32,6 +32,8 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -128,6 +130,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     temporaryFolder.delete();
   }
 
+  public TestLocalTaskActionClientFactory createActionClientFactory()
+  {
+    return new TestLocalTaskActionClientFactory();
+  }
+
   public TestLocalTaskActionClient createActionClient(Task task)
   {
     return new TestLocalTaskActionClient(task);
@@ -209,6 +216,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public IndexMergerV9 getIndexMerger()
   {
     return testUtils.getTestIndexMergerV9();
+  }
+
+  public class TestLocalTaskActionClientFactory implements TaskActionClientFactory
+  {
+    @Override
+    public TaskActionClient create(Task task)
+    {
+      return new TestLocalTaskActionClient(task);
+    }
   }
 
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest

@@ -123,7 +123,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -231,7 +230,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("partitionsSpec[%s] is not supported", tuningConfig.getPartitionsSpec().getClass().getName());
       }
     }
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec());
+    return determineLockGranularityAndTryLock(
+        taskActionClient,
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
+    );
   }
 
   @Override
@@ -452,10 +454,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final boolean determineIntervals = !ingestionSchema.getDataSchema()
-                                                         .getGranularitySpec()
-                                                         .bucketIntervals()
-                                                         .isPresent();
+      final boolean determineIntervals = ingestionSchema.getDataSchema()
+                                                        .getGranularitySpec()
+                                                        .inputIntervals()
+                                                        .isEmpty();
 
       final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
           ingestionSchema.getDataSchema().getParser()
@@ -591,7 +593,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     // Must determine intervals if unknown, since we acquire all locks before processing any data.
-    final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
+    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
     final boolean determineNumPartitions = partitionsSpec.needsDeterminePartitions(false);
@@ -630,7 +632,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @Nonnull DynamicPartitionsSpec partitionsSpec
   )
   {
-    final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
+    final Iterable<Interval> intervals = granularitySpec.sortedBucketIntervals();
     final int numBucketsPerInterval = 1;
     final LinearPartitionAnalysis partitionAnalysis = new LinearPartitionAnalysis(partitionsSpec);
     intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));
@@ -1123,6 +1125,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
+    private final boolean skipBytesInMemoryOverheadCheck;
     private final int maxColumnsToMerge;
 
     // null if all partitionsSpec related params are null. see getDefaultPartitionsSpec() for details.
@@ -1196,6 +1199,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+        @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
         @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
         @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
@@ -1220,6 +1224,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
+          skipBytesInMemoryOverheadCheck != null ? skipBytesInMemoryOverheadCheck : DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
           getPartitionsSpec(
               forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
               partitionsSpec,
@@ -1250,13 +1255,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
         @Nullable AppendableIndexSpec appendableIndexSpec,
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
+        @Nullable Boolean skipBytesInMemoryOverheadCheck,
         @Nullable PartitionsSpec partitionsSpec,
         @Nullable IndexSpec indexSpec,
         @Nullable IndexSpec indexSpecForIntermediatePersists,
@@ -1277,6 +1283,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+      this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
+                                            DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
       this.maxColumnsToMerge = maxColumnsToMerge == null
                                ? IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE
                                : maxColumnsToMerge;
@@ -1317,6 +1325,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          skipBytesInMemoryOverheadCheck,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
@@ -1339,6 +1348,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          skipBytesInMemoryOverheadCheck,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
@@ -1374,6 +1384,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public long getMaxBytesInMemory()
     {
       return maxBytesInMemory;
+    }
+
+    @JsonProperty
+    @Override
+    public boolean isSkipBytesInMemoryOverheadCheck()
+    {
+      return skipBytesInMemoryOverheadCheck;
     }
 
     @JsonProperty
@@ -1549,6 +1566,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
              maxRowsInMemory == that.maxRowsInMemory &&
              maxBytesInMemory == that.maxBytesInMemory &&
+             skipBytesInMemoryOverheadCheck == that.skipBytesInMemoryOverheadCheck &&
              maxColumnsToMerge == that.maxColumnsToMerge &&
              maxPendingPersists == that.maxPendingPersists &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
@@ -1571,6 +1589,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
+          skipBytesInMemoryOverheadCheck,
           maxColumnsToMerge,
           partitionsSpec,
           indexSpec,
@@ -1593,6 +1612,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return "IndexTuningConfig{" +
              "maxRowsInMemory=" + maxRowsInMemory +
              ", maxBytesInMemory=" + maxBytesInMemory +
+             ", skipBytesInMemoryOverheadCheck=" + skipBytesInMemoryOverheadCheck +
              ", maxColumnsToMerge=" + maxColumnsToMerge +
              ", partitionsSpec=" + partitionsSpec +
              ", indexSpec=" + indexSpec +

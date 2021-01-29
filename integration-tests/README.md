@@ -224,7 +224,7 @@ To run tests on any druid cluster that is already running, create a configuratio
        "middlemanager_host": "<middle_manager_ip>",
        "zookeeper_hosts": "<comma-separated list of zookeeper_ip:zookeeper_port>",
        "cloud_bucket": "<(optional) cloud_bucket for test data if running cloud integration test>",
-       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>",
+       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>"
     }
 
 Set the environment variable `CONFIG_FILE` to the name of the configuration file:

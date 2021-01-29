@@ -311,6 +311,20 @@ public class DataSchema
     );
   }
 
+  public DataSchema withDimensionsSpec(DimensionsSpec dimensionsSpec)
+  {
+    return new DataSchema(
+        dataSource,
+        timestampSpec,
+        dimensionsSpec,
+        aggregators,
+        granularitySpec,
+        transformSpec,
+        parserMap,
+        objectMapper
+    );
+  }
+
   @Override
   public String toString()
   {

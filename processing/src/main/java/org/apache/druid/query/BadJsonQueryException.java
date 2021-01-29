@@ -17,34 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.query;
 
-import org.apache.druid.segment.vector.VectorSizeInspector;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParseException;
 
-public class FalseVectorMatcher implements VectorValueMatcher
+public class BadJsonQueryException extends BadQueryException
 {
-  private final VectorSizeInspector vectorSizeInspector;
+  public static final String ERROR_CODE = "Json parse failed";
+  public static final String ERROR_CLASS = JsonParseException.class.getName();
 
-  public FalseVectorMatcher(VectorSizeInspector vectorSizeInspector)
+  public BadJsonQueryException(JsonParseException e)
   {
-    this.vectorSizeInspector = vectorSizeInspector;
+    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
   }
 
-  @Override
-  public ReadableVectorMatch match(ReadableVectorMatch mask)
+  @JsonCreator
+  private BadJsonQueryException(
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass
+  )
   {
-    return VectorMatch.allFalse();
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return vectorSizeInspector.getMaxVectorSize();
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return vectorSizeInspector.getCurrentVectorSize();
+    super(errorCode, errorMessage, errorClass);
   }
 }

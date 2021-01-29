@@ -222,7 +222,7 @@ We recommend keeping a copy of your raw data around in case you ever need to rei
 
 ### With Hadoop-based ingestion
 
-This section assumes the reader understands how to do batch ingestion using Hadoop. See
+This section assumes you understand how to do batch ingestion using Hadoop. See
 [Hadoop batch ingestion](./hadoop.md) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
 
 Druid uses an `inputSpec` in the `ioConfig` to know where the data to be ingested is located and how to read it.
@@ -232,11 +232,7 @@ There are other types of `inputSpec` to enable reindexing and delta ingestion.
 
 ### Reindexing with Native Batch Ingestion
 
-This section assumes the reader understands how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md),
-which uses an `inputSource` to know where and how to read the input data. The [`DruidInputSource`](native-batch.md#druid-input-source)
-can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as
-it has to do all processing inside a single process and can't scale. Please use Hadoop batch ingestion for production
-scenarios dealing with more than 1GB of data.
+This section assumes you understand how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md). Native batch indexing uses an `inputSource` to know where and how to read the input data. You can use the [`DruidInputSource`](native-batch.md#druid-input-source) to read data from segments inside Druid. You can use Parallel task (`index_parallel`) for all native batch reindexing tasks. Increase the `maxNumConcurrentSubTasks` to accommodate the amount of data your are reindexing. See [Capacity planning](native-batch.md#capacity-planning).
 
 <a name="delete"></a>
 

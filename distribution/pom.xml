@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.21.0-SNAPSHOT</version>
+        <version>0.22.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -229,6 +229,8 @@
                                         <argument>org.apache.druid.extensions:druid-kerberos</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-aws-rds-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
                                         <argument>-c</argument>

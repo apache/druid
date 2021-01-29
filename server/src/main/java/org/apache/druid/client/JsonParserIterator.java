@@ -29,8 +29,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 
 import javax.annotation.Nullable;
@@ -117,7 +120,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         timeoutException.addSuppressed(e);
         throw timeoutException;
       } else {
-        throw interruptQuery(e);
+        throw convertException(e);
       }
     }
   }
@@ -165,8 +168,11 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         } else if (checkTimeout()) {
           throw timeoutQuery();
         } else {
-          // if we haven't timed out completing the future, then this is the likely cause
-          throw interruptQuery(new ResourceLimitExceededException("url[%s] max bytes limit reached.", url));
+          // TODO: NettyHttpClient should check the actual cause of the failure and set it in the future properly.
+          throw new ResourceLimitExceededException(
+              "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
+              url
+          );
         }
 
         final JsonToken nextToken = jp.nextToken();
@@ -174,15 +180,15 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           jp.nextToken();
           objectCodec = jp.getCodec();
         } else if (nextToken == JsonToken.START_OBJECT) {
-          throw interruptQuery(jp.getCodec().readValue(jp, QueryInterruptedException.class));
+          throw convertException(jp.getCodec().readValue(jp, QueryException.class));
         } else {
-          throw interruptQuery(
+          throw convertException(
               new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
           );
         }
       }
       catch (IOException | InterruptedException | ExecutionException | CancellationException e) {
-        throw interruptQuery(e);
+        throw convertException(e);
       }
       catch (TimeoutException e) {
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out!", queryId), host);
@@ -195,10 +201,73 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     return new QueryTimeoutException(StringUtils.nonStrictFormat("url[%s] timed out", url), host);
   }
 
-  private QueryInterruptedException interruptQuery(Exception cause)
+  /**
+   * Converts the given exception to a proper type of {@link QueryException}.
+   * The use cases of this method are:
+   *
+   * - All non-QueryExceptions are wrapped with {@link QueryInterruptedException}.
+   * - The QueryException from {@link DirectDruidClient} is converted to a more specific type of QueryException
+   *   based on {@link QueryException#getErrorCode()}. During conversion, {@link QueryException#host} is overridden
+   *   by {@link #host}.
+   */
+  private QueryException convertException(Exception cause)
   {
     LOG.warn(cause, "Query [%s] to host [%s] interrupted", queryId, host);
-    return new QueryInterruptedException(cause, host);
+    if (cause instanceof QueryException) {
+      final QueryException queryException = (QueryException) cause;
+      if (queryException.getErrorCode() == null) {
+        // errorCode should not be null now, but maybe could be null in the past..
+        return new QueryInterruptedException(
+            queryException.getErrorCode(),
+            queryException.getMessage(),
+            queryException.getErrorClass(),
+            host
+        );
+      }
+
+      // Note: this switch clause is to restore the 'type' information of QueryExceptions which is lost during
+      // JSON serialization. This is not a good way to restore the correct exception type. Rather, QueryException
+      // should store its type when it is serialized, so that we can know the exact type when it is deserialized.
+      switch (queryException.getErrorCode()) {
+        // The below is the list of exceptions that can be thrown in historicals and propagated to the broker.
+        case QueryTimeoutException.ERROR_CODE:
+          return new QueryTimeoutException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              host
+          );
+        case QueryCapacityExceededException.ERROR_CODE:
+          return new QueryCapacityExceededException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              host
+          );
+        case QueryUnsupportedException.ERROR_CODE:
+          return new QueryUnsupportedException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              host
+          );
+        case ResourceLimitExceededException.ERROR_CODE:
+          return new ResourceLimitExceededException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              host
+          );
+        default:
+          return new QueryInterruptedException(
+              queryException.getErrorCode(),
+              queryException.getMessage(),
+              queryException.getErrorClass(),
+              host
+          );
+      }
+    } else {
+      return new QueryInterruptedException(cause, host);
+    }
   }
 }
-

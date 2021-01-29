@@ -107,7 +107,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   }
 
   @VisibleForTesting
-    // Only for testing
   PartialDimensionDistributionTask(
       @Nullable String id,
       final String groupId,
