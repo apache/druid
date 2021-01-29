@@ -22,7 +22,6 @@ FROM openjdk:$JDK_VERSION as druidbase
 COPY base-setup.sh /root/base-setup.sh
 RUN /root/base-setup.sh && rm -f /root/base-setup.sh
 
-# This is default value for base image in case DOCKER_IMAGE is not given when building
 FROM druidbase
 ARG MYSQL_CONNECTOR_VERSION=5.1.49
 
