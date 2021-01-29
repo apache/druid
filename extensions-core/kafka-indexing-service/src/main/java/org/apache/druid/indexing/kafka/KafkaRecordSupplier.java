@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -51,7 +52,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
+public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaRecordEntity>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
   private boolean closed;
@@ -119,15 +120,16 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<Integer, Long>> poll(long timeout)
+  public List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> poll(long timeout)
   {
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = new ArrayList<>();
+    List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> polledRecords = new ArrayList<>();
     for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeout))) {
+
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
           record.partition(),
           record.offset(),
-          record.value() == null ? null : ImmutableList.of(record.value())
+          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
       ));
     }
     return polledRecords;

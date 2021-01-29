@@ -19,45 +19,136 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 /**
- * This is a historical occasion that this enum is different from {@link
- * org.apache.druid.server.coordination.ServerType} (also called "node type" in various places) because they are
- * essentially the same abstraction, but merging them could only increase the complexity and drop the code safety,
- * because they name the same types differently ("peon" - "indexer-executor" and "middleManager" - "realtime") and both
- * expose them via JSON APIs.
+ * Defines the 'role' of a Druid service, utilized to strongly type announcement and service discovery.
  *
- * These abstractions can probably be merged when Druid updates to Jackson 2.9 that supports JsonAliases, see
+ * Originally, this was an enum to add type safety for discovery and announcement purposes, but was expanded
+ * into a class to allow for extensibility while retaining the type safety of using defined types instead of raw
+ * strings. As such, this class tries to mimic the interface provided by the previous enum.
+ *
+ * Built in node roles define a {@link #name} that is distinct from {@link #jsonName}, and is the previous value
+ * which would occur when the enum was used in a 'toString' context. Custom node roles allow extension to participate
+ * in announcement and discovery, but are limited to only using {@link #jsonName} for both toString and JSON serde.
+ *
+ * The historical context of why the enum was different from {@link org.apache.druid.server.coordination.ServerType}
+ * (also called "node type" in various places) is because while they are essentially the same abstraction, merging them
+ * could only increase the complexity and drop the code safety, because they name the same types differently
+ * ("peon" - "indexer-executor" and "middleManager" - "realtime") and both expose them via JSON APIs.
+ *
+ * These abstractions can all potentially be merged when Druid updates to Jackson 2.9 that supports JsonAliases,
  * see https://github.com/apache/druid/issues/7152.
  */
-public enum NodeRole
+public class NodeRole
 {
-  COORDINATOR("coordinator"),
-  HISTORICAL("historical"),
-  BROKER("broker"),
-  OVERLORD("overlord"),
-  PEON("peon"),
-  ROUTER("router"),
-  MIDDLE_MANAGER("middleManager"),
-  INDEXER("indexer");
+  public static final NodeRole COORDINATOR = new NodeRole("COORDINATOR", "coordinator");
+  public static final NodeRole HISTORICAL = new NodeRole("HISTORICAL", "historical");
+  public static final NodeRole BROKER = new NodeRole("BROKER", "broker");
+  public static final NodeRole OVERLORD = new NodeRole("OVERLORD", "overlord");
+  public static final NodeRole PEON = new NodeRole("PEON", "peon");
+  public static final NodeRole ROUTER = new NodeRole("ROUTER", "router");
+  public static final NodeRole MIDDLE_MANAGER = new NodeRole("MIDDLE_MANAGER", "middleManager");
+  public static final NodeRole INDEXER = new NodeRole("INDEXER", "indexer");
 
+  private static final NodeRole[] BUILT_IN = new NodeRole[]{
+      COORDINATOR,
+      HISTORICAL,
+      BROKER,
+      OVERLORD,
+      PEON,
+      ROUTER,
+      MIDDLE_MANAGER,
+      INDEXER
+  };
+
+  private static final Map<String, NodeRole> BUILT_IN_LOOKUP =
+      Arrays.stream(BUILT_IN).collect(Collectors.toMap(NodeRole::getJsonName, Function.identity()));
+
+  /**
+   * For built-in roles, to preserve backwards compatibility when this was an enum, this provides compatibility for
+   * usages of the enum name as a string, (e.g. allcaps 'COORDINATOR'), which is used by system tables for displaying
+   * node role, and by curator discovery for the discovery path of a node role (the actual payload at the zk location
+   * uses {@link #jsonName})
+   */
+  private final String name;
+
+  /**
+   * JSON serialized value for {@link NodeRole}
+   */
   private final String jsonName;
 
-  NodeRole(String jsonName)
+  /**
+   * Create a custom node role. Known Druid node roles should ALWAYS use the built-in static node roles:
+   * ({@link #COORDINATOR}, {@link #OVERLORD}, {@link #ROUTER}, {@link #BROKER}{@link #INDEXER},
+   * {@link #MIDDLE_MANAGER}, {@link #HISTORICAL}) instead of constructing a new instance.
+   */
+  public NodeRole(String jsonName)
   {
-    this.jsonName = jsonName;
+    this(jsonName, jsonName);
   }
 
   /**
-   * Lowercase for backward compatibility, as a part of the {@link DiscoveryDruidNode}'s JSON format.
-   *
-   * Don't need to define {@link com.fasterxml.jackson.annotation.JsonCreator} because for enum types {@link JsonValue}
-   * serves for both serialization and deserialization, see the Javadoc comment of {@link JsonValue}.
+   * for built-in roles, to preserve backwards compatibility when this was an enum, allow built-in node roles to specify
+   * the 'name' which is used by 'toString' to be separate from the jsonName, which is the value which the node role
+   * will be serialized as and deserialized from
    */
+  private NodeRole(String name, String jsonName)
+  {
+    this.name = name;
+    this.jsonName = jsonName;
+  }
+
   @JsonValue
   public String getJsonName()
   {
     return jsonName;
+  }
+
+  @JsonCreator
+  public static NodeRole fromJsonName(String jsonName)
+  {
+    return BUILT_IN_LOOKUP.getOrDefault(jsonName, new NodeRole(jsonName));
+  }
+
+  @Override
+  public String toString()
+  {
+    // for built-in roles, to preserve backwards compatibility when this was an enum
+    return name;
+  }
+
+  /**
+   * built-in node roles
+   */
+  public static NodeRole[] values()
+  {
+    return Arrays.copyOf(BUILT_IN, BUILT_IN.length);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NodeRole nodeRole = (NodeRole) o;
+    return name.equals(nodeRole.name) && jsonName.equals(nodeRole.jsonName);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, jsonName);
   }
 }

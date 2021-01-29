@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -72,10 +73,10 @@ public class EmptyIndexTest
     }
 
     try {
-      IncrementalIndex emptyIndex = new IncrementalIndex.Builder()
+      IncrementalIndex emptyIndex = new OnheapIncrementalIndex.Builder()
           .setSimpleTestingIndexSchema(/* empty */)
           .setMaxRowCount(1000)
-          .buildOnheap();
+          .build();
 
       IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
           Intervals.of("2012-08-01/P3D"),
@@ -87,7 +88,8 @@ public class EmptyIndexTest
           true,
           new AggregatorFactory[0],
           tmpDir,
-          new IndexSpec()
+          new IndexSpec(),
+          -1
       );
 
       QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);

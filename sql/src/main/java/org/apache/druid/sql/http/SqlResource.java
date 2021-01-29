@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.io.CountingOutputStream;
@@ -32,13 +33,16 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.BadQueryException;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.server.QueryCapacityExceededException;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTimeZone;
@@ -52,6 +56,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.Arrays;
@@ -134,7 +139,9 @@ public class SqlResource
                       for (int i = 0; i < fieldList.size(); i++) {
                         final Object value;
 
-                        if (timeColumns[i]) {
+                        if (row[i] == null) {
+                          value = null;
+                        } else if (timeColumns[i]) {
                           value = ISODateTimeFormat.dateTime().print(
                               Calcites.calciteTimestampToJoda((long) row[i], timeZone)
                           );
@@ -176,16 +183,19 @@ public class SqlResource
     }
     catch (QueryCapacityExceededException cap) {
       lifecycle.emitLogsAndMetrics(cap, remoteAddr, -1);
-      return Response.status(QueryCapacityExceededException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(cap)).build();
+      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
     }
     catch (QueryUnsupportedException unsupported) {
-      log.warn(unsupported, "Failed to handle query: %s", sqlQuery);
       lifecycle.emitLogsAndMetrics(unsupported, remoteAddr, -1);
-      return Response.status(QueryUnsupportedException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(unsupported)).build();
+      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
     }
     catch (QueryTimeoutException timeout) {
       lifecycle.emitLogsAndMetrics(timeout, remoteAddr, -1);
-      return Response.status(QueryTimeoutException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(timeout)).build();
+      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
+    }
+    catch (SqlPlanningException | ResourceLimitExceededException e) {
+      lifecycle.emitLogsAndMetrics(e, remoteAddr, -1);
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
     }
     catch (ForbiddenException e) {
       throw e; // let ForbiddenExceptionMapper handle this
@@ -202,13 +212,21 @@ public class SqlResource
         exceptionToReport = e;
       }
 
-      return Response.serverError()
-                     .type(MediaType.APPLICATION_JSON_TYPE)
-                     .entity(jsonMapper.writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(exceptionToReport)))
-                     .build();
+      return buildNonOkResponse(
+          Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+          QueryInterruptedException.wrapIfNeeded(exceptionToReport)
+      );
     }
     finally {
       Thread.currentThread().setName(currThreadName);
     }
+  }
+
+  Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
+  {
+    return Response.status(status)
+                   .type(MediaType.APPLICATION_JSON_TYPE)
+                   .entity(jsonMapper.writeValueAsBytes(e))
+                   .build();
   }
 }

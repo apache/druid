@@ -109,7 +109,7 @@ docker-compose -f docker-compose.druid-hadoop.yml up
 
 1. Build druid-cluster, druid-hadoop docker images. From root module run maven command:
 ```
-mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true
+mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true -Ddocker.build.hadoop=true
 ```
 
 2. Run druid cluster by docker-compose:
@@ -147,6 +147,8 @@ You need to build druid containers only once, after you can skip docker build st
 up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
 these containers already running if using this flag. Additionally, please make sure that the running containers
 are in the same state that the setup script (run_cluster.sh) would have brought it up in.
+- -Ddocker.build.hadoop=true to build the hadoop image when either running integration tests or when building the integration test docker images without running the tests.
+- -Dstart.hadoop.docker=true to start hadoop container when you need to run IT tests that utilize local hadoop docker
 
 ### Debugging Druid while running tests
 
@@ -222,7 +224,7 @@ To run tests on any druid cluster that is already running, create a configuratio
        "middlemanager_host": "<middle_manager_ip>",
        "zookeeper_hosts": "<comma-separated list of zookeeper_ip:zookeeper_port>",
        "cloud_bucket": "<(optional) cloud_bucket for test data if running cloud integration test>",
-       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>",
+       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>"
     }
 
 Set the environment variable `CONFIG_FILE` to the name of the configuration file:
@@ -283,7 +285,7 @@ of the integration test run discussed above.  This is because druid
 test clusters might not, in general, have access to hadoop.
 This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage. 
 To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
-1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. 
+1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. If you have not already built the hadoop image, you will also need to add -Ddocker.build.hadoop=true to the mvn command.
 2) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
 
 Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with 
@@ -302,12 +304,22 @@ If using the Docker-based Hadoop container, the steps above are automatically do
 
 When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.
 
-Run the test using mvn (using the bundled Docker-based Hadoop cluster):
+Option 1: Run the test using mvn (using the bundled Docker-based Hadoop cluster and building docker images at runtime):
 ```
-  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.hadoop=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
 ```
 
-Run the test using mvn (using config file for existing Hadoop cluster):
+Option 2: Run the test using mvn (using the bundled Docker-based hadoop cluster and not building images at runtime):
+```
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Ddocker.build.skip=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+```
+
+Option 3: Run the test using mvn (using the bundled Docker-based hadoop cluster and when you have already started all containers)
+```
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Ddocker.run.skip=true -Ddocker.build.skip=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
+```
+
+Option 4: Run the test using mvn (using config file for existing Hadoop cluster):
 ```
   mvn verify -P int-tests-config-file -Dit.test=ITHadoopIndexTest -Dextra.datasource.name.suffix=''
 ```

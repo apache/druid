@@ -1124,6 +1124,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new HashedPartitionsSpec(2, null, null),
         INDEX_SPEC,
         null,
@@ -1135,7 +1136,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         7,
-        7
+        7,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1253,6 +1255,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new DynamicPartitionsSpec(2, null),
         INDEX_SPEC,
         null,
@@ -1264,7 +1267,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1374,6 +1378,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new HashedPartitionsSpec(2, null, null),
         INDEX_SPEC,
         null,
@@ -1385,7 +1390,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1815,6 +1821,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         maxRowsInMemory,
         maxBytesInMemory,
+        null,
         maxTotalRows,
         null,
         null,
@@ -1830,7 +1837,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        1
+        1,
+        null
     );
   }
 

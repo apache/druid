@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.HashMap;
@@ -386,6 +387,19 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getStreamEndpoint()
       {
         return streamEndpoint;
+      }
+
+      @Override
+      public boolean isDocker()
+      {
+        return true;
+      }
+
+      @Override
+      @Nullable
+      public String getDockerHost()
+      {
+        return dockerIp;
       }
     };
   }

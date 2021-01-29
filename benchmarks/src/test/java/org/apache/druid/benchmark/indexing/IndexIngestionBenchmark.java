@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark.indexing;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -26,7 +27,9 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -40,10 +43,11 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -61,6 +65,12 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
+  @Param({"none", "moderate", "high"})
+  private String rollupOpportunity;
+
+  @Param({"onheap", "offheap"})
+  private String indexType;
+
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -68,32 +78,31 @@ public class IndexIngestionBenchmark
     NullHandling.initializeForTests();
   }
 
-  private IncrementalIndex incIndex;
-  private ArrayList<InputRow> rows;
+  private AppendableIndexSpec appendableIndexSpec;
+  private IncrementalIndex<?> incIndex;
+  private List<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
 
   @Setup
-  public void setup()
+  public void setup() throws JsonProcessingException
   {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    rows = new ArrayList<InputRow>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
+
+    // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+    // It is used in {@code makeIncIndex()} to instanciate an incremental-index of the specified type.
+    appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
 
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+        schemaInfo.getDataInterval().getStartMillis(),
+        IndexPersistBenchmark.getValuesPerTimestamp(rollupOpportunity),
+        1000.0
     );
 
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = gen.nextRow();
-      if (i % 10000 == 0) {
-        log.info(i + " rows generated.");
-      }
-      rows.add(row);
-    }
+    rows = gen.toList(rowsPerSegment);
   }
 
   @Setup(Level.Invocation)
@@ -102,9 +111,17 @@ public class IndexIngestionBenchmark
     incIndex = makeIncIndex();
   }
 
-  private IncrementalIndex makeIncIndex()
+  @TearDown(Level.Invocation)
+  public void tearDown()
   {
-    return new IncrementalIndex.Builder()
+    if (incIndex != null) {
+      incIndex.close();
+    }
+  }
+
+  private IncrementalIndex<?> makeIncIndex()
+  {
+    return appendableIndexSpec.builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMetrics(schemaInfo.getAggsArray())
@@ -112,7 +129,7 @@ public class IndexIngestionBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment * 2)
-        .buildOnheap();
+        .build();
   }
 
   @Benchmark
