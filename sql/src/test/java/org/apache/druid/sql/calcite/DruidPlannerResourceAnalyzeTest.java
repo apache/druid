@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -32,7 +31,7 @@ import java.util.Set;
 public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testTable() throws SqlParseException
+  public void testTable()
   {
     final String sql = "SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
 
@@ -70,7 +69,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubquery() throws SqlParseException
+  public void testSubquery()
   {
     final String sql = "SELECT COUNT(*)\n"
                        + "FROM (\n"
