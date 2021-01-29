@@ -151,7 +151,7 @@ public class QueryLifecycleTest
   }
 
   @Test
-  public void testRunSimpleUnAuthorized()
+  public void testRunSimpleUnauthorized()
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Unauthorized");
