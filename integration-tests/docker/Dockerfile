@@ -74,6 +74,9 @@ ADD tls tls
 
 ADD client_tls client_tls
 
+# define default ZooKeeper version
+ENV ZK_VERSION=3.5
+
 # Expose ports:
 # - 8081, 8281: HTTP, HTTPS (coordinator)
 # - 8082, 8282: HTTP, HTTPS (broker)

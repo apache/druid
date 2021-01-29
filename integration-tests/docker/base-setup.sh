@@ -42,13 +42,12 @@ install_zk() {
 ZK_VERSION=3.4.14
 ZK_TAR=zookeeper-$ZK_VERSION
 install_zk
+ln -s /usr/local/$ZK_TAR /usr/local/zookeeper-3.4
 
 ZK_VERSION=3.5.9
 ZK_TAR=apache-zookeeper-$ZK_VERSION-bin
 install_zk
-
-# set default ZK version
-ln -s /usr/local/$ZK_TAR /usr/local/zookeeper
+ln -s /usr/local/$ZK_TAR /usr/local/zookeeper-3.5
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
