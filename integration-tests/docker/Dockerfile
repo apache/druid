@@ -40,7 +40,7 @@ RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mysql start \
 ADD lib/* /usr/local/druid/lib/
 
 # Download the MySQL Java connector
-RUN wget "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_CONNECTOR_VERSION/mysql-connector-java-$MYSQL_CONNECTOR_VERSION.jar" \
+RUN wget -q "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_CONNECTOR_VERSION/mysql-connector-java-$MYSQL_CONNECTOR_VERSION.jar" \
     -O /usr/local/druid/lib/mysql-connector-java-$MYSQL_CONNECTOR_VERSION.jar
 
 # Add sample data
