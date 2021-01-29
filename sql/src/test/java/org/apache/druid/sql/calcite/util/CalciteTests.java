@@ -179,6 +179,8 @@ public class CalciteTests
 
         if (resource.getType() == ResourceType.DATASOURCE && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
           return new Access(false);
+        } else if (resource.getType() == ResourceType.VIEW && resource.getName().equals("forbiddenView")) {
+          return new Access(false);
         } else {
           return Access.OK;
         }

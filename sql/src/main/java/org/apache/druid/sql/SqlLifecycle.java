@@ -264,8 +264,7 @@ public class SqlLifecycle
    * statements via JDBC.
    *
    */
-  public PrepareResult prepare(AuthenticationResult authenticationResult)
-      throws ValidationException, RelConversionException, SqlParseException
+  public PrepareResult prepare(AuthenticationResult authenticationResult) throws RelConversionException
   {
     synchronized (lock) {
       if (state != State.AUTHORIZED) {
@@ -342,7 +341,7 @@ public class SqlLifecycle
       Map<String, Object> queryContext,
       List<SqlParameter> parameters,
       AuthenticationResult authenticationResult
-  ) throws RelConversionException, SqlParseException
+  ) throws RelConversionException
   {
     Sequence<Object[]> result;
 

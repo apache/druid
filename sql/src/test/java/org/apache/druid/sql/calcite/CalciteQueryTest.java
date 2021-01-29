@@ -831,6 +831,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "forbiddenView", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
@@ -865,6 +866,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "forbiddenView", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
@@ -1065,6 +1067,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @Test
   public void testSelectStarOnForbiddenView() throws Exception
+  {
+    assertQueryIsForbidden(
+        "SELECT * FROM view.forbiddenView",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM view.forbiddenView",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ValueType.STRING),
+                    expressionVirtualColumn("v1", "'a'", ValueType.STRING)
+                )
+                .filters(selector("dim2", "a", null))
+                .columns("__time", "v0", "v1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-01"),
+                NullHandling.defaultStringValue(),
+                "a"
+            },
+            new Object[]{
+                timestamp("2001-01-01"),
+                "1",
+                "a"
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testSelectStarOnRestrictedView() throws Exception
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,

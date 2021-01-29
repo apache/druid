@@ -51,7 +51,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConfusingTable() throws SqlParseException
+  public void testConfusingTable()
   {
     final String sql = "SELECT COUNT(*) FROM foo as druid WHERE druid.dim1 <> 'z'";
 
@@ -97,7 +97,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubqueryUnion() throws SqlParseException
+  public void testSubqueryUnion()
   {
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
@@ -123,7 +123,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJoin() throws SqlParseException
+  public void testJoin()
   {
     final String sql = "SELECT COUNT(*) FROM foo INNER JOIN numfoo ON foo.dim1 = numfoo.dim1 WHERE numfoo.dim1 <> 'z'";
 
@@ -143,7 +143,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testView() throws SqlParseException
+  public void testView()
   {
     final String sql = "SELECT COUNT(*) FROM view.aview as druid WHERE dim1_firstchar <> 'z'";
 
@@ -162,7 +162,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubqueryView() throws SqlParseException
+  public void testSubqueryView()
   {
     final String sql = "SELECT COUNT(*)\n"
                        + "FROM (\n"
@@ -189,7 +189,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJoinView() throws SqlParseException
+  public void testJoinView()
   {
     final String sql = "SELECT COUNT(*) FROM view.cview as aview INNER JOIN numfoo ON aview.dim2 = numfoo.dim2 WHERE numfoo.dim1 <> 'z'";
 
@@ -209,7 +209,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConfusingViewIdentifiers() throws SqlParseException
+  public void testConfusingViewIdentifiers()
   {
     final String sql = "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'";
 
@@ -228,7 +228,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDynamicParameters() throws SqlParseException
+  public void testDynamicParameters()
   {
     final String sql = "SELECT SUBSTRING(dim2, CAST(? as BIGINT), CAST(? as BIGINT)) FROM druid.foo LIMIT ?";
     Set<Resource> requiredResources = analyzeResources(
