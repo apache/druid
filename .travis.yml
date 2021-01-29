@@ -27,6 +27,7 @@ cache:
 
 env:
   global:
+    - ZK_VERSION=3.5 # default ZK version for integration tests
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)

@@ -54,7 +54,6 @@ services:
     env_file:
       - ./environment-configs/common
     environment:
-      # ZK_VERSION will be passed through to the docker container
       - ZK_VERSION
 
   druid-metadata-storage:
