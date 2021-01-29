@@ -599,7 +599,7 @@ public class IndexGeneratorJobTest
     Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
     int shardCount = 0;
     int segmentNum = 0;
-    for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+    for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
       List<ShardSpec> specs = constructShardSpecFromShardInfo(partitionType, shardInfoForEachShard[segmentNum++]);
       List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
       for (ShardSpec spec : specs) {

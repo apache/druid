@@ -123,7 +123,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -231,7 +230,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("partitionsSpec[%s] is not supported", tuningConfig.getPartitionsSpec().getClass().getName());
       }
     }
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec());
+    return determineLockGranularityAndTryLock(
+        taskActionClient,
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
+    );
   }
 
   @Override
@@ -452,10 +454,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final boolean determineIntervals = !ingestionSchema.getDataSchema()
-                                                         .getGranularitySpec()
-                                                         .bucketIntervals()
-                                                         .isPresent();
+      final boolean determineIntervals = ingestionSchema.getDataSchema()
+                                                        .getGranularitySpec()
+                                                        .inputIntervals()
+                                                        .isEmpty();
 
       final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
           ingestionSchema.getDataSchema().getParser()
@@ -591,7 +593,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     // Must determine intervals if unknown, since we acquire all locks before processing any data.
-    final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
+    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
     final boolean determineNumPartitions = partitionsSpec.needsDeterminePartitions(false);
@@ -630,7 +632,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @Nonnull DynamicPartitionsSpec partitionsSpec
   )
   {
-    final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
+    final Iterable<Interval> intervals = granularitySpec.sortedBucketIntervals();
     final int numBucketsPerInterval = 1;
     final LinearPartitionAnalysis partitionAnalysis = new LinearPartitionAnalysis(partitionsSpec);
     intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));
