@@ -46,6 +46,7 @@ stages:
   - name: test  # jobs that do not specify a stage get this default value
     if: type != cron
   - name: it
+    if: type != cron
   - name: cron
     if: type = cron
 
