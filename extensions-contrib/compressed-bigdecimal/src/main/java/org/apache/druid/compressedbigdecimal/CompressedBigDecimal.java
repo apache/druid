@@ -25,7 +25,8 @@ import java.util.Arrays;
 import java.util.function.ToIntBiFunction;
 
 /**
- * Mutable big decimal value that can be used to accumulate values without losing precision or reallocating memory.
+ * Mutable big decimal value that can be used to accumulate values without losing precision or reallocating memory. 
+ * This helps in revenue based calculations
  *
  * @param <T> Type of actual derived class that contains the underlying data
  */
