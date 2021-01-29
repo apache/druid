@@ -69,7 +69,12 @@
     </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
-      <artifactId>kafka-protobuf-serializer</artifactId>
+      <artifactId>kafka-schema-registry-client</artifactId>
+      <version>${confluent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-protobuf-provider</artifactId>
       <version>${confluent.version}</version>
       <exclusions>
         <exclusion>
