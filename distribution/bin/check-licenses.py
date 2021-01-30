@@ -225,6 +225,9 @@ def build_compatible_license_names():
     compatible_licenses['Apache License v2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License, version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2.0 License'] = 'Apache License version 2.0'
+    compatible_licenses['Apache License, 2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Confluent Community License'] = 'Confluent Community License'
+    compatible_licenses['EPL 2.0'] = 'EPL 2.0'
 
     compatible_licenses['Public Domain'] = 'Public Domain'
 
@@ -321,6 +324,7 @@ def check_licenses(license_yaml, dependency_reports_root):
                 print_log_to_stderr("Parsing {}".format(full_path))
                 with open(full_path) as report_file:
                     parser = DependencyReportParser(druid_module_name, compatible_license_names)
+                    print (compatible_license_names)
                     reported_dep_to_licenses.update(parser.parse(report_file))
 
     if len(reported_dep_to_licenses) == 0:
