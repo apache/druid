@@ -497,10 +497,15 @@ jobs:
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
 
+    # Subset of integration tests to run with ZooKeeper 3.4.x for backwards compatibility
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk8, ZK=3.4) leadership and high availability integration tests"
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' ZK_VERSION=3.4
+
+    - <<: *integration_kafka_format_tests
+      name: "(Compile=openjdk8, Run=openjdk8, ZK=3.4) Kafka index integration test with various formats"
+      env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' ZK_VERSION=3.4
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
@@ -565,6 +570,7 @@ jobs:
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
+    # Subset of integration tests to run with ZooKeeper 3.4.x for backwards compatibility
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk11, ZK=3.4) leadership and high availability integration tests"
       jdk: openjdk8
