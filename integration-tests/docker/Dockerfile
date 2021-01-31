@@ -23,7 +23,7 @@ COPY base-setup.sh /root/base-setup.sh
 RUN /root/base-setup.sh && rm -f /root/base-setup.sh
 
 FROM druidbase
-ARG MYSQL_CONNECTOR_VERSION=5.1.49
+ARG MYSQL_VERSION
 
 # Verify Java version
 RUN java -version
@@ -41,7 +41,7 @@ ADD lib/* /usr/local/druid/lib/
 
 # Download the MySQL Java connector
 # target path must match the exact path referenced in environment-configs/common
-RUN wget -q "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_CONNECTOR_VERSION/mysql-connector-java-$MYSQL_CONNECTOR_VERSION.jar" \
+RUN wget -q "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_VERSION/mysql-connector-java-$MYSQL_VERSION.jar" \
     -O /usr/local/druid/lib/mysql-connector-java.jar
 
 # Add sample data
