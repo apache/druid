@@ -33,6 +33,18 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
+  <properties>
+    <confluent.version>6.0.1</confluent.version>
+    <commons-io.version>2.6</commons-io.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>confluent</id>
+      <url>https://packages.confluent.io/maven/</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -52,14 +64,31 @@
       <exclusions>
         <exclusion>
           <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
+          <artifactId>protobuf-java</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.github.os72</groupId>
-      <artifactId>protobuf-dynamic</artifactId>
-      <version>0.9.3</version>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-schema-registry-client</artifactId>
+      <version>${confluent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-protobuf-provider</artifactId>
+      <version>${confluent.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>protobuf-java-util</artifactId>
+          <groupId>com.google.protobuf</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons-io.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -96,6 +125,11 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
