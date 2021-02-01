@@ -146,7 +146,7 @@ public class FireDepartmentMetrics
   }
 
   @VisibleForTesting
-  long processingCompletionTime()
+  public long processingCompletionTime()
   {
     return messageProcessingCompletionTime.get();
   }
