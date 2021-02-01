@@ -3402,16 +3402,6 @@ libraries:
 
 ---
 
-name: Kafka Schema Registry Protobuf Provider
-version: 6.0.1
-license_category: binary
-module: extensions/druid-protobuf-extensions
-license_name: Confluent Community License
-libraries:
-  - io.confluent: kafka-protobuf-provider
-
----
-
 name: Apache Velocity Engine
 version: 2.2
 license_category: binary
