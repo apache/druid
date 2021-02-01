@@ -52,7 +52,6 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     registry = new CachedSchemaRegistryClient(Collections.singletonList(url), identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), null);
   }
 
-  //For UT only
   @VisibleForTesting
   SchemaRegistryBasedProtobufBytesDecoder(SchemaRegistryClient registry)
   {
