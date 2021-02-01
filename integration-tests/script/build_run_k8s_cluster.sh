@@ -16,23 +16,25 @@
 
 set -e
 
-export DRUID_OPERATOR_VERSION=0.0.3
-export KUBECTL="sudo /usr/local/bin/kubectl"
+if ($BUILD_DRUID_CLSUTER); then
 
+  DRUID_HOME=$(dirname `pwd`)
+  echo "SET DRUID_HOME: $DRUID_HOME"
+  minikubeFile="/usr/local/bin/minikube*"
+  minikubeFile2="/usr/local/bin/minikube"
 
-# Prepare For Druid-Operator
-rm -rf druid-operator
-git clone https://github.com/druid-io/druid-operator.git
-cd druid-operator
-git checkout -b druid-operator-$DRUID_OPERATOR_VERSION druid-operator-$DRUID_OPERATOR_VERSION
-cd ..
-sed -i "s|REPLACE_IMAGE|druidio/druid-operator:$DRUID_OPERATOR_VERSION|g" druid-operator/deploy/operator.yaml
+  if [ -f "$minikubeFile" ] || [ -f "$minikubeFile2" ]; then
+    bash $DRUID_HOME/integration-tests/script/stop_k8s_cluster.sh
+  fi
 
-# Deploy Druid Operator and Druid CR spec
-$KUBECTL create -f druid-operator/deploy/service_account.yaml
-$KUBECTL create -f druid-operator/deploy/role.yaml
-$KUBECTL create -f druid-operator/deploy/role_binding.yaml
-$KUBECTL create -f druid-operator/deploy/crds/druid.apache.org_druids_crd.yaml
-$KUBECTL create -f druid-operator/deploy/operator.yaml
+  cd $DRUID_HOME
+  echo "Start to setup k8s cluster"
+  bash $DRUID_HOME/integration-tests/script/setup_k8s_cluster.sh
 
-echo "Setup Druid Operator on K8S Done!"
+  echo "Start to setup druid operator on k8s"
+  bash $DRUID_HOME/integration-tests/script/setup_druid_operator_on_k8s.sh
+
+  echo "Start to setup druid on k8s"
+  bash $DRUID_HOME/integration-tests/script/setup_druid_on_k8s.sh
+fi
+
