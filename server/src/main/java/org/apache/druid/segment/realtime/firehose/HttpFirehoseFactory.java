@@ -26,6 +26,7 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.HttpEntity;
+import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -64,6 +65,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
+    HttpInputSource.throwIfInvalidProtocols(uris);
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;

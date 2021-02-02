@@ -21,16 +21,23 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.HttpInputSource;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URI;
 
 public class HttpFirehoseFactoryTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -53,5 +60,44 @@ public class HttpFirehoseFactoryTest
     );
 
     Assert.assertEquals(factory, outputFact);
+  }
+
+  @Test
+  public void testConstructorAllowsOnlyHttpAndHttpsProtocols()
+  {
+    new HttpFirehoseFactory(
+        ImmutableList.of(URI.create("http:///")),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    new HttpFirehoseFactory(
+        ImmutableList.of(URI.create("https:///")),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only HTTP or HTTPS are allowed");
+    new HttpFirehoseFactory(
+        ImmutableList.of(URI.create("my-protocol:///")),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 }

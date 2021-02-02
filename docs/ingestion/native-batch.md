@@ -1203,7 +1203,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `http`|None|yes|
-|uris|URIs of the input files.|None|yes|
+|uris|URIs of the input files. Only `http` and `https` schemes are allowed.|None|yes|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 
@@ -1590,6 +1590,7 @@ A sample HTTP Firehose spec is shown below:
 }
 ```
 
+URIs must have a scheme of either `http` or `https`.
 The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
 Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.
 
