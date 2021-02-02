@@ -53,7 +53,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   {
     // Given
     InputStream fin;
-    fin = this.getClass().getClassLoader().getResourceAsStream("prototest.proto");
+    fin = this.getClass().getClassLoader().getResourceAsStream("ProtoTest.proto");
     String protobufString = IOUtils.toString(fin, StandardCharsets.UTF_8);
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(new ProtobufSchema(protobufString));
     ProtoTestEventWrapper.ProtoTestEvent event = getTestEvent();
@@ -71,7 +71,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   {
     // Given
     InputStream fin;
-    fin = this.getClass().getClassLoader().getResourceAsStream("prototest.proto");
+    fin = this.getClass().getClassLoader().getResourceAsStream("ProtoTest.proto");
     String protobufString = IOUtils.toString(fin, StandardCharsets.UTF_8);
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(new ProtobufSchema(protobufString));
     byte[] bytes = getTestEvent().toByteArray();
@@ -89,6 +89,25 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
     // When
     new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb);
+  }
+
+  @Test
+  public void testDefaultCapacity() throws Exception
+  {
+    // Given
+    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null);
+    // When
+    Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), Integer.MAX_VALUE);
+  }
+
+  @Test
+  public void testGivenCapacity() throws Exception
+  {
+    int capacity = 100;
+    // Given
+    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity);
+    // When
+    Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), capacity);
   }
 
   private ProtoTestEventWrapper.ProtoTestEvent getTestEvent()

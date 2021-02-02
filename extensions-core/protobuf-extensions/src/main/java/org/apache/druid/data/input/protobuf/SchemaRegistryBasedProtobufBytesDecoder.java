@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Objects;
 
 public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDecoder
 {
@@ -41,6 +40,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   private static final Logger LOGGER = new Logger(SchemaRegistryBasedProtobufBytesDecoder.class);
 
   private final SchemaRegistryClient registry;
+  private int identityMapCapacity;
 
   @JsonCreator
   public SchemaRegistryBasedProtobufBytesDecoder(
@@ -48,8 +48,14 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       @JsonProperty("capacity") Integer capacity
   )
   {
-    int identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
+    this.identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
     registry = new CachedSchemaRegistryClient(Collections.singletonList(url), identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), null);
+  }
+
+  @VisibleForTesting
+  int getIdentityMapCapacity()
+  {
+    return this.identityMapCapacity;
   }
 
   @VisibleForTesting
@@ -77,26 +83,5 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       LOGGER.error(e.getMessage());
       throw new ParseException(e, "Fail to decode protobuf message!");
     }
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    SchemaRegistryBasedProtobufBytesDecoder that = (SchemaRegistryBasedProtobufBytesDecoder) o;
-
-    return Objects.equals(registry, that.registry);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return registry != null ? registry.hashCode() : 0;
   }
 }
