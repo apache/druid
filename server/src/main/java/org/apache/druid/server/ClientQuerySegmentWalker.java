@@ -28,6 +28,7 @@ import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -455,7 +456,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
 
     if (limitAccumulator.get() >= limitToUse) {
-      throw new ResourceLimitExceededException("Cannot issue subquery, maximum[%d] reached", limitToUse);
+      throw new ResourceLimitExceededException(
+          StringUtils.nonStrictFormat("Cannot issue subquery, maximum[%d] reached", limitToUse)
+      );
     }
 
     final RowSignature signature = toolChest.resultArraySignature(query);
@@ -467,8 +470,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= limitToUse) {
             throw new ResourceLimitExceededException(
-                "Subquery generated results beyond maximum[%d]",
-                limitToUse
+                StringUtils.nonStrictFormat(
+                    "Subquery generated results beyond maximum[%d]",
+                    limitToUse
+                )
             );
           }
           acc.add(in);
