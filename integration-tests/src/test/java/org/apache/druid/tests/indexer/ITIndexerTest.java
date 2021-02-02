@@ -54,6 +54,9 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   private static final String MERGE_REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_merge_index_queries.json";
   private static final String MERGE_REINDEX_DATASOURCE = "wikipedia_merge_reindex_test";
 
+  private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_TASK = "/indexer/wikipedia_index_with_merge_column_limit_task.json";
+  private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE = "wikipedia_index_with_merge_column_limit_test";
+
   @Test
   public void testIndexData() throws Exception
   {
@@ -149,6 +152,24 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           reindexDatasourceWithDruidInputSource,
           MERGE_REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
           MERGE_INDEX_QUERIES_RESOURCE
+      );
+    }
+  }
+
+
+  @Test
+  public void testIndexWithMergeColumnLimitData() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
+      doIndexTest(
+          INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE,
+          INDEX_WITH_MERGE_COLUMN_LIMIT_TASK,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true
       );
     }
   }

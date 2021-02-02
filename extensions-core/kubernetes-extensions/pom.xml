@@ -30,7 +30,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.21.0-SNAPSHOT</version>
+    <version>0.22.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -84,6 +84,14 @@
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <scope>test</scope>
+    </dependency>
+
+    <!-- Version override to address CVE-2020-28052 -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.68</version>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- others -->

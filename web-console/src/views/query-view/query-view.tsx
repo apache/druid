@@ -20,6 +20,7 @@ import { Code, Intent, Switch, Tooltip } from '@blueprintjs/core';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
+import * as JSONBig from 'json-bigint-native';
 import memoizeOne from 'memoize-one';
 import React, { RefObject } from 'react';
 import SplitterLayout from 'react-splitter-layout';
@@ -318,7 +319,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         return null;
       }
       return {
-        queryString: JSON.stringify(parsed, null, 2),
+        queryString: JSONBig.stringify(parsed, undefined, 2),
       };
     });
   }
@@ -349,7 +350,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             outputObject[newName.name] = r[k];
           }
         }
-        return JSON.stringify(outputObject);
+        return JSONBig.stringify(outputObject);
       });
     }
 

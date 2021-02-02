@@ -19,18 +19,34 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * Exception indicating that an operation failed because it exceeded some configured resource limit.
  *
- * This is used as a marker exception by {@link QueryInterruptedException} to report the "Resource limit exceeded"
- * error code.
+ * This is a {@link BadQueryException} because it likely indicates a user's misbehavior when this exception is thrown.
+ * The resource limitations set by Druid cluster operators are typically less flexible than the parameters of
+ * a user query, so when a user query requires too many resources, the likely remedy is that the user query
+ * should be modified to use fewer resources, or to reduce query volume.
  */
-public class ResourceLimitExceededException extends RuntimeException
+public class ResourceLimitExceededException extends BadQueryException
 {
+  public static final String ERROR_CODE = "Resource limit exceeded";
+
   public ResourceLimitExceededException(String message, Object... arguments)
   {
-    super(StringUtils.nonStrictFormat(message, arguments));
+    this(ERROR_CODE, StringUtils.nonStrictFormat(message, arguments), ResourceLimitExceededException.class.getName());
+  }
+
+  @JsonCreator
+  private ResourceLimitExceededException(
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass
+  )
+  {
+    super(errorCode, errorMessage, errorClass, resolveHostname());
   }
 }

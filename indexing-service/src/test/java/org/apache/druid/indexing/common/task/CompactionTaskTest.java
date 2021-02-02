@@ -312,6 +312,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -323,6 +324,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -447,6 +449,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             new IndexSpec(
                 new RoaringBitmapSerdeFactory(true),
                 CompressionStrategy.LZ4,
@@ -458,6 +461,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,
@@ -547,6 +551,21 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testSegmentProviderFindSegmentsWithEmptySegmentsThrowException()
+  {
+    final SegmentProvider provider = new SegmentProvider(
+        "datasource",
+        new CompactionIntervalSpec(Intervals.of("2021-01-01/P1D"), null)
+    );
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage(
+        "No segments found for compaction. Please check that datasource name and interval are correct."
+    );
+    provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
+  }
+
+  @Test
   public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
@@ -592,6 +611,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -606,6 +626,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -656,6 +677,7 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
+        null,
         1000000L,
         null,
         null,
@@ -671,6 +693,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -727,6 +750,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new HashedPartitionsSpec(null, 3, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
@@ -742,6 +766,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1113,6 +1138,7 @@ public class CompactionTaskTest
             null,
             500000,
             1000000L,
+            null,
             Long.MAX_VALUE,
             null,
             null,
@@ -1128,6 +1154,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,

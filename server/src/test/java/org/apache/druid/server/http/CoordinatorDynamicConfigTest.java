@@ -90,7 +90,6 @@ public class CoordinatorDynamicConfigTest
                      + "  \"mergeBytesLimit\": 1,\n"
                      + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"percentOfSegmentsToConsiderPerMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
@@ -110,13 +109,13 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 0, false);
+    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, decommissioning, 0, false);
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0, false);
+    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0, false);
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(5).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, false);
+    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, false);
   }
 
   @Test
@@ -166,7 +165,7 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testSerdeCorrectsInvalidBadMaxPercentOfSegmentsToConsiderPerMove() throws Exception
+  public void testSerdeHandleInvalidPercentOfSegmentsToConsiderPerMove() throws Exception
   {
     try {
       String jsonStr = "{\n"
@@ -230,6 +229,38 @@ public class CoordinatorDynamicConfigTest
     catch (JsonMappingException e) {
       Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
     }
+  }
+
+  @Test
+  public void testHandleMissingPercentOfSegmentsToConsiderPerMove() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"millisToWaitBeforeDeleting\": 1,\n"
+                     + "  \"mergeBytesLimit\": 1,\n"
+                     + "  \"mergeSegmentsLimit\" : 1,\n"
+                     + "  \"maxSegmentsToMove\": 1,\n"
+                     + "  \"replicantLifetime\": 1,\n"
+                     + "  \"replicationThrottleLimit\": 1,\n"
+                     + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"emitBalancingStats\": true,\n"
+                     + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
+                     + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
+                     + "  \"decommissioningMaxPercentOfMaxSegmentsToMove\": 9,\n"
+                     + "  \"pauseCoordination\": false\n"
+                     + "}\n";
+    CoordinatorDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                CoordinatorDynamicConfig.class
+            )
+        ),
+        CoordinatorDynamicConfig.class
+    );
+    ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
+    ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
+    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, decommissioning, 9, false);
   }
 
   @Test

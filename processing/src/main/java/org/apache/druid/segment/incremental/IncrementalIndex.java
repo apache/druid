@@ -321,66 +321,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  /**
-   * This class exists only as backward competability to reduce the number of modified lines.
-   */
-  public static class Builder extends OnheapIncrementalIndex.Builder
-  {
-    @Override
-    public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
-    {
-      return (Builder) super.setIndexSchema(incrementalIndexSchema);
-    }
-
-    @Override
-    public Builder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
-    {
-      return (Builder) super.setSimpleTestingIndexSchema(metrics);
-    }
-
-    @Override
-    public Builder setSimpleTestingIndexSchema(@Nullable Boolean rollup, final AggregatorFactory... metrics)
-    {
-      return (Builder) super.setSimpleTestingIndexSchema(rollup, metrics);
-    }
-
-    @Override
-    public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
-    {
-      return (Builder) super.setDeserializeComplexMetrics(deserializeComplexMetrics);
-    }
-
-    @Override
-    public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
-    {
-      return (Builder) super.setConcurrentEventAdd(concurrentEventAdd);
-    }
-
-    @Override
-    public Builder setSortFacts(final boolean sortFacts)
-    {
-      return (Builder) super.setSortFacts(sortFacts);
-    }
-
-    @Override
-    public Builder setMaxRowCount(final int maxRowCount)
-    {
-      return (Builder) super.setMaxRowCount(maxRowCount);
-    }
-
-    @Override
-    public Builder setMaxBytesInMemory(final long maxBytesInMemory)
-    {
-      return (Builder) super.setMaxBytesInMemory(maxBytesInMemory);
-    }
-
-    public OnheapIncrementalIndex buildOnheap()
-    {
-      return (OnheapIncrementalIndex) build();
-    }
-  }
-
-
   public abstract FactsHolder getFacts();
 
   public abstract boolean canAppendRow();

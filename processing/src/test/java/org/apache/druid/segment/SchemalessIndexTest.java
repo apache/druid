@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.Overshadowable;
@@ -149,7 +150,7 @@ public class SchemalessIndexTest
         final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
 
         if (theIndex == null) {
-          theIndex = new IncrementalIndex.Builder()
+          theIndex = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
@@ -158,7 +159,7 @@ public class SchemalessIndexTest
                       .build()
               )
               .setMaxRowCount(1000)
-              .buildOnheap();
+              .build();
         }
 
         final List<String> dims = new ArrayList<>();
@@ -218,7 +219,8 @@ public class SchemalessIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 INDEX_SPEC,
-                null
+                null,
+                -1
             )
         );
 
@@ -265,7 +267,8 @@ public class SchemalessIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 INDEX_SPEC,
-                null
+                null,
+                -1
             )
         );
 
@@ -301,7 +304,7 @@ public class SchemalessIndexTest
         }
 
         return indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null)
+            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null, -1)
         );
       }
       catch (IOException e) {
@@ -367,7 +370,7 @@ public class SchemalessIndexTest
             }
           }
 
-          final IncrementalIndex rowIndex = new IncrementalIndex.Builder()
+          final IncrementalIndex rowIndex = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
@@ -376,7 +379,7 @@ public class SchemalessIndexTest
                       .build()
               )
               .setMaxRowCount(1000)
-              .buildOnheap();
+              .build();
 
           rowIndex.add(
               new MapBasedInputRow(timestamp, dims, event)
@@ -404,7 +407,7 @@ public class SchemalessIndexTest
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
 
-    final IncrementalIndex retVal = new IncrementalIndex.Builder()
+    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
@@ -413,7 +416,7 @@ public class SchemalessIndexTest
                 .build()
         )
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     try {
       final List<Object> events = JSON_MAPPER.readValue(new File(filename), List.class);
@@ -562,7 +565,8 @@ public class SchemalessIndexTest
               METRIC_AGGS,
               mergedFile,
               INDEX_SPEC,
-              null
+              null,
+              -1
           )
       );
     }

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -48,7 +49,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String>
+public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, ByteEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTaskRunner.class);
   private static final long POLL_TIMEOUT = 100;
@@ -80,8 +81,8 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<String, String>> getRecords(
-      RecordSupplier<String, String> recordSupplier, TaskToolbox toolbox
+  protected List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(
+      RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox
   )
   {
     return recordSupplier.poll(POLL_TIMEOUT);
@@ -118,7 +119,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<String, String> recordSupplier,
+      RecordSupplier<String, String, ByteEntity> recordSupplier,
       Set<StreamPartition<String>> assignment
   )
   {

@@ -333,6 +333,34 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
+  public SamplerResponse sample(SamplerSpec samplerSpec)
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/sampler")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(samplerSpec))
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        if (!Strings.isNullOrEmpty(response.getContent())) {
+          throw new ISE(
+              "Failed to sample with sampler spec[%s], response[%s].",
+              samplerSpec,
+              response.getContent()
+          );
+        } else {
+          throw new ISE("Failed to sample with sampler spec[%s]. Please check overlord log", samplerSpec);
+        }
+      }
+
+      return jsonMapper.readValue(response.getContent(), SamplerResponse.class);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public int killPendingSegments(String dataSource, DateTime end)
   {
     final String endPoint = StringUtils.format(

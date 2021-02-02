@@ -26,16 +26,20 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import javax.annotation.Nullable;
 
 /**
+ * A class that comes from {@link VectorCursor#getColumnSelectorFactory()} and is used to create vector selectors.
  *
+ * If you need to write code that adapts to different input types, you should write a
+ * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
+ * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this class.
  *
- * @see org.apache.druid.segment.ColumnSelectorFactory, the non-vectorized version.
+ * @see org.apache.druid.segment.ColumnSelectorFactory the non-vectorized version.
  */
 public interface VectorColumnSelectorFactory extends ColumnInspector
 {
   /**
-   * Returns a {@link VectorSizeInspector} for the {@link VectorCursor} that generated this object.
+   * Returns a {@link ReadableVectorInspector} for the {@link VectorCursor} that generated this object.
    */
-  VectorSizeInspector getVectorSizeInspector();
+  ReadableVectorInspector getReadableVectorInspector();
 
   /**
    * Returns the maximum vector size for the {@link VectorCursor} that generated this object.
@@ -44,26 +48,47 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    */
   default int getMaxVectorSize()
   {
-    return getVectorSizeInspector().getMaxVectorSize();
+    return getReadableVectorInspector().getMaxVectorSize();
   }
 
   /**
-   * Returns a string-typed, single-value-per-row column selector.
+   * Returns a string-typed, single-value-per-row column selector. Should only be called on columns where
+   * {@link #getColumnCapabilities} indicates they return STRING, or on nonexistent columns.
+   *
+   * If you need to write code that adapts to different input types, you should write a
+   * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
+   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec);
 
   /**
-   * Returns a string-typed, multi-value-per-row column selector.
+   * Returns a string-typed, multi-value-per-row column selector. Should only be called on columns where
+   * {@link #getColumnCapabilities} indicates they return STRING. Unlike {@link #makeSingleValueDimensionSelector},
+   * this should not be called on nonexistent columns.
+   *
+   * If you need to write code that adapts to different input types, you should write a
+   * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
+   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec);
 
   /**
-   * Returns a primitive column selector.
+   * Returns a primitive column selector. Should only be called on columns where {@link #getColumnCapabilities}
+   * indicates they return DOUBLE, FLOAT, or LONG, or on nonexistent columns.
+   *
+   * If you need to write code that adapts to different input types, you should write a
+   * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
+   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   VectorValueSelector makeValueSelector(String column);
 
   /**
-   * Returns an object selector, useful for complex columns.
+   * Returns an object selector. Should only be called on columns where {@link #getColumnCapabilities} indicates that
+   * they return STRING or COMPLEX, or on nonexistent columns.
+   *
+   * If you need to write code that adapts to different input types, you should write a
+   * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
+   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   VectorObjectSelector makeObjectSelector(String column);
 
