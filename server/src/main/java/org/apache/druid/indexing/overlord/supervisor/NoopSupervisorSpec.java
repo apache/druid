@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 
 /**
  * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
