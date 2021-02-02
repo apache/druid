@@ -22,34 +22,59 @@ package org.apache.druid.segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 /**
  * Class that encapsulates knowledge about how to create vector column processors. Used by
- * {@link DimensionHandlerUtils#makeVectorProcessor}.
+ * {@link ColumnProcessors#makeVectorProcessor}.
  *
- * Unlike {@link ColumnProcessorFactory}, this interface does not have a "defaultType" method. The default type is
- * always implicitly STRING. It also does not have a "makeComplexProcessor" method; instead, complex-typed columns
- * are fed into "makeSingleValueDimensionProcessor". This behavior may change in the future to better align
- * with {@link ColumnProcessorFactory}.
+ * Column processors can be any type "T". The idea is that a ColumnProcessorFactory embodies the logic for wrapping
+ * and processing selectors of various types, and so enables nice code design, where type-dependent code is not
+ * sprinkled throughout.
+ *
+ * Unlike {@link ColumnProcessorFactory}, this interface does not have a "defaultType" method, because vector
+ * column types are always known, so it isn't necessary.
  *
  * @see ColumnProcessorFactory the non-vectorized version
  */
 public interface VectorColumnProcessorFactory<T>
 {
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is STRING and the underlying column always has a single value
+   * per row.
+   */
   T makeSingleValueDimensionProcessor(
       ColumnCapabilities capabilities,
       SingleValueDimensionVectorSelector selector
   );
 
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is STRING and the underlying column may have multiple values
+   * per row.
+   */
   T makeMultiValueDimensionProcessor(
       ColumnCapabilities capabilities,
       MultiValueDimensionVectorSelector selector
   );
 
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is FLOAT.
+   */
   T makeFloatProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
 
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is DOUBLE.
+   */
   T makeDoubleProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
 
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is LONG.
+   */
   T makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
+
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is COMPLEX.
+   */
+  T makeObjectProcessor(@SuppressWarnings("unused") ColumnCapabilities capabilities, VectorObjectSelector selector);
 }

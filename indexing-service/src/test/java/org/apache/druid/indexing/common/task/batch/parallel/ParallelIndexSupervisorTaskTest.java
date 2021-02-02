@@ -201,6 +201,7 @@ public class ParallelIndexSupervisorTaskTest
           null,
           null,
           null,
+          null,
           new HashedPartitionsSpec(null, 10, null),
           new IndexSpec(
               new RoaringBitmapSerdeFactory(true),
