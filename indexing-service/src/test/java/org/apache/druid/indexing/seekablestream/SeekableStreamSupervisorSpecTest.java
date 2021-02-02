@@ -36,6 +36,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -333,8 +334,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     }
 
     @Override
-    public void collectLag(ArrayList<Long> lags)
+    public LagStats computeLagStats()
     {
+      return null;
     }
   }
 
@@ -483,6 +485,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
                 null,
                 null,
                 null,
+                null,
                 null
         )
         {
@@ -505,31 +508,31 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testAutoScalerCreated()
   {
-    HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
-    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
-    dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
-    dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
-    dynamicAllocationTasksProperties.put("scaleOutThreshold", 5000000);
-    dynamicAllocationTasksProperties.put("triggerScaleOutThresholdFrequency", 0.3);
-    dynamicAllocationTasksProperties.put("scaleInThreshold", 1000000);
-    dynamicAllocationTasksProperties.put("triggerScaleInThresholdFrequency", 0.8);
-    dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
-    dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
-    dynamicAllocationTasksProperties.put("taskCountMax", 8);
-    dynamicAllocationTasksProperties.put("taskCountMin", 1);
-    dynamicAllocationTasksProperties.put("scaleInStep", 1);
-    dynamicAllocationTasksProperties.put("scaleOutStep", 2);
-    dynamicAllocationTasksProperties.put("minTriggerDynamicFrequencyMillis", 1200000);
+    HashMap<String, Object> autoscalerConfig = new HashMap<>();
+    autoscalerConfig.put("enableTaskAutoscaler", true);
+    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
+    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
+    autoscalerConfig.put("scaleOutThreshold", 5000000);
+    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoscalerConfig.put("scaleInThreshold", 1000000);
+    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
+    autoscalerConfig.put("dynamicCheckPeriod", 100);
+    autoscalerConfig.put("taskCountMax", 8);
+    autoscalerConfig.put("taskCountMin", 1);
+    autoscalerConfig.put("scaleInStep", 1);
+    autoscalerConfig.put("scaleOutStep", 2);
+    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getDynamicAllocationTasksProperties()).andReturn(dynamicAllocationTasksProperties).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getautoscalerConfig()).andReturn(autoscalerConfig).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
-    EasyMock.expect(supervisor4.getSupervisorTaskInfos()).andReturn(new HashMap()).anyTimes();
+    EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
     TesstSeekableStreamSupervisorSpec spec = new TesstSeekableStreamSupervisorSpec(ingestionSchema,
@@ -549,11 +552,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     SupervisorTaskAutoscaler autoscaler = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler instanceof DefaultAutoScaler);
 
-    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", false);
+    autoscalerConfig.put("enableTaskAutoscaler", false);
     SupervisorTaskAutoscaler autoscaler2 = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler2 instanceof DummyAutoScaler);
 
-    dynamicAllocationTasksProperties.remove("enableDynamicAllocationTasks");
+    autoscalerConfig.remove("enableTaskAutoscaler");
     SupervisorTaskAutoscaler autoscaler3 = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler3 instanceof DummyAutoScaler);
 
@@ -743,42 +746,42 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
   private static Map<String, Object> getScaleOutProperties()
   {
-    HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
-    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
-    dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
-    dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
-    dynamicAllocationTasksProperties.put("scaleOutThreshold", 0);
-    dynamicAllocationTasksProperties.put("triggerScaleOutThresholdFrequency", 0.0);
-    dynamicAllocationTasksProperties.put("scaleInThreshold", 1000000);
-    dynamicAllocationTasksProperties.put("triggerScaleInThresholdFrequency", 0.8);
-    dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
-    dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
-    dynamicAllocationTasksProperties.put("taskCountMax", 2);
-    dynamicAllocationTasksProperties.put("taskCountMin", 1);
-    dynamicAllocationTasksProperties.put("scaleInStep", 1);
-    dynamicAllocationTasksProperties.put("scaleOutStep", 2);
-    dynamicAllocationTasksProperties.put("minTriggerDynamicFrequencyMillis", 1200000);
-    return dynamicAllocationTasksProperties;
+    HashMap<String, Object> autoscalerConfig = new HashMap<>();
+    autoscalerConfig.put("enableTaskAutoscaler", true);
+    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
+    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
+    autoscalerConfig.put("scaleOutThreshold", 0);
+    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.0);
+    autoscalerConfig.put("scaleInThreshold", 1000000);
+    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
+    autoscalerConfig.put("dynamicCheckPeriod", 100);
+    autoscalerConfig.put("taskCountMax", 2);
+    autoscalerConfig.put("taskCountMin", 1);
+    autoscalerConfig.put("scaleInStep", 1);
+    autoscalerConfig.put("scaleOutStep", 2);
+    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
+    return autoscalerConfig;
   }
 
   private static Map<String, Object> getScaleInProperties()
   {
-    HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
-    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
-    dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
-    dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
-    dynamicAllocationTasksProperties.put("scaleOutThreshold", 8000000);
-    dynamicAllocationTasksProperties.put("triggerScaleOutThresholdFrequency", 0.3);
-    dynamicAllocationTasksProperties.put("scaleInThreshold", 0);
-    dynamicAllocationTasksProperties.put("triggerScaleInThresholdFrequency", 0.0);
-    dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
-    dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
-    dynamicAllocationTasksProperties.put("taskCountMax", 2);
-    dynamicAllocationTasksProperties.put("taskCountMin", 1);
-    dynamicAllocationTasksProperties.put("scaleInStep", 1);
-    dynamicAllocationTasksProperties.put("scaleOutStep", 2);
-    dynamicAllocationTasksProperties.put("minTriggerDynamicFrequencyMillis", 1200000);
-    return dynamicAllocationTasksProperties;
+    HashMap<String, Object> autoscalerConfig = new HashMap<>();
+    autoscalerConfig.put("enableTaskAutoscaler", true);
+    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
+    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
+    autoscalerConfig.put("scaleOutThreshold", 8000000);
+    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoscalerConfig.put("scaleInThreshold", 0);
+    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.0);
+    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
+    autoscalerConfig.put("dynamicCheckPeriod", 100);
+    autoscalerConfig.put("taskCountMax", 2);
+    autoscalerConfig.put("taskCountMin", 1);
+    autoscalerConfig.put("scaleInStep", 1);
+    autoscalerConfig.put("scaleOutStep", 2);
+    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
+    return autoscalerConfig;
   }
 
 }

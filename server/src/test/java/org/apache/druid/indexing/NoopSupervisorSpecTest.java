@@ -25,9 +25,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class NoopSupervisorSpecTest
@@ -48,13 +46,11 @@ public class NoopSupervisorSpecTest
             return -1;
           }
       };
-      Runnable runnable = supervisor.buildDynamicAllocationTask(noop);
-      Assert.assertNull(runnable);
 
-      Map supervisorTaskInfos = supervisor.getSupervisorTaskInfos();
-      Assert.assertNull(supervisorTaskInfos);
+      int count = supervisor.getActiveTaskGroupsCount();
+      Assert.assertEquals(count, -1);
 
-      supervisor.collectLag(new ArrayList<Long>());
+      supervisor.computeLagStats();
     }
     catch (Exception ex) {
       e = ex;

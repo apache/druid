@@ -48,7 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
-  @Nullable private final Map<String, Object> dynamicAllocationTasksProperties;
+  @Nullable private final Map<String, Object> autoscalerConfig;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -62,7 +62,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
-      @Nullable Map<String, Object> dynamicAllocationTasksProperties,
+      @Nullable Map<String, Object> autoscalerConfig,
       DateTime lateMessageRejectionStartDateTime
   )
   {
@@ -92,7 +92,7 @@ public abstract class SeekableStreamSupervisorIOConfig
           + "and lateMessageRejectionPeriod.");
     }
     // Could be null
-    this.dynamicAllocationTasksProperties = dynamicAllocationTasksProperties;
+    this.autoscalerConfig = autoscalerConfig;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -121,9 +121,9 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   @Nullable
   @JsonProperty
-  public Map<String, Object> getDynamicAllocationTasksProperties()
+  public Map<String, Object> getautoscalerConfig()
   {
-    return dynamicAllocationTasksProperties;
+    return autoscalerConfig;
   }
 
   @JsonProperty

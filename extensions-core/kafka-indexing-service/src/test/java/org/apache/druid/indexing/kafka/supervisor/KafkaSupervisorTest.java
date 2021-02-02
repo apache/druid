@@ -260,21 +260,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
       }
     };
 
-    HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
-    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
-    dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
-    dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
-    dynamicAllocationTasksProperties.put("scaleOutThreshold", 0);
-    dynamicAllocationTasksProperties.put("triggerScaleOutThresholdFrequency", 0.0);
-    dynamicAllocationTasksProperties.put("scaleInThreshold", 1000000);
-    dynamicAllocationTasksProperties.put("triggerScaleInThresholdFrequency", 0.8);
-    dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
-    dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
-    dynamicAllocationTasksProperties.put("taskCountMax", 2);
-    dynamicAllocationTasksProperties.put("taskCountMin", 1);
-    dynamicAllocationTasksProperties.put("scaleInStep", 1);
-    dynamicAllocationTasksProperties.put("scaleOutStep", 2);
-    dynamicAllocationTasksProperties.put("minTriggerDynamicFrequencyMillis", 1200000);
+    HashMap<String, Object> autoscalerConfig = new HashMap<>();
+    autoscalerConfig.put("enableTaskAutoscaler", true);
+    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
+    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
+    autoscalerConfig.put("scaleOutThreshold", 0);
+    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.0);
+    autoscalerConfig.put("scaleInThreshold", 1000000);
+    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
+    autoscalerConfig.put("dynamicCheckPeriod", 100);
+    autoscalerConfig.put("taskCountMax", 2);
+    autoscalerConfig.put("taskCountMin", 1);
+    autoscalerConfig.put("scaleInStep", 1);
+    autoscalerConfig.put("scaleOutStep", 2);
+    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
 
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
@@ -287,7 +287,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             1,
             new Period("PT1H"),
             consumerProperties,
-            dynamicAllocationTasksProperties,
+            autoscalerConfig,
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             new Period("P1D"),
             new Period("PT30S"),
@@ -319,6 +319,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
+            null,
             null,
             null,
             null,

@@ -38,6 +38,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -332,13 +333,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   }
 
   @Override
-  public void collectLag(ArrayList<Long> lags)
+  public LagStats computeLagStats()
   {
     Map<Integer, Long> partitionRecordLag = getPartitionRecordLag();
     if (partitionRecordLag == null) {
-      return;
+      return new LagStats(0, 0, 0);
     }
-    computeLags(partitionRecordLag, lags);
+
+    return computeLags(partitionRecordLag);
   }
 
   @Override

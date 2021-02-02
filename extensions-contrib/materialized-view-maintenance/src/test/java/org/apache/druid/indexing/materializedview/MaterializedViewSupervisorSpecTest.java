@@ -52,8 +52,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class MaterializedViewSupervisorSpecTest
@@ -209,10 +207,19 @@ public class MaterializedViewSupervisorSpecTest
       SupervisorTaskAutoscaler autoscaler = spec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
 
-      supervisor.collectLag(new ArrayList<>());
+      try {
+        supervisor.computeLagStats();
+      }
+      catch (Exception e) {
+        Assert.assertTrue(e instanceof UnsupportedOperationException);
+      }
 
-      Map supervisorTaskInfos = supervisor.getSupervisorTaskInfos();
-      Assert.assertNull(supervisorTaskInfos);
+      try {
+        int count = supervisor.getActiveTaskGroupsCount();
+      }
+      catch (Exception e) {
+        Assert.assertTrue(e instanceof UnsupportedOperationException);
+      }
 
       Callable<Integer> noop = new Callable<Integer>() {
         @Override
@@ -221,8 +228,6 @@ public class MaterializedViewSupervisorSpecTest
           return -1;
         }
       };
-      Runnable runnable = supervisor.buildDynamicAllocationTask(noop);
-      Assert.assertNull(runnable);
 
     }
     catch (Exception e) {

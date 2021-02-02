@@ -167,13 +167,20 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   {
     String dataSource = getId();
     SupervisorTaskAutoscaler autoScaler = new DummyAutoScaler(supervisor, dataSource);
-    Map<String, Object> dynamicAllocationTasksProperties = ingestionSchema.getIOConfig().getDynamicAllocationTasksProperties();
-    if (dynamicAllocationTasksProperties != null && !dynamicAllocationTasksProperties.isEmpty() && Boolean.parseBoolean(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("enableDynamicAllocationTasks", false)))) {
-      String autoScalerStrategy = String.valueOf(dynamicAllocationTasksProperties.getOrDefault("autoScalerStrategy", "default"));
+    Map<String, Object> autoscalerConfig = ingestionSchema.getIOConfig().getautoscalerConfig();
+
+    // kinesis'autoscalerConfig is always null for now, So that kinesis will hold a DummyAutoScaler.
+    // only SeekableStreamSupervisor is supported here.
+    if (autoscalerConfig != null
+            && !autoscalerConfig.isEmpty()
+            && Boolean.parseBoolean(String.valueOf(autoscalerConfig.getOrDefault("enableTaskAutoscaler", true)))
+            && supervisor instanceof SeekableStreamSupervisor) {
+
+      String autoScalerStrategy = String.valueOf(autoscalerConfig.getOrDefault("autoScalerStrategy", "default"));
 
       // will thorw 'Return value of String.hashCode() ignored : RV_RETURN_VALUE_IGNORED' just Suppress it.
       switch (StringUtils.toLowerCase(autoScalerStrategy)) {
-        default: autoScaler = new DefaultAutoScaler(supervisor, dataSource, dynamicAllocationTasksProperties, this);
+        default: autoScaler = new DefaultAutoScaler(supervisor, dataSource, autoscalerConfig, this);
       }
     }
     return autoScaler;

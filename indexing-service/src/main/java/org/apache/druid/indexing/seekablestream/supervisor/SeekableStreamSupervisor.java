@@ -59,6 +59,7 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
@@ -146,6 +147,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
+
+  public static final int TASK_COUNT_MAX = 4;
+  public static final int TASK_COUNT_MIN = 1;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -582,7 +586,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
   private final SeekableStreamSupervisorIOConfig ioConfig;
-  private final Map<String, Object> dynamicAllocationTasksProperties;
+  private final Map<String, Object> autoscalerConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
@@ -610,7 +614,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
-  private final boolean enableDynamicAllocationTasks;
+  private final boolean enableTaskAutoscaler;
   private int taskCountMax;
   private long minTriggerDynamicFrequency;
 
@@ -636,16 +640,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
-    this.dynamicAllocationTasksProperties = ioConfig.getDynamicAllocationTasksProperties();
-    log.debug("Get dynamicAllocationTasksProperties from IOConfig : [%s] in [%s]", dynamicAllocationTasksProperties, dataSource);
-    if (dynamicAllocationTasksProperties != null && !dynamicAllocationTasksProperties.isEmpty() && Boolean.parseBoolean(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("enableDynamicAllocationTasks", false)))) {
-      log.info("EnableDynamicAllocationTasks for datasource [%s]", dataSource);
-      this.taskCountMax = Integer.parseInt(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("taskCountMax", 4)));
-      this.minTriggerDynamicFrequency = Long.parseLong(String.valueOf(dynamicAllocationTasksProperties.getOrDefault("minTriggerDynamicFrequencyMillis", 600000)));
-      this.enableDynamicAllocationTasks = true;
+    this.autoscalerConfig = ioConfig.getautoscalerConfig();
+    log.debug("Get autoscalerConfig from IOConfig : [%s] in [%s]", autoscalerConfig, dataSource);
+    if (autoscalerConfig != null && !autoscalerConfig.isEmpty() && Boolean.parseBoolean(String.valueOf(autoscalerConfig.getOrDefault("enableTaskAutoscaler", true)))) {
+      log.info("enableTaskAutoscaler for datasource [%s]", dataSource);
+      this.taskCountMax = Integer.parseInt(String.valueOf(autoscalerConfig.getOrDefault("taskCountMax", TASK_COUNT_MAX)));
+      this.minTriggerDynamicFrequency = Long.parseLong(String.valueOf(autoscalerConfig.getOrDefault("minTriggerDynamicFrequencyMillis", 600000)));
+      this.enableTaskAutoscaler = true;
     } else {
       log.info("Disable dynamic allocate tasks for [%s]", dataSource);
-      this.enableDynamicAllocationTasks = false;
+      this.enableTaskAutoscaler = false;
     }
 
     this.tuningConfig = spec.getTuningConfig();
@@ -661,7 +665,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     int workerThreads;
-    if (enableDynamicAllocationTasks) {
+    if (enableTaskAutoscaler) {
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
               : Math.min(10, taskCountMax));
@@ -715,7 +719,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                          + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
     int chatThreads;
-    if (enableDynamicAllocationTasks) {
+    if (enableTaskAutoscaler) {
       chatThreads = (this.tuningConfig.getChatThreads() != null
               ? this.tuningConfig.getChatThreads()
               : Math.min(10, taskCountMax * this.ioConfig.getReplicas()));
@@ -743,9 +747,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
 
   @Override
-  public Map getSupervisorTaskInfos()
+  public int getActiveTaskGroupsCount()
   {
-    return activelyReadingTaskGroups;
+    return activelyReadingTaskGroups.values().size();
   }
 
   @Override
@@ -948,7 +952,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  @Override
   public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
   {
     return () -> notices.add(new DynamicAllocationTasksNotice(scaleAction));
@@ -3664,22 +3667,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (partitionLags == null) {
           return;
         }
-        ArrayList<Long> lags = new ArrayList<>(3);
-        computeLags(partitionLags, lags);
+
+        LagStats lagStats = computeLags(partitionLags);
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lags.get(1))
+                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lags.get(0))
+                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lags.get(2))
+                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
         );
       };
 
@@ -3696,9 +3699,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * This method compute maxLag, totalLag and avgLag then fill in 'lags'
    * @param partitionLags lags per partition
-   * @param lags a arraylist in order of maxLag, totalLag and avgLag
    */
-  protected void computeLags(Map<PartitionIdType, Long> partitionLags, ArrayList<Long> lags)
+  protected LagStats computeLags(Map<PartitionIdType, Long> partitionLags)
   {
     long maxLag = 0, totalLag = 0, avgLag;
     for (long lag : partitionLags.values()) {
@@ -3708,9 +3710,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       totalLag += lag;
     }
     avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
-    lags.add(maxLag);
-    lags.add(totalLag);
-    lags.add(avgLag);
+    return new LagStats(maxLag, totalLag, avgLag);
   }
 
   /**

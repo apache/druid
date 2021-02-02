@@ -21,11 +21,10 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 public interface Supervisor
 {
@@ -68,16 +67,10 @@ public interface Supervisor
   void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata);
 
   /**
-   * Collect maxLag, totalLag, avgLag into ArrayList<Long> lags
+   * Collect maxLag, totalLag, avgLag
    * Only support Kafka ingestion so far.
-   * @param lags , Notice : The order of values is maxLag, totalLag and avgLag.
    */
-  void collectLag(ArrayList<Long> lags);
+  LagStats computeLagStats();
 
-  /**
-   * use for autoscaler
-   */
-  Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction);
-
-  Map getSupervisorTaskInfos();
+  int getActiveTaskGroupsCount();
 }

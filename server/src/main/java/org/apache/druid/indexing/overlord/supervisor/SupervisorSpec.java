@@ -41,7 +41,10 @@ public interface SupervisorSpec
    */
   Supervisor createSupervisor();
 
-  SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor);
+  default SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
+  {
+    return null;
+  }
 
   List<String> getDataSources();
 

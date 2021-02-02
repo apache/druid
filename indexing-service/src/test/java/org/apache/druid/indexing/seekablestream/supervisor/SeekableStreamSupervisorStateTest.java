@@ -43,6 +43,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager.BasicState;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -836,22 +837,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private static Map<String, Object> getProperties()
   {
-    HashMap<String, Object> dynamicAllocationTasksProperties = new HashMap<>();
-    dynamicAllocationTasksProperties.put("enableDynamicAllocationTasks", true);
-    dynamicAllocationTasksProperties.put("metricsCollectionIntervalMillis", 500);
-    dynamicAllocationTasksProperties.put("metricsCollectionRangeMillis", 500);
-    dynamicAllocationTasksProperties.put("scaleOutThreshold", 5000000);
-    dynamicAllocationTasksProperties.put("triggerScaleOutThresholdFrequency", 0.3);
-    dynamicAllocationTasksProperties.put("scaleInThreshold", 1000000);
-    dynamicAllocationTasksProperties.put("triggerScaleInThresholdFrequency", 0.8);
-    dynamicAllocationTasksProperties.put("dynamicCheckStartDelayMillis", 0);
-    dynamicAllocationTasksProperties.put("dynamicCheckPeriod", 100);
-    dynamicAllocationTasksProperties.put("taskCountMax", 8);
-    dynamicAllocationTasksProperties.put("taskCountMin", 1);
-    dynamicAllocationTasksProperties.put("scaleInStep", 1);
-    dynamicAllocationTasksProperties.put("scaleOutStep", 2);
-    dynamicAllocationTasksProperties.put("minTriggerDynamicFrequencyMillis", 1200000);
-    return dynamicAllocationTasksProperties;
+    HashMap<String, Object> autoscalerConfig = new HashMap<>();
+    autoscalerConfig.put("enableTaskAutoscaler", true);
+    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
+    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
+    autoscalerConfig.put("scaleOutThreshold", 5000000);
+    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoscalerConfig.put("scaleInThreshold", 1000000);
+    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
+    autoscalerConfig.put("dynamicCheckPeriod", 100);
+    autoscalerConfig.put("taskCountMax", 8);
+    autoscalerConfig.put("taskCountMin", 1);
+    autoscalerConfig.put("scaleInStep", 1);
+    autoscalerConfig.put("scaleOutStep", 2);
+    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
+    return autoscalerConfig;
   }
 
   private static SeekableStreamSupervisorTuningConfig getTuningConfig()
@@ -1202,8 +1203,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    public void collectLag(ArrayList<Long> lags)
+    public LagStats computeLagStats()
     {
+      return null;
     }
   }
 
@@ -1248,8 +1250,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    public void collectLag(ArrayList<Long> lags)
+    public LagStats computeLagStats()
     {
+      return null;
     }
 
     @Override

@@ -39,7 +39,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -360,12 +359,6 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         config,
         this
     );
-  }
-
-  @Override
-  public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
-  {
-    return null;
   }
 
   @Override

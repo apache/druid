@@ -72,7 +72,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
-      @JsonProperty("dynamicAllocationTasksProperties") Map<String, Object> dynamicAllocationTasksProperties,
+      @JsonProperty("autoscalerConfig") Map<String, Object> autoscalerConfig,
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
@@ -88,9 +88,16 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        dynamicAllocationTasksProperties,
+        null,
         lateMessageRejectionStartDateTime
     );
+
+    // for now dynamic Allocation Tasks is not supported here
+    // throw UnsupportedOperationException in case someone sets this on a kinesis supervisor spec.
+    if (autoscalerConfig != null || !autoscalerConfig.isEmpty()) {
+      throw new UnsupportedOperationException("Dynamic Allocation Tasks is not supported here");
+    }
+
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
