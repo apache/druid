@@ -558,7 +558,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     autoscalerConfig.remove("enableTaskAutoscaler");
     SupervisorTaskAutoscaler autoscaler3 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler3 instanceof DummyAutoScaler);
+    Assert.assertTrue(autoscaler3 instanceof DefaultAutoScaler);
 
   }
 

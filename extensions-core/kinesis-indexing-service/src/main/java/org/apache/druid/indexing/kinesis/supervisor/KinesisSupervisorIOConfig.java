@@ -94,8 +94,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
     // for now dynamic Allocation Tasks is not supported here
     // throw UnsupportedOperationException in case someone sets this on a kinesis supervisor spec.
-    if (autoscalerConfig != null || !autoscalerConfig.isEmpty()) {
-      throw new UnsupportedOperationException("Dynamic Allocation Tasks is not supported here");
+    if (autoscalerConfig != null) {
+      throw new UnsupportedOperationException("Tasks auto scaler for kinesis is not supported yet.");
     }
 
     this.endpoint = endpoint != null

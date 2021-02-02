@@ -102,6 +102,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -343,6 +344,70 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // background fetch should not be enabled for supervisor supplier
     supplier.start();
     Assert.assertFalse(supplier.isBackgroundFetchRunning());
+  }
+
+  @Test
+  public void testKinesisIOConfig()
+  {
+    Exception e = null;
+    try {
+      KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+              STREAM,
+              INPUT_FORMAT,
+              "awsEndpoint",
+              null,
+              1,
+              1,
+              new Period("PT30M"),
+              new Period("P1D"),
+              new Period("PT30S"),
+              false,
+              new Period("PT30M"),
+              null,
+              null,
+              null,
+              100,
+              1000,
+              null,
+              null,
+              null,
+              false
+      );
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNull(e);
+
+    try {
+      KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+              STREAM,
+              INPUT_FORMAT,
+              "awsEndpoint",
+              null,
+              1,
+              1,
+              new Period("PT30M"),
+              new Period("P1D"),
+              new Period("PT30S"),
+              false,
+              new Period("PT30M"),
+              null,
+              null,
+              null,
+              100,
+              1000,
+              null,
+              null,
+              new HashMap<>(),
+              false
+      );
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNotNull(e);
+    Assert.assertTrue(e instanceof UnsupportedOperationException);
   }
 
   @Test

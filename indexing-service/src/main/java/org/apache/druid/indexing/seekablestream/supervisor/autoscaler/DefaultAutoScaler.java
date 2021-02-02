@@ -225,7 +225,7 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
     log.info("beyondProportion is [%s] and withinProportion is [%s] for dataSource [%s].", beyondProportion, withinProportion, dataSource);
 
     int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
-    if (currentActiveTaskCount <= 0) {
+    if (currentActiveTaskCount < 0) {
       log.info("CurrentActiveTaskCount is lower than 0 ??? skip [%s].", dataSource);
       return -1;
     }
