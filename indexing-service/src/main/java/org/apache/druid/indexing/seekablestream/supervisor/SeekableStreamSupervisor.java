@@ -640,7 +640,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
-    this.autoscalerConfig = ioConfig.getautoscalerConfig();
+    this.autoscalerConfig = ioConfig.getAutoscalerConfig();
     log.debug("Get autoscalerConfig from IOConfig : [%s] in [%s]", autoscalerConfig, dataSource);
     if (autoscalerConfig != null && !autoscalerConfig.isEmpty() && Boolean.parseBoolean(String.valueOf(autoscalerConfig.getOrDefault("enableTaskAutoscaler", true)))) {
       log.info("enableTaskAutoscaler for datasource [%s]", dataSource);

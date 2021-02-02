@@ -121,7 +121,7 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   @Nullable
   @JsonProperty
-  public Map<String, Object> getautoscalerConfig()
+  public Map<String, Object> getAutoscalerConfig()
   {
     return autoscalerConfig;
   }

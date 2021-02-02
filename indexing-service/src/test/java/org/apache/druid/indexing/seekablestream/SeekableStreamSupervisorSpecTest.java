@@ -336,7 +336,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     @Override
     public LagStats computeLagStats()
     {
-      return null;
+      return new LagStats(0, 0, 0);
     }
   }
 
@@ -529,7 +529,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getautoscalerConfig()).andReturn(autoscalerConfig).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(autoscalerConfig).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -585,6 +585,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    LagStats lagStats = supervisor.computeLagStats();
+    long totalLag = lagStats.getTotalLag();
+    long avgLag = lagStats.getAvgLag();
+    long maxLag = lagStats.getMaxLag();
+    Assert.assertEquals(totalLag, 0);
+    Assert.assertEquals(avgLag, 0);
+    Assert.assertEquals(maxLag, 0);
+
     DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, getScaleOutProperties(), spec);
     supervisor.start();
     autoScaler.start();
