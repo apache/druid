@@ -92,7 +92,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   }
 
   @Test
-  public void testDefaultCapacity() throws Exception
+  public void testDefaultCapacity()
   {
     // Given
     SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null);
@@ -101,7 +101,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   }
 
   @Test
-  public void testGivenCapacity() throws Exception
+  public void testGivenCapacity()
   {
     int capacity = 100;
     // Given
