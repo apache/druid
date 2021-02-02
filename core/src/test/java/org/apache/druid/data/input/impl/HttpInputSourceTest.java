@@ -25,7 +25,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,6 +35,9 @@ import java.util.Collections;
 
 public class HttpInputSourceTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -75,6 +80,33 @@ public class HttpInputSourceTest
         "myName",
         new DefaultPasswordProvider("myPassword"),
         new HttpInputSourceConfig(null, Collections.singletonList("deny.com"))
+    );
+  }
+
+  @Test
+  public void testConstructorAllowsOnlyHttpAndHttpsProtocols()
+  {
+    new HttpInputSource(
+        ImmutableList.of(URI.create("http:///")),
+        "myName",
+        new DefaultPasswordProvider("myPassword"),
+        new HttpInputSourceConfig(null, null)
+    );
+
+    new HttpInputSource(
+        ImmutableList.of(URI.create("https:///")),
+        "myName",
+        new DefaultPasswordProvider("myPassword"),
+        new HttpInputSourceConfig(null, null)
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only HTTP or HTTPS are allowed");
+    new HttpInputSource(
+        ImmutableList.of(URI.create("my-protocol:///")),
+        "myName",
+        new DefaultPasswordProvider("myPassword"),
+        new HttpInputSourceConfig(null, null)
     );
   }
 

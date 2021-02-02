@@ -59,6 +59,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   )
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
+    throwForInvalidProtocols(uris);
     uris.forEach(uri -> Preconditions.checkArgument(
         config.isURIAllowed(uri),
         StringUtils.format("Access to [%s] DENIED!", uri)
@@ -67,6 +68,13 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.config = config;
+  }
+
+  private static void throwForInvalidProtocols(List<URI> uris)
+  {
+    if (uris.stream().anyMatch(uri -> !"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme()))) {
+      throw new IllegalArgumentException("Only HTTP or HTTPS are allowed");
+    }
   }
 
   @JsonProperty
