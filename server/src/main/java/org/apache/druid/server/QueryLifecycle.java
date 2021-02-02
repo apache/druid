@@ -112,26 +112,6 @@ public class QueryLifecycle
     this.startNs = startNs;
   }
 
-  /**
-   * For callers where simplicity is desired over flexibility. This method does it all in one call. If the request
-   * is unauthorized, an IllegalStateException will be thrown. Logs and metrics are emitted when the Sequence is
-   * either fully iterated or throws an exception.
-   *
-   * @param query                the query
-   * @param authenticationResult authentication result indicating identity of the requester
-   * @param remoteAddress        remote address, for logging; or null if unknown
-   *
-   * @return results
-   */
-  @SuppressWarnings("unchecked")
-  public <T> Sequence<T> runSimple(
-      final Query<T> query,
-      final AuthenticationResult authenticationResult,
-      @Nullable final String remoteAddress
-  )
-  {
-    return runSimple(query, authenticationResult, remoteAddress, false);
-  }
 
   /**
    * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
@@ -140,9 +120,7 @@ public class QueryLifecycle
    *
    * @param query                 the query
    * @param authenticationResult  authentication result indicating identity of the requester
-   * @param remoteAddress         remote address, for logging; or null if unknown
-   * @param preAuthorized         indicates that authorization has already been checked (e.g. SQL layer) and can be
-   *                              skipped
+   * @param authorizationResult   authorization result of requester
    *
    * @return results
    */
@@ -150,8 +128,7 @@ public class QueryLifecycle
   public <T> Sequence<T> runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
-      @Nullable final String remoteAddress,
-      boolean preAuthorized
+      final Access authorizationResult
   )
   {
     initialize(query);
@@ -159,8 +136,8 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      final Access access = preAuthorized ? preAuthorized(authenticationResult) : authorize(authenticationResult);
-      if (!access.isAllowed()) {
+      preAuthorized(authenticationResult, authorizationResult);
+      if (!authorizationResult.isAllowed()) {
         throw new ISE("Unauthorized");
       }
 
@@ -168,7 +145,7 @@ public class QueryLifecycle
       results = queryResponse.getResults();
     }
     catch (Throwable e) {
-      emitLogsAndMetrics(e, remoteAddress, -1);
+      emitLogsAndMetrics(e, null, -1);
       throw e;
     }
 
@@ -179,7 +156,7 @@ public class QueryLifecycle
           @Override
           public void after(final boolean isDone, final Throwable thrown)
           {
-            emitLogsAndMetrics(thrown, remoteAddress, -1);
+            emitLogsAndMetrics(thrown, null, -1);
           }
         }
     );
@@ -214,29 +191,6 @@ public class QueryLifecycle
   /**
    * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
    *
-   * @param authenticationResult authentication result indicating the identity of the requester
-   *
-   * @return authorization result
-   */
-  public Access authorize(final AuthenticationResult authenticationResult)
-  {
-    transition(State.INITIALIZED, State.AUTHORIZING);
-    return doAuthorize(
-        authenticationResult,
-        AuthorizationUtils.authorizeAllResourceActions(
-            authenticationResult,
-            Iterables.transform(
-                baseQuery.getDataSource().getTableNames(),
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-            ),
-            authorizerMapper
-        )
-    );
-  }
-
-  /**
-   * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
-   *
    * @param req HTTP request object of the request. If provided, the auth-related fields in the HTTP request
    *            will be automatically set.
    *
@@ -258,11 +212,11 @@ public class QueryLifecycle
     );
   }
 
-  private Access preAuthorized(final AuthenticationResult authenticationResult)
+  private void preAuthorized(final AuthenticationResult authenticationResult, final Access access)
   {
     // gotta transition those states, even if we are already authorized
     transition(State.INITIALIZED, State.AUTHORIZING);
-    return doAuthorize(authenticationResult, Access.OK);
+    doAuthorize(authenticationResult, access);
   }
 
   private Access doAuthorize(final AuthenticationResult authenticationResult, final Access authorizationResult)

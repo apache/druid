@@ -20,8 +20,8 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -38,12 +38,12 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -90,20 +90,56 @@ public class PlannerFactory
   }
 
   public DruidPlanner createPlanner(
-      final Map<String, Object> queryContext,
-      final List<TypedValue> parameters,
-      final AuthenticationResult authenticationResult
+      final Map<String, Object> queryContext
   )
   {
     final PlannerContext plannerContext = PlannerContext.create(
         operatorTable,
         macroTable,
         plannerConfig,
-        queryContext,
-        parameters,
-        authenticationResult
+        queryContext
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
+    final FrameworkConfig frameworkConfig = getFrameworkConfig(plannerContext, queryMaker);
+
+    return new DruidPlanner(
+        frameworkConfig,
+        plannerContext
+    );
+  }
+
+  // not just visible for, but only for testing
+  @VisibleForTesting
+  public DruidPlanner createPlannerForTesting(final Map<String, Object> queryContext)
+  {
+    DruidPlanner thePlanner = createPlanner(queryContext);
+    thePlanner.getPlannerContext().setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
+    thePlanner.getPlannerContext().setAuthorizationResult(Access.OK);
+    return thePlanner;
+  }
+
+  public DruidPlanner createPlannerWithContext(PlannerContext plannerContext)
+  {
+    final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
+    final FrameworkConfig frameworkConfig = getFrameworkConfig(plannerContext, queryMaker);
+
+    return new DruidPlanner(
+        frameworkConfig,
+        plannerContext
+    );
+  }
+
+
+  public AuthorizerMapper getAuthorizerMapper()
+  {
+    return authorizerMapper;
+  }
+
+  private FrameworkConfig getFrameworkConfig(
+      PlannerContext plannerContext,
+      QueryMaker queryMaker
+  )
+  {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
         .configBuilder()
         .withExpand(false)
@@ -111,7 +147,7 @@ public class PlannerFactory
         .withTrimUnusedFields(false)
         .withInSubQueryThreshold(Integer.MAX_VALUE)
         .build();
-    final FrameworkConfig frameworkConfig = Frameworks
+    return Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
@@ -152,15 +188,5 @@ public class PlannerFactory
           }
         })
         .build();
-
-    return new DruidPlanner(
-        frameworkConfig,
-        plannerContext
-    );
-  }
-
-  public AuthorizerMapper getAuthorizerMapper()
-  {
-    return authorizerMapper;
   }
 }

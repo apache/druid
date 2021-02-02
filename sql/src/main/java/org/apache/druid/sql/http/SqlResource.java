@@ -98,7 +98,7 @@ public class SqlResource
 
       lifecycle.setParameters(sqlQuery.getParameterList());
       lifecycle.validateAndAuthorize(req);
-      final PlannerContext plannerContext = lifecycle.plan(req);
+      final PlannerContext plannerContext = lifecycle.plan();
       final DateTimeZone timeZone = plannerContext.getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.

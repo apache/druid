@@ -59,6 +59,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -672,7 +673,7 @@ public class DruidSchema extends AbstractSchema
         false
     );
 
-    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, null);
+    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, Access.OK);
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)

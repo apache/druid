@@ -20,6 +20,7 @@
 package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.remote.TypedValue;
@@ -73,7 +74,7 @@ import java.util.stream.Collectors;
  * <ol>
  * <li>Initialization ({@link #initialize(String, Map)})</li>
  * <li>Validation and Authorization ({@link #validateAndAuthorize(HttpServletRequest)} or {@link #validateAndAuthorize(AuthenticationResult)})</li>
- * <li>Planning ({@link #plan(HttpServletRequest)} or {@link #plan(AuthenticationResult)})</li>
+ * <li>Planning ({@link #plan()})</li>
  * <li>Execution ({@link #execute()})</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)})</li>
  * </ol>
@@ -111,6 +112,8 @@ public class SqlLifecycle
   private PrepareResult prepareResult;
   @GuardedBy("lock")
   private PlannerResult plannerResult;
+  @GuardedBy("lock")
+  private Access authorizationResult;
 
   public SqlLifecycle(
       PlannerFactory plannerFactory,
@@ -168,6 +171,9 @@ public class SqlLifecycle
   {
     synchronized (lock) {
       this.parameters = parameters;
+      if (this.plannerContext != null) {
+        this.plannerContext.setParameters(parameters);
+      }
     }
   }
 
@@ -223,9 +229,12 @@ public class SqlLifecycle
   @GuardedBy("lock")
   private ResourceResult analyzeResources(AuthenticationResult authenticationResult)
   {
-    try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {
+    try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       // set planner context for logs/metrics in case something explodes early
       this.plannerContext = planner.getPlannerContext();
+      // set parameters on planner context, if already set
+      this.plannerContext.setAuthenticationResult(authenticationResult);
+      this.plannerContext.setParameters(parameters);
       this.resourceResult = planner.validateAndCollectResources(sql);
       return resourceResult;
     }
@@ -253,6 +262,7 @@ public class SqlLifecycle
   @GuardedBy("lock")
   private void checkAccess(Access access)
   {
+    plannerContext.setAuthorizationResult(access);
     if (!access.isAllowed()) {
       throw new ForbiddenException(access.toString());
     }
@@ -264,15 +274,14 @@ public class SqlLifecycle
    * statements via JDBC.
    *
    */
-  public PrepareResult prepare(AuthenticationResult authenticationResult) throws RelConversionException
+  public PrepareResult prepare() throws RelConversionException
   {
     synchronized (lock) {
       if (state != State.AUTHORIZED) {
         throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
       }
-      try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {
-        // set planner context for logs/metrics in case something explodes early
-        this.plannerContext = planner.getPlannerContext();
+      Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
+      try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
         this.prepareResult = planner.prepare(sql);
         return prepareResult;
       }
@@ -291,12 +300,12 @@ public class SqlLifecycle
    *
    * If successful, the lifecycle will first transition from {@link State#AUTHORIZED} to {@link State#PLANNED}.
    */
-  public PlannerContext plan(AuthenticationResult authenticationResult) throws RelConversionException
+  public PlannerContext plan() throws RelConversionException
   {
     synchronized (lock) {
       transition(State.AUTHORIZED, State.PLANNED);
-      try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {
-        this.plannerContext = planner.getPlannerContext();
+      Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
+      try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
         this.plannerResult = planner.plan(sql);
       }
       // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -307,18 +316,6 @@ public class SqlLifecycle
         throw new SqlPlanningException(e);
       }
       return plannerContext;
-    }
-  }
-
-  /**
-   * Plan the query to enable execution. Like {@link #plan(AuthenticationResult)}, but for a {@link HttpServletRequest}
-   *
-   * If successful, the lifecycle will first transition from {@link State#AUTHORIZED} to {@link State#PLANNED}.
-   */
-  public PlannerContext plan(HttpServletRequest req) throws RelConversionException
-  {
-    synchronized (lock) {
-      return plan(AuthorizationUtils.authenticationResultFromRequest(req));
     }
   }
 
@@ -349,7 +346,7 @@ public class SqlLifecycle
     try {
       setParameters(SqlQuery.getParameterList(parameters));
       validateAndAuthorize(authenticationResult);
-      plan(authenticationResult);
+      plan();
       result = execute();
     }
     catch (Throwable e) {

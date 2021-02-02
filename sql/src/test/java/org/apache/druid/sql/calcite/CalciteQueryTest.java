@@ -105,6 +105,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -13280,11 +13281,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     QueryLifecycleFactory qlf = CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate);
     QueryLifecycle ql = qlf.factorize();
-    Sequence seq = ql.runSimple(
-        query,
-        CalciteTests.SUPER_USER_AUTH_RESULT,
-        null
-    );
+    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK);
     List<Object> results = seq.toList();
     Assert.assertEquals(
         ImmutableList.of(ResultRow.of("def")),

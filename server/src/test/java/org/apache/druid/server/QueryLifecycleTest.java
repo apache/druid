@@ -37,12 +37,9 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
@@ -53,7 +50,6 @@ import org.junit.rules.ExpectedException;
 public class QueryLifecycleTest
 {
   private static final String DATASOURCE = "some_datasource";
-  private static final String AUTHORIZER_NAME = "some_authorizer";
   private static final String IDENTITY = "some_identity";
 
   private final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -147,7 +143,7 @@ public class QueryLifecycleTest
 
     replayAll();
 
-    lifecycle.runSimple(query, authenticationResult, "localhost:8888", true);
+    lifecycle.runSimple(query, authenticationResult, Access.OK);
   }
 
   @Test
@@ -155,15 +151,9 @@ public class QueryLifecycleTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Unauthorized");
+
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
-
-    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER_NAME).once();
-    EasyMock.expect(authzMapper.getAuthorizer(AUTHORIZER_NAME)).andReturn(authorizer).once();
-    EasyMock.expect(
-        authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ)
-    ).andReturn(new Access(false)).once();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
-
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .once();
@@ -173,34 +163,7 @@ public class QueryLifecycleTest
 
     replayAll();
 
-    lifecycle.runSimple(query, authenticationResult, "localhost:8888", false);
-  }
-
-  @Test
-  public void testRunSimpleAuthorized()
-  {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
-
-    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER_NAME).once();
-    EasyMock.expect(authzMapper.getAuthorizer(AUTHORIZER_NAME)).andReturn(authorizer).once();
-    EasyMock.expect(
-        authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ)
-    ).andReturn(Access.OK).once();
-    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
-
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
-            .andReturn(toolChest)
-            .once();
-    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(runner)
-            .once();
-    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
-
-    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
-
-    replayAll();
-
-    lifecycle.runSimple(query, authenticationResult, "localhost:8888", false);
+    lifecycle.runSimple(query, authenticationResult, new Access(false));
   }
 
   private void replayAll()

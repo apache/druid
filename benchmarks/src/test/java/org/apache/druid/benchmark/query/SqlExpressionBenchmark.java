@@ -292,7 +292,7 @@ public class SqlExpressionBenchmark
     );
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context)) {
       final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);

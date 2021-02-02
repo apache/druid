@@ -29,11 +29,13 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,29 +65,25 @@ public class PlannerContext
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
   private final Map<String, Object> queryContext;
-  private final List<TypedValue> parameters;
-  private final AuthenticationResult authenticationResult;
   private final String sqlQueryId;
   private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
-
+  private List<TypedValue> parameters = Collections.emptyList();
+  private AuthenticationResult authenticationResult;
+  private Access authorizationResult;
 
   private PlannerContext(
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
-      final Map<String, Object> queryContext,
-      final List<TypedValue> parameters,
-      final AuthenticationResult authenticationResult
+      final Map<String, Object> queryContext
   )
   {
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
-    this.parameters = Preconditions.checkNotNull(parameters);
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
-    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
 
     String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -99,9 +97,7 @@ public class PlannerContext
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
-      final Map<String, Object> queryContext,
-      final List<TypedValue> parameters,
-      final AuthenticationResult authenticationResult
+      final Map<String, Object> queryContext
   )
   {
     final DateTime utcNow;
@@ -132,9 +128,7 @@ public class PlannerContext
         macroTable,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
-        queryContext,
-        parameters,
-        authenticationResult
+        queryContext
     );
   }
 
@@ -204,8 +198,7 @@ public class PlannerContext
               new DateTime("1970-01-01T00:00:00.000", localNow.getZone()),
               localNow
           ).toDurationMillis(),
-          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone(),
-          DATA_CTX_AUTHENTICATION_RESULT, authenticationResult
+          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone()
       );
       private final Map<String, Object> context;
 
@@ -217,6 +210,9 @@ public class PlannerContext
         for (TypedValue parameter : parameters) {
           builder.put("?" + i, parameter.value);
           i++;
+        }
+        if (authenticationResult != null) {
+          builder.put(DATA_CTX_AUTHENTICATION_RESULT, authenticationResult);
         }
         context = builder.build();
       }
@@ -247,5 +243,26 @@ public class PlannerContext
     }
 
     return new DruidDataContext();
+  }
+
+
+  public Access getAuthorizationResult()
+  {
+    return authorizationResult;
+  }
+
+  public void setParameters(List<TypedValue> parameters)
+  {
+    this.parameters = Preconditions.checkNotNull(parameters, "parameters");
+  }
+
+  public void setAuthenticationResult(AuthenticationResult authenticationResult)
+  {
+    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
+  }
+
+  public void setAuthorizationResult(Access access)
+  {
+    this.authorizationResult = Preconditions.checkNotNull(access, "authorizationResult");
   }
 }
