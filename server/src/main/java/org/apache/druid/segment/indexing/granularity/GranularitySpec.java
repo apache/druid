@@ -21,12 +21,14 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 /**
@@ -70,4 +72,6 @@ public interface GranularitySpec
   Granularity getQueryGranularity();
 
   GranularitySpec withIntervals(List<Interval> inputIntervals);
+
+  Map<String, Object> asMap(ObjectMapper objectMapper);
 }

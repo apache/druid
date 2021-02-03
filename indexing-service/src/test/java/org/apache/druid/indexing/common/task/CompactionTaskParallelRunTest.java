@@ -146,7 +146,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     final CompactionState expectedState = new CompactionState(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
+        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+        ImmutableMap.of()
     );
     for (DataSegment segment : compactedSegments) {
       Assert.assertSame(
@@ -178,7 +179,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     final CompactionState expectedState = new CompactionState(
         new HashedPartitionsSpec(null, 3, null),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
+        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+        ImmutableMap.of()
     );
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
@@ -207,7 +209,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     final CompactionState expectedState = new CompactionState(
         new SingleDimensionPartitionsSpec(7, null, "dim", false),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
+        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+        ImmutableMap.of()
     );
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
@@ -236,7 +239,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     final CompactionState expectedState = new CompactionState(
         new SingleDimensionPartitionsSpec(7, null, "dim", false),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
+        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+        ImmutableMap.of()
     );
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default

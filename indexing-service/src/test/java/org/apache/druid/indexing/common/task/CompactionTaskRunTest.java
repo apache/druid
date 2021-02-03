@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -193,7 +194,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     DEFAULT_COMPACTION_STATE = new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class)
+      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+      ImmutableMap.of()
     );
   }
 
@@ -312,7 +314,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(6, segments.size());
     final CompactionState expectedState = new CompactionState(
         new HashedPartitionsSpec(null, 3, null),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
+        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+        ImmutableMap.of()
     );
 
     for (int i = 0; i < 3; i++) {

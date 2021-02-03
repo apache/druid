@@ -21,6 +21,8 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -31,6 +33,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 public class UniformGranularitySpec implements GranularitySpec
@@ -188,5 +191,14 @@ public class UniformGranularitySpec implements GranularitySpec
   public GranularitySpec withIntervals(List<Interval> inputIntervals)
   {
     return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals);
+  }
+
+  @Override
+  public Map<String, Object> asMap(ObjectMapper objectMapper)
+  {
+    return objectMapper.convertValue(
+        this,
+        new TypeReference<Map<String, Object>>() {}
+    );
   }
 }
