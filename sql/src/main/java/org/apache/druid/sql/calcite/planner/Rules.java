@@ -62,7 +62,6 @@ import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
-import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
@@ -185,6 +184,7 @@ public class Rules
   // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
   //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
+  // 5) SortRemoveRule (it cause testNestedGroupBy2 infinite loop)
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
@@ -193,8 +193,7 @@ public class Rules
           ProjectRemoveRule.INSTANCE,
           AggregateJoinTransposeRule.INSTANCE,
           AggregateProjectMergeRule.INSTANCE,
-          CalcRemoveRule.INSTANCE,
-          SortRemoveRule.INSTANCE
+          CalcRemoveRule.INSTANCE
       );
 
   private Rules()

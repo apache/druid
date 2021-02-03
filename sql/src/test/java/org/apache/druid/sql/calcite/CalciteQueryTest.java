@@ -7357,6 +7357,65 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNestedGroupBy2() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, dim1, SUM(inner_sum) AS sum_m1\n"
+        + "   FROM (\n"
+        + "     SELECT dim2, dim1, SUM(m1) AS inner_sum\n"
+        + "     FROM foo\n"
+        + "     GROUP BY dim2, dim1\n"
+        + "   )\n"
+        + "   GROUP BY dim2, dim1\n"
+        + "   ORDER BY dim2, dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            CalciteTests.DATASOURCE1
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(
+                            new DefaultDimensionSpec("dim2", "d0", ValueType.STRING),
+                            new DefaultDimensionSpec("dim1", "d1", ValueType.STRING)
+                        ))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1")
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.ASCENDING,
+                                        StringComparators.LEXICOGRAPHIC
+                                    ),
+                                    new OrderByColumnSpec(
+                                        "d1",
+                                        OrderByColumnSpec.Direction.ASCENDING,
+                                        StringComparators.LEXICOGRAPHIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "10.1", 2.0},
+            new Object[]{"", "2", 3.0},
+            new Object[]{"", "abc", 6.0},
+            new Object[]{"a", "", 1.0},
+            new Object[]{"a", "1", 4.0},
+            new Object[]{"abc", "def", 5.0}
+        )
+    );
+  }
+
+  @Test
   public void testDoubleNestedGroupBy() throws Exception
   {
     testQuery(
@@ -13901,7 +13960,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("p0", "(\"a0\" + \"a1\")")
+                      expressionPostAgg("s0", "(\"a0\" + \"a1\")")
                   )
                   .descending(true)
                   .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
