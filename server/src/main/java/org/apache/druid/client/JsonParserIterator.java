@@ -169,11 +169,9 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           throw timeoutQuery();
         } else {
           // TODO: NettyHttpClient should check the actual cause of the failure and set it in the future properly.
-          throw new ResourceLimitExceededException(
-              StringUtils.nonStrictFormat(
-                  "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
-                  url
-              )
+          throw ResourceLimitExceededException.withNonStrictStringFormat(
+              "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
+              url
           );
         }
 

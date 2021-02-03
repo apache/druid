@@ -27,7 +27,6 @@ import org.apache.druid.collections.StableLimitingSorter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -190,17 +189,15 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
             return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
           }
-          throw new ResourceLimitExceededException(
-              StringUtils.nonStrictFormat(
-                  "Time ordering is not supported for a Scan query with %,d segments per time chunk and a row limit of %,d. "
-                  + "Try reducing your query limit below maxRowsQueuedForOrdering (currently %,d), or using compaction to "
-                  + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "
-                  + "(currently %,d) above the number of segments you have per time chunk.",
-                  maxNumPartitionsInSegment,
-                  query.getScanRowsLimit(),
-                  maxRowsQueuedForOrdering,
-                  maxSegmentPartitionsOrderedInMemory
-              )
+          throw ResourceLimitExceededException.withNonStrictStringFormat(
+              "Time ordering is not supported for a Scan query with %,d segments per time chunk and a row limit of %,d. "
+              + "Try reducing your query limit below maxRowsQueuedForOrdering (currently %,d), or using compaction to "
+              + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "
+              + "(currently %,d) above the number of segments you have per time chunk.",
+              maxNumPartitionsInSegment,
+              query.getScanRowsLimit(),
+              maxRowsQueuedForOrdering,
+              maxSegmentPartitionsOrderedInMemory
           );
         }
       }
