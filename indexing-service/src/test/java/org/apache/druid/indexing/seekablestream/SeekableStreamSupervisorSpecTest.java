@@ -562,6 +562,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     SupervisorTaskAutoscaler autoscaler3 = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler3 instanceof DefaultAutoScaler);
 
+    autoscalerConfig.clear();
+    Assert.assertTrue(autoscalerConfig.isEmpty());
+    SupervisorTaskAutoscaler autoscaler4 = spec.createAutoscaler(supervisor4);
+    Assert.assertTrue(autoscaler4 instanceof DummyAutoScaler);
+
   }
 
   @Test
@@ -572,7 +577,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(ImmutableMap.of("DummyKey", "DummyValue")).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(ImmutableMap.of("metricsCollectionIntervalMillis", "1")).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -596,7 +601,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertTrue(autoscaler instanceof DefaultAutoScaler);
     DefaultAutoScaler defaultAutoScaler = (DefaultAutoScaler) autoscaler;
     AutoScalerConfig autoScalerConfig = defaultAutoScaler.getAutoScalerConfig();
-    Assert.assertEquals(autoScalerConfig.getMetricsCollectionIntervalMillis(), 30000);
+    Assert.assertEquals(autoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
     Assert.assertEquals(autoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
     Assert.assertEquals(autoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
     Assert.assertEquals(autoScalerConfig.getDynamicCheckPeriod(), 60000);
@@ -606,12 +611,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(autoScalerConfig.getTaskCountMin(), 1);
     Assert.assertEquals(autoScalerConfig.getScaleInStep(), 1);
     Assert.assertEquals(autoScalerConfig.getScaleOutStep(), 2);
-    Assert.assertEquals(autoScalerConfig.getEnableTaskAutoscaler(), true);
+    Assert.assertTrue(autoScalerConfig.getEnableTaskAutoscaler());
     Assert.assertEquals(autoScalerConfig.getAutoScalerStrategy(), "default");
     Assert.assertEquals(autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
-
-
-
   }
 
   @Test

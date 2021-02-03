@@ -152,7 +152,7 @@ A sample supervisor spec is shown below:
 
 | Property | Description | Default |
 | ------------- | ------------- | ------------- |
-| `enableTaskAutoscaler` | whether enable this feature or not. Set false here will disable `autoscaler` even though autoscalerConfig is not null| true |
+| `enableTaskAutoscaler` | whether enable this feature or not. Set false here will disable `autoscaler` even though `autoscalerConfig` is not null| true |
 | `metricsCollectionIntervalMillis` | Define the frequency of lag points collection.  | 30000 |
 | `metricsCollectionRangeMillis` | The total time window of lag collection, Use with `metricsCollectionIntervalMillis`，it means that in the recent `metricsCollectionRangeMill`, collect lag metric points every `metricsCollectionIntervalMillis`. | 600000 |
 | `scaleOutThreshold` | The Threshold of scale out action | 6000000 |
