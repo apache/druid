@@ -91,11 +91,11 @@ public class DruidPlanner implements Closeable
   }
 
   /**
-   * Validates an SQL query and collects a {@link ResourceResult} which contains a set of
+   * Validates an SQL query and collects a {@link ValidationResult} which contains a set of
    * {@link org.apache.druid.server.security.Resource} corresponding to any Druid datasources or views which are taking
    * part in the query
    */
-  public ResourceResult validateAndCollectResources(final String sql) throws SqlParseException, ValidationException
+  public ValidationResult validate(final String sql) throws SqlParseException, ValidationException
   {
     reset();
     SqlNode parsed = planner.parse(sql);
@@ -115,14 +115,14 @@ public class DruidPlanner implements Closeable
         new SqlResourceCollectorShuttle(validator, frameworkConfig.getDefaultSchema().getName());
     validated.accept(resourceCollectorShuttle);
     plannerContext.setResources(resourceCollectorShuttle.getResources());
-    return new ResourceResult(resourceCollectorShuttle.getResources());
+    return new ValidationResult(resourceCollectorShuttle.getResources());
   }
 
   /**
    * Prepare an SQL query for execution, including some initial parsing and validation and any dyanmic parameter type
    * resolution, to support prepared statements via JDBC.
    *
-   * In some future this could perhaps re-use some of the work done by {@link #validateAndCollectResources(String)}
+   * In some future this could perhaps re-use some of the work done by {@link #validate(String)}
    * instead of repeating it, but that day is not today.
    */
   public PrepareResult prepare(final String sql) throws SqlParseException, ValidationException, RelConversionException
@@ -155,7 +155,7 @@ public class DruidPlanner implements Closeable
    * {@link #planWithDruidConvention(SqlExplain, RelRoot)}, but will fall-back to
    * {@link #planWithBindableConvention(SqlExplain, RelRoot)} if this is not possible.
    *
-   * In some future this could perhaps re-use some of the work done by {@link #validateAndCollectResources(String)}
+   * In some future this could perhaps re-use some of the work done by {@link #validate(String)}
    * instead of repeating it, but that day is not today.
    */
   public PlannerResult plan(final String sql) throws SqlParseException, ValidationException, RelConversionException
@@ -203,7 +203,7 @@ public class DruidPlanner implements Closeable
   /**
    * While the actual query might not have changed, if the druid planner is re-used, we still have the need to reset the
    * {@link #planner} since we do not re-use artifacts or keep track of state between
-   * {@link #validateAndCollectResources}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
+   * {@link #validate}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
    * for each step.
    *
    * Currently, that state tracking is done in {@link org.apache.druid.sql.SqlLifecycle}, which will create a new

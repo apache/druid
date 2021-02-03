@@ -136,7 +136,7 @@ public class PlannerFactory
     DruidPlanner thePlanner = createPlanner(queryContext);
     thePlanner.getPlannerContext().setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
-      thePlanner.validateAndCollectResources(query);
+      thePlanner.validate(query);
     }
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);

@@ -52,7 +52,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
-import org.apache.druid.sql.calcite.planner.ResourceResult;
+import org.apache.druid.sql.calcite.planner.ValidationResult;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 
@@ -107,7 +107,7 @@ public class SqlLifecycle
   @GuardedBy("lock")
   private PlannerContext plannerContext;
   @GuardedBy("lock")
-  private ResourceResult resourceResult;
+  private ValidationResult validationResult;
   @GuardedBy("lock")
   private PrepareResult prepareResult;
   @GuardedBy("lock")
@@ -188,11 +188,11 @@ public class SqlLifecycle
         return;
       }
       transition(State.INITIALIZED, State.AUTHORIZING);
-      analyzeResources(authenticationResult);
+      validate(authenticationResult);
       Access access = doAuthorize(
           AuthorizationUtils.authorizeAllResourceActions(
               authenticationResult,
-              Iterables.transform(resourceResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+              Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
               plannerFactory.getAuthorizerMapper()
           )
       );
@@ -212,11 +212,11 @@ public class SqlLifecycle
     synchronized (lock) {
       transition(State.INITIALIZED, State.AUTHORIZING);
       AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
-      analyzeResources(authResult);
+      validate(authResult);
       Access access = doAuthorize(
           AuthorizationUtils.authorizeAllResourceActions(
               req,
-              Iterables.transform(resourceResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+              Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
               plannerFactory.getAuthorizerMapper()
           )
       );
@@ -225,16 +225,16 @@ public class SqlLifecycle
   }
 
   @GuardedBy("lock")
-  private ResourceResult analyzeResources(AuthenticationResult authenticationResult)
+  private ValidationResult validate(AuthenticationResult authenticationResult)
   {
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       // set planner context for logs/metrics in case something explodes early
       this.plannerContext = planner.getPlannerContext();
-      // set parameters on planner context, if already set
       this.plannerContext.setAuthenticationResult(authenticationResult);
+      // set parameters on planner context, if parameters have already been set
       this.plannerContext.setParameters(parameters);
-      this.resourceResult = planner.validateAndCollectResources(sql);
-      return resourceResult;
+      this.validationResult = planner.validate(sql);
+      return validationResult;
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
     catch (SqlParseException e) {
@@ -364,10 +364,10 @@ public class SqlLifecycle
 
 
   @VisibleForTesting
-  public ResourceResult runAnalyzeResources(AuthenticationResult authenticationResult)
+  public ValidationResult runAnalyzeResources(AuthenticationResult authenticationResult)
   {
     synchronized (lock) {
-      return analyzeResources(authenticationResult);
+      return validate(authenticationResult);
     }
   }
 
@@ -412,10 +412,10 @@ public class SqlLifecycle
           metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
           metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
         }
-        if (resourceResult != null) {
+        if (validationResult != null) {
           metricBuilder.setDimension(
               "dataSource",
-              resourceResult.getResources().stream().map(Resource::getName).collect(Collectors.toList()).toString()
+              validationResult.getResources().stream().map(Resource::getName).collect(Collectors.toList()).toString()
           );
         }
         metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));

@@ -24,11 +24,11 @@ import org.apache.druid.server.security.Resource;
 
 import java.util.Set;
 
-public class ResourceResult
+public class ValidationResult
 {
   private final Set<Resource> resources;
 
-  public ResourceResult(
+  public ValidationResult(
       final Set<Resource> resources
   )
   {
