@@ -168,16 +168,11 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   {
     String dataSource = getId();
     SupervisorTaskAutoscaler autoScaler = new DummyAutoScaler(supervisor, dataSource);
-    Map<String, Object> autoscalerConfigMap = ingestionSchema.getIOConfig().getAutoscalerConfig();
-
-    // if autoscalerConfigMap is null then autoScalerConfig will be null.
-    // if autoscalerConfigMap is empty then autoScalerConfig will be default values and shouldn't be used.
-    AutoScalerConfig autoScalerConfig = mapper.convertValue(autoscalerConfigMap, AutoScalerConfig.class);
+    AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoscalerConfig();
 
     // kinesis'autoscalerConfig is always null for now, So that kinesis will hold a DummyAutoScaler.
     // only SeekableStreamSupervisor is supported here.
-    if (autoscalerConfigMap != null
-            && !autoscalerConfigMap.isEmpty()
+    if (autoScalerConfig != null
             && autoScalerConfig.getEnableTaskAutoscaler()
             && supervisor instanceof SeekableStreamSupervisor) {
 

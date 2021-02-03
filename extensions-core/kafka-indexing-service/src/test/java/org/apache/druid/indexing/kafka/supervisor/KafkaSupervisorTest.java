@@ -70,6 +70,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -287,7 +288,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             1,
             new Period("PT1H"),
             consumerProperties,
-            autoscalerConfig,
+            OBJECT_MAPPER.convertValue(autoscalerConfig, AutoScalerConfig.class),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             new Period("P1D"),
             new Period("PT30S"),
@@ -426,6 +427,96 @@ public class KafkaSupervisorTest extends EasyMockSupport
     autoscaler.reset();
     autoscaler.stop();
   }
+
+
+  @Test
+  public void testKafkaSupervisorIOConfigInit()
+  {
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("myCustomKey", "myCustomValue");
+    consumerProperties.put("bootstrap.servers", kafkaHost);
+
+    //autoscalerConfig = normal
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+            topic,
+            INPUT_FORMAT,
+            1,
+            1,
+            new Period("PT1H"),
+            consumerProperties,
+            OBJECT_MAPPER.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", 1), AutoScalerConfig.class),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            new Period("P1D"),
+            new Period("PT30S"),
+            true,
+            new Period("PT30M"),
+            null,
+            null,
+            null
+    );
+
+    AutoScalerConfig autoScalerConfig = kafkaSupervisorIOConfig.getAutoscalerConfig();
+    Assert.assertNotNull(autoScalerConfig);
+    Assert.assertEquals(autoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
+    Assert.assertEquals(autoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
+    Assert.assertEquals(autoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
+    Assert.assertEquals(autoScalerConfig.getDynamicCheckPeriod(), 60000);
+    Assert.assertEquals(autoScalerConfig.getScaleOutThreshold(), 6000000);
+    Assert.assertEquals(autoScalerConfig.getScaleInThreshold(), 1000000);
+    Assert.assertEquals(autoScalerConfig.getTaskCountMax(), 4);
+    Assert.assertEquals(autoScalerConfig.getTaskCountMin(), 1);
+    Assert.assertEquals(autoScalerConfig.getScaleInStep(), 1);
+    Assert.assertEquals(autoScalerConfig.getScaleOutStep(), 2);
+    Assert.assertFalse(autoScalerConfig.getEnableTaskAutoscaler());
+    Assert.assertEquals(autoScalerConfig.getAutoScalerStrategy(), "default");
+    Assert.assertEquals(autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
+
+    // autoscalerConfig = null ;
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig2 = new KafkaSupervisorIOConfig(
+            topic,
+            INPUT_FORMAT,
+            1,
+            1,
+            new Period("PT1H"),
+            consumerProperties,
+            null,
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            new Period("P1D"),
+            new Period("PT30S"),
+            true,
+            new Period("PT30M"),
+            null,
+            null,
+            null
+    );
+
+    AutoScalerConfig autoScalerConfig2 = kafkaSupervisorIOConfig2.getAutoscalerConfig();
+    Assert.assertNull(autoScalerConfig2);
+
+    // autoscalerConfig = empty ;
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig3 = new KafkaSupervisorIOConfig(
+            topic,
+            INPUT_FORMAT,
+            1,
+            1,
+            new Period("PT1H"),
+            consumerProperties,
+            OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            new Period("P1D"),
+            new Period("PT30S"),
+            true,
+            new Period("PT30M"),
+            null,
+            null,
+            null
+    );
+
+    AutoScalerConfig autoScalerConfig3 = kafkaSupervisorIOConfig3.getAutoscalerConfig();
+    Assert.assertFalse(autoScalerConfig3.getEnableTaskAutoscaler());
+  }
+
+
 
   @Test
   public void testCreateBaseTaskContexts() throws JsonProcessingException

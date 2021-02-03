@@ -531,7 +531,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(autoscalerConfig).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -577,7 +577,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(ImmutableMap.of("metricsCollectionIntervalMillis", "1")).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1", "enableTaskAutoscaler", true), AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -611,7 +611,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(autoScalerConfig.getTaskCountMin(), 1);
     Assert.assertEquals(autoScalerConfig.getScaleInStep(), 1);
     Assert.assertEquals(autoScalerConfig.getScaleOutStep(), 2);
-    Assert.assertTrue(autoScalerConfig.getEnableTaskAutoscaler());
     Assert.assertEquals(autoScalerConfig.getAutoScalerStrategy(), "default");
     Assert.assertEquals(autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
   }
@@ -768,7 +767,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     );
   }
 
-  private static SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut)
+  private SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut)
   {
     if (scaleOut) {
       return new SeekableStreamSupervisorIOConfig(
@@ -782,7 +781,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
               false,
               new Period("PT30M"),
               null,
-              null, getScaleOutProperties(), null
+              null, mapper.convertValue(getScaleOutProperties(), AutoScalerConfig.class), null
       ) {};
     } else {
       return new SeekableStreamSupervisorIOConfig(
@@ -796,7 +795,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
               false,
               new Period("PT30M"),
               null,
-              null, getScaleInProperties(), null
+              null, mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null
         ) {};
     }
   }

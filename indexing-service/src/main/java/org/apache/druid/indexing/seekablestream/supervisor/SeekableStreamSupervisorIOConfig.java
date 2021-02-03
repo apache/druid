@@ -23,14 +23,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
-import java.util.Map;
 
 
 public abstract class SeekableStreamSupervisorIOConfig
@@ -48,7 +47,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
-  @Nullable private final Map<String, Object> autoscalerConfig;
+  @Nullable private final AutoScalerConfig autoscalerConfig;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -62,7 +61,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
-      @Nullable Map<String, Object> autoscalerConfig,
+      @Nullable AutoScalerConfig autoscalerConfig,
       DateTime lateMessageRejectionStartDateTime
   )
   {
@@ -121,7 +120,7 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   @Nullable
   @JsonProperty
-  public Map<String, Object> getAutoscalerConfig()
+  public AutoScalerConfig getAutoscalerConfig()
   {
     return autoscalerConfig;
   }

@@ -635,9 +635,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
-    Map<String, Object> autoscalerConfigMap = ioConfig.getAutoscalerConfig();
-    this.autoScalerConfig = mapper.convertValue(autoscalerConfigMap, AutoScalerConfig.class);
-    log.debug("Get autoscalerConfig from IOConfig : [%s] in [%s]", autoscalerConfigMap, dataSource);
+    this.autoScalerConfig = ioConfig.getAutoscalerConfig();
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;
@@ -652,7 +650,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     int workerThreads;
     int chatThreads;
-    if (autoscalerConfigMap != null && !autoscalerConfigMap.isEmpty() && autoScalerConfig.getEnableTaskAutoscaler()) {
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoscaler()) {
       log.info("enableTaskAutoscaler for datasource [%s]", dataSource);
 
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
