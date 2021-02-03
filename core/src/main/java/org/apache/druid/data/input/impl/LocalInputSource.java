@@ -40,6 +40,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
@@ -56,6 +57,8 @@ import java.util.stream.Stream;
 
 public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
+  private static final Logger log = new Logger(LocalInputSource.class);
+
   @Nullable
   private final File baseDir;
   @Nullable
@@ -150,6 +153,16 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
                 new NameFileFilter(files.stream().map(File::getName).collect(Collectors.toList()), IOCase.SENSITIVE)
             )
         );
+      }
+      Iterator<File> fileIterator = FileUtils.iterateFiles(
+          baseDir.getAbsoluteFile(),
+          fileFilter,
+          TrueFileFilter.INSTANCE
+      );
+      if (!fileIterator.hasNext()) {
+        // base dir & filter are guaranteed to be non-null here
+        // (by construction and non-null check of baseDir a few lines above):
+        log.info("Local inputSource filter [%s] for base dir [%s] did not match any files", filter, baseDir);
       }
       return FileUtils.iterateFiles(
           baseDir.getAbsoluteFile(),
