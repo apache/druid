@@ -73,6 +73,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -147,9 +148,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
-
-  public static final int TASK_COUNT_MAX = 4;
-  public static final int TASK_COUNT_MIN = 1;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -356,8 +354,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             return;
           }
         }
-        if (nowTime - dynamicTriggerLastRunTime < minTriggerDynamicFrequency) {
-          log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CLAM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, minTriggerDynamicFrequency, dataSource);
+        if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
+          log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CLAM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource);
           return;
         }
 
@@ -586,7 +584,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
   private final SeekableStreamSupervisorIOConfig ioConfig;
-  private final Map<String, Object> autoscalerConfig;
+  private final AutoScalerConfig autoScalerConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
@@ -614,9 +612,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
-  private final boolean enableTaskAutoscaler;
-  private int taskCountMax;
-  private long minTriggerDynamicFrequency;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -640,18 +635,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
-    this.autoscalerConfig = ioConfig.getAutoscalerConfig();
-    log.debug("Get autoscalerConfig from IOConfig : [%s] in [%s]", autoscalerConfig, dataSource);
-    if (autoscalerConfig != null && !autoscalerConfig.isEmpty() && Boolean.parseBoolean(String.valueOf(autoscalerConfig.getOrDefault("enableTaskAutoscaler", true)))) {
-      log.info("enableTaskAutoscaler for datasource [%s]", dataSource);
-      this.taskCountMax = Integer.parseInt(String.valueOf(autoscalerConfig.getOrDefault("taskCountMax", TASK_COUNT_MAX)));
-      this.minTriggerDynamicFrequency = Long.parseLong(String.valueOf(autoscalerConfig.getOrDefault("minTriggerDynamicFrequencyMillis", 600000)));
-      this.enableTaskAutoscaler = true;
-    } else {
-      log.info("Disable dynamic allocate tasks for [%s]", dataSource);
-      this.enableTaskAutoscaler = false;
-    }
-
+    Map<String, Object> autoscalerConfigMap = ioConfig.getAutoscalerConfig();
+    this.autoScalerConfig = mapper.convertValue(autoscalerConfigMap, AutoScalerConfig.class);
+    log.debug("Get autoscalerConfig from IOConfig : [%s] in [%s]", autoscalerConfigMap, dataSource);
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;
@@ -665,14 +651,27 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     int workerThreads;
-    if (enableTaskAutoscaler) {
+    int chatThreads;
+    if (autoscalerConfigMap != null && !autoscalerConfigMap.isEmpty() && autoScalerConfig.getEnableTaskAutoscaler()) {
+      log.info("enableTaskAutoscaler for datasource [%s]", dataSource);
+
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
-              : Math.min(10, taskCountMax));
+              : Math.min(10, autoScalerConfig.getTaskCountMax()));
+
+      chatThreads = (this.tuningConfig.getChatThreads() != null
+              ? this.tuningConfig.getChatThreads()
+              : Math.min(10, autoScalerConfig.getTaskCountMax() * this.ioConfig.getReplicas()));
     } else {
+      log.info("Disable dynamic allocate tasks for [%s]", dataSource);
+
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
               : Math.min(10, this.ioConfig.getTaskCount()));
+
+      chatThreads = (this.tuningConfig.getChatThreads() != null
+              ? this.tuningConfig.getChatThreads()
+              : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
     }
 
     this.workerExec = MoreExecutors.listeningDecorator(
@@ -718,16 +717,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
                                          + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
-    int chatThreads;
-    if (enableTaskAutoscaler) {
-      chatThreads = (this.tuningConfig.getChatThreads() != null
-              ? this.tuningConfig.getChatThreads()
-              : Math.min(10, taskCountMax * this.ioConfig.getReplicas()));
-    } else {
-      chatThreads = (this.tuningConfig.getChatThreads() != null
-              ? this.tuningConfig.getChatThreads()
-              : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
-    }
 
     this.taskClient = taskClientFactory.build(
         taskInfoProvider,

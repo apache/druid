@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DummyAutoScaler;
 import org.apache.druid.java.util.common.StringUtils;
@@ -167,20 +168,26 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   {
     String dataSource = getId();
     SupervisorTaskAutoscaler autoScaler = new DummyAutoScaler(supervisor, dataSource);
-    Map<String, Object> autoscalerConfig = ingestionSchema.getIOConfig().getAutoscalerConfig();
+    Map<String, Object> autoscalerConfigMap = ingestionSchema.getIOConfig().getAutoscalerConfig();
+
+    // if autoscalerConfigMap is null then autoScalerConfig will be null
+    // if autoscalerConfigMap is empty then autoScalerConfig will be default values.
+    AutoScalerConfig autoScalerConfig = mapper.convertValue(autoscalerConfigMap, AutoScalerConfig.class);
 
     // kinesis'autoscalerConfig is always null for now, So that kinesis will hold a DummyAutoScaler.
     // only SeekableStreamSupervisor is supported here.
-    if (autoscalerConfig != null
-            && !autoscalerConfig.isEmpty()
-            && Boolean.parseBoolean(String.valueOf(autoscalerConfig.getOrDefault("enableTaskAutoscaler", true)))
+    if (autoscalerConfigMap != null
+            && !autoscalerConfigMap.isEmpty()
+            && autoScalerConfig.getEnableTaskAutoscaler()
             && supervisor instanceof SeekableStreamSupervisor) {
 
-      String autoScalerStrategy = String.valueOf(autoscalerConfig.getOrDefault("autoScalerStrategy", "default"));
+      String autoScalerStrategy = autoScalerConfig.getAutoScalerStrategy();
 
       // will thorw 'Return value of String.hashCode() ignored : RV_RETURN_VALUE_IGNORED' just Suppress it.
       switch (StringUtils.toLowerCase(autoScalerStrategy)) {
-        default: autoScaler = new DefaultAutoScaler(supervisor, dataSource, autoscalerConfig, this);
+        default: {
+          autoScaler = new DefaultAutoScaler(supervisor, dataSource, autoScalerConfig, this);
+        }
       }
     }
     return autoScaler;
