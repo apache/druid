@@ -164,11 +164,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
         // (by construction and non-null check of baseDir a few lines above):
         log.info("Local inputSource filter [%s] for base dir [%s] did not match any files", filter, baseDir);
       }
-      return FileUtils.iterateFiles(
-          baseDir.getAbsoluteFile(),
-          fileFilter,
-          TrueFileFilter.INSTANCE
-      );
+      return fileIterator;
     }
   }
 
