@@ -587,12 +587,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
 
     LagStats lagStats = supervisor.computeLagStats();
-    long totalLag = lagStats.getTotalLag();
-    long avgLag = lagStats.getAvgLag();
-    long maxLag = lagStats.getMaxLag();
-    Assert.assertEquals(totalLag, 0);
-    Assert.assertEquals(avgLag, 0);
-    Assert.assertEquals(maxLag, 0);
 
     DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, getScaleOutProperties(), spec);
     supervisor.start();

@@ -159,7 +159,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
       @Override
       public LagStats computeLagStats()
       {
-        return null;
+        return new LagStats(0, 0, 0);
       }
 
       @Override
