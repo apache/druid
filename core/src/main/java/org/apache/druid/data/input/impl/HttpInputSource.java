@@ -72,7 +72,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
 
   public static void throwIfInvalidProtocols(List<URI> uris)
   {
-    if (uris.stream().anyMatch(uri -> !"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme()))) {
+    if (uris.stream().anyMatch(uri -> !"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme()))) {
       throw new IllegalArgumentException("Only HTTP or HTTPS are allowed");
     }
   }
