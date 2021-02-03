@@ -86,7 +86,7 @@ public class DataSourceCompactionConfig
           granularitySpec.getQueryGranularity().equals(UniformGranularitySpec.DEFAULT_QUERY_GRANULARITY),
           "Auto compaction granularitySpec only supports default query granularity value");
       Preconditions.checkArgument(
-          granularitySpec.inputIntervals().isEmpty() && !granularitySpec.bucketIntervals().isPresent(),
+          granularitySpec.inputIntervals().isEmpty(),
           "Auto compaction granularitySpec does not supports interval value"
       );
     }
