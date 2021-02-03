@@ -163,7 +163,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }
 
-
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException, RelConversionException, SqlParseException
   {
@@ -177,8 +176,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
 
     try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector)
+        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector, query);
+        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector, query)
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan(query);
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan(query);

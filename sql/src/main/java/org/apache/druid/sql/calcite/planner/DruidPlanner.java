@@ -97,6 +97,7 @@ public class DruidPlanner implements Closeable
    */
   public ResourceResult validateAndCollectResources(final String sql) throws SqlParseException, ValidationException
   {
+    reset();
     SqlNode parsed = planner.parse(sql);
     if (parsed.getKind() == SqlKind.EXPLAIN) {
       SqlExplain explain = (SqlExplain) parsed;
@@ -113,6 +114,7 @@ public class DruidPlanner implements Closeable
     SqlResourceCollectorShuttle resourceCollectorShuttle =
         new SqlResourceCollectorShuttle(validator, frameworkConfig.getDefaultSchema().getName());
     validated.accept(resourceCollectorShuttle);
+    plannerContext.setResources(resourceCollectorShuttle.getResources());
     return new ResourceResult(resourceCollectorShuttle.getResources());
   }
 
@@ -125,6 +127,7 @@ public class DruidPlanner implements Closeable
    */
   public PrepareResult prepare(final String sql) throws SqlParseException, ValidationException, RelConversionException
   {
+    reset();
     SqlNode parsed = planner.parse(sql);
     SqlExplain explain = null;
     if (parsed.getKind() == SqlKind.EXPLAIN) {
@@ -155,9 +158,9 @@ public class DruidPlanner implements Closeable
    * In some future this could perhaps re-use some of the work done by {@link #validateAndCollectResources(String)}
    * instead of repeating it, but that day is not today.
    */
-  public PlannerResult plan(final String sql)
-      throws SqlParseException, ValidationException, RelConversionException
+  public PlannerResult plan(final String sql) throws SqlParseException, ValidationException, RelConversionException
   {
+    reset();
     SqlExplain explain = null;
     SqlNode parsed = planner.parse(sql);
     if (parsed.getKind() == SqlKind.EXPLAIN) {
@@ -198,6 +201,27 @@ public class DruidPlanner implements Closeable
   }
 
   /**
+   * While the actual query might not have changed, if the druid planner is re-used, we still have the need to reset the
+   * {@link #planner} since we do not re-use artifacts or keep track of state between
+   * {@link #validateAndCollectResources}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
+   * for each step.
+   *
+   * Currently, that state tracking is done in {@link org.apache.druid.sql.SqlLifecycle}, which will create a new
+   * planner for each of the corresponding steps so this isn't strictly necessary at this time, this method is here as
+   * much to make this situation explicit and provide context for a future refactor as anything else (and some tests
+   * do re-use the planner between validate, prepare, and plan, which will run into this issue).
+   *
+   * This could be improved by tying {@link org.apache.druid.sql.SqlLifecycle} and {@link DruidPlanner} states more
+   * closely with the state of {@link #planner}, instead of repeating parsing and validation between each of these
+   * steps.
+   */
+  private void reset()
+  {
+    planner.close();
+    planner.reset();
+  }
+
+  /**
    * Construct a {@link PlannerResult} for a {@link RelNode} that is directly translatable to a native Druid query.
    */
   private PlannerResult planWithDruidConvention(
@@ -220,6 +244,11 @@ public class DruidPlanner implements Closeable
       return planExplanation(druidRel, explain);
     } else {
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+        // sanity check
+        Preconditions.checkState(
+            plannerContext.getResources().isEmpty() == druidRel.getDataSourceNames().isEmpty(),
+            "Authorization sanity check failed"
+        );
         if (root.isRefTrivial()) {
           return druidRel.runQuery();
         } else {

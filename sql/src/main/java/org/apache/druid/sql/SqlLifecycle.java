@@ -112,8 +112,6 @@ public class SqlLifecycle
   private PrepareResult prepareResult;
   @GuardedBy("lock")
   private PlannerResult plannerResult;
-  @GuardedBy("lock")
-  private Access authorizationResult;
 
   public SqlLifecycle(
       PlannerFactory plannerFactory,
@@ -178,7 +176,7 @@ public class SqlLifecycle
   }
 
   /**
-   * Validate SQL query and authorize against any datasources or views which the query.
+   * Validate SQL query and authorize against any datasources or views which will take part in the query.
    *
    * If successful, the lifecycle will first transition from {@link State#INITIALIZED} first to
    * {@link State#AUTHORIZING} and then to either {@link State#AUTHORIZED} or {@link State#UNAUTHORIZED}.

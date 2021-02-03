@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Resource;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -39,6 +40,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -69,6 +71,7 @@ public class PlannerContext
   private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private List<TypedValue> parameters = Collections.emptyList();
   private AuthenticationResult authenticationResult;
+  private Set<Resource> resources = Collections.emptySet();
   private Access authorizationResult;
 
   private PlannerContext(
@@ -264,5 +267,15 @@ public class PlannerContext
   public void setAuthorizationResult(Access access)
   {
     this.authorizationResult = Preconditions.checkNotNull(access, "authorizationResult");
+  }
+
+  public Set<Resource> getResources()
+  {
+    return resources;
+  }
+
+  public void setResources(Set<Resource> resources)
+  {
+    this.resources = Preconditions.checkNotNull(resources, "resources");
   }
 }

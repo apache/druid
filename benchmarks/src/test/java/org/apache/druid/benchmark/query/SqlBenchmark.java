@@ -437,8 +437,9 @@ public class SqlBenchmark
         QueryContexts.VECTORIZE_KEY, vectorize,
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context)) {
-      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+      final PlannerResult plannerResult = planner.plan(sql);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
@@ -454,8 +455,9 @@ public class SqlBenchmark
         QueryContexts.VECTORIZE_KEY, vectorize,
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context)) {
-      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+      final PlannerResult plannerResult = planner.plan(sql);
       blackhole.consume(plannerResult);
     }
   }

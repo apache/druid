@@ -61,7 +61,7 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
     // raw tables and views and such will have a IdentifierNamespace
     // since we are scoped to identifiers here, we should only pick up these
     SqlValidatorNamespace namespace = validator.getNamespace(id);
-    if (namespace instanceof IdentifierNamespace) {
+    if (namespace != null && namespace.isWrapperFor(IdentifierNamespace.class)) {
       SqlValidatorTable validatorTable = namespace.getTable();
       // this should not probably be null if the namespace was not null,
       if (validatorTable != null) {

@@ -30,11 +30,13 @@ import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -89,9 +91,10 @@ public class PlannerFactory
     this.druidSchemaName = druidSchemaName;
   }
 
-  public DruidPlanner createPlanner(
-      final Map<String, Object> queryContext
-  )
+  /**
+   * Create a Druid query planner from an initial query context
+   */
+  public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
     final PlannerContext plannerContext = PlannerContext.create(
         operatorTable,
@@ -100,7 +103,7 @@ public class PlannerFactory
         queryContext
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
-    final FrameworkConfig frameworkConfig = getFrameworkConfig(plannerContext, queryMaker);
+    final FrameworkConfig frameworkConfig = buildFrameworkConfig(plannerContext, queryMaker);
 
     return new DruidPlanner(
         frameworkConfig,
@@ -108,20 +111,13 @@ public class PlannerFactory
     );
   }
 
-  // not just visible for, but only for testing
-  @VisibleForTesting
-  public DruidPlanner createPlannerForTesting(final Map<String, Object> queryContext)
-  {
-    DruidPlanner thePlanner = createPlanner(queryContext);
-    thePlanner.getPlannerContext().setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
-    thePlanner.getPlannerContext().setAuthorizationResult(Access.OK);
-    return thePlanner;
-  }
-
+  /**
+   * Create a new Druid query planner, re-using a previous {@link PlannerContext}
+   */
   public DruidPlanner createPlannerWithContext(PlannerContext plannerContext)
   {
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
-    final FrameworkConfig frameworkConfig = getFrameworkConfig(plannerContext, queryMaker);
+    final FrameworkConfig frameworkConfig = buildFrameworkConfig(plannerContext, queryMaker);
 
     return new DruidPlanner(
         frameworkConfig,
@@ -129,16 +125,32 @@ public class PlannerFactory
     );
   }
 
+
+  /**
+   * Not just visible for, but only for testing. Create a planner pre-loaded with an escalated authentication result
+   * and ready to go authorization result.
+   */
+  @VisibleForTesting
+  public DruidPlanner createPlannerForTesting(final Map<String, Object> queryContext, String query)
+  {
+    DruidPlanner thePlanner = createPlanner(queryContext);
+    thePlanner.getPlannerContext().setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
+    try {
+      thePlanner.validateAndCollectResources(query);
+    }
+    catch (SqlParseException | ValidationException e) {
+      throw new RuntimeException(e);
+    }
+    thePlanner.getPlannerContext().setAuthorizationResult(Access.OK);
+    return thePlanner;
+  }
 
   public AuthorizerMapper getAuthorizerMapper()
   {
     return authorizerMapper;
   }
 
-  private FrameworkConfig getFrameworkConfig(
-      PlannerContext plannerContext,
-      QueryMaker queryMaker
-  )
+  private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext, QueryMaker queryMaker)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
         .configBuilder()

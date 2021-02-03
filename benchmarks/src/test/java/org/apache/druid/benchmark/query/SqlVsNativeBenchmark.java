@@ -161,7 +161,7 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(null)) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(null, sqlQuery)) {
       final PlannerResult plannerResult = planner.plan(sqlQuery);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
