@@ -416,6 +416,7 @@
                                         <DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>${docker.build.skip}</DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>
                                         <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
+                                        <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>
@@ -497,8 +498,54 @@
 
         <profile>
             <id>int-tests-config-file</id>
+            <properties>
+                <pod.name>int-test</pod.name>
+                <pod.namespace>default</pod.namespace>
+                <build.druid.cluster>false</build.druid.cluster>
+                <override.config.path />
+                <resource.file.dir.path />
+
+                <!-- Would like to put emojis in here too, but they throw "Input buffer too short" errors due to https://issues.apache.org/jira/browse/SUREFIRE-1865 -->
+                <extra.datasource.name.suffix>\ %Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
+            </properties>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>K8s-package</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <environmentVariables>
+                                        <POD_NAME>${pod.name}</POD_NAME>
+                                        <POD_NAMESPACE>${pod.namespace}</POD_NAMESPACE>
+                                        <BUILD_DRUID_CLSUTER>${build.druid.cluster}</BUILD_DRUID_CLSUTER>
+                                    </environmentVariables>
+                                    <executable>${project.basedir}/script/build_run_k8s_cluster.sh</executable>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-k8s-druid-cluster</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+                                    <environmentVariables>
+                                        <POD_NAME>${pod.name}</POD_NAME>
+                                        <POD_NAMESPACE>${pod.namespace}</POD_NAMESPACE>
+                                        <BUILD_DRUID_CLSUTER>${build.druid.cluster}</BUILD_DRUID_CLSUTER>
+                                    </environmentVariables>
+                                    <executable>${project.basedir}/script/stop_k8s_cluster.sh</executable>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>

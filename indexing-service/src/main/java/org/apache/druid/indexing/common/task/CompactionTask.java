@@ -235,6 +235,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           indexTuningConfig.getAppendableIndexSpec(),
           indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getMaxBytesInMemory(),
+          indexTuningConfig.isSkipBytesInMemoryOverheadCheck(),
           indexTuningConfig.getMaxTotalRows(),
           indexTuningConfig.getNumShards(),
           null,

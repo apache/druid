@@ -1090,6 +1090,15 @@ array_to_string
 asin
 atan
 atan2
+bitwise
+bitwiseAnd
+bitwiseComplement
+bitwiseConvertDoubleToLongBits
+bitwiseConvertLongBitsToDouble
+bitwiseOr
+bitwiseShiftLeft
+bitwiseShiftRight
+bitwiseXor
 bloom_filter_test
 cartesian_fold
 cartesian_map
@@ -1797,6 +1806,7 @@ expr
 jackson-jq
 missingValue
 schemaless
+skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
  - ../docs/tutorials/index.md
