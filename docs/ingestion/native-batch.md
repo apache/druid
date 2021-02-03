@@ -1133,8 +1133,11 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 
 ### HTTP Input Source
 
-The HTTP input source is to support reading files directly
-from remote sites via HTTP.
+The HTTP input source is to support reading files directly from remote sites via HTTP.
+
+The HTTP input source is set to _deny accesses to all hosts_ by default. You need to configure [Ingestion security properties](../configuration/index.md#ingestion-security-configuration)
+to use the HTTP input source.
+
 The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
 where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 

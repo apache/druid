@@ -25,7 +25,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,12 +35,15 @@ import java.util.Collections;
 
 public class HttpInputSourceTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
     HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(
         null,
-        null
+        ImmutableList.of()
     );
     final ObjectMapper mapper = new ObjectMapper();
     mapper.setInjectableValues(new InjectableValues.Std().addValue(
@@ -56,9 +61,26 @@ public class HttpInputSourceTest
     Assert.assertEquals(source, fromJson);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  public void testDenyAllByDefault()
+  {
+    HttpInputSourceConfig defaultConfig = new HttpInputSourceConfig(null, null);
+    Assert.assertEquals(ImmutableList.of(), defaultConfig.getAllowListDomains());
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Access to [http://valid.com] DENIED!");
+    new HttpInputSource(
+        ImmutableList.of(URI.create("http://valid.com")),
+        "myName",
+        new DefaultPasswordProvider("myPassword"),
+        defaultConfig
+    );
+  }
+
+  @Test
   public void testDenyListDomainThrowsException()
   {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Access to [http://deny.com/http-test] DENIED!");
     new HttpInputSource(
         ImmutableList.of(URI.create("http://deny.com/http-test")),
         "myName",
@@ -78,9 +100,11 @@ public class HttpInputSourceTest
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testAllowListDomainThrowsException()
   {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Access to [http://deny.com/http-test] DENIED!");
     new HttpInputSource(
         ImmutableList.of(URI.create("http://deny.com/http-test")),
         "myName",
@@ -100,9 +124,11 @@ public class HttpInputSourceTest
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testEmptyAllowListDomainMatch()
   {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Access to [http://allow.com/http-test] DENIED!");
     new HttpInputSource(
         ImmutableList.of(URI.create("http://allow.com/http-test")),
         "myName",
@@ -111,9 +137,11 @@ public class HttpInputSourceTest
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCannotSetBothAllowAndDenyList()
   {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Can only use one of allowList or blackList");
     new HttpInputSourceConfig(Collections.singletonList("allow.com"), Collections.singletonList("deny.com"));
   }
 }

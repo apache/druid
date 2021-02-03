@@ -22,13 +22,17 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
+import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
 public class HttpInputSourceConfig
 {
+  private static final List<String> DENY_ALL_ALLOW_LIST_DOMAINS = ImmutableList.of();
+
   @JsonProperty
   private final List<String> allowListDomains;
   @JsonProperty
@@ -36,11 +40,13 @@ public class HttpInputSourceConfig
 
   @JsonCreator
   public HttpInputSourceConfig(
-      @JsonProperty("allowListDomains") List<String> allowListDomains,
-      @JsonProperty("denyListDomains") List<String> denyListDomains
+      @JsonProperty("allowListDomains") @Nullable List<String> allowListDomains,
+      @JsonProperty("denyListDomains") @Nullable List<String> denyListDomains
   )
   {
-    this.allowListDomains = allowListDomains;
+    this.allowListDomains = (allowListDomains == null && denyListDomains == null)
+                            ? DENY_ALL_ALLOW_LIST_DOMAINS
+                            : allowListDomains;
     this.denyListDomains = denyListDomains;
     Preconditions.checkArgument(
         this.denyListDomains == null || this.allowListDomains == null,
