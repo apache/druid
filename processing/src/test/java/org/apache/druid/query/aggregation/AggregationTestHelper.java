@@ -333,6 +333,21 @@ public class AggregationTestHelper implements Closeable
       long minTimestamp,
       Granularity gran,
       int maxRowCount,
+      Query<T> query
+  ) throws Exception
+  {
+    File segmentDir = tempFolder.newFolder();
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), query);
+  }
+
+  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
+      File inputDataFile,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
       boolean rollup,
       String queryJson
   ) throws Exception
