@@ -742,6 +742,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     return partitionsFetchStarted.get();
   }
 
+  @VisibleForTesting
+  public boolean isAnyFetchActive()
+  {
+    return partitionResources.values()
+                             .stream()
+                             .map(pr -> pr.currentFetch)
+                             .anyMatch(fetch -> (fetch != null && !fetch.isDone()));
+  }
+
   /**
    * Check that a {@link PartitionResource} has been assigned to this record supplier, and if so call
    * {@link PartitionResource#seek} to move it to the latest offsets. Note that this method does not restart background
