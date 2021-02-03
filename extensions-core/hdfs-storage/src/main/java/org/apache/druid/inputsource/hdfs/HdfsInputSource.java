@@ -51,6 +51,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -101,9 +102,9 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     return paths;
   }
 
-  public static Collection<Path> getPaths(List<String> inputPaths, Configuration configuration) throws IOException
+  public static Collection<Path> getPaths(List<String> inputPathStrings, Configuration configuration) throws IOException
   {
-    if (inputPaths.isEmpty()) {
+    if (inputPathStrings.isEmpty()) {
       return Collections.emptySet();
     }
 
@@ -111,8 +112,13 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     Job job = Job.getInstance(configuration);
 
     // Add paths to the fake JobContext.
-    for (String inputPath : inputPaths) {
+    for (String inputPath : inputPathStrings) {
       FileInputFormat.addInputPaths(job, inputPath);
+    }
+
+    final Path[] inputPaths = FileInputFormat.getInputPaths(job);
+    if (Arrays.stream(inputPaths).anyMatch(path -> !"hdfs".equalsIgnoreCase(path.toUri().getScheme()))) {
+      throw new IllegalArgumentException("Input paths must be the HDFS path");
     }
 
     return new HdfsFileInputFormat().getSplits(job)

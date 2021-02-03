@@ -170,6 +170,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
     @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private MiniDFSCluster dfsCluster;
@@ -291,6 +294,18 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
         String actualPath = Iterables.getOnlyElement(inputSource.getInputPaths());
         Assert.assertEquals(expectedPath, actualPath);
       }
+    }
+
+    @Test
+    public void testNonHdfsPathThrowException()
+    {
+      target = HdfsInputSource.builder()
+                              .paths("file:///" + PATH + "*")
+                              .configuration(CONFIGURATION)
+                              .build();
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Input paths must be the HDFS path");
+      target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
     }
   }
 
