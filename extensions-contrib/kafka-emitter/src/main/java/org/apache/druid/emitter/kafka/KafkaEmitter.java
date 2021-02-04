@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.server.log.DefaultRequestLogEvent;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -51,6 +52,7 @@ public class KafkaEmitter implements Emitter
   private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
+  private final AtomicLong requestSqlLost;
   private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
@@ -58,6 +60,7 @@ public class KafkaEmitter implements Emitter
   private final ObjectMapper jsonMapper;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> requestSqlQueue;
   private final ScheduledExecutorService scheduler;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
@@ -70,9 +73,11 @@ public class KafkaEmitter implements Emitter
                                                       .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432"));
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.requestSqlQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.scheduler = Executors.newScheduledThreadPool(3);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
+    this.requestSqlLost = new AtomicLong(0L);
     this.invalidLost = new AtomicLong(0L);
   }
 
@@ -111,9 +116,10 @@ public class KafkaEmitter implements Emitter
   {
     scheduler.schedule(this::sendMetricToKafka, 10, TimeUnit.SECONDS);
     scheduler.schedule(this::sendAlertToKafka, 10, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendRequestSqlToKafka, 10, TimeUnit.SECONDS);
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], invalidLost=[%d]",
-               metricLost.get(), alertLost.get(), invalidLost.get());
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestSqlLost=[%d], invalidLost=[%d]",
+               metricLost.get(), alertLost.get(), requestSqlLost.get(), invalidLost.get());
     }, 5, 5, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
@@ -126,6 +132,11 @@ public class KafkaEmitter implements Emitter
   private void sendAlertToKafka()
   {
     sendToKafka(config.getAlertTopic(), alertQueue, setProducerCallback(alertLost));
+  }
+
+  private void sendRequestSqlToKafka()
+  {
+    sendToKafka(config.getRequestSqlTopic(), requestSqlQueue, setProducerCallback(requestSqlLost));
   }
 
   private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
@@ -146,23 +157,53 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
-      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder().putAll(event.toMap());
+      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder();
       if (config.getClusterName() != null) {
         resultBuilder.put("clusterName", config.getClusterName());
       }
-      Map<String, Object> result = resultBuilder.build();
-
       try {
-        String resultJson = jsonMapper.writeValueAsString(result);
-        ObjectContainer<String> objectContainer = new ObjectContainer<>(
-            resultJson,
-            StringUtils.toUtf8(resultJson).length
-        );
         if (event instanceof ServiceMetricEvent) {
+          resultBuilder.putAll(event.toMap());
+          Map<String, Object> result = resultBuilder.build();
+
+          String resultJson = jsonMapper.writeValueAsString(result);
+          ObjectContainer<String> objectContainer = new ObjectContainer<>(
+              resultJson,
+              StringUtils.toUtf8(resultJson).length
+          );
           if (!metricQueue.offer(objectContainer)) {
             metricLost.incrementAndGet();
           }
+        } else if (event instanceof DefaultRequestLogEvent) {
+          DefaultRequestLogEvent defaultRequestLogEvent = (DefaultRequestLogEvent) event;
+          if (null != defaultRequestLogEvent.getSql()) {
+            resultBuilder.put("timestamp", defaultRequestLogEvent.getCreatedTime());
+            resultBuilder.put("service", defaultRequestLogEvent.getService());
+            resultBuilder.put("host", defaultRequestLogEvent.getHost());
+            resultBuilder.put("sqlQueryId", defaultRequestLogEvent.getSqlQueryContext().get("sqlQueryId"));
+            resultBuilder.put("sql", defaultRequestLogEvent.getSql());
+            resultBuilder.put("sqlQuery/time", defaultRequestLogEvent.getQueryStats().getStats().get("sqlQuery/time"));
+            resultBuilder.put("sqlQuery/bytes", defaultRequestLogEvent.getQueryStats().getStats().get("sqlQuery/bytes"));
+
+            Map<String, Object> result = resultBuilder.build();
+            String resultJson = jsonMapper.writeValueAsString(result);
+            ObjectContainer<String> objectContainer = new ObjectContainer<>(resultJson, StringUtils.toUtf8(resultJson).length);
+
+            if (!requestSqlQueue.offer(objectContainer)) {
+              requestSqlLost.incrementAndGet();
+            }
+          } else {
+            invalidLost.incrementAndGet();
+          }
         } else if (event instanceof AlertEvent) {
+          resultBuilder.putAll(event.toMap());
+          Map<String, Object> result = resultBuilder.build();
+
+          String resultJson = jsonMapper.writeValueAsString(result);
+          ObjectContainer<String> objectContainer = new ObjectContainer<>(
+              resultJson,
+              StringUtils.toUtf8(resultJson).length
+          );
           if (!alertQueue.offer(objectContainer)) {
             alertLost.incrementAndGet();
           }
