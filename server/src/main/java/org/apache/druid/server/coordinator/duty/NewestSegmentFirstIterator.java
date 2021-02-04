@@ -106,7 +106,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
         if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
-          Map<Interval, Set<DataSegment>> IntervalToPartitionMap = new HashMap<>();
+          Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
           configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
           // Create a new timeline to hold segments in the new configured segment granularity
           VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
@@ -117,11 +117,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
             // of 2020-01/2020-02 and 2020-02/2020-03.
             for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
-              IntervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+              intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
             }
           }
           Map<SegmentId, ShardSpec> originalShardSpecs = originalShardSpecDatasourceMap.computeIfAbsent(dataSource, k -> new HashMap<>());
-          for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : IntervalToPartitionMap.entrySet()) {
+          for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
             Interval interval = partitionsPerInterval.getKey();
             int partitionNum = 0;
             Set<DataSegment> segmentSet = partitionsPerInterval.getValue();
