@@ -516,6 +516,7 @@ jobs:
 
 import:
   - source: .travis-jdk11.yml
+    mode: deep_merge_prepend
 
 # END - Integration tests for Compile with Java 8 and Run with Java 11
 
