@@ -136,15 +136,6 @@ jobs:
         MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
 
-    - <<: *package
-      name: "(openjdk11) packaging check"
-      jdk: openjdk11
-    
-    - <<: *package
-      name: "Build and test on ARM64 CPU architecture"
-      arch: arm64
-      jdk: openjdk11
-
     - &test_processing_module
       name: "(openjdk8) processing module test"
       env:
@@ -205,19 +196,11 @@ jobs:
         - travis_retry curl -o codecov.sh -s https://codecov.io/bash
         - travis_retry bash codecov.sh -X gcov
 
-    - <<: *test_processing_module
-      name: "(openjdk11) processing module test"
-      jdk: openjdk11
-
     - &test_processing_module_sqlcompat
       <<: *test_processing_module
       name: "(openjdk8) processing module test (SQL Compatibility)"
       before_script: &setup_sqlcompat
       - export DRUID_USE_DEFAULT_VALUE_FOR_NULL=false
-
-    - <<: *test_processing_module_sqlcompat
-      name: "(openjdk11) processing module test (SQL Compatibility)"
-      jdk: openjdk11
 
     - &test_indexing_module
       <<: *test_processing_module
@@ -225,18 +208,10 @@ jobs:
       env:
       - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
-    - <<: *test_indexing_module
-      name: "(openjdk11) indexing modules test"
-      jdk: openjdk11
-
     - &test_indexing_module_sqlcompat
       <<: *test_indexing_module
       name: "(openjdk8) indexing modules test (SQL Compatibility)"
       before_script: *setup_sqlcompat
-
-    - <<: *test_indexing_module_sqlcompat
-      name: "(openjdk11) indexing modules test (SQL Compatibility)"
-      jdk: openjdk11
 
     - &test_server_module
       <<: *test_processing_module
@@ -244,18 +219,10 @@ jobs:
       env:
         - MAVEN_PROJECTS='server'
 
-    - <<: *test_server_module
-      name: "(openjdk11) server module test"
-      jdk: openjdk11
-
     - &test_server_module_sqlcompat
       <<: *test_server_module
       name: "(openjdk8) server module test (SQL Compatibility)"
       before_script: *setup_sqlcompat
-
-    - <<: *test_server_module_sqlcompat
-      name: "(openjdk11) server module test (SQL Compatibility)"
-      jdk: openjdk11
 
     - &test_other_modules
       <<: *test_processing_module
@@ -263,18 +230,10 @@ jobs:
       env:
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests'
 
-    - <<: *test_other_modules
-      name: "(openjdk11) other modules test"
-      jdk: openjdk11
-
     - &test_other_modules_sqlcompat
       <<: *test_other_modules
       name: "(openjdk8) other modules test (SQL Compatibility)"
       before_script: *setup_sqlcompat
-
-    - <<: *test_other_modules_sqlcompat
-      name: "(openjdk11) other modules test (SQL Compatibility)"
-      jdk: openjdk11
 
     - name: "web console"
       install: skip
