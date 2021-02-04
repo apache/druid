@@ -374,8 +374,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
               null,
               false
       );
-      AutoScalerConfig autoscalerConfigDefault = kinesisSupervisorIOConfig.getAutoscalerConfig();
-      Assert.assertNull(autoscalerConfigDefault);
+      AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfig.getAutoscalerConfig();
+      Assert.assertNull(autoscalerConfig);
     }
     catch (Exception ex) {
       e = ex;
