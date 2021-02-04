@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
@@ -59,13 +60,13 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -97,9 +98,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -642,21 +645,41 @@ public class CompactionTask extends AbstractBatchIndexTask
       Granularity segmentGranularity
   )
   {
-    // check index metadata
+    // check index metadata &
+    // set carry-over aspects only if they are all set and the same for all segments
+    final SettableSupplier<Boolean> rollup = new SettableSupplier<>();
+    final SettableSupplier<Boolean> rollupIsValid = new SettableSupplier<>(true);
+    final SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    Set<Granularity> finerGranularities = new HashSet<>();
     for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
       final QueryableIndex index = pair.lhs;
       if (index.getMetadata() == null) {
         throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
       }
+      // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
+
+      // Pick rollup value if all segments being compacted have the same value otherwise set it to false
+      if (rollupIsValid.get()) {
+        boolean current = index.getMetadata().isRollup();
+        if (rollup.get() == null) {
+          rollup.set(current);
+        } else if (rollup.get() != current) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        }
+      }
+
+      // Pick the finer, non-null, of the query granularities of the segments being compacted
+      Granularity current = index.getMetadata().getQueryGranularity();
+      if (queryGranularity.get() == null) {
+        queryGranularity.set(current);
+      } else if (current != queryGranularity.get()) {
+        // note that queryGranularity will be set if we are here...
+        chooseFinerGranularity(queryGranularity, current, finerGranularities);
+      }
     }
 
     // find granularity spec
-    // set rollup only if rollup is set for all segments
-    final boolean rollup = queryableIndexAndSegments.stream().allMatch(pair -> {
-      // We have already checked getMetadata() doesn't return null
-      final Boolean isRollup = pair.lhs.getMetadata().isRollup();
-      return isRollup != null && isRollup;
-    });
 
     final Interval totalInterval = JodaUtils.umbrellaInterval(
         queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
@@ -664,8 +687,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
         Preconditions.checkNotNull(segmentGranularity),
-        Granularities.NONE,
-        rollup,
+        queryGranularity.get(),
+        rollup.get(),
         Collections.singletonList(totalInterval)
     );
 
@@ -677,14 +700,46 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                  ? createMetricsSpec(queryableIndexAndSegments)
                                                  : convertToCombiningFactories(metricsSpec);
 
-    return new DataSchema(
+    return new
+
+        DataSchema(
         dataSource,
-        new TimestampSpec(null, null, null),
+        new TimestampSpec(null, null, null
+        ),
+
         finalDimensionsSpec,
         finalMetricsSpec,
         granularitySpec,
         null
     );
+  }
+
+  @VisibleForTesting
+  /**
+   * queryGranularity must contain a granularity otherwise this throws a null pointer
+   */
+  static void chooseFinerGranularity(
+      SettableSupplier<Granularity> queryGranularity,
+      Granularity current,
+      Set<Granularity> finerGranularities
+  )
+  {
+    // We will pick the finer since this is the non-destructive option that
+    // makes the most sense (the coarsest would be destructive and discarding
+    // the granularities loses more information)
+    if (finerGranularities.isEmpty()) {
+      // sanity
+      if (queryGranularity.get() == null) {
+        throw new IAE("queryGranularity must be set");
+      }
+      finerGranularities.addAll(Granularity.granularitiesFinerThan(queryGranularity.get()));
+    }
+    if (current != null && finerGranularities.contains(current)) {
+      queryGranularity.set(current);
+      // throw away larger granularities:
+      finerGranularities.clear();
+      finerGranularities.addAll(Granularity.granularitiesFinerThan(current));
+    }
   }
 
   private static AggregatorFactory[] createMetricsSpec(
@@ -881,8 +936,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     ParallelIndexTuningConfig computeTuningConfig()
     {
       ParallelIndexTuningConfig newTuningConfig = tuningConfig == null
-                                          ? ParallelIndexTuningConfig.defaultConfig()
-                                          : tuningConfig;
+                                                  ? ParallelIndexTuningConfig.defaultConfig()
+                                                  : tuningConfig;
       PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
       if (partitionsSpec instanceof DynamicPartitionsSpec) {
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;

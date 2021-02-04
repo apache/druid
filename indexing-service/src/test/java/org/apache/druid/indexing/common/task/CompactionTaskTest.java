@@ -38,6 +38,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -142,6 +143,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -1114,6 +1116,59 @@ public class CompactionTaskTest
         SEGMENT_INTERVALS,
         Granularities.MONTH
     );
+  }
+
+  @Test
+  public void testChooseFinestGranularity()
+  {
+    List<Granularity> input = ImmutableList.of(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.DAY,
+        Granularities.NONE,
+        Granularities.MINUTE
+    );
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>(Granularities.QUARTER);
+    Set<Granularity> finer = new HashSet<>();
+    for (Granularity current : input) {
+      CompactionTask.chooseFinerGranularity(queryGranularity, current, finer);
+    }
+    Assert.assertEquals(Granularities.SECOND, queryGranularity.get());
+
+  }
+
+  @Test
+  public void testChooseFinestGranularityContainsAndStartWithNull()
+  {
+    List<Granularity> input = Arrays.asList(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        null,
+        Granularities.DAY,
+        Granularities.NONE,
+        Granularities.MINUTE
+    );
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>(Granularities.MONTH);
+    Set<Granularity> finer = new HashSet<>();
+    for (Granularity current : input) {
+      CompactionTask.chooseFinerGranularity(queryGranularity, current, finer);
+    }
+    Assert.assertEquals(Granularities.SECOND, queryGranularity.get());
+
+  }
+
+  @Test
+  public void testChooseFinestGranularityFirstRound()
+  {
+    Set<Granularity> finer = new HashSet<>();
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>(Granularities.MINUTE);
+    Granularity current = Granularities.HOUR;
+    CompactionTask.chooseFinerGranularity(queryGranularity, current, finer);
+    Assert.assertEquals(Granularities.MINUTE, queryGranularity.get());
   }
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
