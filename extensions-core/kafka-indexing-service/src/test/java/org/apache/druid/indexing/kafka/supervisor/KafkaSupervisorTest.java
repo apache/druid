@@ -71,6 +71,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -288,7 +289,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             1,
             new Period("PT1H"),
             consumerProperties,
-            OBJECT_MAPPER.convertValue(autoscalerConfig, AutoScalerConfig.class),
+            OBJECT_MAPPER.convertValue(autoscalerConfig, DefaultAutoScalerConfig.class),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             new Period("P1D"),
             new Period("PT30S"),
@@ -444,7 +445,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             1,
             new Period("PT1H"),
             consumerProperties,
-            OBJECT_MAPPER.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", 1), AutoScalerConfig.class),
+            OBJECT_MAPPER.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", 1), DefaultAutoScalerConfig.class),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             new Period("P1D"),
             new Period("PT30S"),
@@ -457,19 +458,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     AutoScalerConfig autoScalerConfig = kafkaSupervisorIOConfig.getAutoscalerConfig();
     Assert.assertNotNull(autoScalerConfig);
-    Assert.assertEquals(autoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
-    Assert.assertEquals(autoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
-    Assert.assertEquals(autoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
-    Assert.assertEquals(autoScalerConfig.getDynamicCheckPeriod(), 60000);
-    Assert.assertEquals(autoScalerConfig.getScaleOutThreshold(), 6000000);
-    Assert.assertEquals(autoScalerConfig.getScaleInThreshold(), 1000000);
-    Assert.assertEquals(autoScalerConfig.getTaskCountMax(), 4);
-    Assert.assertEquals(autoScalerConfig.getTaskCountMin(), 1);
-    Assert.assertEquals(autoScalerConfig.getScaleInStep(), 1);
-    Assert.assertEquals(autoScalerConfig.getScaleOutStep(), 2);
-    Assert.assertFalse(autoScalerConfig.getEnableTaskAutoscaler());
-    Assert.assertEquals(autoScalerConfig.getAutoScalerStrategy(), "default");
-    Assert.assertEquals(autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
+    Assert.assertTrue(autoScalerConfig instanceof DefaultAutoScalerConfig);
+    DefaultAutoScalerConfig defaultAutoScalerConfig = (DefaultAutoScalerConfig) autoScalerConfig;
+    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
+    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
+    Assert.assertEquals(defaultAutoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
+    Assert.assertEquals(defaultAutoScalerConfig.getDynamicCheckPeriod(), 60000);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleOutThreshold(), 6000000);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleInThreshold(), 1000000);
+    Assert.assertEquals(defaultAutoScalerConfig.getTaskCountMax(), 4);
+    Assert.assertEquals(defaultAutoScalerConfig.getTaskCountMin(), 1);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleInStep(), 1);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleOutStep(), 2);
+    Assert.assertFalse(defaultAutoScalerConfig.getEnableTaskAutoscaler());
+    Assert.assertEquals(defaultAutoScalerConfig.getAutoScalerStrategy(), "default");
+    Assert.assertEquals(defaultAutoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
 
     // autoscalerConfig = null ;
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig2 = new KafkaSupervisorIOConfig(
@@ -501,7 +504,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             1,
             new Period("PT1H"),
             consumerProperties,
-            OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+            OBJECT_MAPPER.convertValue(new HashMap<>(), DefaultAutoScalerConfig.class),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             new Period("P1D"),
             new Period("PT30S"),
@@ -513,6 +516,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     AutoScalerConfig autoScalerConfig3 = kafkaSupervisorIOConfig3.getAutoscalerConfig();
+    Assert.assertTrue(autoScalerConfig3 instanceof DefaultAutoScalerConfig);
     Assert.assertFalse(autoScalerConfig3.getEnableTaskAutoscaler());
   }
 

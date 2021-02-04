@@ -46,8 +46,8 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DummyAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -531,7 +531,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, DefaultAutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -577,7 +577,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1", "enableTaskAutoscaler", true), AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1", "enableTaskAutoscaler", true), DefaultAutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -600,19 +600,19 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     SupervisorTaskAutoscaler autoscaler = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler instanceof DefaultAutoScaler);
     DefaultAutoScaler defaultAutoScaler = (DefaultAutoScaler) autoscaler;
-    AutoScalerConfig autoScalerConfig = defaultAutoScaler.getAutoScalerConfig();
-    Assert.assertEquals(autoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
-    Assert.assertEquals(autoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
-    Assert.assertEquals(autoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
-    Assert.assertEquals(autoScalerConfig.getDynamicCheckPeriod(), 60000);
-    Assert.assertEquals(autoScalerConfig.getScaleOutThreshold(), 6000000);
-    Assert.assertEquals(autoScalerConfig.getScaleInThreshold(), 1000000);
-    Assert.assertEquals(autoScalerConfig.getTaskCountMax(), 4);
-    Assert.assertEquals(autoScalerConfig.getTaskCountMin(), 1);
-    Assert.assertEquals(autoScalerConfig.getScaleInStep(), 1);
-    Assert.assertEquals(autoScalerConfig.getScaleOutStep(), 2);
-    Assert.assertEquals(autoScalerConfig.getAutoScalerStrategy(), "default");
-    Assert.assertEquals(autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
+    DefaultAutoScalerConfig defaultAutoScalerConfig = defaultAutoScaler.getAutoScalerConfig();
+    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
+    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
+    Assert.assertEquals(defaultAutoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
+    Assert.assertEquals(defaultAutoScalerConfig.getDynamicCheckPeriod(), 60000);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleOutThreshold(), 6000000);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleInThreshold(), 1000000);
+    Assert.assertEquals(defaultAutoScalerConfig.getTaskCountMax(), 4);
+    Assert.assertEquals(defaultAutoScalerConfig.getTaskCountMin(), 1);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleInStep(), 1);
+    Assert.assertEquals(defaultAutoScalerConfig.getScaleOutStep(), 2);
+    Assert.assertEquals(defaultAutoScalerConfig.getAutoScalerStrategy(), "default");
+    Assert.assertEquals(defaultAutoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
   }
 
   @Test
@@ -641,7 +641,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     LagStats lagStats = supervisor.computeLagStats();
 
-    DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleOutProperties(), AutoScalerConfig.class), spec);
+    DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleOutProperties(), DefaultAutoScalerConfig.class), spec);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
@@ -679,7 +679,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-    DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), spec);
+    DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleInProperties(), DefaultAutoScalerConfig.class), spec);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
@@ -781,7 +781,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
               false,
               new Period("PT30M"),
               null,
-              null, mapper.convertValue(getScaleOutProperties(), AutoScalerConfig.class), null
+              null, mapper.convertValue(getScaleOutProperties(), DefaultAutoScalerConfig.class), null
       ) {};
     } else {
       return new SeekableStreamSupervisorIOConfig(
@@ -795,7 +795,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
               false,
               new Period("PT30M"),
               null,
-              null, mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null
+              null, mapper.convertValue(getScaleInProperties(), DefaultAutoScalerConfig.class), null
         ) {};
     }
   }

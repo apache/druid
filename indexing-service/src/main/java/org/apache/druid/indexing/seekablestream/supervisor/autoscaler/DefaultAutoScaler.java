@@ -45,23 +45,23 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
   private final ScheduledExecutorService allocationExec;
   private final SupervisorSpec spec;
   private final SeekableStreamSupervisor supervisor;
-  private final AutoScalerConfig autoScalerConfig;
+  private final DefaultAutoScalerConfig defaultAutoScalerConfig;
 
   private static ReentrantLock lock = new ReentrantLock(true);
 
 
   public DefaultAutoScaler(Supervisor supervisor, String dataSource, AutoScalerConfig autoScalerConfig, SupervisorSpec spec)
   {
+    this.defaultAutoScalerConfig = (DefaultAutoScalerConfig) autoScalerConfig;
     String supervisorId = StringUtils.format("KafkaSupervisor-%s", dataSource);
     this.dataSource = dataSource;
-    int slots = (int) (autoScalerConfig.getMetricsCollectionRangeMillis() / autoScalerConfig.getMetricsCollectionIntervalMillis()) + 1;
-    log.debug(" The interval of metrics collection is [%s], [%s] timeRange will collect [%s] data points for dataSource [%s].", autoScalerConfig.getMetricsCollectionIntervalMillis(), autoScalerConfig.getMetricsCollectionRangeMillis(), slots, dataSource);
+    int slots = (int) (defaultAutoScalerConfig.getMetricsCollectionRangeMillis() / defaultAutoScalerConfig.getMetricsCollectionIntervalMillis()) + 1;
+    log.debug(" The interval of metrics collection is [%s], [%s] timeRange will collect [%s] data points for dataSource [%s].", defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), defaultAutoScalerConfig.getMetricsCollectionRangeMillis(), slots, dataSource);
     this.lagMetricsQueue = new CircularFifoQueue<>(slots);
     this.allocationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Allocation-%d");
     this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Computation-%d");
     this.spec = spec;
     this.supervisor = (SeekableStreamSupervisor) supervisor;
-    this.autoScalerConfig = autoScalerConfig;
   }
 
   @Override
@@ -91,18 +91,18 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
     };
 
     log.info("enableTaskAutoscaler for datasource [%s]", dataSource);
-    log.debug("Collect and compute lags at fixed rate of [%s] for dataSource[%s].", autoScalerConfig.getMetricsCollectionIntervalMillis(), dataSource);
+    log.debug("Collect and compute lags at fixed rate of [%s] for dataSource[%s].", defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), dataSource);
     lagComputationExec.scheduleAtFixedRate(
             collectAndComputeLags(),
-            autoScalerConfig.getDynamicCheckStartDelayMillis(), // wait for tasks to start up
-            autoScalerConfig.getMetricsCollectionIntervalMillis(),
+            defaultAutoScalerConfig.getDynamicCheckStartDelayMillis(), // wait for tasks to start up
+            defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(),
             TimeUnit.MILLISECONDS
     );
-    log.debug("allocate task at fixed rate of [%s], dataSource [%s].", autoScalerConfig.getDynamicCheckPeriod(), dataSource);
+    log.debug("allocate task at fixed rate of [%s], dataSource [%s].", defaultAutoScalerConfig.getDynamicCheckPeriod(), dataSource);
     allocationExec.scheduleAtFixedRate(
             supervisor.buildDynamicAllocationTask(scaleAction),
-            autoScalerConfig.getDynamicCheckStartDelayMillis() + autoScalerConfig.getMetricsCollectionRangeMillis(),
-            autoScalerConfig.getDynamicCheckPeriod(),
+            defaultAutoScalerConfig.getDynamicCheckStartDelayMillis() + defaultAutoScalerConfig.getMetricsCollectionRangeMillis(),
+            defaultAutoScalerConfig.getDynamicCheckPeriod(),
             TimeUnit.MILLISECONDS
     );
   }
@@ -189,16 +189,16 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
     int within = 0;
     int metricsCount = lags.size();
     for (Long lag : lags) {
-      if (lag >= autoScalerConfig.getScaleOutThreshold()) {
+      if (lag >= defaultAutoScalerConfig.getScaleOutThreshold()) {
         beyond++;
       }
-      if (lag <= autoScalerConfig.getScaleInThreshold()) {
+      if (lag <= defaultAutoScalerConfig.getScaleInThreshold()) {
         within++;
       }
     }
     double beyondProportion = beyond * 1.0 / metricsCount;
     double withinProportion = within * 1.0 / metricsCount;
-    log.debug("triggerScaleOutThresholdFrequency is [%s] and triggerScaleInThresholdFrequency is [%s] for dataSource [%s].", autoScalerConfig.getTriggerScaleOutThresholdFrequency(), autoScalerConfig.getTriggerScaleInThresholdFrequency(), dataSource);
+    log.debug("triggerScaleOutThresholdFrequency is [%s] and triggerScaleInThresholdFrequency is [%s] for dataSource [%s].", defaultAutoScalerConfig.getTriggerScaleOutThresholdFrequency(), defaultAutoScalerConfig.getTriggerScaleInThresholdFrequency(), dataSource);
     log.info("beyondProportion is [%s] and withinProportion is [%s] for dataSource [%s].", beyondProportion, withinProportion, dataSource);
 
     int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
@@ -208,27 +208,27 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
     }
     int desireActiveTaskCount;
 
-    if (beyondProportion >= autoScalerConfig.getTriggerScaleOutThresholdFrequency()) {
+    if (beyondProportion >= defaultAutoScalerConfig.getTriggerScaleOutThresholdFrequency()) {
         // Do Scale out
-      int taskCount = currentActiveTaskCount + autoScalerConfig.getScaleOutStep();
-      if (currentActiveTaskCount == autoScalerConfig.getTaskCountMax()) {
+      int taskCount = currentActiveTaskCount + defaultAutoScalerConfig.getScaleOutStep();
+      if (currentActiveTaskCount == defaultAutoScalerConfig.getTaskCountMax()) {
         log.info("CurrentActiveTaskCount reach task count Max limit, skip to scale out tasks for dataSource [%s].", dataSource);
         return -1;
       } else {
-        desireActiveTaskCount = Math.min(taskCount, autoScalerConfig.getTaskCountMax());
+        desireActiveTaskCount = Math.min(taskCount, defaultAutoScalerConfig.getTaskCountMax());
       }
 
       return desireActiveTaskCount;
     }
 
-    if (withinProportion >= autoScalerConfig.getTriggerScaleInThresholdFrequency()) {
+    if (withinProportion >= defaultAutoScalerConfig.getTriggerScaleInThresholdFrequency()) {
       // Do Scale in
-      int taskCount = currentActiveTaskCount - autoScalerConfig.getScaleInStep();
-      if (currentActiveTaskCount == autoScalerConfig.getTaskCountMin()) {
+      int taskCount = currentActiveTaskCount - defaultAutoScalerConfig.getScaleInStep();
+      if (currentActiveTaskCount == defaultAutoScalerConfig.getTaskCountMin()) {
         log.info("CurrentActiveTaskCount reach task count Min limit, skip to scale in tasks for dataSource [%s].", dataSource);
         return -1;
       } else {
-        desireActiveTaskCount = Math.max(taskCount, autoScalerConfig.getTaskCountMin());
+        desireActiveTaskCount = Math.max(taskCount, defaultAutoScalerConfig.getTaskCountMin());
       }
       log.debug("Start to scale in tasks, current active task number [%s] and desire task number is [%s] for dataSource [%s].", currentActiveTaskCount, desireActiveTaskCount, dataSource);
       return desireActiveTaskCount;
@@ -237,8 +237,8 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
     return -1;
   }
 
-  public AutoScalerConfig getAutoScalerConfig()
+  public DefaultAutoScalerConfig getAutoScalerConfig()
   {
-    return autoScalerConfig;
+    return defaultAutoScalerConfig;
   }
 }

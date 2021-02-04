@@ -354,7 +354,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             return;
           }
         }
-        if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
+        if (autoScalerConfig != null && nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
           log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CLAM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource);
           return;
         }

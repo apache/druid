@@ -67,6 +67,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -374,8 +375,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
               null,
               false
       );
-      AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfig.getAutoscalerConfig();
-      Assert.assertNull(autoscalerConfig);
+      AutoScalerConfig autoscalerConfigDefault = kinesisSupervisorIOConfig.getAutoscalerConfig();
+      Assert.assertNull(autoscalerConfigDefault);
     }
     catch (Exception ex) {
       e = ex;
@@ -402,7 +403,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
               1000,
               null,
               null,
-              OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+              OBJECT_MAPPER.convertValue(new HashMap<>(), DefaultAutoScalerConfig.class),
               false
       );
     }
