@@ -309,17 +309,24 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+        ClientCompactionTaskQueryGranularitySpec queryGranularitySpec;
+        if (config.getGranularitySpec() != null) {
+          queryGranularitySpec = new ClientCompactionTaskQueryGranularitySpec(
+              config.getGranularitySpec().getSegmentGranularity(),
+              config.getGranularitySpec().getQueryGranularity(),
+              config.getGranularitySpec().isRollup()
+          );
+        } else {
+          queryGranularitySpec = null;
+        }
+
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
-            new ClientCompactionTaskQueryGranularitySpec(
-                config.getGranularitySpec().getSegmentGranularity(),
-                config.getGranularitySpec().getQueryGranularity(),
-                config.getGranularitySpec().isRollup()
-            ),
+            queryGranularitySpec,
             newAutoCompactionContext(config.getTaskContext())
         );
 

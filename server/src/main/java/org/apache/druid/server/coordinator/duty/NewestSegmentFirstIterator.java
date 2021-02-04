@@ -533,7 +533,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                                 : new ArrayList<>(skipIntervals.size());
     final Interval skipFromLatest;
     if (configuredSegmentGranularity != null) {
-      DateTime skipFromLastest = new DateTime(latest).minus(skipOffset);
+      DateTime skipFromLastest = new DateTime(latest, latest.getZone()).minus(skipOffset);
       DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromLastest);
       skipFromLatest = new Interval(skipOffsetBucketToSegmentGranularity, latest);
     } else {
