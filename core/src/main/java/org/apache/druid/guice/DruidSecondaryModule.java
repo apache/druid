@@ -19,8 +19,10 @@
 
 package org.apache.druid.guice;
 
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -83,14 +85,28 @@ public class DruidSecondaryModule implements Module
     return smileMapper;
   }
 
-  private void setupJackson(Injector injector, final ObjectMapper mapper)
+  @VisibleForTesting
+  public static void setupJackson(Injector injector, final ObjectMapper mapper)
   {
-    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
-
     mapper.setInjectableValues(new GuiceInjectableValues(injector));
+    setupAnnotationIntrospector(mapper, new GuiceAnnotationIntrospector());
+  }
+
+  @VisibleForTesting
+  public static void setupAnnotationIntrospector(
+      final ObjectMapper mapper,
+      final AnnotationIntrospector annotationIntrospector
+  )
+  {
     mapper.setAnnotationIntrospectors(
-        new AnnotationIntrospectorPair(guiceIntrospector, mapper.getSerializationConfig().getAnnotationIntrospector()),
-        new AnnotationIntrospectorPair(guiceIntrospector, mapper.getDeserializationConfig().getAnnotationIntrospector())
+        new AnnotationIntrospectorPair(
+            annotationIntrospector,
+            mapper.getSerializationConfig().getAnnotationIntrospector()
+        ),
+        new AnnotationIntrospectorPair(
+            annotationIntrospector,
+            mapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
     );
   }
 }
