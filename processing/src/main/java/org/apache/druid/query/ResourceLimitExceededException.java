@@ -35,7 +35,7 @@ public class ResourceLimitExceededException extends BadQueryException
 {
   public static final String ERROR_CODE = "Resource limit exceeded";
 
-  public static ResourceLimitExceededException withNonStrictStringFormat(String message, Object... arguments)
+  public static ResourceLimitExceededException withMessage(String message, Object... arguments)
   {
     return new ResourceLimitExceededException(StringUtils.nonStrictFormat(message, arguments));
   }

@@ -455,7 +455,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
 
     if (limitAccumulator.get() >= limitToUse) {
-      throw ResourceLimitExceededException.withNonStrictStringFormat(
+      throw ResourceLimitExceededException.withMessage(
           "Cannot issue subquery, maximum[%d] reached",
           limitToUse
       );
@@ -469,7 +469,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         resultList,
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= limitToUse) {
-            throw ResourceLimitExceededException.withNonStrictStringFormat(
+            throw ResourceLimitExceededException.withMessage(
                 "Subquery generated results beyond maximum[%d]",
                 limitToUse
             );
