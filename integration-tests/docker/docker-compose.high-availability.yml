@@ -132,7 +132,7 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
       - DRUID_SERVICE=custom-node-role
       - DRUID_LOG_PATH=/shared/logs/custom-node-role.log
-      - SERVICE_DRUID_JAVA_OPTS=-server -Xmx32m -Xms32m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5011
+      - SERVICE_DRUID_JAVA_OPTS=-server -Xmx64m -Xms64m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5011
       - druid_host=druid-custom-node-role
       - druid_auth_basic_common_cacheDirectory=/tmp/authCache/custom_node_role
       - druid_server_https_crlPath=/tls/revocations.crl
