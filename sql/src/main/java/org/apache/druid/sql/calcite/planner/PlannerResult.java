@@ -25,6 +25,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * The result of planning an SQL query with {@link DruidPlanner} can be run to produce query result, and also includes
+ * the output row type signature.
+ */
 public class PlannerResult
 {
   private final Supplier<Sequence<Object[]>> resultsSupplier;
@@ -40,6 +44,9 @@ public class PlannerResult
     this.rowType = rowType;
   }
 
+  /**
+   * Run the query
+   */
   public Sequence<Object[]> run()
   {
     if (!didRun.compareAndSet(false, true)) {

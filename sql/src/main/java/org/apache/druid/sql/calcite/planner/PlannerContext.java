@@ -69,9 +69,13 @@ public class PlannerContext
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
+  // result of authentication, providing identity to authorize set of resources produced by validation
   private AuthenticationResult authenticationResult;
+  // set of datasources and views which must be authorized
   private Set<Resource> resources = Collections.emptySet();
+  // result of authorizing set of resources against authentication identity
   private Access authorizationResult;
 
   private PlannerContext(

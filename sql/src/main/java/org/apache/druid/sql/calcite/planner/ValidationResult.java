@@ -24,6 +24,11 @@ import org.apache.druid.server.security.Resource;
 
 import java.util.Set;
 
+/**
+ * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
+ * corresponding to the datasources and views which an authenticated request must be authorized for to process the
+ * query.
+ */
 public class ValidationResult
 {
   private final Set<Resource> resources;
