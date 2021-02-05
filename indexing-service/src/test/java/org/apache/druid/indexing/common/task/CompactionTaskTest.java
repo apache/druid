@@ -363,9 +363,9 @@ public class CompactionTaskTest
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
     ).inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)))
-     .tuningConfig(createTuningConfig())
-     .segmentGranularity(Granularities.HOUR)
-     .build();
+      .tuningConfig(createTuningConfig())
+      .segmentGranularity(Granularities.HOUR)
+      .build();
     final CompactionTask taskCreatedWithGranularitySpec = new Builder(
         DATA_SOURCE,
         segmentLoaderFactory,
@@ -385,10 +385,10 @@ public class CompactionTaskTest
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
     ).inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)))
-     .tuningConfig(createTuningConfig())
-     .segmentGranularity(Granularities.HOUR)
-     .granularitySpec(new UniformGranularitySpec(Granularities.MINUTE, Granularities.DAY, null))
-     .build();
+      .tuningConfig(createTuningConfig())
+      .segmentGranularity(Granularities.HOUR)
+      .granularitySpec(new UniformGranularitySpec(Granularities.MINUTE, Granularities.DAY, null))
+      .build();
     Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
 
