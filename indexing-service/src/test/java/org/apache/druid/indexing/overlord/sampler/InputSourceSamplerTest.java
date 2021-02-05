@@ -1311,7 +1311,9 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
       @Override
       public InputSourceReader reader(
-          InputRowSchema inputRowSchema, @Nullable InputFormat inputFormat, File temporaryDirectory
+          InputRowSchema inputRowSchema,
+          @Nullable InputFormat inputFormat,
+          File temporaryDirectory
       )
       {
         throw new RuntimeException();
