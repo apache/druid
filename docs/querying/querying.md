@@ -106,6 +106,12 @@ curl -X DELETE "http://host:port/druid/v2/abc123"
 
 ## Query errors
 
+### Authentication and authorization failures
+
+For [secured](../design/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
+
+### Query execution failures
+
 If a query fails, Druid returns a response with an HTTP response code and a JSON object with the following structure:
 
 ```json
@@ -116,13 +122,6 @@ If a query fails, Druid returns a response with an HTTP response code and a JSON
   "host" : "druid1.example.com:8083"
 }
 ```
-The HTTP response code returned depends on the type of query failure. For timed out queries, an HTTP 504 response code is returned.
-
-For [secured](../design/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
-
-If a query request fails due to being limited by the [query scheduler laning configuration](../configuration/index.md#broker), an HTTP 429 response with the same JSON object schema as an error response, but with `errorMessage` of the form: "Total query capacity exceeded" or "Query capacity exceeded for lane 'low'".
-
-For every other type of query failures, an HTTP 500 response code is returned.
 
 The fields in the response are:
 
@@ -133,15 +132,17 @@ The fields in the response are:
 |errorClass|The class of the exception that caused this error. May be null.|
 |host|The host on which this error occurred. May be null.|
 
-Possible codes for the *error* field include:
+Possible Druid error codes for the `error` field include:
 
-|code|description|
-|----|-----------|
-|`Query timeout`|The query timed out.|
-|`Query interrupted`|The query was interrupted, possibly due to JVM shutdown.|
-|`Query cancelled`|The query was cancelled through the query cancellation API.|
-|`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
-|`Unauthorized request.`|The query was denied due to security policy. Either the user was not recognized, or the user was recognized but does not have access to the requested resource.|
-|`Unsupported operation`|The query attempted to perform an unsupported operation. This may occur when using undocumented features or when using an incompletely implemented extension.|
-|`Truncated response context`|An intermediate response context for the query exceeded the built-in limit of 7KB.<br/><br/>The response context is an internal data structure that Druid servers use to share out-of-band information when sending query results to each other. It is serialized in an HTTP header with a maximum length of 7KB. This error occurs when an intermediate response context sent from a data server (like a Historical) to the Broker exceeds this limit.<br/><br/>The response context is used for a variety of purposes, but the one most likely to generate a large context is sharing details about segments that move during a query. That means this error can potentially indicate that a very large number of segments moved in between the time a Broker issued a query and the time it was processed on Historicals. This should rarely, if ever, occur during normal operation.|
-|`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
+|Error code|HTTP response code|description|
+|----|-----------|-----------|
+|`SQL parse failed`|400|Only for SQL queries. The SQL query failed to parse.|
+|`Plan validation failed`|400|Only for SQL queries. The SQL query failed to validate.|
+|`Resource limit exceeded`|400|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
+|`Query capacity exceeded`|429|The query failed to execute because of the lack of resources available at the time when the query was submitted. The resources could be any runtime resources such as [query scheduler lane capacity](../configuration/index.md#query-prioritization-and-laning), merge buffers, and so on. The error message should have more details about the failure.|
+|`Unsupported operation`|501|The query attempted to perform an unsupported operation. This may occur when using undocumented features or when using an incompletely implemented extension.|
+|`Query timeout`|504|The query timed out.|
+|`Query interrupted`|500|The query was interrupted, possibly due to JVM shutdown.|
+|`Query cancelled`|500|The query was cancelled through the query cancellation API.|
+|`Truncated response context`|500|An intermediate response context for the query exceeded the built-in limit of 7KB.<br/><br/>The response context is an internal data structure that Druid servers use to share out-of-band information when sending query results to each other. It is serialized in an HTTP header with a maximum length of 7KB. This error occurs when an intermediate response context sent from a data server (like a Historical) to the Broker exceeds this limit.<br/><br/>The response context is used for a variety of purposes, but the one most likely to generate a large context is sharing details about segments that move during a query. That means this error can potentially indicate that a very large number of segments moved in between the time a Broker issued a query and the time it was processed on Historicals. This should rarely, if ever, occur during normal operation.|
+|`Unknown exception`|500|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
