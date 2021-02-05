@@ -349,7 +349,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest,null);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null);
   }
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, GranularitySpec granularitySpec) throws Exception
