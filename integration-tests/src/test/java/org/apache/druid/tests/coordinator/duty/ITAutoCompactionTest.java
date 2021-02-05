@@ -28,7 +28,11 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -160,7 +164,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with hash partitioning");
 
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null);
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -175,7 +179,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -278,6 +282,37 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+  @Test
+  public void testAutoCompactionDutyWithSegmentGranularity() throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(Granularities.MONTH, null, null));
+
+      LOG.info("Auto compaction test with MONTH segment granularity");
+
+      forceTriggerAutoCompaction(1);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, 1000);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      LOG.info("Auto compaction test with DAY segment granularity");
+
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(Granularities.DAY, null, null));
+      // 2 segments published per day after compaction.
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(2, 1000);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+    }
+  }
+
   private void loadData(String indexTask) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
@@ -314,13 +349,19 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
   {
-    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest,null);
+  }
+
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, GranularitySpec granularitySpec) throws Exception
+  {
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec);
   }
 
   private void submitCompactionConfig(
       PartitionsSpec partitionsSpec,
       Period skipOffsetFromLatest,
-      int maxNumConcurrentSubTasks
+      int maxNumConcurrentSubTasks,
+      GranularitySpec granularitySpec
   ) throws Exception
   {
     DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
@@ -348,7 +389,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             null,
             1
         ),
-        null,
+        granularitySpec,
         null
     );
     compactionResource.submitCompactionConfig(compactionConfig);

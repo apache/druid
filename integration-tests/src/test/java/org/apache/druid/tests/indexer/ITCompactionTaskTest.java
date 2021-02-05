@@ -49,6 +49,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
+  private static final String COMPACTION_TASK_WITH_SEGMENT_GRANULARITY = "/indexer/wikipedia_compaction_task_with_segment_granularity.json";
+  private static final String COMPACTION_TASK_WITH_GRANULARITY_SPEC = "/indexer/wikipedia_compaction_task_with_granularity_spec.json";
 
   private static final String INDEX_TASK_WITH_TIMESTAMP = "/indexer/wikipedia_with_timestamp_index_task.json";
 
@@ -66,16 +68,28 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   @Test
   public void testCompaction() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE);
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK);
+  }
+
+  @Test
+  public void testCompactionWithSegmentGranularity() throws Exception
+  {
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_SEGMENT_GRANULARITY);
+  }
+
+  @Test
+  public void testCompactionWithGranularitySpec() throws Exception
+  {
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC);
   }
 
   @Test
   public void testCompactionWithTimestampDimension() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK_WITH_TIMESTAMP, INDEX_QUERIES_RESOURCE);
+    loadDataAndCompact(INDEX_TASK_WITH_TIMESTAMP, INDEX_QUERIES_RESOURCE, COMPACTION_TASK);
   }
 
-  private void loadDataAndCompact(String indexTask, String queriesResource) throws Exception
+  private void loadDataAndCompact(String indexTask, String queriesResource, String compactionResource) throws Exception
   {
     loadData(indexTask);
 
@@ -102,7 +116,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
 
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      compactData();
+      compactData(compactionResource);
 
       // The original 4 segments should be compacted into 2 new segments
       checkNumberOfSegments(2);
@@ -124,9 +138,9 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void compactData() throws Exception
+  private void compactData(String compactionResource) throws Exception
   {
-    final String template = getResourceAsString(COMPACTION_TASK);
+    final String template = getResourceAsString(compactionResource);
     String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
 
     final String taskID = indexer.submitTask(taskSpec);
