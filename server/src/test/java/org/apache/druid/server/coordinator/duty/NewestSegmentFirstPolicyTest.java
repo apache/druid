@@ -24,12 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -49,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -386,8 +383,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            40000, new Period("P1D"), new UniformGranularitySpec(Granularities.DAY, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UniformGranularitySpec(Granularities.DAY, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -414,8 +410,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            40000, new Period("P1D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -441,8 +436,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            40000, new Period("P1D"), new UniformGranularitySpec(Granularities.MINUTE, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UniformGranularitySpec(Granularities.MINUTE, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -551,8 +545,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000, new Period("P0D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -600,8 +593,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000, new Period("P0D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
