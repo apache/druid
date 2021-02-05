@@ -308,14 +308,14 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 
 2. From druid-website, checkout branch `asf-staging`.
 
-3. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
+3. From druid-website-src, create a release branch from `master` and run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
 * checkout the tag of the Druid release version
 * build the docs for that version into druid-website-src
 * build druid-website-src into druid-website
 * stage druid-website-src and druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. Once the website PR is pushed to `asf-site`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
+4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
 
 ### Create staged Maven repo
 
@@ -557,14 +557,18 @@ druid_versions:
         date: 2019-08-15
 ```
 
-3. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
+3. From druid-website, checkout branch `asf-site`.
+
+4. From druid-website-src, checkout the branch you created to update the staged Druid website or create a new branch from `master` if you have not.
+
+5. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
 * checkout the tag of the Druid release version
 * build the docs for that version into druid-website-src
 * build druid-website-src into druid-website
 * stage druid-website-src and druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/druid-website-src) and to the website repo (https://github.com/apache/druid-website). Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
+6. Make a PR to the src repo (https://github.com/apache/druid-website-src) and to the website repo (https://github.com/apache/druid-website). Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
 
 ### Draft a release on github
 
