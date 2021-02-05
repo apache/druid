@@ -133,7 +133,7 @@ jobs:
       install: skip
       before_script: *setup_generate_license
       script: >
-        MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
+        MAVEN_OPTS='-Xmx5000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
 
     - <<: *package

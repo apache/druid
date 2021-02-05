@@ -219,7 +219,7 @@ public class ArbitraryGranularityTest
   }
 
   @Test
-  public void testAsMap() throws Exception
+  public void testAsMap()
   {
     final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, Lists.newArrayList(
         Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),

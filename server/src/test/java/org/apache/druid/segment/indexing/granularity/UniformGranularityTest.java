@@ -180,7 +180,7 @@ public class UniformGranularityTest
   }
 
   @Test
-  public void testAsMap() throws Exception
+  public void testAsMap()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
         Granularities.DAY,
