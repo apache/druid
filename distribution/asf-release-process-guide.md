@@ -559,7 +559,7 @@ druid_versions:
 
 3. From druid-website, checkout branch `asf-site`.
 
-4. From druid-website-src, checkout the branch you created to update the staged Druid website or create a new branch from `master` if you don't have.
+4. From druid-website-src, checkout the branch you created to update the staged Druid website or create a new branch from `master` if you have not.
 
 5. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
