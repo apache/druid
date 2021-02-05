@@ -588,8 +588,9 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsInMultipleIntervalIfConfiguredSegmentGranularityCrossBoundary()
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
-        // Single segment starts in Jan and ends in Feb
-        new SegmentGenerateSpec(Intervals.of("2020-01-28/2020-02-03"), new Period("P7D"))
+        new SegmentGenerateSpec(Intervals.of("2020-01-01/2020-01-08"), new Period("P7D")),
+        new SegmentGenerateSpec(Intervals.of("2020-01-28/2020-02-03"), new Period("P7D")),
+        new SegmentGenerateSpec(Intervals.of("2020-02-08/2020-02-15"), new Period("P7D"))
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
@@ -597,25 +598,48 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
+    // We should get the segment of "2020-01-28/2020-02-03" back twice when the iterator returns for Jan and when the
+    // iterator returns for Feb.
 
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-03"), Partitions.ONLY_COMPLETE)
-    );
-
-    // We should get the same segment back twice when the iterator returns for Jan and when the iterator returns for Feb
     // Month of Jan
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(
-        expectedSegmentsToCompact,
-        iterator.next()
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-15"), Partitions.ONLY_COMPLETE)
     );
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> actual = iterator.next();
+    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // Month of Feb
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(
-        expectedSegmentsToCompact,
-        iterator.next()
+    expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-01/2020-02-03"), Partitions.ONLY_COMPLETE)
     );
+    Assert.assertTrue(iterator.hasNext());
+    actual = iterator.next();
+    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testIteratorDoesNotReturnCompactedInterval()
+  {
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), new Period("P1D"))
+    );
+
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P0D"), new UniformGranularitySpec(Granularities.MINUTE, null, null))),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(iterator.next()));
+    // Iterator should return only once since all the "minute" interval of the iterator contains the same interval
     Assert.assertFalse(iterator.hasNext());
   }
 

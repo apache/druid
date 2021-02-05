@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -84,7 +85,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   // searchIntervals keeps track of the current state of which interval should be considered to search segments to
   // compact.
   private final Map<String, CompactibleTimelineObjectHolderCursor> timelineIterators;
-  private final Map<String, Map<SegmentId, ShardSpec>> originalShardSpecDatasourceMap = new HashMap<>();
+  // This is needed for datasource that has segmentGranularity configured
+  // If configured segmentGranularity is finer than current segmentGranularity, the same set of segments
+  // can belong to multiple intervals in the timeline. We keep track of the
+  private final Map<String, Set<Interval>> intervalCompactedForDatasource = new HashMap<>();
 
   private final PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
       (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.interval, o1.interval)
@@ -105,6 +109,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
+        Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs = new HashMap<>();
         if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
           Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
           configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
@@ -120,7 +125,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
             }
           }
-          Map<SegmentId, ShardSpec> originalShardSpecs = originalShardSpecDatasourceMap.computeIfAbsent(dataSource, k -> new HashMap<>());
           for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
             Interval interval = partitionsPerInterval.getKey();
             int partitionNum = 0;
@@ -135,7 +139,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               // by the new configuredSegmentGranularity. We then convert each segment into a new partition space so that
               // there is no duplicate partitionNum across all segments of each new Interval. We will have to save the
               // original ShardSpec to convert the segment back when returning from the iterator.
-              originalShardSpecs.put(segmentsForCompact.getId(), segment.getShardSpec());
+              originalShardSpecs.put(new Pair<>(interval, segmentsForCompact.getId()), segment.getShardSpec());
               timelineWithConfiguredSegmentGranularity.add(
                   interval,
                   segmentsForCompact.getVersion(),
@@ -149,7 +153,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         final List<Interval> searchIntervals =
             findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
-          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
+          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalShardSpecs));
         }
       }
     });
@@ -238,10 +242,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private static class CompactibleTimelineObjectHolderCursor implements Iterator<List<DataSegment>>
   {
     private final List<TimelineObjectHolder<String, DataSegment>> holders;
+    private final Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs;
 
     CompactibleTimelineObjectHolderCursor(
         VersionedIntervalTimeline<String, DataSegment> timeline,
-        List<Interval> totalIntervalsToSearch
+        List<Interval> totalIntervalsToSearch,
+        Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs
     )
     {
       this.holders = totalIntervalsToSearch
@@ -252,6 +258,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               .filter(holder -> isCompactibleHolder(interval, holder))
           )
           .collect(Collectors.toList());
+      this.originalShardSpecs = originalShardSpecs;
     }
 
     private boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
@@ -271,6 +278,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return partitionBytes > 0;
     }
 
+    private DataSegment transformShardSpecIfNeeded(DataSegment dataSegment, Interval interval)
+    {
+      if (originalShardSpecs != null && !originalShardSpecs.isEmpty()) {
+        return dataSegment.withShardSpec(originalShardSpecs.get(new Pair<>(interval, dataSegment.getId())));
+      }
+      return dataSegment;
+    }
+
     @Override
     public boolean hasNext()
     {
@@ -283,8 +298,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (holders.isEmpty()) {
         throw new NoSuchElementException();
       }
-      return Streams.sequentialStreamFrom(holders.remove(holders.size() - 1).getObject())
+      TimelineObjectHolder<String, DataSegment> timelineObjectHolder = holders.remove(holders.size() - 1);
+      return Streams.sequentialStreamFrom(timelineObjectHolder.getObject())
                     .map(PartitionChunk::getObject)
+                    .map(dataSegment -> transformShardSpecIfNeeded(dataSegment, timelineObjectHolder.getTrueInterval()))
                     .collect(Collectors.toList());
     }
   }
@@ -403,13 +420,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       List<DataSegment> segments = compactibleTimelineObjectHolderCursor.next();
-      Map<SegmentId, ShardSpec> originalShardSpec = originalShardSpecDatasourceMap.get(dataSourceName);
-      // Convert segment back to original ShardSpec if the datasource has configuredSegmentGranularity set
-      if (originalShardSpec != null) {
-        segments = segments.stream()
-                           .map(segment -> segment.withShardSpec(originalShardSpec.get(segment.getId())))
-                           .collect(Collectors.toList());
-      }
       final SegmentsToCompact candidates = new SegmentsToCompact(segments);
       if (!candidates.isEmpty()) {
         final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
@@ -419,6 +429,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         );
 
         if (isCompactibleSize && needsCompaction) {
+          if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+            Interval interval = candidates.getUmbrellaInterval();
+            Set<Interval> intervalsCompacted = intervalCompactedForDatasource.computeIfAbsent(dataSourceName, k -> new HashSet<>());
+            // Skip this candidates if we have compacted the interval already
+            if (intervalsCompacted.contains(interval)) {
+              continue;
+            }
+            intervalsCompacted.add(interval);
+          }
           return candidates;
         } else {
           if (!needsCompaction) {
@@ -661,6 +680,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private long getNumberOfSegments()
     {
       return segments.size();
+    }
+
+    private Interval getUmbrellaInterval()
+    {
+      return JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
     }
 
     private long getNumberOfIntervals()
