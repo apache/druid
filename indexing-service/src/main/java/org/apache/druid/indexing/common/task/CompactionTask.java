@@ -658,12 +658,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       }
       // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
 
-      // Pick rollup value if all segments being compacted have the same value otherwise set it to false
+      // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
       if (rollupIsValid.get()) {
-        boolean current = index.getMetadata().isRollup();
-        if (rollup.get() == null) {
-          rollup.set(current);
-        } else if (rollup.get() != current) {
+        Boolean isRollup = index.getMetadata().isRollup();
+        if (isRollup == null) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        } else if (rollup.get() == null) {
+          rollup.set(isRollup);
+        } else if (rollup.get() != isRollup) {
           rollupIsValid.set(false);
           rollup.set(false);
         }
