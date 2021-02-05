@@ -373,4 +373,12 @@ public class AuthorizationUtils
       new Resource(input, ResourceType.DATASOURCE),
       Action.WRITE
   );
+
+  /**
+   * Function for the pattern of generating a {@link ResourceAction} for reading from a given {@link Resource}
+   */
+  public static final Function<Resource, ResourceAction> RESOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
+      input,
+      Action.READ
+  );
 }

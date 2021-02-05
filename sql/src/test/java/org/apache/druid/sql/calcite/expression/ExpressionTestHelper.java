@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
@@ -67,9 +66,7 @@ class ExpressionTestHelper
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      ImmutableMap.of(),
-      ImmutableList.of(),
-      CalciteTests.REGULAR_USER_AUTH_RESULT
+      ImmutableMap.of()
   );
 
   private final RowSignature rowSignature;

@@ -794,8 +794,8 @@ public class SqlResourceTest extends CalciteTestBase
     final QueryException exception = doPost(badQuery).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
-    Assert.assertEquals(exception.getErrorClass(), QueryUnsupportedException.class.getName());
+    Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
+    Assert.assertEquals(QueryUnsupportedException.class.getName(), exception.getErrorClass());
   }
 
   @Test

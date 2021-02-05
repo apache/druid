@@ -17,24 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.sql.calcite.planner;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.server.security.Resource;
 
-public enum ResourceType
+import java.util.Set;
+
+/**
+ * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
+ * corresponding to the datasources and views which an authenticated request must be authorized for to process the
+ * query.
+ */
+public class ValidationResult
 {
-  DATASOURCE,
-  VIEW,
-  CONFIG,
-  STATE;
+  private final Set<Resource> resources;
 
-  @JsonCreator
-  public static ResourceType fromString(String name)
+  public ValidationResult(
+      final Set<Resource> resources
+  )
   {
-    if (name == null) {
-      return null;
-    }
-    return valueOf(StringUtils.toUpperCase(name));
+    this.resources = ImmutableSet.copyOf(resources);
+  }
+
+  public Set<Resource> getResources()
+  {
+    return resources;
   }
 }
