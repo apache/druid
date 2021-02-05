@@ -206,7 +206,7 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
       log.info("CurrentActiveTaskCount is lower than 0 ??? skip [%s].", dataSource);
       return -1;
     }
-    int desireActiveTaskCount;
+    int desiredActiveTaskCount;
 
     if (beyondProportion >= defaultAutoScalerConfig.getTriggerScaleOutThresholdFrequency()) {
         // Do Scale out
@@ -215,10 +215,10 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
         log.info("CurrentActiveTaskCount reach task count Max limit, skip to scale out tasks for dataSource [%s].", dataSource);
         return -1;
       } else {
-        desireActiveTaskCount = Math.min(taskCount, defaultAutoScalerConfig.getTaskCountMax());
+        desiredActiveTaskCount = Math.min(taskCount, defaultAutoScalerConfig.getTaskCountMax());
       }
 
-      return desireActiveTaskCount;
+      return desiredActiveTaskCount;
     }
 
     if (withinProportion >= defaultAutoScalerConfig.getTriggerScaleInThresholdFrequency()) {
@@ -228,10 +228,10 @@ public class DefaultAutoScaler implements SupervisorTaskAutoscaler
         log.info("CurrentActiveTaskCount reach task count Min limit, skip to scale in tasks for dataSource [%s].", dataSource);
         return -1;
       } else {
-        desireActiveTaskCount = Math.max(taskCount, defaultAutoScalerConfig.getTaskCountMin());
+        desiredActiveTaskCount = Math.max(taskCount, defaultAutoScalerConfig.getTaskCountMin());
       }
-      log.debug("Start to scale in tasks, current active task number [%s] and desire task number is [%s] for dataSource [%s].", currentActiveTaskCount, desireActiveTaskCount, dataSource);
-      return desireActiveTaskCount;
+      log.debug("Start to scale in tasks, current active task number [%s] and desire task number is [%s] for dataSource [%s].", currentActiveTaskCount, desiredActiveTaskCount, dataSource);
+      return desiredActiveTaskCount;
     }
 
     return -1;
