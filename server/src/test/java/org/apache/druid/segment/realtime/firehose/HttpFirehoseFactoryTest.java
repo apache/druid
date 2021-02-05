@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -41,7 +43,13 @@ public class HttpFirehoseFactoryTest
   @Test
   public void testSerde() throws IOException
   {
+    final HttpInputSourceConfig inputSourceConfig = new HttpInputSourceConfig(null, null, null);
     final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(new Std().addValue(
+        HttpInputSourceConfig.class,
+        inputSourceConfig
+    ));
+
     final DefaultPasswordProvider pwProvider = new DefaultPasswordProvider("testPassword");
     final HttpFirehoseFactory factory = new HttpFirehoseFactory(
         ImmutableList.of(URI.create("http://foo/bar"), URI.create("http://foo/bar2")),
@@ -51,7 +59,8 @@ public class HttpFirehoseFactoryTest
         100L,
         5,
         "testUser",
-        pwProvider
+        pwProvider,
+        inputSourceConfig
     );
 
     final HttpFirehoseFactory outputFact = mapper.readValue(
@@ -63,7 +72,7 @@ public class HttpFirehoseFactoryTest
   }
 
   @Test
-  public void testConstructorAllowsOnlyHttpAndHttpsProtocols()
+  public void testConstructorAllowsOnlyDefaultProtocols()
   {
     new HttpFirehoseFactory(
         ImmutableList.of(URI.create("http:///")),
@@ -73,7 +82,8 @@ public class HttpFirehoseFactoryTest
         null,
         null,
         null,
-        null
+        null,
+        new HttpInputSourceConfig(null, null, null)
     );
 
     new HttpFirehoseFactory(
@@ -84,11 +94,12 @@ public class HttpFirehoseFactoryTest
         null,
         null,
         null,
-        null
+        null,
+        new HttpInputSourceConfig(null, null, null)
     );
 
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Only HTTP or HTTPS are allowed");
+    expectedException.expectMessage("Only [http, https] protocols are allowed");
     new HttpFirehoseFactory(
         ImmutableList.of(URI.create("my-protocol:///")),
         null,
@@ -97,7 +108,39 @@ public class HttpFirehoseFactoryTest
         null,
         null,
         null,
-        null
+        null,
+        new HttpInputSourceConfig(null, null, null)
+    );
+  }
+
+  @Test
+  public void testConstructorAllowsOnlyCustomProtocols()
+  {
+    final HttpInputSourceConfig customConfig = new HttpInputSourceConfig(null, null, ImmutableSet.of("druid"));
+    new HttpFirehoseFactory(
+        ImmutableList.of(URI.create("druid:///")),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        customConfig
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only [druid] protocols are allowed");
+    new HttpFirehoseFactory(
+        ImmutableList.of(URI.create("https:///")),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        customConfig
     );
   }
 }

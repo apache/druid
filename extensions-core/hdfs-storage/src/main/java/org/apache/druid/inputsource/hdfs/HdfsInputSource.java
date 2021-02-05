@@ -37,6 +37,7 @@ import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +52,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -65,6 +65,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
 
   private final List<String> inputPaths;
   private final Configuration configuration;
+  private final HdfsInputSourceConfig inputSourceConfig;
 
   // Although the javadocs for SplittableInputSource say to avoid caching splits to reduce memory, HdfsInputSource
   // *does* cache the splits for the following reasons:
@@ -74,37 +75,54 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   //
   // 2) The index_hadoop task allocates splits eagerly, so the memory usage should not be a problem for anyone
   //    migrating from Hadoop.
-  private List<Path> cachedPaths;
+  @Nullable
+  private List<Path> cachedPaths = null;
 
   @JsonCreator
   public HdfsInputSource(
       @JsonProperty(PROP_PATHS) Object inputPaths,
-      @JacksonInject @Hdfs Configuration configuration
+      @JacksonInject @Hdfs Configuration configuration,
+      @JacksonInject HdfsInputSourceConfig inputSourceConfig
   )
   {
     this.inputPaths = coerceInputPathsToList(inputPaths, PROP_PATHS);
     this.configuration = configuration;
-    this.cachedPaths = null;
+    this.inputSourceConfig = inputSourceConfig;
+    this.inputPaths.forEach(p -> verifyProtocol(configuration, inputSourceConfig, p));
   }
 
   public static List<String> coerceInputPathsToList(Object inputPaths, String propertyName)
   {
-    final List<String> paths;
-
     if (inputPaths instanceof String) {
-      paths = Collections.singletonList((String) inputPaths);
+      return Collections.singletonList((String) inputPaths);
     } else if (inputPaths instanceof List && ((List<?>) inputPaths).stream().allMatch(x -> x instanceof String)) {
-      paths = ((List<?>) inputPaths).stream().map(x -> (String) x).collect(Collectors.toList());
+      return  ((List<?>) inputPaths).stream().map(x -> (String) x).collect(Collectors.toList());
     } else {
       throw new IAE("'%s' must be a string or an array of strings", propertyName);
     }
-
-    return paths;
   }
 
-  public static Collection<Path> getPaths(List<String> inputPathStrings, Configuration configuration) throws IOException
+  public static void verifyProtocol(Configuration conf, HdfsInputSourceConfig config, String pathString)
   {
-    if (inputPathStrings.isEmpty()) {
+    Path path = new Path(pathString);
+    try {
+      throwIfInvalidProtocol(config, path.getFileSystem(conf).getScheme());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static void throwIfInvalidProtocol(HdfsInputSourceConfig config, String scheme)
+  {
+    if (!config.getAllowedProtocols().contains(StringUtils.toLowerCase(scheme))) {
+      throw new IAE("Only %s protocols are allowed", config.getAllowedProtocols());
+    }
+  }
+
+  public static Collection<Path> getPaths(List<String> inputPaths, Configuration configuration) throws IOException
+  {
+    if (inputPaths.isEmpty()) {
       return Collections.emptySet();
     }
 
@@ -112,13 +130,8 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     Job job = Job.getInstance(configuration);
 
     // Add paths to the fake JobContext.
-    for (String inputPath : inputPathStrings) {
+    for (String inputPath : inputPaths) {
       FileInputFormat.addInputPaths(job, inputPath);
-    }
-
-    final Path[] inputPaths = FileInputFormat.getInputPaths(job);
-    if (Arrays.stream(inputPaths).anyMatch(path -> !"hdfs".equalsIgnoreCase(path.toUri().getScheme()))) {
-      throw new IllegalArgumentException("Input paths must be the HDFS path");
     }
 
     return new HdfsFileInputFormat().getSplits(job)
@@ -208,7 +221,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   public SplittableInputSource<List<Path>> withSplit(InputSplit<List<Path>> split)
   {
     List<String> paths = split.get().stream().map(path -> path.toString()).collect(Collectors.toList());
-    return new HdfsInputSource(paths, configuration);
+    return new HdfsInputSource(paths, configuration, inputSourceConfig);
   }
 
   @Override
@@ -224,6 +237,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     }
   }
 
+  @VisibleForTesting
   static Builder builder()
   {
     return new Builder();
@@ -233,6 +247,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   {
     private Object paths;
     private Configuration configuration;
+    private HdfsInputSourceConfig inputSourceConfig;
 
     private Builder()
     {
@@ -250,9 +265,19 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
       return this;
     }
 
+    Builder inputSourceConfig(HdfsInputSourceConfig inputSourceConfig)
+    {
+      this.inputSourceConfig = inputSourceConfig;
+      return this;
+    }
+
     HdfsInputSource build()
     {
-      return new HdfsInputSource(paths, configuration);
+      return new HdfsInputSource(
+          Preconditions.checkNotNull(paths, "paths"),
+          Preconditions.checkNotNull(configuration, "configuration"),
+          Preconditions.checkNotNull(inputSourceConfig, "inputSourceConfig")
+      );
     }
   }
 }

@@ -83,7 +83,7 @@ public class InputSourceModuleTest
     props.put("druid.ingestion.http.allowListDomains", "[\"allow.com\"]");
     Injector injector = makeInjectorWithProperties(props);
     HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(Collections.singletonList("allow.com"), null), instance);
+    Assert.assertEquals(new HttpInputSourceConfig(Collections.singletonList("allow.com"), null, null), instance);
   }
 
   @Test
@@ -93,7 +93,7 @@ public class InputSourceModuleTest
     props.put("druid.ingestion.http.denyListDomains", "[\"deny.com\"]");
     Injector injector = makeInjectorWithProperties(props);
     HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(null, Collections.singletonList("deny.com")), instance);
+    Assert.assertEquals(new HttpInputSourceConfig(null, Collections.singletonList("deny.com"), null), instance);
   }
 
   @Test(expected = ProvisionException.class)
@@ -112,7 +112,7 @@ public class InputSourceModuleTest
     Properties props = new Properties();
     Injector injector = makeInjectorWithProperties(props);
     HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(null, null), instance);
+    Assert.assertEquals(new HttpInputSourceConfig(null, null, null), instance);
     Assert.assertNull(instance.getAllowListDomains());
     Assert.assertNull(instance.getDenyListDomains());
   }

@@ -515,6 +515,36 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 |`druid.storage.keyspace`|Cassandra key space.|none|
 
 
+### Ingestion Security Configuration
+
+#### HDFS input source
+
+You can set the following property to control what protocols are allowed for
+the [HDFS input source](../ingestion/native-batch.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch.md#hdfsfirehose).
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols that HDFS inputSource and HDFS firehose can use.|["hdfs"]|
+
+
+#### HTTP input source
+
+You can set the following property to control what protocols are allowed for
+the [HTTP input source](../ingestion/native-batch.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch.md#httpfirehose).
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols that HTTP inputSource and HTTP firehose can use.|["http", "https"]|
+
+The following properties are to control what domains native batch tasks can access to using
+the [HTTP input source](../ingestion/native-batch.md#http-input-source).
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.ingestion.http.allowListDomains`|List of domains|Allowed domains from which ingestion will be allowed. Only one of allowList or denyList can be set.|empty list|
+|`druid.ingestion.http.denyListDomains`|List of domains|Blacklisted domains from which ingestion will NOT be allowed. Only one of allowList or denyList can be set. |empty list| 
+
+
 ### Task Logging
 
 If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
@@ -1354,14 +1384,6 @@ The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
-
-#### Indexer Security Configuration
-You can optionally configure following additional configs to restrict druid ingestion
- 
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowListDomains`|List of domains|Allowed domains from which ingestion will be allowed. Only one of allowList or denyList can be set.|empty list|
-|`druid.ingestion.http.denyListDomains`|List of domains|Blacklisted domains from which ingestion will NOT be allowed. Only one of allowList or denyList can be set. |empty list|
 
 
 #### Query Configurations

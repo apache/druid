@@ -1064,7 +1064,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": "hdfs://foo/bar/", "hdfs://bar/foo"
+        "paths": "hdfs:/foo/bar/", "hdfs:/bar/foo"
       },
       "inputFormat": {
         "type": "json"
@@ -1080,7 +1080,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": ["hdfs://foo/bar", "hdfs://bar/foo"]
+        "paths": ["hdfs:/foo/bar", "hdfs:/bar/foo"]
       },
       "inputFormat": {
         "type": "json"
@@ -1096,7 +1096,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": "hdfs://foo/bar/file.json", "hdfs://bar/foo/file2.json"
+        "paths": "hdfs:/foo/bar/file.json", "hdfs:/bar/foo/file2.json"
       },
       "inputFormat": {
         "type": "json"
@@ -1112,7 +1112,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": ["hdfs://foo/bar/file.json", "hdfs://bar/foo/file2.json"]
+        "paths": ["hdfs:/foo/bar/file.json", "hdfs:/bar/foo/file2.json"]
       },
       "inputFormat": {
         "type": "json"
@@ -1127,9 +1127,10 @@ Sample specs:
 |type|This should be `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
 
-You can also ingest from cloud storage using the HDFS input source.
-However, if you want to read from AWS S3 or Google Cloud Storage, consider using
-the [S3 input source](#s3-input-source) or the [Google Cloud Storage input source](#google-cloud-storage-input-source) instead.
+You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
+However, if you want to ingest from cloud storage, consider using the proper input sources for them.
+If you want to use a non-hdfs protocol with the HDFS input source, you need to include the protocol you want
+in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
 ### HTTP Input Source
 
@@ -1203,9 +1204,12 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `http`|None|yes|
-|uris|URIs of the input files. Only `http` and `https` schemes are allowed.|None|yes|
+|uris|URIs of the input files. See below for the protocols allowed for URIs.|None|yes|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
+
+The protocols that the HTTP input source can use is restricted by `druid.ingestion.http.allowedProtocols`.
+The `http` and `https` protocols are allowed by default. See [HTTP input source security configuration](../configuration/index.md#http-input-source) for more details.
 
 ### Inline Input Source
 
@@ -1553,6 +1557,11 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 |fetchTimeout|Timeout for fetching each file.|60000|
 |maxFetchRetry|Maximum number of retries for fetching each file.|3|
 
+You can also ingest from other storage using the HDFS firehose if the HDFS client supports that storage.
+However, if you want to ingest from cloud storage, consider using the proper input sources for them.
+If you want to use a non-hdfs protocol with the HDFS firehose, you need to include the protocol you want
+in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS firehose security configuration](../configuration/index.md#hdfs-input-source) for more details.
+
 ### LocalFirehose
 
 This Firehose can be used to read the data from files on local disk, and is mainly intended for proof-of-concept testing, and works with `string` typed parsers.
@@ -1590,7 +1599,9 @@ A sample HTTP Firehose spec is shown below:
 }
 ```
 
-URIs must have a scheme of either `http` or `https`.
+The protocols that the HTTP firehose can use is restricted by `druid.ingestion.http.allowedProtocols`.
+The `http` and `https` protocols are allowed by default. See [HTTP firehose security configuration](../configuration/index.md#http-input-source) for more details.
+
 The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
 Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.
 

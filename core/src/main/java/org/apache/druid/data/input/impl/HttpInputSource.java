@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
@@ -47,7 +48,6 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
-
   private final HttpInputSourceConfig config;
 
   @JsonCreator
@@ -59,7 +59,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   )
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
-    throwIfInvalidProtocols(uris);
+    throwIfInvalidProtocols(config, uris);
     uris.forEach(uri -> Preconditions.checkArgument(
         config.isURIAllowed(uri),
         StringUtils.format("Access to [%s] DENIED!", uri)
@@ -70,10 +70,12 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.config = config;
   }
 
-  public static void throwIfInvalidProtocols(List<URI> uris)
+  public static void throwIfInvalidProtocols(HttpInputSourceConfig config, List<URI> uris)
   {
-    if (uris.stream().anyMatch(uri -> !"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme()))) {
-      throw new IllegalArgumentException("Only HTTP or HTTPS are allowed");
+    for (URI uri : uris) {
+      if (!config.getAllowedProtocols().contains(StringUtils.toLowerCase(uri.getScheme()))) {
+        throw new IAE("Only %s protocols are allowed", config.getAllowedProtocols());
+      }
     }
   }
 
@@ -148,16 +150,17 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    HttpInputSource source = (HttpInputSource) o;
-    return Objects.equals(uris, source.uris) &&
-           Objects.equals(httpAuthenticationUsername, source.httpAuthenticationUsername) &&
-           Objects.equals(httpAuthenticationPasswordProvider, source.httpAuthenticationPasswordProvider);
+    HttpInputSource that = (HttpInputSource) o;
+    return Objects.equals(uris, that.uris) &&
+           Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername) &&
+           Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider) &&
+           Objects.equals(config, that.config);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider);
+    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider, config);
   }
 
   @Override
