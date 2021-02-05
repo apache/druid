@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,7 +43,9 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
@@ -258,14 +261,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Iterable<Interval> intervals
   )
   {
-    DatasourceBundle datasourceBundle;
-    synchronized (this) {
-      datasourceBundle = datasourceBundles.get(query.getDataSource().toString());
-      if (datasourceBundle == null) {
-        throw new IAE("Could not find segment walker for datasource [%s]", query.getDataSource().toString());
-      }
-    }
-    return datasourceBundle.getWalker().getQueryRunnerForIntervals(query, intervals);
+    return getBundle(query).getWalker().getQueryRunnerForIntervals(query, intervals);
   }
 
   @Override
@@ -274,14 +270,29 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Iterable<SegmentDescriptor> specs
   )
   {
-    DatasourceBundle datasourceBundle;
+    return getBundle(query).getWalker().getQueryRunnerForSegments(query, specs);
+  }
+
+  @VisibleForTesting
+  <T> DatasourceBundle getBundle(final Query<T> query)
+  {
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
+    final TableDataSource table =
+        analysis.getBaseTableDataSource()
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+
+    final DatasourceBundle bundle;
+
     synchronized (this) {
-      datasourceBundle = datasourceBundles.get(query.getDataSource().toString());
-      if (datasourceBundle == null) {
-        throw new IAE("Could not find segment walker for datasource [%s]", query.getDataSource().toString());
-      }
+      bundle = datasourceBundles.get(table.getName());
     }
-    return datasourceBundle.getWalker().getQueryRunnerForSegments(query, specs);
+
+    if (bundle == null) {
+      throw new IAE("Could not find segment walker for datasource [%s]", table.getName());
+    }
+
+    return bundle;
   }
 
   @Override
@@ -402,6 +413,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public boolean isSkipBytesInMemoryOverheadCheck()
+    {
+      return baseConfig.isSkipBytesInMemoryOverheadCheck();
+    }
+
+    @Override
     public int getMaxPendingPersists()
     {
       return baseConfig.getMaxPendingPersists();
@@ -500,7 +517,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         AggregatorFactory[] metricAggs,
         File outDir,
         IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
@@ -516,7 +534,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                     metricAggs,
                     outDir,
                     indexSpec,
-                    segmentWriteOutMediumFactory
+                    segmentWriteOutMediumFactory,
+                    maxColumnsToMerge
                 );
               }
               catch (IOException ioe) {
@@ -579,7 +598,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
-        IndexSpec indexSpec
+        IndexSpec indexSpec,
+        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);
@@ -639,7 +659,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);

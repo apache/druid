@@ -83,6 +83,9 @@ public class PullDependencies implements Runnable
                   .put("commons-beanutils", "commons-beanutils")
                   .put("org.apache.commons", "commons-compress")
                   .put("org.apache.zookeeper", "zookeeper")
+                  .put("com.fasterxml.jackson.core", "jackson-databind")
+                  .put("com.fasterxml.jackson.core", "jackson-core")
+                  .put("com.fasterxml.jackson.core", "jackson-annotations")
                   .build();
    /*
 

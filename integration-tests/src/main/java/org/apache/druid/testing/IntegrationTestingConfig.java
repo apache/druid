@@ -19,15 +19,98 @@
 
 package org.apache.druid.testing;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
  */
 public interface IntegrationTestingConfig
 {
+  String getZookeeperHosts();
+
+  default String getZookeeperInternalHosts()
+  {
+    return getZookeeperHosts();
+  }
+
+  String getKafkaHost();
+
+  default String getKafkaInternalHost()
+  {
+    return getKafkaHost();
+  }
+
+  String getBrokerHost();
+
+  default String getBrokerInternalHost()
+  {
+    return getBrokerHost();
+  }
+
+  String getRouterHost();
+
+  default String getRouterInternalHost()
+  {
+    return getRouterHost();
+  }
+
+  String getCoordinatorHost();
+
+  default String getCoordinatorInternalHost()
+  {
+    return getCoordinatorHost();
+  }
+
+  String getCoordinatorTwoHost();
+
+  default String getCoordinatorTwoInternalHost()
+  {
+    return getCoordinatorTwoHost();
+  }
+
+  String getOverlordHost();
+
+  default String getOverlordInternalHost()
+  {
+    return getOverlordHost();
+  }
+
+  String getOverlordTwoHost();
+
+  default String getOverlordTwoInternalHost()
+  {
+    return getOverlordTwoHost();
+  }
+
+  String getMiddleManagerHost();
+
+  default String getMiddleManagerInternalHost()
+  {
+    return getMiddleManagerHost();
+  }
+
+  String getHistoricalHost();
+
+  default String getHistoricalInternalHost()
+  {
+    return getHistoricalHost();
+  }
+
   String getCoordinatorUrl();
 
   String getCoordinatorTLSUrl();
+
+  String getCoordinatorTwoUrl();
+
+  String getCoordinatorTwoTLSUrl();
+
+  String getOverlordUrl();
+
+  String getOverlordTLSUrl();
+
+  String getOverlordTwoUrl();
+
+  String getOverlordTwoTLSUrl();
 
   String getIndexerUrl();
 
@@ -57,22 +140,6 @@ public interface IntegrationTestingConfig
 
   String getHistoricalTLSUrl();
 
-  String getMiddleManagerHost();
-
-  String getZookeeperHosts();
-
-  default String getZookeeperInternalHosts()
-  {
-    return getZookeeperHosts();
-  }
-
-  String getKafkaHost();
-
-  default String getKafkaInternalHost()
-  {
-    return getKafkaHost();
-  }
-
   String getProperty(String prop);
 
   String getUsername();
@@ -96,4 +163,12 @@ public interface IntegrationTestingConfig
   String getHadoopGcsCredentialsPath();
 
   String getStreamEndpoint();
+
+  boolean isDocker();
+
+  @Nullable
+  default String getDockerHost()
+  {
+    return null;
+  }
 }

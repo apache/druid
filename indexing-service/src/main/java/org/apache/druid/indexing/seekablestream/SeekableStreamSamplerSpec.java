@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.client.indexing.SamplerResponse;
+import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
@@ -36,8 +38,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
-import org.apache.druid.indexing.overlord.sampler.SamplerSpec;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -54,7 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetType> implements SamplerSpec
+public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> implements SamplerSpec
 {
   static final long POLL_TIMEOUT_MS = 100;
 
@@ -106,7 +106,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
 
-  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> createRecordSupplier();
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> createRecordSupplier();
 
   private class SeekableStreamSamplerFirehoseFactory implements FiniteFirehoseFactory<ByteBufferInputRowParser, Object>
   {
@@ -159,7 +159,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         ((StringInputRowParser) parser).startFileFromBeginning();
       }
 
-      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> inputSource = new RecordSupplierInputSource<>(
+      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, RecordType> inputSource = new RecordSupplierInputSource<>(
           ioConfig.getStream(),
           createRecordSupplier(),
           ioConfig.isUseEarliestSequenceNumber()

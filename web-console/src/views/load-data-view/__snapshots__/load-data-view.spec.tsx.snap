@@ -173,13 +173,13 @@ exports[`load data view matches snapshot 1`] = `
   <div
     className="control"
   >
-    <Blueprint3.Callout
-      className="intro"
-    >
-      <p>
-        Please specify where your raw data is located
-      </p>
-    </Blueprint3.Callout>
+    <Blueprint3.FormGroup>
+      <Blueprint3.Callout>
+        <p>
+          Please specify where your raw data is located
+        </p>
+      </Blueprint3.Callout>
+    </Blueprint3.FormGroup>
   </div>
 </div>
 `;

@@ -54,6 +54,8 @@ public class TestNGGroup
 
   public static final String QUERY_RETRY = "query-retry";
 
+  public static final String CLI_INDEXER = "cli-indexer";
+
   public static final String REALTIME_INDEX = "realtime-index";
 
   /**
@@ -142,4 +144,6 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
+
+  public static final String HIGH_AVAILABILTY = "high-availability";
 }

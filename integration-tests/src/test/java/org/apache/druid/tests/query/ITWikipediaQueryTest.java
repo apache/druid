@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
@@ -123,14 +123,14 @@ public class ITWikipediaQueryTest
         getQueryBuilder().build()
     ).get();
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), followUp.getStatus().getCode());
+    Assert.assertEquals(followUp.getStatus().getCode(), HttpResponseStatus.OK.getCode());
 
     StatusResponseHolder andAnother = queryClient.queryAsync(
         queryHelper.getQueryURL(config.getBrokerUrl()),
         getQueryBuilder().build()
     ).get();
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), andAnother.getStatus().getCode());
+    Assert.assertEquals(andAnother.getStatus().getCode(), HttpResponseStatus.OK.getCode());
   }
 
   @Test

@@ -242,7 +242,9 @@ public class DruidSchema extends AbstractSchema
                       break;
                     }
 
-                    if (isServerViewInitialized) {
+                    // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
+                    // so that even ServerView is initialized, we can't let broker complete initialization.
+                    if (isServerViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
                       initialized.countDown();
@@ -363,6 +365,8 @@ public class DruidSchema extends AbstractSchema
   void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
+      // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
+      // broker served segments in the timeline, to ensure that removeSegment the event is triggered accurately
       if (server.getType().equals(ServerType.BROKER)) {
         // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
         // historical, however mark the datasource for refresh because it needs to be globalized
@@ -423,7 +427,6 @@ public class DruidSchema extends AbstractSchema
     synchronized (lock) {
       log.debug("Segment[%s] is gone.", segment.getId());
 
-      dataSourcesNeedingRebuild.add(segment.getDataSource());
       segmentsNeedingRefresh.remove(segment.getId());
       mutableSegments.remove(segment.getId());
 
@@ -437,6 +440,8 @@ public class DruidSchema extends AbstractSchema
         segmentMetadataInfo.remove(segment.getDataSource());
         tables.remove(segment.getDataSource());
         log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
+      } else {
+        dataSourcesNeedingRebuild.add(segment.getDataSource());
       }
 
       lock.notifyAll();
@@ -448,12 +453,18 @@ public class DruidSchema extends AbstractSchema
   {
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
+      final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
+
+      // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
+      // broker served segments in the timeline, to ensure that removeSegment the event is triggered accurately
       if (server.getType().equals(ServerType.BROKER)) {
-        // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
-        // historical, however mark the datasource for refresh because it might no longer be broadcast or something
-        dataSourcesNeedingRebuild.add(segment.getDataSource());
+        // for brokers, if the segment drops from all historicals before the broker this could be null.
+        if (knownSegments != null && !knownSegments.isEmpty()) {
+          // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
+          // historical, however mark the datasource for refresh because it might no longer be broadcast or something
+          dataSourcesNeedingRebuild.add(segment.getDataSource());
+        }
       } else {
-        final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
         final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
         final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
         final ImmutableSet<DruidServerMetadata> servers = FluentIterable

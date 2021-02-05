@@ -21,6 +21,8 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,8 +36,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
 
 public class UniformGranularityTest
 {
@@ -44,18 +46,25 @@ public class UniformGranularityTest
   @Test
   public void testSimple()
   {
+
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
     final GranularitySpec spec = new UniformGranularitySpec(
         Granularities.DAY,
         null,
-        Lists.newArrayList(
-            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
-            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
-            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
-            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
-        )
+        inputIntervals
     );
 
     Assert.assertTrue(spec.isRollup());
+
+    Assert.assertEquals(
+        inputIntervals,
+        Lists.newArrayList(spec.inputIntervals())
+    );
 
     Assert.assertEquals(
         Lists.newArrayList(
@@ -67,7 +76,28 @@ public class UniformGranularityTest
             Intervals.of("2012-01-09T00Z/P1D"),
             Intervals.of("2012-01-10T00Z/P1D")
         ),
-        Lists.newArrayList(spec.bucketIntervals().get())
+        Lists.newArrayList(spec.sortedBucketIntervals())
+    );
+
+
+    Assert.assertEquals(
+        Optional.<Interval>absent(),
+        spec.bucketInterval(DateTimes.of("2011-01-12T00Z"))
+    );
+
+    Assert.assertEquals(
+        Optional.of(Intervals.of("2012-01-01T00Z/2012-01-02T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-01T00Z"))
+    );
+
+    Assert.assertEquals(
+        Optional.of(Intervals.of("2012-01-10T00Z/2012-01-11T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-10T00Z"))
+    );
+
+    Assert.assertEquals(
+        Optional.<Interval>absent(),
+        spec.bucketInterval(DateTimes.of("2012-01-12T00Z"))
     );
 
     Assert.assertEquals(
@@ -99,6 +129,7 @@ public class UniformGranularityTest
         Optional.of(Intervals.of("2012-01-08T00Z/2012-01-09T00Z")),
         spec.bucketInterval(DateTimes.of("2012-01-08T01Z"))
     );
+
   }
 
   @Test
@@ -132,9 +163,9 @@ public class UniformGranularityTest
     try {
       final GranularitySpec rtSpec = JOSN_MAPPER.readValue(JOSN_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals(
-          "Round-trip bucketIntervals",
-          spec.bucketIntervals(),
-          rtSpec.bucketIntervals()
+          "Round-trip sortedBucketIntervals",
+          ImmutableList.copyOf(spec.sortedBucketIntervals()),
+          ImmutableList.copyOf(rtSpec.sortedBucketIntervals().iterator())
       );
       Assert.assertEquals(
           "Round-trip granularity",
@@ -253,10 +284,9 @@ public class UniformGranularityTest
         )
     );
 
-    Assert.assertTrue(spec.bucketIntervals().isPresent());
+    Assert.assertTrue(spec.sortedBucketIntervals().iterator().hasNext());
 
-    final Optional<SortedSet<Interval>> sortedSetOptional = spec.bucketIntervals();
-    final SortedSet<Interval> intervals = sortedSetOptional.get();
+    final Iterable<Interval> intervals = spec.sortedBucketIntervals();
     ArrayList<Long> actualIntervals = new ArrayList<>();
     for (Interval interval : intervals) {
       actualIntervals.add(interval.toDurationMillis());
@@ -277,6 +307,25 @@ public class UniformGranularityTest
     );
 
     Assert.assertEquals(expectedIntervals, actualIntervals);
+  }
+
+  @Test
+  public void testUniformGranularitySpecWithLargeNumberOfIntervalsDoesNotBlowUp()
+  {
+    // just make sure that intervals for uniform spec are not materialized (causing OOM) when created
+    final GranularitySpec spec = new UniformGranularitySpec(
+        Granularities.SECOND,
+        null,
+        Collections.singletonList(
+            Intervals.of("2012-01-01T00Z/P10Y")
+        )
+    );
+
+    Assert.assertTrue(spec != null);
+
+    int count = Iterators.size(spec.sortedBucketIntervals().iterator());
+    // account for three leap years...
+    Assert.assertEquals(3600 * 24 * 365 * 10 + 3 * 24 * 3600, count);
   }
 
   private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2)

@@ -19,6 +19,7 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { SqlExpression, SqlRef } from 'druid-query-toolkit';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -254,7 +255,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             queryParts.push(
               'ORDER BY ' +
                 query.sorted
-                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .map((sort: any) => `${JSONBig.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                   .join(', '),
             );
           }
@@ -271,7 +272,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             queryParts.push(
               'ORDER BY ' +
                 query.sorted
-                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .map((sort: any) => `${JSONBig.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                   .join(', '),
             );
           }
@@ -300,8 +301,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         )).data;
         const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
           datasourceList.map(async (d: string) => {
-            const segments = (await Api.instance.get(`/druid/coordinator/v1/datasources/${d}?full`))
-              .data.segments;
+            const segments = (await Api.instance.get(
+              `/druid/coordinator/v1/datasources/${Api.encodePath(d)}?full`,
+            )).data.segments;
 
             return segments.map(
               (segment: any): SegmentQueryResultRow => {
@@ -637,7 +639,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
+            `/druid/coordinator/v1/datasources/${Api.encodePath(
+              terminateDatasourceId,
+            )}/segments/${Api.encodePath(terminateSegmentId)}`,
             {},
           );
           return resp.data;
@@ -742,7 +746,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           {this.renderSegmentsTable()}
         </div>
         {this.renderTerminateSegmentAction()}
-        {segmentTableActionDialogId && (
+        {segmentTableActionDialogId && datasourceTableActionDialogId && (
           <SegmentTableActionDialog
             segmentId={segmentTableActionDialogId}
             datasourceId={datasourceTableActionDialogId}

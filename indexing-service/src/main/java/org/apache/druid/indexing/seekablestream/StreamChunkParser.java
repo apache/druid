@@ -46,7 +46,7 @@ import java.util.function.Predicate;
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
  * or {@link InputRowParser}. This class will be useful untill we remove the deprecated InputRowParser.
  */
-class StreamChunkParser
+class StreamChunkParser<RecordType extends ByteEntity>
 {
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
@@ -90,7 +90,7 @@ class StreamChunkParser
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  List<InputRow> parse(@Nullable List<byte[]> streamChunk) throws IOException
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk) throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
       rowIngestionMeters.incrementThrownAway();
@@ -104,11 +104,11 @@ class StreamChunkParser
     }
   }
 
-  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<byte[]> valueBytess)
+  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytess)
   {
     final FluentIterable<InputRow> iterable = FluentIterable
         .from(valueBytess)
-        .transformAndConcat(bytes -> parser.parseBatch(ByteBuffer.wrap(bytes)));
+        .transformAndConcat(bytes -> parser.parseBatch(bytes.getBuffer()));
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         CloseableIterators.withEmptyBaggage(iterable.iterator()),
@@ -121,12 +121,12 @@ class StreamChunkParser
 
   private List<InputRow> parseWithInputFormat(
       SettableByteEntityReader byteEntityReader,
-      List<byte[]> valueBytess
+      List<? extends ByteEntity> valueBytess
   ) throws IOException
   {
     final List<InputRow> rows = new ArrayList<>();
-    for (byte[] valueBytes : valueBytess) {
-      byteEntityReader.setEntity(new ByteEntity(valueBytes));
+    for (ByteEntity valueBytes : valueBytess) {
+      byteEntityReader.setEntity(valueBytes);
       try (FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
           byteEntityReader.read(),
           rowFilter,

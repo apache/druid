@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 import {
   DimensionsSpec,
   getSpecType,
@@ -127,7 +129,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
     type: 'inline',
-    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+    data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
@@ -276,6 +278,7 @@ export async function sampleForConnect(
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
       pattern: '(.*)',
+      listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
   }

@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
+import { SqlRef } from 'druid-query-toolkit';
 import * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import { PartitionConfig } from './component/load-data/config/partition';
 import { SegmentGranularity } from './component/load-data/config/partition';
+import { PartitionConfig } from './component/load-data/config/partition';
 import { PublishConfig } from './component/load-data/config/publish';
 import { LocalFileDataConnector } from './component/load-data/data-connector/local-file';
 import { DataLoader } from './component/load-data/data-loader';
@@ -36,6 +37,8 @@ import { retryIfJestAssertionError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
+
+const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Россия 한국 中国!?~';
 
 describe('Tutorial: Loading a file', () => {
   let browser: playwright.Browser;
@@ -56,7 +59,7 @@ describe('Tutorial: Loading a file', () => {
 
   it('Loads data from local disk', async () => {
     const testName = 'load-data-from-local-disk-';
-    const datasourceName = testName + new Date().toISOString();
+    const datasourceName = testName + ALL_SORTS_OF_CHARS + new Date().toISOString();
     const dataConnector = new LocalFileDataConnector(page, {
       baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
       fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
@@ -168,7 +171,7 @@ async function validateDatasourceStatus(page: playwright.Page, datasourceName: s
 
 async function validateQuery(page: playwright.Page, datasourceName: string) {
   const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
-  const query = `SELECT * FROM "${datasourceName}" ORDER BY __time`;
+  const query = `SELECT * FROM ${SqlRef.table(datasourceName)} ORDER BY __time`;
   const results = await queryOverview.runQuery(query);
   expect(results).toBeDefined();
   expect(results.length).toBeGreaterThan(0);

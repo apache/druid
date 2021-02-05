@@ -270,7 +270,9 @@ ORDER BY "start" DESC`;
             intervals = (await Promise.all(
               datasources.map(async datasource => {
                 const intervalMap = (await Api.instance.get(
-                  `/druid/coordinator/v1/datasources/${datasource}/intervals?simple`,
+                  `/druid/coordinator/v1/datasources/${Api.encodePath(
+                    datasource,
+                  )}/intervals?simple`,
                 )).data;
 
                 return Object.keys(intervalMap)

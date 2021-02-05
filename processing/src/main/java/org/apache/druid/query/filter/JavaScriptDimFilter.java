@@ -36,6 +36,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
@@ -155,7 +156,8 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
    * script compilation.
    */
   @EnsuresNonNull("predicateFactory")
-  private JavaScriptPredicateFactory getPredicateFactory()
+  @VisibleForTesting
+  JavaScriptPredicateFactory getPredicateFactory()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid
     // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
@@ -327,7 +329,14 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
       if (extractionFn != null) {
         input = extractionFn.apply(input);
       }
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new Object[]{input}));
+      Object fnResult = fnApply.call(cx, scope, scope, new Object[]{input});
+      if (fnResult instanceof ScriptableObject) {
+        // Direct return js function result (like arr.includes) will return org.mozilla.javascript.NativeBoolean,
+        // Context.toBoolean always treat it as true, even if it is false. Convert it to java.lang.Boolean first to fix this mistake.
+        return Context.toBoolean(((ScriptableObject) fnResult).getDefaultValue(ScriptRuntime.BooleanClass));
+      } else {
+        return Context.toBoolean(fnResult);
+      }
     }
 
     @Override
