@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.easymock.Capture;
@@ -403,12 +402,6 @@ public class SupervisorManagerTest extends EasyMockSupport
     public Supervisor createSupervisor()
     {
       return supervisor;
-    }
-
-    @Override
-    public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
-    {
-      return null;
     }
 
     @Override
