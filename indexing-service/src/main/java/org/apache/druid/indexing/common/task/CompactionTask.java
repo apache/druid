@@ -646,7 +646,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   )
   {
     // check index metadata &
-    // set carry-over aspects only if they are all set and the same for all segments
+    // Decide which values to propagate (i.e. carry over) for rollup & queryGranularity
     final SettableSupplier<Boolean> rollup = new SettableSupplier<>();
     final SettableSupplier<Boolean> rollupIsValid = new SettableSupplier<>(true);
     final SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
@@ -666,7 +666,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           rollup.set(false);
         } else if (rollup.get() == null) {
           rollup.set(isRollup);
-        } else if (rollup.get() != isRollup) {
+        } else if (!rollup.get().equals(isRollup.booleanValue())) {
           rollupIsValid.set(false);
           rollup.set(false);
         }
