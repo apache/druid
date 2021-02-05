@@ -355,7 +355,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         }
         if (autoScalerConfig != null && nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
-          log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CLAM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource);
+          log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CALM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource);
           return;
         }
 
@@ -367,7 +367,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
       catch (Exception ex) {
-        log.warn(ex, "Error, when parse DynamicAllocationTasksNotice");
+        log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
       }
     }
   }
@@ -378,36 +378,36 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *    First of all, call gracefulShutdownInternal() which will change the state of  current datasource ingest tasks from reading to publishing.
    *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled next 'RunNotice'.
    *    Finally, change taskCount in SeekableStreamSupervisorIOConfig and sync it to MetaStorage.
-   * After changed taskCount in SeekableStreamSupervisorIOConfig, next RunNotice will ceate scaled number of ingest tasks without resubmitting supervisors.
-   * @param desireActiveTaskCount desire taskCount compute from autoscaler
-   * @return Boolean flag, do scale action successfully or not. If true , it will take at least 'minTriggerDynamicFrequency' before next 'dynamicAllocatie'.
+   * After changed taskCount in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting supervisors.
+   * @param desiredActiveTaskCount desired taskCount compute from autoscaler
+   * @return Boolean flag, do scale action successfully or not. If true , it will take at least 'minTriggerDynamicFrequency' before next 'dynamicAllocate'.
    *         If false, it will do 'dynamicAllocate' again after 'dynamicCheckPeriod'.
    * @throws InterruptedException
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private boolean dynamicAllocate(Integer desireActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
+  private boolean dynamicAllocate(Integer desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
   {
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
     currentActiveTaskCount = activeTaskGroups.size();
 
-    if (desireActiveTaskCount == -1) {
+    if (desiredActiveTaskCount == -1 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
     } else {
-      log.debug("Start to scale action tasks, current active task number [%s] and desire task number is [%s] for dataSource [%s].", currentActiveTaskCount, desireActiveTaskCount, dataSource);
+      log.debug("Start to scale action tasks, current active task number [%s] and desired task number is [%s] for dataSource [%s].", currentActiveTaskCount, desiredActiveTaskCount, dataSource);
       gracefulShutdownInternal();
+      changeTaskCountInIOConfig(desiredActiveTaskCount);
       // clear everything
       clearAllocationInfos();
-      log.info("Change taskCount to [%s] for dataSource [%s].", desireActiveTaskCount, dataSource);
-      changeTaskCountInIOConfig(desireActiveTaskCount);
+      log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }
   }
 
-  private void changeTaskCountInIOConfig(int desireActiveTaskCount)
+  private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
   {
-    ioConfig.setTaskCount(desireActiveTaskCount);
+    ioConfig.setTaskCount(desiredActiveTaskCount);
     try {
       Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
       if (supervisorManager.isPresent()) {
