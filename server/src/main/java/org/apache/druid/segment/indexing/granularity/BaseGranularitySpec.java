@@ -24,6 +24,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -33,9 +35,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-abstract class BaseGranularitySpec implements GranularitySpec
+public abstract class BaseGranularitySpec implements GranularitySpec
 {
   public static final Boolean DEFAULT_ROLLUP = Boolean.TRUE;
+  public static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
+  public static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
 
   protected List<Interval> inputIntervals;
   protected final Boolean rollup;

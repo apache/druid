@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
@@ -33,9 +32,6 @@ import java.util.Map;
 
 public class UniformGranularitySpec extends BaseGranularitySpec
 {
-  public static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
-  public static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
-
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
   private final IntervalsByGranularity intervalsByGranularity;

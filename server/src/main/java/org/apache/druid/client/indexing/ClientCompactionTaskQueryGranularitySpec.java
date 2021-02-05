@@ -22,6 +22,7 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 
 import java.util.Objects;
@@ -30,7 +31,7 @@ public class ClientCompactionTaskQueryGranularitySpec
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
-  private final Boolean rollup;
+  private final boolean rollup;
 
   @JsonCreator
   public ClientCompactionTaskQueryGranularitySpec(
@@ -39,9 +40,9 @@ public class ClientCompactionTaskQueryGranularitySpec
       @JsonProperty("rollup") Boolean rollup
   )
   {
-    this.queryGranularity = queryGranularity == null ? UniformGranularitySpec.DEFAULT_QUERY_GRANULARITY : queryGranularity;
-    this.rollup = rollup == null ? UniformGranularitySpec.DEFAULT_ROLLUP : rollup;
-    this.segmentGranularity = segmentGranularity == null ? UniformGranularitySpec.DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
+    this.queryGranularity = queryGranularity == null ? BaseGranularitySpec.DEFAULT_QUERY_GRANULARITY : queryGranularity;
+    this.rollup = rollup == null ? BaseGranularitySpec.DEFAULT_ROLLUP : rollup;
+    this.segmentGranularity = segmentGranularity == null ? BaseGranularitySpec.DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
   }
 
   @JsonProperty
@@ -57,7 +58,7 @@ public class ClientCompactionTaskQueryGranularitySpec
   }
 
   @JsonProperty
-  public Boolean getRollup()
+  public boolean isRollup()
   {
     return rollup;
   }

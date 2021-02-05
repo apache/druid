@@ -125,9 +125,6 @@ public class CompactSegments implements CoordinatorDuty
           }
           if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
-            numEstimatedNonCompleteCompactionTasks += findMaxNumTaskSlotsUsedByOneCompactionTask(
-                compactionTaskQuery.getTuningConfig()
-            );
             DataSourceCompactionConfig dataSourceCompactionConfig = compactionConfigs.get(status.getDataSource());
             if (dataSourceCompactionConfig != null && dataSourceCompactionConfig.getGranularitySpec() != null) {
               Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec().getSegmentGranularity();
@@ -145,9 +142,13 @@ public class CompactSegments implements CoordinatorDuty
                 continue;
               }
             }
-            // Skip interval as the current active compaction task is satisfactory
+            // Skip interval as the current active compaction task is good
             final Interval interval = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
             compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
+            // Since we keep the current active compaction task running, we count the active task slots
+            numEstimatedNonCompleteCompactionTasks += findMaxNumTaskSlotsUsedByOneCompactionTask(
+                compactionTaskQuery.getTuningConfig()
+            );
           } else {
             throw new ISE("task[%s] is not a compactionTask", status.getId());
           }

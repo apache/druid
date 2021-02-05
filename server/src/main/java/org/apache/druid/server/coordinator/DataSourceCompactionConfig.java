@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Period;
@@ -79,11 +80,11 @@ public class DataSourceCompactionConfig
           "Auto compaction granularitySpec only supports uniform type"
       );
       Preconditions.checkArgument(
-          granularitySpec.isRollup() == UniformGranularitySpec.DEFAULT_ROLLUP,
+          granularitySpec.isRollup() == BaseGranularitySpec.DEFAULT_ROLLUP,
           "Auto compaction granularitySpec only supports default rollup value"
       );
       Preconditions.checkArgument(
-          granularitySpec.getQueryGranularity().equals(UniformGranularitySpec.DEFAULT_QUERY_GRANULARITY),
+          granularitySpec.getQueryGranularity().equals(BaseGranularitySpec.DEFAULT_QUERY_GRANULARITY),
           "Auto compaction granularitySpec only supports default query granularity value");
       Preconditions.checkArgument(
           granularitySpec.inputIntervals().isEmpty(),

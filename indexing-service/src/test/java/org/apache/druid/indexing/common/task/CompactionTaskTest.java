@@ -356,6 +356,43 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testCreateCompactionTaskWithGranularitySpec()
+  {
+    final CompactionTask taskCreatedWithSegmentGranularity = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    ).inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)))
+     .tuningConfig(createTuningConfig())
+     .segmentGranularity(Granularities.HOUR)
+     .build();
+    final CompactionTask taskCreatedWithGranularitySpec = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    ).inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)))
+     .tuningConfig(createTuningConfig())
+     .granularitySpec(new UniformGranularitySpec(Granularities.HOUR, Granularities.DAY, null))
+     .build();
+    Assert.assertEquals(taskCreatedWithGranularitySpec.getSegmentGranularity(), taskCreatedWithSegmentGranularity.getSegmentGranularity());
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithGranularitySpecOverrideSegmentGranularity()
+  {
+    final CompactionTask taskCreatedWithSegmentGranularity = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    ).inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)))
+     .tuningConfig(createTuningConfig())
+     .segmentGranularity(Granularities.HOUR)
+     .granularitySpec(new UniformGranularitySpec(Granularities.MINUTE, Granularities.DAY, null))
+     .build();
+    Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
+  }
+
+  @Test
   public void testSerdeWithInterval() throws IOException
   {
     final Builder builder = new Builder(

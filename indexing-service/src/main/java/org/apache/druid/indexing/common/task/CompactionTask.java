@@ -208,8 +208,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     if (granularitySpec == null && segmentGranularity != null) {
       this.granularitySpec = new UniformGranularitySpec(
           segmentGranularity,
-          UniformGranularitySpec.DEFAULT_QUERY_GRANULARITY,
-          UniformGranularitySpec.DEFAULT_ROLLUP,
+          null,
+          null,
           null
       );
     } else {
@@ -368,7 +368,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         partitionConfigurationManager,
         dimensionsSpec,
         metricsSpec,
-        granularitySpec == null ? null : granularitySpec.getSegmentGranularity(),
+        getSegmentGranularity(),
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory
