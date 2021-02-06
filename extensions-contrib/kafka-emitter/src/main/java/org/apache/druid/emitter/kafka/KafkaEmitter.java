@@ -157,7 +157,7 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
-      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder();
+      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.builder();
       if (config.getClusterName() != null) {
         resultBuilder.put("clusterName", config.getClusterName());
       }
