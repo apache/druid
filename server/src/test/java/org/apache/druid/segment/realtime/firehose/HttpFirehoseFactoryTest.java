@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.DefaultPasswordProvider;

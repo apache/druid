@@ -524,7 +524,7 @@ the [HDFS input source](../ingestion/native-batch.md#hdfs-input-source) and the 
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols that HDFS inputSource and HDFS firehose can use.|["hdfs"]|
+|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols that HDFS input source and HDFS firehose can use.|["hdfs"]|
 
 
 #### HTTP input source
@@ -534,7 +534,7 @@ the [HTTP input source](../ingestion/native-batch.md#http-input-source) and the 
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols that HTTP inputSource and HTTP firehose can use.|["http", "https"]|
+|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols that HTTP input source and HTTP firehose can use.|["http", "https"]|
 
 The following properties are to control what domains native batch tasks can access to using
 the [HTTP input source](../ingestion/native-batch.md#http-input-source).

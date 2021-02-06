@@ -63,7 +63,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
       @JacksonInject HttpInputSourceConfig inputSourceConfig
-      )
+  )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
