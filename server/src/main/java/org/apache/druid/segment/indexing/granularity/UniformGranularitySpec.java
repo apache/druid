@@ -21,14 +21,11 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
 
 import java.util.List;
-import java.util.Map;
 
 public class UniformGranularitySpec extends BaseGranularitySpec
 {

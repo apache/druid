@@ -21,8 +21,6 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import org.apache.druid.java.util.common.IAE;
@@ -32,7 +30,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 public class ArbitraryGranularitySpec extends BaseGranularitySpec
 {
