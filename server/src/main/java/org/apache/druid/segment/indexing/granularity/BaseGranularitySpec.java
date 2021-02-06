@@ -20,6 +20,8 @@
 package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
@@ -33,6 +35,7 @@ import org.joda.time.Interval;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 
 public abstract class BaseGranularitySpec implements GranularitySpec
@@ -81,6 +84,15 @@ public abstract class BaseGranularitySpec implements GranularitySpec
   }
 
   protected abstract LookupIntervalBuckets getLookupTableBuckets();
+
+  @Override
+  public Map<String, Object> asMap(ObjectMapper objectMapper)
+  {
+    return objectMapper.convertValue(
+        this,
+        new TypeReference<Map<String, Object>>() {}
+    );
+  }
 
   /**
    * This is a helper class to facilitate sharing the code for sortedBucketIntervals among

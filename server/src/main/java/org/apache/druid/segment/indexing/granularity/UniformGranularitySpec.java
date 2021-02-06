@@ -139,15 +139,6 @@ public class UniformGranularitySpec extends BaseGranularitySpec
   }
 
   @Override
-  public Map<String, Object> asMap(ObjectMapper objectMapper)
-  {
-    return objectMapper.convertValue(
-        this,
-        new TypeReference<Map<String, Object>>() {}
-    );
-  }
-
-  @Override
   protected LookupIntervalBuckets getLookupTableBuckets()
   {
     return lookupTableBucketByDateTime;
