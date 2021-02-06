@@ -57,7 +57,7 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
       @JacksonInject @Hdfs Configuration conf,
       @JacksonInject HdfsInputSourceConfig inputSourceConfig
-      )
+  )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.inputPaths = HdfsInputSource.coerceInputPathsToList(inputPaths, "paths");

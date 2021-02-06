@@ -96,7 +96,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     if (inputPaths instanceof String) {
       return Collections.singletonList((String) inputPaths);
     } else if (inputPaths instanceof List && ((List<?>) inputPaths).stream().allMatch(x -> x instanceof String)) {
-      return  ((List<?>) inputPaths).stream().map(x -> (String) x).collect(Collectors.toList());
+      return ((List<?>) inputPaths).stream().map(x -> (String) x).collect(Collectors.toList());
     } else {
       throw new IAE("'%s' must be a string or an array of strings", propertyName);
     }
