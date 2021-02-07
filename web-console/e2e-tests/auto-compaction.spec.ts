@@ -32,7 +32,7 @@ import { createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';
 
-jest.setTimeout(8 * 60 * 1000);
+jest.setTimeout(5 * 60 * 1000);
 
 // The workflow in these tests is based on the compaction tutorial:
 // https://druid.apache.org/docs/latest/tutorials/tutorial-compaction.html

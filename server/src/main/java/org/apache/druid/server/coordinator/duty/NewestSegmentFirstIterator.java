@@ -104,7 +104,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               searchIntervals.get(0).getStart(),
               searchIntervals.get(searchIntervals.size() - 1).getEnd()
           );
-          if (indexingServiceClient != null) {
+          if (indexingServiceClient != null && config.getEnableFilterLockedInterval()) {
             searchIntervals = indexingServiceClient.getNonLockIntervals(dataSource, totalSearchInterval);
           }
           if (!searchIntervals.isEmpty()) {

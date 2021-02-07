@@ -210,6 +210,7 @@ public class OverlordResource
       @Context HttpServletRequest request
   )
   {
+    log.info("Search unLocked intervals conditions: searchDataSource[%s],searchInterval[%s]", dataSource, intervalStr);
     return asLeaderWith(
         taskMaster.getTaskQueue(),
         new Function<TaskQueue, Response>()
