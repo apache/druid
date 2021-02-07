@@ -35,6 +35,7 @@ mvn -B -ff -q dependency:go-offline \
 docker build -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
 
 # This tmp dir is used for MiddleManager pod and Historical Pod to cache segments.
+sudo rm -rf tmp
 mkdir tmp
 chmod 777 tmp
 
@@ -43,7 +44,7 @@ sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
 $KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
 
 # Wait a bit
-sleep 120
+sleep 60
 
 ## Debug And FastFail
 

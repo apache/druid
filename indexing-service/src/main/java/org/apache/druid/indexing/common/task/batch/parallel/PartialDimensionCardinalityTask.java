@@ -44,12 +44,12 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitioner;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,11 +146,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
 
-    List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
-    if (partitionDimensions == null) {
-      partitionDimensions = HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS;
-    }
-
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
@@ -179,8 +174,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     ) {
       Map<Interval, byte[]> cardinalities = determineCardinalities(
           inputRowIterator,
-          granularitySpec,
-          partitionDimensions
+          granularitySpec
       );
 
       sendReport(
@@ -194,8 +188,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
   private Map<Interval, byte[]> determineCardinalities(
       CloseableIterator<InputRow> inputRowIterator,
-      GranularitySpec granularitySpec,
-      List<String> partitionDimensions
+      GranularitySpec granularitySpec
   )
   {
     Map<Interval, HllSketch> intervalToCardinalities = new HashMap<>();
@@ -218,8 +211,10 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
           interval,
           (intervalKey) -> DimensionCardinalityReport.createHllSketchForReport()
       );
+      // For cardinality estimation, we want to consider unique rows instead of unique hash buckets and therefore
+      // we do not use partition dimensions in computing the group key
       List<Object> groupKey = HashPartitioner.extractKeys(
-          partitionDimensions,
+          Collections.emptyList(),
           queryGranularity.bucketStart(timestamp).getMillis(),
           inputRow
       );

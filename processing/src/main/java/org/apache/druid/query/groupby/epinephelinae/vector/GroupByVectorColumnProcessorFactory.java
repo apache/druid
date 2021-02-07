@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class GroupByVectorColumnProcessorFactory implements VectorColumnProcessorFactory<GroupByVectorColumnSelector>
@@ -101,5 +102,14 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       return new LongGroupByVectorColumnSelector(selector);
     }
     return new NullableLongGroupByVectorColumnSelector(selector);
+  }
+
+  @Override
+  public GroupByVectorColumnSelector makeObjectProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorObjectSelector selector
+  )
+  {
+    return NilGroupByVectorColumnSelector.INSTANCE;
   }
 }

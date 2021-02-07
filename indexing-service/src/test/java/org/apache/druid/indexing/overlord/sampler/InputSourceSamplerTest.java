@@ -28,7 +28,9 @@ import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
@@ -71,6 +73,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1287,6 +1290,36 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ),
         data.get(index)
     );
+  }
+
+  @Test(expected = SamplerException.class)
+  public void testReaderCreationException()
+  {
+    InputSource failingReaderInputSource = new InputSource()
+    {
+      @Override
+      public boolean isSplittable()
+      {
+        return false;
+      }
+
+      @Override
+      public boolean needsFormat()
+      {
+        return false;
+      }
+
+      @Override
+      public InputSourceReader reader(
+          InputRowSchema inputRowSchema,
+          @Nullable InputFormat inputFormat,
+          File temporaryDirectory
+      )
+      {
+        throw new RuntimeException();
+      }
+    };
+    inputSourceSampler.sample(failingReaderInputSource, null, null, null);
   }
 
   private List<String> getTestRows()

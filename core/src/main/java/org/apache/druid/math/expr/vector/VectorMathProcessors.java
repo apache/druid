@@ -1968,7 +1968,406 @@ public class VectorMathProcessors
     );
   }
 
+  public static <T> ExprVectorProcessor<T> bitwiseComplement(Expr.VectorInputBindingInspector inspector, Expr arg)
+  {
+    return makeLongMathProcessor(
+        inspector,
+        arg,
+        () -> new LongOutLongInFunctionVectorProcessor(
+            arg.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long input)
+          {
+            return ~input;
+          }
+        },
+        () -> new LongOutDoubleInFunctionVectorProcessor(
+            arg.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double input)
+          {
+            return ~((long) input);
+          }
+        }
+    );
+  }
 
+  public static <T> ExprVectorProcessor<T> bitwiseConvertDoubleToLongBits(
+      Expr.VectorInputBindingInspector inspector,
+      Expr arg
+  )
+  {
+    final ExprType inputType = arg.getOutputType(inspector);
+
+    ExprVectorProcessor<?> processor = null;
+    if (inputType == ExprType.LONG) {
+      processor = new LongOutLongInFunctionVectorProcessor(
+          arg.buildVectorized(inspector),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public long apply(long input)
+        {
+          return Double.doubleToLongBits(input);
+        }
+      };
+    } else if (inputType == ExprType.DOUBLE) {
+      processor = new LongOutDoubleInFunctionVectorProcessor(
+          arg.buildVectorized(inspector),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public long apply(double input)
+        {
+          return Double.doubleToLongBits(input);
+        }
+      };
+    }
+    if (processor == null) {
+      throw Exprs.cannotVectorize();
+    }
+    return (ExprVectorProcessor<T>) processor;
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseConvertLongBitsToDouble(
+      Expr.VectorInputBindingInspector inspector,
+      Expr arg
+  )
+  {
+    final ExprType inputType = arg.getOutputType(inspector);
+
+    ExprVectorProcessor<?> processor = null;
+    if (inputType == ExprType.LONG) {
+      processor = new DoubleOutLongInFunctionVectorProcessor(
+          arg.buildVectorized(inspector),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public double apply(long input)
+        {
+          return Double.longBitsToDouble(input);
+        }
+      };
+    } else if (inputType == ExprType.DOUBLE) {
+      processor = new DoubleOutDoubleInFunctionVectorProcessor(
+          arg.buildVectorized(inspector),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public double apply(double input)
+        {
+          return Double.longBitsToDouble((long) input);
+        }
+      };
+    }
+    if (processor == null) {
+      throw Exprs.cannotVectorize();
+    }
+    return (ExprVectorProcessor<T>) processor;
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseAnd(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  {
+    return makeLongMathProcessor(
+        inspector,
+        left,
+        right,
+        () -> new LongOutLongsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, long right)
+          {
+            return left & right;
+          }
+        },
+        () -> new LongOutLongDoubleInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, double right)
+          {
+            return left & (long) right;
+          }
+        },
+        () -> new LongOutDoubleLongInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, long right)
+          {
+            return (long) left & right;
+          }
+        },
+        () -> new LongOutDoublesInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, double right)
+          {
+            return (long) left & (long) right;
+          }
+        }
+    );
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseOr(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  {
+    return makeLongMathProcessor(
+        inspector,
+        left,
+        right,
+        () -> new LongOutLongsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, long right)
+          {
+            return left | right;
+          }
+        },
+        () -> new LongOutLongDoubleInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, double right)
+          {
+            return left | (long) right;
+          }
+        },
+        () -> new LongOutDoubleLongInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, long right)
+          {
+            return (long) left | right;
+          }
+        },
+        () -> new LongOutDoublesInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, double right)
+          {
+            return (long) left | (long) right;
+          }
+        }
+    );
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseXor(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  {
+    return makeLongMathProcessor(
+        inspector,
+        left,
+        right,
+        () -> new LongOutLongsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, long right)
+          {
+            return left ^ right;
+          }
+        },
+        () -> new LongOutLongDoubleInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, double right)
+          {
+            return left ^ (long) right;
+          }
+        },
+        () -> new LongOutDoubleLongInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, long right)
+          {
+            return (long) left ^ right;
+          }
+        },
+        () -> new LongOutDoublesInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, double right)
+          {
+            return (long) left ^ (long) right;
+          }
+        }
+    );
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseShiftLeft(
+      Expr.VectorInputBindingInspector inspector,
+      Expr left,
+      Expr right
+  )
+  {
+    return makeLongMathProcessor(
+        inspector,
+        left,
+        right,
+        () -> new LongOutLongsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, long right)
+          {
+            return left << right;
+          }
+        },
+        () -> new LongOutLongDoubleInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, double right)
+          {
+            return left << (long) right;
+          }
+        },
+        () -> new LongOutDoubleLongInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, long right)
+          {
+            return (long) left << right;
+          }
+        },
+        () -> new LongOutDoublesInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, double right)
+          {
+            return (long) left << (long) right;
+          }
+        }
+    );
+  }
+
+  public static <T> ExprVectorProcessor<T> bitwiseShiftRight(
+      Expr.VectorInputBindingInspector inspector,
+      Expr left,
+      Expr right
+  )
+  {
+    return makeLongMathProcessor(
+        inspector,
+        left,
+        right,
+        () -> new LongOutLongsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, long right)
+          {
+            return left >> right;
+          }
+        },
+        () -> new LongOutLongDoubleInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(long left, double right)
+          {
+            return left >> (long) right;
+          }
+        },
+        () -> new LongOutDoubleLongInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, long right)
+          {
+            return (long) left >> right;
+          }
+        },
+        () -> new LongOutDoublesInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Override
+          public long apply(double left, double right)
+          {
+            return (long) left >> (long) right;
+          }
+        }
+    );
+  }
 
   private VectorMathProcessors()
   {

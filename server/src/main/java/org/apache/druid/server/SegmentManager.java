@@ -31,6 +31,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -214,14 +215,15 @@ public class SegmentManager
    *
    * @param segment segment to load
    * @param lazy    whether to lazy load columns metadata
+   * @param loadFailed callBack to execute when segment lazy load failed
    *
    * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
-    final Segment adapter = getAdapter(segment, lazy);
+    final Segment adapter = getAdapter(segment, lazy, loadFailed);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -271,11 +273,11 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  private Segment getAdapter(final DataSegment segment, boolean lazy) throws SegmentLoadingException
+  private Segment getAdapter(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final Segment adapter;
     try {
-      adapter = segmentLoader.getSegment(segment, lazy);
+      adapter = segmentLoader.getSegment(segment, lazy, loadFailed);
     }
     catch (SegmentLoadingException e) {
       segmentLoader.cleanup(segment);

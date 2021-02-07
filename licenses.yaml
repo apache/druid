@@ -151,7 +151,7 @@ name: AWS RDS SDK for Java
 license_category: source
 module: extensions/druid-aws-rds-extensions
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-rds
 
@@ -841,7 +841,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.0
+version: 10.0.1
 libraries:
   - io.kubernetes: client-java
 
@@ -851,7 +851,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.0
+version: 10.0.1
 libraries:
   - io.kubernetes: client-java-api
 
@@ -861,7 +861,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.0
+version: 10.0.1
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -981,7 +981,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.0
+version: 10.0.1
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -3522,7 +3522,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2.0-incubating
+version: 1.3.0
 libraries:
   - org.apache.datasketches: datasketches-memory
 
@@ -3583,10 +3583,11 @@ name: AWS SDK for Java
 license_category: binary
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-kinesis
   - com.amazonaws: aws-java-sdk-sts
+  - com.amazonaws: jmespath-java  
 
 ---
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -194,11 +194,11 @@ public class FilterCnfConversionTest
             )
         )
     );
-    final Set<Filter> expected = ImmutableSet.of(
+    final List<Filter> expected = ImmutableList.of(
         FilterTestUtils.selector("col1", "val1"),
         FilterTestUtils.selector("col2", "val2")
     );
-    final Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(muchReducible);
+    final List<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(muchReducible);
     Assert.assertEquals(expected, normalizedOrClauses);
   }
 
@@ -253,36 +253,6 @@ public class FilterCnfConversionTest
         )
     );
     final Filter expected = FilterTestUtils.and(
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.selector("col2", "val22"),
-            FilterTestUtils.selector("col3", "val3")
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
-            FilterTestUtils.selector("col3", "val3")
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col3", "val3"),
-            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col3", "val3"),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
-        ),
-        FilterTestUtils.not(FilterTestUtils.selector("col1", "val11")),
         // The below OR filter could be eliminated because this filter also has
         // (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)).
         // The reduction process would be
@@ -292,15 +262,45 @@ public class FilterCnfConversionTest
         // => (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)).
         // However, we don't have this reduction now, so we have a filter in a suboptimized CNF.
         FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
             FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col1", "val1")
         ),
         FilterTestUtils.or(
-            FilterTestUtils.selector("col2", "val2"),
             FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
-        )
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col2", "val2")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
+            FilterTestUtils.selector("col1", "val1")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
+            FilterTestUtils.selector("col1", "val1")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col1", "val1")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.selector("col2", "val22"),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.not(FilterTestUtils.selector("col1", "val11"))
     );
     final Filter cnf = Filters.toCnf(filter);
     assertFilter(filter, expected, cnf);
@@ -356,37 +356,7 @@ public class FilterCnfConversionTest
             )
         )
     );
-    final Set<Filter> expected = ImmutableSet.of(
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.selector("col2", "val22"),
-            FilterTestUtils.selector("col3", "val3")
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
-            FilterTestUtils.selector("col3", "val3")
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col3", "val3"),
-            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
-        ),
-        FilterTestUtils.or(
-            FilterTestUtils.selector("col3", "val3"),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
-        ),
-        FilterTestUtils.not(FilterTestUtils.selector("col1", "val11")),
+    final List<Filter> expected = ImmutableList.of(
         // The below OR filter could be eliminated because this filter also has
         // (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)).
         // The reduction process would be
@@ -396,25 +366,55 @@ public class FilterCnfConversionTest
         // => (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)).
         // However, we don't have this reduction now, so we have a filter in a suboptimized CNF.
         FilterTestUtils.or(
-            FilterTestUtils.selector("col1", "val1"),
             FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col1", "val1")
         ),
         FilterTestUtils.or(
-            FilterTestUtils.selector("col2", "val2"),
             FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
-            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
-        )
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col2", "val2")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
+            FilterTestUtils.selector("col1", "val1")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
+            FilterTestUtils.selector("col1", "val1")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col1", "val1")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.selector("col2", "val22"),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.not(FilterTestUtils.selector("col1", "val11"))
     );
-    final Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(filter);
+    final List<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(filter);
     Assert.assertEquals(expected, normalizedOrClauses);
   }
 
   @Test
   public void testToCnfCollapsibleBigFilter()
   {
-    Set<Filter> ands = new HashSet<>();
-    Set<Filter> ors = new HashSet<>();
+    List<Filter> ands = new ArrayList<>();
+    List<Filter> ors = new ArrayList<>();
     for (int i = 0; i < 12; i++) {
       ands.add(
           FilterTestUtils.and(
@@ -432,11 +432,11 @@ public class FilterCnfConversionTest
         FilterTestUtils.selector("col2", "val2")
     );
     final Filter expectedCnf = FilterTestUtils.and(
-        FilterTestUtils.selector("col1", "val1"),
-        FilterTestUtils.selector("col2", "val2"),
         FilterTestUtils.selector("col3", "val3"),
         FilterTestUtils.selector("col4", "val4"),
-        new OrFilter(ors)
+        new OrFilter(ors),
+        FilterTestUtils.selector("col1", "val1"),
+        FilterTestUtils.selector("col2", "val2")
     );
     final Filter cnf = Filters.toCnf(bigFilter);
     assertFilter(bigFilter, expectedCnf, cnf);
@@ -513,8 +513,8 @@ public class FilterCnfConversionTest
         FilterTestUtils.selector("col1", "val1"),
         FilterTestUtils.selector("col2", "val2")
     );
-    Set<Filter> expected = Collections.singleton(filter);
-    Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(filter);
+    List<Filter> expected = Collections.singletonList(filter);
+    List<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(filter);
     Assert.assertEquals(expected, normalizedOrClauses);
   }
 
@@ -642,13 +642,13 @@ public class FilterCnfConversionTest
   private Filter visitSelectorFilters(Filter filter, Function<SelectorFilter, Filter> visitAction)
   {
     if (filter instanceof AndFilter) {
-      Set<Filter> newChildren = new HashSet<>();
+      List<Filter> newChildren = new ArrayList<>();
       for (Filter child : ((AndFilter) filter).getFilters()) {
         newChildren.add(visitSelectorFilters(child, visitAction));
       }
       return new AndFilter(newChildren);
     } else if (filter instanceof OrFilter) {
-      Set<Filter> newChildren = new HashSet<>();
+      List<Filter> newChildren = new ArrayList<>();
       for (Filter child : ((OrFilter) filter).getFilters()) {
         newChildren.add(visitSelectorFilters(child, visitAction));
       }
