@@ -586,6 +586,7 @@ convertRange
 HTTPServer
 conversionFactor
 prometheus
+Pushgateway
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
