@@ -76,6 +76,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(new ProtobufSchema(protobufString));
     byte[] bytes = getTestEvent().toByteArray();
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(1234).put((bytes), 5, 10);
+    bb.rewind();
     // When
     new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb);
   }
@@ -86,7 +87,8 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
     byte[] bytes = getTestEvent().toByteArray();
-    ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
+    ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(1234).put((byte) 0).put(bytes);
+    bb.rewind();
     // When
     new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb);
   }

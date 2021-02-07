@@ -115,8 +115,8 @@ public class ProtobufParserBenchmark
 
     protoFilePath = "ProtoFile";
     protoInputs = getProtoInputs(protoFilePath);
-    nestedParser = new ProtobufInputRowParser(nestedParseSpec, decoder);
-    flatParser = new ProtobufInputRowParser(flatParseSpec, decoder);
+    nestedParser = new ProtobufInputRowParser(nestedParseSpec, decoder, null, null);
+    flatParser = new ProtobufInputRowParser(flatParseSpec, decoder, null, null);
   }
 
   @Benchmark

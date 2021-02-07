@@ -62,7 +62,6 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     }
   }
 
-  @SuppressWarnings("checkstyle:RightCurly")
   @Override
   public DynamicMessage parse(ByteBuffer bytes)
   {

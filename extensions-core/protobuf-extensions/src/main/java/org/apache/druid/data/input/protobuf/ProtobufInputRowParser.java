@@ -53,12 +53,21 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   @JsonCreator
   public ProtobufInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("protoBytesDecoder") ProtobufBytesDecoder protobufBytesDecoder
+      @JsonProperty("protoBytesDecoder") ProtobufBytesDecoder protobufBytesDecoder,
+      @Deprecated
+      @JsonProperty("descriptor") String descriptorFilePath,
+      @Deprecated
+      @JsonProperty("protoMessageType") String protoMessageType
   )
   {
     this.parseSpec = parseSpec;
-    this.protobufBytesDecoder = protobufBytesDecoder;
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
+
+    if (descriptorFilePath != null || protoMessageType != null) {
+      this.protobufBytesDecoder = new FileBasedProtobufBytesDecoder(descriptorFilePath, protoMessageType);
+    } else {
+      this.protobufBytesDecoder = protobufBytesDecoder;
+    }
   }
 
   @Override
@@ -70,7 +79,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   @Override
   public ProtobufInputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new ProtobufInputRowParser(parseSpec, protobufBytesDecoder);
+    return new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
   }
 
   @Override

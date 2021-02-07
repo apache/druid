@@ -67,13 +67,20 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   @Override
   public DynamicMessage parse(ByteBuffer bytes)
   {
+    bytes.get(); // ignore first \0 byte
+    int id = bytes.getInt(); // extract schema registry id
+    bytes.get(); // ignore \0 byte before PB message
+    int length = bytes.limit() - 2 - 4;
+    Descriptors.Descriptor descriptor;
     try {
-      bytes.get(); // ignore first \0 byte
-      int id = bytes.getInt(); // extract schema registry id
-      bytes.get(); // ignore \0 byte before PB message
-      int length = bytes.limit() - 2 - 4;
       ProtobufSchema schema = (ProtobufSchema) registry.getSchemaById(id);
-      Descriptors.Descriptor descriptor = schema.toDescriptor();
+      descriptor = schema.toDescriptor();
+    }
+    catch (Exception e) {
+      LOGGER.error(e.getMessage());
+      throw new ParseException(e, "Fail to get protobuf schema!");
+    }
+    try {
       byte[] rawMessage = new byte[length];
       bytes.get(rawMessage, 0, length);
       DynamicMessage message = DynamicMessage.parseFrom(descriptor, rawMessage);
