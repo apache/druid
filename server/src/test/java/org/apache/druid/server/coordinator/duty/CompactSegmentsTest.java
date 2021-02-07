@@ -868,6 +868,11 @@ public class CompactSegmentsTest
                  || urlString.contains("/druid/indexer/v1/pendingTasks")
                  || urlString.contains("/druid/indexer/v1/runningTasks")) {
         return createStringFullResponseHolder(jsonMapper.writeValueAsString(Collections.emptyList()));
+      } else if (urlString.contains("/druid/indexer/v1/getNonLockIntervals")) {
+        String interval = urlString.substring(urlString.lastIndexOf('=') + 1);
+        ImmutableList<String> intervals = ImmutableList.of(StringUtils.urlDecode(
+            interval));
+        return createStringFullResponseHolder(jsonMapper.writeValueAsString(intervals));
       } else {
         throw new IAE("Cannot handle request for url[%s]", request.getUrl());
       }
