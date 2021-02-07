@@ -46,6 +46,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -707,5 +708,11 @@ public class TaskQueue
                                                .collect(Collectors.toSet());
     return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                 .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+  }
+
+  // get all unlocked datasource,interval
+  public List<Interval> getNonLockIntervalSnapshots(String dataSource, Interval interval)
+  {
+    return taskLockbox.getNonLockIntervalSnapshots(dataSource, interval);
   }
 }

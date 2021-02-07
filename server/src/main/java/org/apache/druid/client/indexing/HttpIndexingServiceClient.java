@@ -389,4 +389,37 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       throw new RuntimeException(e);
     }
   }
+
+  @Override
+  public List<Interval> getNonLockIntervals(String dataSource, Interval interval)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/getNonLockIntervals/%s?interval=%s",
+                                 StringUtils.urlEncode(dataSource), StringUtils.urlEncode(interval.toString())
+              )
+          )
+      );
+
+      if (!responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching unLocked intervals for conditions: dataSource[%s],interval[%s]",
+            dataSource,
+            interval
+        );
+      }
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<List<Interval>>()
+          {
+          }
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

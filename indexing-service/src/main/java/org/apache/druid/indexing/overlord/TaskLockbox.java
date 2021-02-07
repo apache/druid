@@ -42,6 +42,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.base.AbstractInterval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -416,6 +417,39 @@ public class TaskLockbox
     }
   }
 
+  /**
+   * Get all unlocked intervals by searchDataSource,searchInterval conditions
+   *
+   * @param searchDataSource
+   * @param searchInterval
+   *
+   * @return
+   */
+  public List<Interval> getNonLockIntervalSnapshots(String searchDataSource, Interval searchInterval)
+  {
+    List<Interval> intervals = new ArrayList<>();
+    DateTime preTime = searchInterval.getStart();
+    DateTime time = preTime.plusHours(1);
+    DateTime startTime = preTime;
+    while (time.isBefore(searchInterval.getEnd())) {
+      final Interval tempInterval = new Interval(preTime, time);
+      if (findLockPossesOverlapsInterval(searchDataSource, tempInterval).size() > 0) {
+        if (startTime.getMillis() != preTime.getMillis()) {
+          intervals.add(new Interval(startTime, preTime));
+        }
+        startTime = time;
+      }
+      preTime = time;
+      time = time.plusHours(1);
+    }
+    if (startTime.isBefore(searchInterval.getEnd())) {
+      intervals.add(new Interval(startTime, searchInterval.getEnd()));
+    }
+    log.info("DataSource[%s] all unlocked intervals[%s],size[%s]",
+             searchDataSource, Iterables.transform(intervals, AbstractInterval::toString), intervals.size()
+    );
+    return intervals;
+  }
   private TaskLockPosse createOrFindLockPosse(LockRequest request)
   {
     Preconditions.checkState(!(request instanceof LockRequestForNewSegment), "Can't handle LockRequestForNewSegment");

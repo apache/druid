@@ -89,7 +89,7 @@ public class CompactSegments implements CoordinatorDuty
       IndexingServiceClient indexingServiceClient
   )
   {
-    this.policy = new NewestSegmentFirstPolicy(objectMapper);
+    this.policy = new NewestSegmentFirstPolicy(objectMapper, indexingServiceClient);
     this.indexingServiceClient = indexingServiceClient;
     autoCompactionSnapshotPerDataSource.set(new HashMap<>());
   }

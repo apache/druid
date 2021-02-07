@@ -110,4 +110,10 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   {
     return new SamplerResponse(0, 0, Collections.emptyList());
   }
+
+  @Override
+  public List<Interval> getNonLockIntervals(String dataSource, Interval interval)
+  {
+    return null;
+  }
 }

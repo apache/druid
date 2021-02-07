@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -84,7 +85,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       ObjectMapper objectMapper,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
-      Map<String, List<Interval>> skipIntervals
+      Map<String, List<Interval>> skipIntervals,
+      @Nullable IndexingServiceClient indexingServiceClient
   )
   {
     this.objectMapper = objectMapper;
@@ -95,10 +97,19 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
-        final List<Interval> searchIntervals =
+        List<Interval> searchIntervals =
             findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
-          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
+          Interval totalSearchInterval = new Interval(
+              searchIntervals.get(0).getStart(),
+              searchIntervals.get(searchIntervals.size() - 1).getEnd()
+          );
+          if (indexingServiceClient != null) {
+            searchIntervals = indexingServiceClient.getNonLockIntervals(dataSource, totalSearchInterval);
+          }
+          if (!searchIntervals.isEmpty()) {
+            timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
+          }
         }
       }
     });

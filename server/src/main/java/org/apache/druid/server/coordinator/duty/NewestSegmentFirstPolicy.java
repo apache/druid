@@ -20,11 +20,13 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -34,10 +36,12 @@ import java.util.Map;
 public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 {
   private final ObjectMapper objectMapper;
+  private final IndexingServiceClient indexingServiceClient;
 
-  public NewestSegmentFirstPolicy(ObjectMapper objectMapper)
+  public NewestSegmentFirstPolicy(ObjectMapper objectMapper, @Nullable IndexingServiceClient indexingServiceClient)
   {
     this.objectMapper = objectMapper;
+    this.indexingServiceClient = indexingServiceClient;
   }
 
   @Override
@@ -47,6 +51,12 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
       Map<String, List<Interval>> skipIntervals
   )
   {
-    return new NewestSegmentFirstIterator(objectMapper, compactionConfigs, dataSources, skipIntervals);
+    return new NewestSegmentFirstIterator(
+        objectMapper,
+        compactionConfigs,
+        dataSources,
+        skipIntervals,
+        indexingServiceClient
+    );
   }
 }
