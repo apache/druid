@@ -100,7 +100,7 @@ public class JoinFilterAnalyzer
       return preAnalysisBuilder.build();
     }
 
-    Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
+    List<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
     List<Filter> normalizedJoinTableClauses = new ArrayList<>();
@@ -183,8 +183,8 @@ public class JoinFilterAnalyzer
     }
 
     return new JoinFilterSplit(
-        Filters.and(leftFilters),
-        Filters.and(rightFilters),
+        Filters.maybeAnd(leftFilters).orElse(null),
+        Filters.maybeAnd(rightFilters).orElse(null),
         new HashSet<>(pushDownVirtualColumnsForLhsExprs.values())
     );
   }
@@ -309,7 +309,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         false,
         filterClause,
-        Filters.and(newFilters)
+        Filters.maybeAnd(newFilters).orElse(null)
     );
   }
 
@@ -329,7 +329,7 @@ public class JoinFilterAnalyzer
       Map<Expr, VirtualColumn> pushDownVirtualColumnsForLhsExprs
   )
   {
-    Set<Filter> newFilters = new HashSet<>();
+    List<Filter> newFilters = new ArrayList<>();
     boolean retainRhs = false;
 
     for (Filter filter : orFilter.getFilters()) {
@@ -369,7 +369,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         retainRhs,
         orFilter,
-        Filters.or(newFilters)
+        Filters.maybeOr(newFilters).orElse(null)
     );
   }
 
@@ -473,7 +473,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         true,
         selectorFilter,
-        Filters.and(newFilters)
+        Filters.maybeAnd(newFilters).orElse(null)
     );
   }
 

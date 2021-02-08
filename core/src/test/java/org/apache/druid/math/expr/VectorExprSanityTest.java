@@ -152,7 +152,10 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "tanh",
         "toDegrees",
         "toRadians",
-        "ulp"
+        "ulp",
+        "bitwiseComplement",
+        "bitwiseConvertDoubleToLongBits",
+        "bitwiseConvertLongBitsToDouble"
     };
     final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)"};
     testFunctions(types, templates, functions);
@@ -171,7 +174,12 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "min",
         "nextAfter",
         "scalb",
-        "pow"
+        "pow",
+        "bitwiseAnd",
+        "bitwiseOr",
+        "bitwiseXor",
+        "bitwiseShiftLeft",
+        "bitwiseShiftRight"
     };
     final String[] templates = new String[]{
         "%s(d1, d2)",
@@ -431,6 +439,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
 
     private final int vectorSize;
 
+    private int id = 0;
+
     SettableVectorInputBinding(int vectorSize)
     {
       this.nulls = new HashMap<>();
@@ -522,6 +532,13 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     public int getCurrentVectorSize()
     {
       return vectorSize;
+    }
+
+    @Override
+    public int getCurrentVectorId()
+    {
+      // never cache, this is just for tests anyway
+      return id++;
     }
   }
 }

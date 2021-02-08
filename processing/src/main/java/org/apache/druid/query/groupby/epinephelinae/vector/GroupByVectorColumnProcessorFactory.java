@@ -69,15 +69,6 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   }
 
   @Override
-  public GroupByVectorColumnSelector makeObjectProcessor(
-      ColumnCapabilities capabilities,
-      VectorObjectSelector selector
-  )
-  {
-    throw new UnsupportedOperationException("Object columns are not yet implemented for vectorized groupBys");
-  }
-
-  @Override
   public GroupByVectorColumnSelector makeFloatProcessor(
       final ColumnCapabilities capabilities,
       final VectorValueSelector selector
@@ -111,5 +102,14 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       return new LongGroupByVectorColumnSelector(selector);
     }
     return new NullableLongGroupByVectorColumnSelector(selector);
+  }
+
+  @Override
+  public GroupByVectorColumnSelector makeObjectProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorObjectSelector selector
+  )
+  {
+    return NilGroupByVectorColumnSelector.INSTANCE;
   }
 }

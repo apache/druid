@@ -25,11 +25,11 @@ title: "Overlord Process"
 
 ### Configuration
 
-For Apache Druid Overlord Process Configuration, see [Overlord Configuration](../configuration/index.html#overlord).
+For Apache Druid Overlord Process Configuration, see [Overlord Configuration](../configuration/index.md#overlord).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Overlord, please see the [API reference](../operations/api-reference.html#overlord).
+For a list of API endpoints supported by the Overlord, please see the [API reference](../operations/api-reference.md#overlord).
 
 ### Overview
 
@@ -40,7 +40,7 @@ This mode is recommended if you intend to use the indexing service as the single
 
 ### Overlord console
 
-The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/management-uis.html#overlord-console).
+The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/management-uis.md#overlord-console).
 
 ### Blacklisted workers
 

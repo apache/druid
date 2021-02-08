@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -111,7 +112,11 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       // wait for a while to let the events be ingested
       ITRetryUtil.retryUntil(
           () -> {
-            final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
+            final int countRows = queryHelper.countRows(
+                fullDatasourceName,
+                Intervals.ETERNITY,
+                name -> new LongSumAggregatorFactory(name, "count")
+            );
             return countRows == getNumExpectedRowsIngested();
           },
           true,

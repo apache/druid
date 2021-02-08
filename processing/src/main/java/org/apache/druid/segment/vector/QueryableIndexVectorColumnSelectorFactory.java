@@ -71,7 +71,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
-  public VectorSizeInspector getVectorSizeInspector()
+  public ReadableVectorInspector getReadableVectorInspector()
   {
     return offset;
   }
@@ -189,7 +189,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
-  public VectorObjectSelector makeStringObjectSelector(DimensionSpec dimensionSpec)
+  public VectorObjectSelector makeObjectDimensionSelector(DimensionSpec dimensionSpec)
   {
     if (!dimensionSpec.canVectorize()) {
       throw new ISE("DimensionSpec[%s] cannot be vectorized", dimensionSpec);

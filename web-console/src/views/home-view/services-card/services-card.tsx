@@ -17,13 +17,13 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { lookupBy, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils/capabilities';
+import { Capabilities } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface ServiceCounts {
@@ -53,10 +53,10 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
         });
         return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
       } else if (capabilities.hasCoordinatorAccess()) {
-        const services = (await axios.get('/druid/coordinator/v1/servers?simple')).data;
+        const services = (await Api.instance.get('/druid/coordinator/v1/servers?simple')).data;
 
         const middleManager = capabilities.hasOverlordAccess()
-          ? (await axios.get('/druid/indexer/v1/workers')).data
+          ? (await Api.instance.get('/druid/indexer/v1/workers')).data
           : [];
 
         return {

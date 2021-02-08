@@ -83,6 +83,11 @@ export function deepSet<T extends Record<string, any>>(value: T, path: string, x
   return valueCopy;
 }
 
+export function deepSetIfUnset<T extends Record<string, any>>(value: T, path: string, x: any): T {
+  if (typeof deepGet(value, path) !== 'undefined') return value;
+  return deepSet(value, path, x);
+}
+
 export function deepSetMulti<T extends Record<string, any>>(
   value: T,
   changes: Record<string, any>,

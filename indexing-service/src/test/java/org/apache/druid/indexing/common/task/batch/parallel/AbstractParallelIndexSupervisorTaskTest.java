@@ -158,7 +158,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           null,
           null,
+          null,
           2,
+          null,
           null,
           null,
           null,
@@ -229,6 +231,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
         new MaxSizeSplitHintSpec(null, 1),
         partitionsSpec,
         null,
@@ -240,6 +243,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         maxNumConcurrentSubTasks,
+        null,
         null,
         null,
         null,
@@ -484,6 +488,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       final String taskType = task.isPresent() ? task.get().getType() : null;
       final TaskStatus taskStatus = taskRunner.getStatus(taskId);
+
       if (taskStatus != null) {
         return new TaskStatusResponse(
             taskId,

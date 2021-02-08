@@ -27,13 +27,6 @@ public interface DruidPredicateFactory
 {
   Predicate<String> makeStringPredicate();
 
-  default Predicate<Object> makeObjectPredicate()
-  {
-    // default to try to use string predicate;
-    final Predicate<String> stringPredicate = makeStringPredicate();
-    return o -> stringPredicate.apply((String) o);
-  }
-
   DruidLongPredicate makeLongPredicate();
 
   DruidFloatPredicate makeFloatPredicate();

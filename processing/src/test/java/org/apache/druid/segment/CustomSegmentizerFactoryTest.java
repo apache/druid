@@ -126,10 +126,10 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   private static class CustomSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir, boolean lazy) throws SegmentLoadingException
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
     {
       try {
-        return new QueryableIndexSegment(INDEX_IO.loadIndex(parentDir, lazy), segment.getId());
+        return new QueryableIndexSegment(INDEX_IO.loadIndex(parentDir, lazy, loadFailed), segment.getId());
       }
       catch (IOException e) {
         throw new SegmentLoadingException(e, "%s", e.getMessage());

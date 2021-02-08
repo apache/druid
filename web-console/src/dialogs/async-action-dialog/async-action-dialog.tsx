@@ -31,7 +31,7 @@ import classNames from 'classnames';
 import React, { ReactNode, useState } from 'react';
 
 import { WarningChecklist } from '../../components/warning-checklist/warning-checklist';
-import { AppToaster } from '../../singletons/toaster';
+import { AppToaster } from '../../singletons';
 
 import './async-action-dialog.scss';
 

@@ -17,13 +17,13 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils/capabilities';
+import { Capabilities } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 function getTaskStatus(d: any) {
@@ -55,7 +55,7 @@ GROUP BY 1`,
         });
         return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
       } else if (capabilities.hasOverlordAccess()) {
-        const tasks: any[] = (await axios.get('/druid/indexer/v1/tasks')).data;
+        const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks')).data;
         return {
           SUCCESS: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
           FAILED: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,

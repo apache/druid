@@ -21,6 +21,7 @@ package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -59,15 +60,6 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   }
 
   @Override
-  public VectorValueMatcherFactory makeObjectProcessor(
-      final ColumnCapabilities capabilities,
-      final VectorObjectSelector selector
-  )
-  {
-    return new ObjectVectorValueMatcher(selector);
-  }
-
-  @Override
   public VectorValueMatcherFactory makeFloatProcessor(
       final ColumnCapabilities capabilities,
       final VectorValueSelector selector
@@ -92,5 +84,18 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   )
   {
     return new LongVectorValueMatcher(selector);
+  }
+
+  @Override
+  public VectorValueMatcherFactory makeObjectProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorObjectSelector selector
+  )
+  {
+    // prevent complex filters... for now
+    if (ValueType.STRING.equals(capabilities.getType())) {
+      return new StringObjectVectorValueMatcher(selector);
+    }
+    return new NilVectorValueMatcher(selector);
   }
 }

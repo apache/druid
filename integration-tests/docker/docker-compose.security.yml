@@ -19,10 +19,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router-permissive-tls
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-      - druid-coordinator:druid-coordinator
-      - druid-broker:druid-broker
     depends_on:
       - druid-zookeeper-kafka
       - druid-metadata-storage
@@ -37,10 +33,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router-no-client-auth-tls
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-      - druid-coordinator:druid-coordinator
-      - druid-broker:druid-broker
     depends_on:
       - druid-zookeeper-kafka
       - druid-metadata-storage
@@ -55,10 +47,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router-custom-check-tls
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-      - druid-coordinator:druid-coordinator
-      - druid-broker:druid-broker
     depends_on:
       - druid-zookeeper-kafka
       - druid-metadata-storage

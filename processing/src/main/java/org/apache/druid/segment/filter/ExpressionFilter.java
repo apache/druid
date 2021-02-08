@@ -38,7 +38,7 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.vector.FalseVectorMatcher;
+import org.apache.druid.query.filter.vector.BooleanVectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -135,7 +135,7 @@ public class ExpressionFilter implements Filter
 
       // in sql compatible mode, this means no matches ever, so just use the false matcher:
       if (NullHandling.sqlCompatible()) {
-        return new FalseVectorMatcher(factory.getVectorSizeInspector());
+        return BooleanVectorValueMatcher.of(factory.getReadableVectorInspector(), false);
       }
       // in default mode, just fallback to using a long matcher since nearly all boolean-ish expressions
       // output a long value so it is probably a safe bet? idk, ending up here by using all null-ish things
@@ -159,8 +159,7 @@ public class ExpressionFilter implements Filter
         ).makeMatcher(predicateFactory);
       case STRING:
         return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
-            // using 'numeric' capabilities creator so we are configured to NOT be dictionary encoded, etc
-            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.STRING),
+            ColumnCapabilitiesImpl.createSimpleStringColumnCapabilities(),
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       default:

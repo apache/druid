@@ -8,23 +8,13 @@ exports[`AutoForm matches snapshot 1`] = `
     key="testOne"
     label="Test one"
   >
-    <Blueprint3.NumericInput
-      allowNumericCharactersOnly={true}
-      buttonPosition="right"
-      clampValueOnBlur={false}
-      defaultValue=""
+    <Memo(NumericInputWithDefault)
       disabled={false}
       fill={true}
-      large={false}
-      majorStepSize={10}
       min={0}
-      minorStepSize={0.1}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
-      selectAllOnFocus={false}
-      selectAllOnIncrement={false}
-      stepSize={1}
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)

@@ -63,6 +63,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -140,10 +141,10 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   @Before
   public void setup() throws Exception
   {
-    incrementalIndex = new IncrementalIndex.Builder()
+    incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(5000)
-        .buildOnheap();
+        .build();
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
@@ -183,10 +184,10 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         "UTF-8"
     );
 
-    incrementalIndexNullSampler = new IncrementalIndex.Builder()
+    incrementalIndexNullSampler = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(5000)
-        .buildOnheap();
+        .build();
 
     String[] rowsNullSampler = new String[]{
         "{\"time\":\"2011-01-13T00:00:00.000Z\",\"product\":\"product_1\",\"tags\":[],\"othertags\":[\"u1\", \"u2\"]}",

@@ -23,12 +23,18 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public class ExpressionVectorObjectSelector implements VectorObjectSelector
 {
-  final Expr.VectorInputBinding bindings;
-  final ExprVectorProcessor<?> processor;
+  private final Expr.VectorInputBinding bindings;
+  private final ExprVectorProcessor<?> processor;
+
+  @MonotonicNonNull
+  private Object[] cached;
+  private int currentId = ReadableVectorInspector.NULL_ID;
 
   public ExpressionVectorObjectSelector(ExprVectorProcessor<?> processor, Expr.VectorInputBinding bindings)
   {
@@ -39,7 +45,11 @@ public class ExpressionVectorObjectSelector implements VectorObjectSelector
   @Override
   public Object[] getObjectVector()
   {
-    return processor.evalVector(bindings).asObjectVector(ExprType.STRING);
+    if (bindings.getCurrentVectorId() != currentId) {
+      currentId = bindings.getCurrentVectorId();
+      cached = processor.evalVector(bindings).asObjectVector(ExprType.STRING);
+    }
+    return cached;
   }
 
   @Override

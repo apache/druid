@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-
+import { Api } from '../../singletons';
 import { deepGet, pluralIfNeeded, queryDruidSql } from '../../utils';
 import { postToSampler } from '../../utils/sampler';
 
@@ -56,7 +55,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that the router responds to /status and gives some valid info back
       let status: any;
       try {
-        status = (await axios.get(`/status`)).data;
+        status = (await Api.instance.get(`/status`)).data;
       } catch (e) {
         controls.addIssue(
           `Did not get a /status response from the Router service. Try confirming that it is running and accessible. Got: ${e.message}`,
@@ -76,7 +75,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that everything in /status/properties is above board
       let properties: Record<string, string>;
       try {
-        properties = (await axios.get(`/status/properties`)).data;
+        properties = (await Api.instance.get(`/status/properties`)).data;
       } catch (e) {
         controls.addIssue(
           `Did not get a /status/properties response from the Router. Message: ${e.message}`,
@@ -126,14 +125,14 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that everything in Coordinator's /status is good
       let myStatus: any;
       try {
-        myStatus = (await axios.get(`/status`)).data;
+        myStatus = (await Api.instance.get(`/status`)).data;
       } catch {
         return;
       }
 
       let coordinatorStatus: any;
       try {
-        coordinatorStatus = (await axios.get(`/proxy/coordinator/status`)).data;
+        coordinatorStatus = (await Api.instance.get(`/proxy/coordinator/status`)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the Coordinator service. Try confirming that it is running and accessible.',
@@ -143,7 +142,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 
       let overlordStatus: any;
       try {
-        overlordStatus = (await axios.get(`/proxy/overlord/status`)).data;
+        overlordStatus = (await Api.instance.get(`/proxy/overlord/status`)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the Overlord service. Try confirming that it is running and accessible.',
@@ -170,14 +169,15 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       // Make sure that everything in coordinator and overlord /status/properties is good and matches where needed
       let myProperties: Record<string, string>;
       try {
-        myProperties = (await axios.get(`/status/properties`)).data;
+        myProperties = (await Api.instance.get(`/status/properties`)).data;
       } catch {
         return;
       }
 
       let coordinatorProperties: Record<string, string>;
       try {
-        coordinatorProperties = (await axios.get(`/proxy/coordinator/status/properties`)).data;
+        coordinatorProperties = (await Api.instance.get(`/proxy/coordinator/status/properties`))
+          .data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the coordinator. Try confirming that it is running and accessible.',
@@ -187,7 +187,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 
       let overlordProperties: Record<string, string>;
       try {
-        overlordProperties = (await axios.get(`/proxy/overlord/status/properties`)).data;
+        overlordProperties = (await Api.instance.get(`/proxy/overlord/status/properties`)).data;
       } catch (e) {
         controls.addIssue(
           'Did not get a /status response from the overlord. Try confirming that it is running and accessible.',
@@ -384,7 +384,8 @@ ORDER BY "num_bad_time_chunks"`,
         // Grab the auto-compaction definitions and ignore dataSources that already have auto-compaction
         let compactionResult: any;
         try {
-          compactionResult = (await axios.get('/druid/coordinator/v1/config/compaction')).data;
+          compactionResult = (await Api.instance.get('/druid/coordinator/v1/config/compaction'))
+            .data;
         } catch (e) {
           controls.addIssue(`Could not get compaction config. Something is wrong.`);
           return;

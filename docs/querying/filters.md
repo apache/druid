@@ -137,7 +137,7 @@ The JavaScript filter supports the use of extraction functions, see [Filtering w
 > The extraction filter is now deprecated. The selector filter with an extraction function specified
 > provides identical functionality and should be used instead.
 
-Extraction filter matches a dimension using some specific [Extraction function](./dimensionspecs.html#extraction-functions).
+Extraction filter matches a dimension using some specific [Extraction function](./dimensionspecs.md#extraction-functions).
 The following filter matches the values for which the extraction function has transformation entry `input_key=output_value` where
 `output_value` is equal to the filter `value` and `input_key` is present as dimension.
 
@@ -409,7 +409,7 @@ The filter above is equivalent to the following OR of Bound filters:
 ### Filtering with Extraction Functions
 All filters except the "spatial" filter support extraction functions.
 An extraction function is defined by setting the "extractionFn" field on a filter.
-See [Extraction function](./dimensionspecs.html#extraction-functions) for more details on extraction functions.
+See [Extraction function](./dimensionspecs.md#extraction-functions) for more details on extraction functions.
 
 If specified, the extraction function will be used to transform input values before the filter is applied.
 The example below shows a selector filter combined with an extraction function. This filter will transform input values
@@ -483,7 +483,7 @@ Query filters can also be applied to the timestamp column. The timestamp column 
 to the timestamp column, use the string `__time` as the dimension name. Like numeric dimensions, timestamp filters
 should be specified as if the timestamp values were strings.
 
-If the user wishes to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.html#time-format-extraction-function) is useful.
+If the user wishes to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.md#time-format-extraction-function) is useful.
 
 For example, filtering on a long timestamp value:
 

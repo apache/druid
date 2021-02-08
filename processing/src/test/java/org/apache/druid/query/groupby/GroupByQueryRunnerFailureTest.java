@@ -30,7 +30,7 @@ import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.InsufficientResourcesException;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
@@ -243,7 +243,7 @@ public class GroupByQueryRunnerFailureTest
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
   }
 
-  @Test(timeout = 60_000L, expected = InsufficientResourcesException.class)
+  @Test(timeout = 60_000L)
   public void testInsufficientResourcesOnBroker()
   {
     final GroupByQuery query = GroupByQuery
@@ -268,6 +268,8 @@ public class GroupByQueryRunnerFailureTest
     List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
     try {
       holder = MERGE_BUFFER_POOL.takeBatch(1, 10);
+      expectedException.expect(QueryCapacityExceededException.class);
+      expectedException.expectMessage("Cannot acquire 1 merge buffers. Try again after current running queries are finished.");
       GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
     }
     finally {
