@@ -100,12 +100,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         List<Interval> searchIntervals =
             findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
-          Interval totalSearchInterval = new Interval(
-              searchIntervals.get(0).getStart(),
-              searchIntervals.get(searchIntervals.size() - 1).getEnd()
-          );
           if (indexingServiceClient != null && config.getEnableFilterLockedInterval()) {
             Collections.sort(searchIntervals, (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1, o2));
+            Interval totalSearchInterval = new Interval(
+                searchIntervals.get(0).getStart(),
+                searchIntervals.get(searchIntervals.size() - 1).getEnd()
+            );
             searchIntervals = indexingServiceClient.getNonLockIntervals(dataSource, totalSearchInterval);
           }
           if (!searchIntervals.isEmpty()) {
