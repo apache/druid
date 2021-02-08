@@ -46,6 +46,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -289,6 +290,15 @@ public class TaskQueue
           if (taskIsReady) {
             log.info("Asking taskRunner to run: %s", task.getId());
             runnerTaskFuture = taskRunner.run(task);
+          } else if (!task.isWaitingToRun()) {
+            log.warn("[%s] is not ready for now,remove it.", task.getId());
+            notifyStatus(
+                task,
+                TaskStatus.success(task.getId(), "Not ready run for now."),
+                "failed because of not ready[%s]",
+                task.getId()
+            );
+            continue;
           } else {
             // Task.isReady() can internally lock intervals or segments.
             // We should release them if the task is not ready.
@@ -707,5 +717,11 @@ public class TaskQueue
                                                .collect(Collectors.toSet());
     return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                 .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+  }
+
+  // get all unlocked datasource,interval
+  public List<Interval> getNonLockIntervalSnapshots(String dataSource, Interval interval)
+  {
+    return taskLockbox.getNonLockIntervalSnapshots(dataSource, interval);
   }
 }

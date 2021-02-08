@@ -26,32 +26,34 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
 /**
- * This policy searches segments for compaction from the newest one to oldest one.
+ * This policy searches segments for compaction from the high score to the low score.
  */
-public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
+public class HighScoreSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 {
   private final ObjectMapper objectMapper;
   private final IndexingServiceClient indexingServiceClient;
 
-  public NewestSegmentFirstPolicy(ObjectMapper objectMapper, @Nullable IndexingServiceClient indexingServiceClient)
+  public HighScoreSegmentFirstPolicy(
+      ObjectMapper objectMapper,
+      IndexingServiceClient indexingServiceClient
+  )
   {
     this.objectMapper = objectMapper;
     this.indexingServiceClient = indexingServiceClient;
   }
 
   @Override
-  public CompactionSegmentIterator reset(
+  public CompactionSegmentIterator<HighScoreSegmentFirstIterator.Tuple2<Float, List<DataSegment>>> reset(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
       Map<String, List<Interval>> skipIntervals
   )
   {
-    return new NewestSegmentFirstIterator(
+    return new HighScoreSegmentFirstIterator(
         objectMapper,
         compactionConfigs,
         dataSources,

@@ -54,7 +54,10 @@ public class DataSourceCompactionConfigTest
         null,
         500L,
         null,
+        null,
+        null,
         new Period(3600),
+        true,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -77,8 +80,11 @@ public class DataSourceCompactionConfigTest
         "dataSource",
         null,
         500L,
+        null,
+        null,
         30,
         new Period(3600),
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -102,7 +108,10 @@ public class DataSourceCompactionConfigTest
         null,
         500L,
         null,
+        null,
+        null,
         new Period(3600),
+        null,
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
@@ -143,8 +152,11 @@ public class DataSourceCompactionConfigTest
         "dataSource",
         null,
         500L,
+        null,
+        null,
         10000,
         new Period(3600),
+        null,
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,

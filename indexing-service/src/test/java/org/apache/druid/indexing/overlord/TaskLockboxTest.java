@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -584,6 +585,36 @@ public class TaskLockboxTest
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
+  }
+
+  @Test
+  public void testGetNonLockIntervals()
+  {
+    final Interval interval1 = Intervals.of("2021-01-11T10/2021-01-11T11");
+    final Interval interval2 = Intervals.of("2021-01-11T11/2021-01-11T12");
+    final Interval interval3 = Intervals.of("2021-01-11T14/2021-01-11T16");
+
+    final Interval searchInterval = Intervals.of("2021-01-10T12/2021-01-11T18");
+
+    Task task = NoopTask.create();
+    lockbox.add(task);
+    Task task2 = NoopTask.create();
+    lockbox.add(task2);
+
+    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval1).isOk());
+    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval2).isOk());
+    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval3).isOk());
+
+    final List<Interval> none = lockbox.getNonLockIntervalSnapshots("none", interval1);
+    Assert.assertEquals(none.get(0), interval1);
+
+    final List<Interval> none2 = lockbox.getNonLockIntervalSnapshots("none", searchInterval);
+    Assert.assertTrue(none2.size() == 3);
+    Assert.assertEquals(ImmutableList.of(
+        Intervals.of("2021-01-10T12:00:00.000Z/2021-01-11T10:00:00.000Z"),
+        Intervals.of("2021-01-11T12:00:00.000Z/2021-01-11T14:00:00.000Z"),
+        Intervals.of("2021-01-11T16:00:00.000Z/2021-01-11T18:00:00.000Z")
+    ), none2);
   }
 
   @Test(timeout = 60_000L)

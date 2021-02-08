@@ -24,8 +24,10 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.coordinator.duty.HighScoreSegmentFirstIterator;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -61,7 +63,7 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
+  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper(), null);
 
   @Param("100")
   private int numDataSources;
@@ -96,6 +98,9 @@ public class NewestSegmentFirstPolicyBenchmark
               dataSource,
               0,
               inputSegmentSizeBytes,
+              null,
+              null,
+              null,
               null,
               null,
               null,
@@ -137,7 +142,16 @@ public class NewestSegmentFirstPolicyBenchmark
   {
     final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources, Collections.emptyMap());
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
-      final List<DataSegment> segments = iterator.next();
+      final Object next = iterator.next();
+
+      List<DataSegment> segments;
+      if (next instanceof List) {
+        segments = (List<DataSegment>) next;
+      } else if (next instanceof HighScoreSegmentFirstIterator.Tuple2) {
+        segments = ((HighScoreSegmentFirstIterator.Tuple2<Float, List<DataSegment>>) next)._2;
+      } else {
+        throw new ISE("WTF! CompactionSegmentIterator don't know element type?");
+      }
       blackhole.consume(segments);
     }
   }

@@ -27,6 +27,10 @@ import org.skife.config.Default;
  */
 public abstract class DruidCoordinatorConfig
 {
+  public static final String AUTO_COMPACT_POLICY_NEWEST = "newest";
+  public static final String AUTO_COMPACT_POLICY_HIGH_SCORE = "score";
+  static final String DEFAULT_AUTO_COMPACT_POLICY = AUTO_COMPACT_POLICY_NEWEST;
+
   @Config("druid.coordinator.startDelay")
   @Default("PT300s")
   public abstract Duration getCoordinatorStartDelay();
@@ -38,6 +42,18 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.period.indexingPeriod")
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();
+
+  @Config("druid.coordinator.period.autoCompactionPeriod")
+  public Duration getCoordinatorAutoCompactionPeriod()
+  {
+    return Duration.millis(30 * 60 * 1000);
+  }
+
+  @Config("druid.coordinator.autoCompactionPolicy")
+  public String getAutoCompactionPolicy()
+  {
+    return DEFAULT_AUTO_COMPACT_POLICY;
+  }
 
   @Config("druid.coordinator.kill.period")
   @Default("P1D")

@@ -93,11 +93,17 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final ClientCompactionIntervalSpec clientCompactionIntervalSpec = ClientCompactionIntervalSpec.fromSegments(segments);
+    final String taskId = IdUtils.newTaskId(
+        idPrefix,
+        ClientCompactionTaskQuery.TYPE,
+        dataSource,
+        clientCompactionIntervalSpec.getInterval()
+    );
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
+        new ClientCompactionIOConfig(clientCompactionIntervalSpec),
         tuningConfig,
         context
     );
@@ -386,6 +392,39 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       return (Integer) Preconditions.checkNotNull(numDeletedObject, "numDeletedObject");
     }
     catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public List<Interval> getNonLockIntervals(String dataSource, Interval interval)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/getNonLockIntervals/%s?interval=%s",
+                                 StringUtils.urlEncode(dataSource), StringUtils.urlEncode(interval.toString())
+              )
+          )
+      );
+
+      if (!responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching unLocked intervals for conditions: dataSource[%s],interval[%s]",
+            dataSource,
+            interval
+        );
+      }
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<List<Interval>>()
+          {
+          }
+      );
+    }
+    catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
     }
   }

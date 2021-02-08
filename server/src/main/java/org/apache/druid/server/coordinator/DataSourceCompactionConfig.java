@@ -35,9 +35,18 @@ public class DataSourceCompactionConfig
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
+  // Interval score computed by recentDaysForTimeWeight,timeWeight,numWeight,sizeWeight
+  // Time weight{timeWeight} vs others{numWeight+sizeWeight} is 1:1
+  // Recent days{recentDaysForTimeWeight=1} occupy time weight{timeWeight=1.0f} from old to newest is (0f-1.0f)
+  public static final Period DEFAULT_COMPACTION_RECENT_DAYS = new Period("P5D");
+  public static final float DEFAULT_COMPACTION_TIME_WEIGHT_FOR_RECENT_DAYS = 1.0f;
+  public static final float DEFAULT_COMPACTION_SEGMENT_NUM_WEIGHT = 0.6f;
+
   private final String dataSource;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
+  private final long minInputSegmentNum;
+  private final Period minorCompactRecentDays;
   /**
    * The number of input segments is limited because the byte size of a serialized task spec is limited by
    * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
@@ -45,6 +54,7 @@ public class DataSourceCompactionConfig
   @Nullable
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
+  private final Boolean enableFilterLockedInterval;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
 
@@ -53,8 +63,11 @@ public class DataSourceCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
+      @JsonProperty("minInputSegmentNum") @Nullable Long minInputSegmentNum,
+      @JsonProperty("minorCompactRecentDays") @Nullable Period minorCompactRecentDays,
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("enableFilterLockedInterval") @Nullable Boolean enableFilterLockedInterval,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
@@ -68,8 +81,13 @@ public class DataSourceCompactionConfig
                                  : inputSegmentSizeBytes;
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
+    this.enableFilterLockedInterval = enableFilterLockedInterval == null ? false : enableFilterLockedInterval;
     this.tuningConfig = tuningConfig;
     this.taskContext = taskContext;
+    this.minInputSegmentNum = minInputSegmentNum == null ? 1 : minInputSegmentNum;
+    this.minorCompactRecentDays = minorCompactRecentDays == null
+                                  ? DEFAULT_COMPACTION_RECENT_DAYS
+                                  : minorCompactRecentDays;
   }
 
   @JsonProperty
@@ -105,6 +123,24 @@ public class DataSourceCompactionConfig
   }
 
   @JsonProperty
+  public Period getMinorCompactRecentDays()
+  {
+    return minorCompactRecentDays;
+  }
+
+  @JsonProperty
+  public long getMinInputSegmentNum()
+  {
+    return minInputSegmentNum;
+  }
+
+  @JsonProperty
+  public Boolean getEnableFilterLockedInterval()
+  {
+    return enableFilterLockedInterval;
+  }
+
+  @JsonProperty
   @Nullable
   public UserCompactionTaskQueryTuningConfig getTuningConfig()
   {
@@ -132,6 +168,7 @@ public class DataSourceCompactionConfig
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
+           Objects.equals(enableFilterLockedInterval, that.enableFilterLockedInterval) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(taskContext, that.taskContext);
   }
@@ -144,6 +181,7 @@ public class DataSourceCompactionConfig
         taskPriority,
         inputSegmentSizeBytes,
         skipOffsetFromLatest,
+        enableFilterLockedInterval,
         tuningConfig,
         taskContext
     );

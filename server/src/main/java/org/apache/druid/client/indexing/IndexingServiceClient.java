@@ -65,4 +65,9 @@ public interface IndexingServiceClient
   TaskPayloadResponse getTaskPayload(String taskId);
 
   SamplerResponse sample(SamplerSpec samplerSpec);
+
+  /**
+   * Gets all unLocked intervals from interval.
+   */
+  List<Interval> getNonLockIntervals(String dataSource, Interval interval);
 }

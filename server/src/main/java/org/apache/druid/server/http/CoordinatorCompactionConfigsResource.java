@@ -73,6 +73,7 @@ public class CoordinatorCompactionConfigsResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
+      @QueryParam("majorRatioInAvailableCompact") Double majorRatioInAvailableCompact,
       @QueryParam("max") Integer maxCompactionTaskSlots,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
@@ -84,6 +85,7 @@ public class CoordinatorCompactionConfigsResource
     final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
         current,
         compactionTaskSlotRatio,
+        majorRatioInAvailableCompact,
         maxCompactionTaskSlots
     );
 

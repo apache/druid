@@ -34,10 +34,15 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
+import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -55,7 +60,9 @@ import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -74,6 +81,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -105,6 +113,31 @@ public class CompactSegmentsTest
   private static final int TOTAL_BYTE_PER_DATASOURCE = 440;
   private static final int TOTAL_SEGMENT_PER_DATASOURCE = 44;
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
+  private static final TestDruidCoordinatorConfig CONFIG_NEWEST_POLICY = new TestDruidCoordinatorConfig(
+      null,
+      null,
+      Duration.parse("PT1800S"),
+      new Duration(1),
+      Duration.parse("PT86400S"),
+      Duration.parse("PT86400S"),
+      1000,
+      Duration.ZERO,
+      DruidCoordinatorConfig.AUTO_COMPACT_POLICY_NEWEST,
+      Duration.parse("PT1800S")
+  );
+
+  static final TestDruidCoordinatorConfig CONFIG_SCORE_POLICY = new TestDruidCoordinatorConfig(
+      null,
+      null,
+      Duration.parse("PT1800S"),
+      new Duration(1),
+      Duration.parse("PT86400S"),
+      Duration.parse("PT86400S"),
+      1000,
+      Duration.ZERO,
+      DruidCoordinatorConfig.AUTO_COMPACT_POLICY_HIGH_SCORE,
+      Duration.parse("PT1800S")
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
@@ -113,7 +146,13 @@ public class CompactSegmentsTest
     return ImmutableList.of(
         new Object[]{
             new DynamicPartitionsSpec(300000, Long.MAX_VALUE),
-            (BiFunction<Integer, Integer, ShardSpec>) NumberedShardSpec::new
+            (BiFunction<Integer, Integer, ShardSpec>) NumberedShardSpec::new,
+            CONFIG_NEWEST_POLICY
+        },
+        new Object[]{
+            new DynamicPartitionsSpec(300000, Long.MAX_VALUE),
+            (BiFunction<Integer, Integer, ShardSpec>) NumberedShardSpec::new,
+            CONFIG_SCORE_POLICY
         },
         new Object[]{
             new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")),
@@ -125,7 +164,21 @@ public class CompactSegmentsTest
                 ImmutableList.of("dim"),
                 null,
                 JSON_MAPPER
-            )
+            ),
+            CONFIG_NEWEST_POLICY
+        },
+        new Object[]{
+            new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")),
+            (BiFunction<Integer, Integer, ShardSpec>) (bucketId, numBuckets) -> new HashBasedNumberedShardSpec(
+                bucketId,
+                numBuckets,
+                bucketId,
+                numBuckets,
+                ImmutableList.of("dim"),
+                null,
+                JSON_MAPPER
+            ),
+            CONFIG_SCORE_POLICY
         },
         new Object[]{
             new SingleDimensionPartitionsSpec(300000, null, "dim", false),
@@ -135,20 +188,38 @@ public class CompactSegmentsTest
                 bucketId.equals(numBuckets) ? null : String.valueOf(nextRangePartitionBoundary.getAndIncrement()),
                 bucketId,
                 numBuckets
-            )
+            ),
+            CONFIG_NEWEST_POLICY
+        },
+        new Object[]{
+            new SingleDimensionPartitionsSpec(300000, null, "dim", false),
+            (BiFunction<Integer, Integer, ShardSpec>) (bucketId, numBuckets) -> new SingleDimensionShardSpec(
+                "dim",
+                bucketId == 0 ? null : String.valueOf(nextRangePartitionBoundary.getAndIncrement()),
+                bucketId.equals(numBuckets) ? null : String.valueOf(nextRangePartitionBoundary.getAndIncrement()),
+                bucketId,
+                numBuckets
+            ),
+            CONFIG_SCORE_POLICY
         }
     );
   }
 
   private final PartitionsSpec partitionsSpec;
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
+  private final TestDruidCoordinatorConfig coordinatorConfig;
 
   private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
 
-  public CompactSegmentsTest(PartitionsSpec partitionsSpec, BiFunction<Integer, Integer, ShardSpec> shardSpecFactory)
+  public CompactSegmentsTest(
+      PartitionsSpec partitionsSpec,
+      BiFunction<Integer, Integer, ShardSpec> shardSpecFactory,
+      TestDruidCoordinatorConfig coordinatorConfig
+  )
   {
     this.partitionsSpec = partitionsSpec;
     this.shardSpecFactory = shardSpecFactory;
+    this.coordinatorConfig = coordinatorConfig;
   }
 
   @Before
@@ -206,7 +277,11 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(
+        JSON_MAPPER,
+        indexingServiceClient,
+        coordinatorConfig
+    );
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -278,13 +353,18 @@ public class CompactSegmentsTest
     assertLastSegmentNotCompacted(compactSegments);
   }
 
+
   @Test
   public void testMakeStats()
   {
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(
+        JSON_MAPPER,
+        indexingServiceClient,
+        coordinatorConfig
+    );
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -376,7 +456,11 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(
+        JSON_MAPPER,
+        indexingServiceClient,
+        coordinatorConfig
+    );
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -469,7 +553,11 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(
+        JSON_MAPPER,
+        indexingServiceClient,
+        coordinatorConfig
+    );
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -530,7 +618,11 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(
+        JSON_MAPPER,
+        indexingServiceClient,
+        coordinatorConfig
+    );
 
     final CoordinatorStats stats = doCompactSegments(compactSegments, 3);
     Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
@@ -544,7 +636,11 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(
+        JSON_MAPPER,
+        indexingServiceClient,
+        coordinatorConfig
+    );
 
     final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
     Assert.assertEquals(4, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
@@ -683,6 +779,7 @@ public class CompactSegmentsTest
             new CoordinatorCompactionConfig(
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 100., // 100% when numCompactionTaskSlots is not null
+                null,
                 numCompactionTaskSlots
             )
         )
@@ -811,7 +908,10 @@ public class CompactSegmentsTest
               0,
               50L,
               null,
+              null,
+              null,
               new Period("PT1H"), // smaller than segment interval
+              true,
               new UserCompactionTaskQueryTuningConfig(
                   null,
                   null,
@@ -860,7 +960,7 @@ public class CompactSegmentsTest
     public StringFullResponseHolder go(Request request) throws IOException
     {
       final String urlString = request.getUrl().toString();
-      if (urlString.contains("/druid/indexer/v1/task")) {
+      if (urlString.contains("/druid/indexer/v1/task") && urlString.lastIndexOf("/status") == -1) {
         return handleTask(request);
       } else if (urlString.contains("/druid/indexer/v1/workers")) {
         return handleWorkers();
@@ -868,6 +968,26 @@ public class CompactSegmentsTest
                  || urlString.contains("/druid/indexer/v1/pendingTasks")
                  || urlString.contains("/druid/indexer/v1/runningTasks")) {
         return createStringFullResponseHolder(jsonMapper.writeValueAsString(Collections.emptyList()));
+      } else if (urlString.contains("/druid/indexer/v1/getNonLockIntervals")) {
+        String interval = urlString.substring(urlString.lastIndexOf('=') + 1);
+        ImmutableList<String> intervals = ImmutableList.of(StringUtils.urlDecode(
+            interval));
+        return createStringFullResponseHolder(jsonMapper.writeValueAsString(intervals));
+      } else if (urlString.contains("/druid/indexer/v1/task/") && urlString.lastIndexOf("/status") != -1) {
+        TaskStatusResponse taskStatusResponse = new TaskStatusResponse("testId", new TaskStatusPlus(
+            "testId",
+            "testGroupId",
+            "testType",
+            DateTimes.nowUtc(),
+            DateTimes.nowUtc(),
+            TaskState.RUNNING,
+            RunnerTaskState.RUNNING,
+            1000L,
+            TaskLocation.create("testHost", 1010, -1),
+            "ds_test",
+            null
+        ));
+        return createStringFullResponseHolder(jsonMapper.writeValueAsString(taskStatusResponse));
       } else {
         throw new IAE("Cannot handle request for url[%s]", request.getUrl());
       }

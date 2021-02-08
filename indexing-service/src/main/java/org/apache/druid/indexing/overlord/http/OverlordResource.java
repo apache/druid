@@ -202,6 +202,29 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/getNonLockIntervals/{dataSource}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getNonLockIntervals(
+      @PathParam("dataSource") String dataSource,
+      @QueryParam("interval") String intervalStr,
+      @Context HttpServletRequest request
+  )
+  {
+    log.info("Search unLocked intervals conditions: searchDataSource[%s],searchInterval[%s]", dataSource, intervalStr);
+    return asLeaderWith(
+        taskMaster.getTaskQueue(),
+        new Function<TaskQueue, Response>()
+        {
+          @Override
+          public Response apply(TaskQueue taskQueue)
+          {
+            return Response.ok(taskQueue.getNonLockIntervalSnapshots(dataSource, Intervals.of(intervalStr))).build();
+          }
+        }
+    );
+  }
+
+  @GET
   @Path("/leader")
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)

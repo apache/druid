@@ -90,11 +90,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        true,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -109,6 +112,9 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
+        true,
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
@@ -132,7 +138,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -147,6 +153,9 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
+        true,
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
@@ -170,7 +179,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, 1000L),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -181,6 +190,9 @@ public class NewestSegmentFirstIteratorTest
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "datasource",
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -208,7 +220,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -221,7 +233,10 @@ public class NewestSegmentFirstIteratorTest
         "datasource",
         null,
         null,
+        null,
+        null,
         100,
+        null,
         null,
         new UserCompactionTaskQueryTuningConfig(
             null,
@@ -246,7 +261,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -259,7 +274,10 @@ public class NewestSegmentFirstIteratorTest
         "datasource",
         null,
         null,
+        null,
+        null,
         100,
+        null,
         null,
         new UserCompactionTaskQueryTuningConfig(
             null,
@@ -284,7 +302,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -295,6 +313,9 @@ public class NewestSegmentFirstIteratorTest
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "datasource",
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -322,7 +343,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -333,6 +354,9 @@ public class NewestSegmentFirstIteratorTest
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "datasource",
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -360,7 +384,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new HashedPartitionsSpec(null, 10, ImmutableList.of("dim")),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );
@@ -371,6 +395,9 @@ public class NewestSegmentFirstIteratorTest
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "datasource",
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -398,7 +425,7 @@ public class NewestSegmentFirstIteratorTest
     );
     Assert.assertEquals(
         new SingleDimensionPartitionsSpec(10000, null, "dim", false),
-        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+        CompactionSegmentIterator.findPartitinosSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
         )
     );

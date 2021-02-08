@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -51,7 +52,7 @@ public class NewestSegmentFirstPolicyTest
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
 
-  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
+  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper(), null);
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -178,7 +179,16 @@ public class NewestSegmentFirstPolicyTest
 
     Interval lastInterval = null;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next();
+      final Object next = iterator.next();
+
+      List<DataSegment> segments;
+      if (next instanceof List) {
+        segments = (List<DataSegment>) next;
+      } else if (next instanceof HighScoreSegmentFirstIterator.Tuple2) {
+        segments = ((HighScoreSegmentFirstIterator.Tuple2<Float, List<DataSegment>>) next)._2;
+      } else {
+        throw new ISE("WTF! CompactionSegmentIterator don't know element type?");
+      }
       lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
@@ -234,7 +244,16 @@ public class NewestSegmentFirstPolicyTest
 
     Interval lastInterval = null;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next();
+      final Object next = iterator.next();
+
+      List<DataSegment> segments;
+      if (next instanceof List) {
+        segments = (List<DataSegment>) next;
+      } else if (next instanceof HighScoreSegmentFirstIterator.Tuple2) {
+        segments = ((HighScoreSegmentFirstIterator.Tuple2<Float, List<DataSegment>>) next)._2;
+      } else {
+        throw new ISE("WTF! CompactionSegmentIterator don't know element type?");
+      }
       lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
@@ -465,8 +484,16 @@ public class NewestSegmentFirstPolicyTest
   {
     Interval expectedSegmentIntervalStart = to;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next();
+      final Object next = iterator.next();
 
+      List<DataSegment> segments;
+      if (next instanceof List) {
+        segments = (List<DataSegment>) next;
+      } else if (next instanceof HighScoreSegmentFirstIterator.Tuple2) {
+        segments = ((HighScoreSegmentFirstIterator.Tuple2<Float, List<DataSegment>>) next)._2;
+      } else {
+        throw new ISE("WTF! CompactionSegmentIterator don't know element type?");
+      }
       final Interval firstInterval = segments.get(0).getInterval();
       Assert.assertTrue(
           "Intervals should be same or abutting",
@@ -500,7 +527,7 @@ public class NewestSegmentFirstPolicyTest
     }
   }
 
-  private static VersionedIntervalTimeline<String, DataSegment> createTimeline(
+  static VersionedIntervalTimeline<String, DataSegment> createTimeline(
       SegmentGenerateSpec... specs
   )
   {
@@ -554,13 +581,16 @@ public class NewestSegmentFirstPolicyTest
         0,
         inputSegmentSizeBytes,
         null,
+        null,
+        null,
         skipOffsetFromLatest,
+        null,
         null,
         null
     );
   }
 
-  private static class SegmentGenerateSpec
+  static class SegmentGenerateSpec
   {
     private final Interval totalInterval;
     private final Period segmentPeriod;

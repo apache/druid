@@ -37,9 +37,11 @@ public class CoordinatorCompactionConfig
 
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
   private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
+  private static final double DEFAULT_MAJOR_COMPACTION_TASK_RATIO_FROM_COMPACTION = 0.5;
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
+  private final double majorRatioInAvailableCompactionSlots;
   private final int maxCompactionTaskSlots;
 
   public static CoordinatorCompactionConfig from(
@@ -50,6 +52,7 @@ public class CoordinatorCompactionConfig
     return new CoordinatorCompactionConfig(
         compactionConfigs,
         baseConfig.compactionTaskSlotRatio,
+        baseConfig.majorRatioInAvailableCompactionSlots,
         baseConfig.maxCompactionTaskSlots
     );
   }
@@ -57,24 +60,28 @@ public class CoordinatorCompactionConfig
   public static CoordinatorCompactionConfig from(
       CoordinatorCompactionConfig baseConfig,
       @Nullable Double compactionTaskSlotRatio,
+      @Nullable Double majorRatioInAvailableCompactionSlots,
       @Nullable Integer maxCompactionTaskSlots
   )
   {
     return new CoordinatorCompactionConfig(
         baseConfig.compactionConfigs,
         compactionTaskSlotRatio == null ? baseConfig.compactionTaskSlotRatio : compactionTaskSlotRatio,
+        majorRatioInAvailableCompactionSlots == null
+        ? baseConfig.majorRatioInAvailableCompactionSlots
+        : majorRatioInAvailableCompactionSlots,
         maxCompactionTaskSlots == null ? baseConfig.maxCompactionTaskSlots : maxCompactionTaskSlots
     );
   }
 
   public static CoordinatorCompactionConfig from(List<DataSourceCompactionConfig> compactionConfigs)
   {
-    return new CoordinatorCompactionConfig(compactionConfigs, null, null);
+    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null);
   }
 
   public static CoordinatorCompactionConfig empty()
   {
-    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null);
+    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null);
   }
 
   public static AtomicReference<CoordinatorCompactionConfig> watch(final JacksonConfigManager configManager)
@@ -96,6 +103,8 @@ public class CoordinatorCompactionConfig
   public CoordinatorCompactionConfig(
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
+      @JsonProperty("majorRatioInAvailableCompactionSlots") @Nullable
+          Double majorRatioInAvailableCompactionSlots,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots
   )
   {
@@ -103,6 +112,9 @@ public class CoordinatorCompactionConfig
     this.compactionTaskSlotRatio = compactionTaskSlotRatio == null ?
                                    DEFAULT_COMPACTION_TASK_RATIO :
                                    compactionTaskSlotRatio;
+    this.majorRatioInAvailableCompactionSlots = majorRatioInAvailableCompactionSlots == null ?
+                                                DEFAULT_MAJOR_COMPACTION_TASK_RATIO_FROM_COMPACTION :
+                                                majorRatioInAvailableCompactionSlots;
     this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ?
                                   DEFAILT_MAX_COMPACTION_TASK_SLOTS :
                                   maxCompactionTaskSlots;
@@ -121,6 +133,12 @@ public class CoordinatorCompactionConfig
   }
 
   @JsonProperty
+  public double getMajorRatioInAvailableCompactionSlots()
+  {
+    return majorRatioInAvailableCompactionSlots;
+  }
+
+  @JsonProperty
   public int getMaxCompactionTaskSlots()
   {
     return maxCompactionTaskSlots;
@@ -132,6 +150,7 @@ public class CoordinatorCompactionConfig
     return "CoordinatorCompactionConfig{" +
            ", compactionConfigs=" + compactionConfigs +
            ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
+           ", majorRatioInAvailableCompactionSlots=" + majorRatioInAvailableCompactionSlots +
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            '}';
   }
@@ -139,7 +158,12 @@ public class CoordinatorCompactionConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(compactionConfigs, compactionTaskSlotRatio, maxCompactionTaskSlots);
+    return Objects.hash(
+        compactionConfigs,
+        compactionTaskSlotRatio,
+        majorRatioInAvailableCompactionSlots,
+        maxCompactionTaskSlots
+    );
   }
 
   @Override
@@ -158,6 +182,9 @@ public class CoordinatorCompactionConfig
       return false;
     }
     if (compactionTaskSlotRatio != that.compactionTaskSlotRatio) {
+      return false;
+    }
+    if (majorRatioInAvailableCompactionSlots != that.majorRatioInAvailableCompactionSlots) {
       return false;
     }
 

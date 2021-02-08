@@ -32,6 +32,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
+  private final String autoCompactPolicy;
+  private final Duration autoCheckOrSubmitPeriod;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -44,6 +46,33 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration getLoadQueuePeonRepeatDelay
   )
   {
+    this(
+        coordinatorStartDelay,
+        coordinatorPeriod,
+        coordinatorIndexingPeriod,
+        loadTimeoutDelay,
+        coordinatorKillPeriod,
+        coordinatorKillDurationToRetain,
+        coordinatorKillMaxSegments,
+        getLoadQueuePeonRepeatDelay,
+        null,
+        null
+    );
+  }
+
+  public TestDruidCoordinatorConfig(
+      Duration coordinatorStartDelay,
+      Duration coordinatorPeriod,
+      Duration coordinatorIndexingPeriod,
+      Duration loadTimeoutDelay,
+      Duration coordinatorKillPeriod,
+      Duration coordinatorKillDurationToRetain,
+      int coordinatorKillMaxSegments,
+      Duration getLoadQueuePeonRepeatDelay,
+      String autoCompactPolicy,
+      Duration autoCheckOrSubmitPeriod
+  )
+  {
     this.coordinatorStartDelay = coordinatorStartDelay;
     this.coordinatorPeriod = coordinatorPeriod;
     this.coordinatorIndexingPeriod = coordinatorIndexingPeriod;
@@ -52,6 +81,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
+    this.autoCompactPolicy = autoCompactPolicy;
+    this.autoCheckOrSubmitPeriod = autoCheckOrSubmitPeriod;
   }
 
   @Override
@@ -94,6 +125,24 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getLoadTimeoutDelay()
   {
     return loadTimeoutDelay == null ? super.getLoadTimeoutDelay() : loadTimeoutDelay;
+  }
+
+  @Override
+  public Duration getCoordinatorAutoCompactionPeriod()
+  {
+    if (autoCheckOrSubmitPeriod == null) {
+      return super.getCoordinatorAutoCompactionPeriod();
+    }
+    return autoCheckOrSubmitPeriod;
+  }
+
+  @Override
+  public String getAutoCompactionPolicy()
+  {
+    if (autoCompactPolicy == null) {
+      return super.getAutoCompactionPolicy();
+    }
+    return autoCompactPolicy;
   }
 
   @Override

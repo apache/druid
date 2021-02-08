@@ -328,7 +328,10 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         null,
         null,
         null,
+        null,
+        null,
         skipOffsetFromLatest,
+        null,
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,

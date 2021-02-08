@@ -22,10 +22,10 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -50,14 +50,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * This class iterates all segments of the dataSources configured for compaction from the newest to the oldest.
+ * This class iterates all segments of the dataSources configured for compaction from the high score to the low score.
  */
-public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<DataSegment>>
+public class HighScoreSegmentFirstIterator
+    extends CompactionSegmentIterator<HighScoreSegmentFirstIterator.Tuple2<Float, List<DataSegment>>>
 {
-  private static final Logger log = new Logger(NewestSegmentFirstIterator.class);
+  private static final Logger log = new Logger(HighScoreSegmentFirstIterator.class);
+  public static final float MAJOR_COMPACTION_IGNORE_TIME_LEVEL = 0.01f;
 
   private final Map<String, DataSourceCompactionConfig> compactionConfigs;
   private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
@@ -67,16 +70,22 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
   // compact.
   private final Map<String, CompactibleTimelineObjectHolderCursor> timelineIterators;
 
-  private final PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
+  // minor compact queue
+  private final PriorityQueue<QueueEntry> minorQueue = new PriorityQueue<>(
       (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.interval, o1.interval)
   );
+  // major compact queue
+  private final PriorityQueue<QueueEntry> majorQueue = new PriorityQueue<>(
+      (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.interval, o1.interval)
+  );
+  private volatile boolean isMajor = false;
 
-  NewestSegmentFirstIterator(
+  HighScoreSegmentFirstIterator(
       ObjectMapper objectMapper,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
       Map<String, List<Interval>> skipIntervals,
-      @Nullable IndexingServiceClient indexingServiceClient
+      IndexingServiceClient indexingServiceClient
   )
   {
     super(objectMapper);
@@ -109,7 +118,10 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
             searchIntervals = indexingServiceClient.getNonLockIntervals(dataSource, totalSearchInterval);
           }
           if (!searchIntervals.isEmpty()) {
-            timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
+            timelineIterators.put(
+                dataSource,
+                new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, config)
+            );
           }
         }
       }
@@ -119,43 +131,67 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
       if (config == null) {
         throw new ISE("Unknown dataSource[%s]", dataSourceName);
       }
-      updateQueue(dataSourceName, config);
+      updateQueue(dataSourceName, config, isMajor, 0);
     });
   }
 
   @Override
-  public void skip(String dataSource, int skipCount)
+  public void setCompactType(boolean isMajorNew)
   {
+    if (this.isMajor == isMajorNew) {
+      return;
+    }
+    this.isMajor = isMajorNew;
+    compactionConfigs.forEach((String dataSourceName, DataSourceCompactionConfig config) -> {
+      if (config == null) {
+        throw new ISE("Unknown dataSource[%s]", dataSourceName);
+      }
+      updateQueue(dataSourceName, config, isMajorNew, 0);
+    });
   }
 
   @Override
   public boolean hasNext()
   {
-    return !queue.isEmpty();
+    if (isMajor == false) {
+      return !minorQueue.isEmpty();
+    } else {
+      return !majorQueue.isEmpty();
+    }
   }
 
   @Override
-  public List<DataSegment> next()
+  public Tuple2<Float, List<DataSegment>> next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    final QueueEntry entry = queue.poll();
+    QueueEntry entry;
+    if (isMajor == false) {
+      entry = minorQueue.poll();
+    } else {
+      entry = majorQueue.poll();
+    }
 
     if (entry == null) {
       throw new NoSuchElementException();
     }
 
-    final List<DataSegment> resultSegments = entry.segments;
+    final List<DataSegment> resultSegments = entry.segmentsToCompactTuple2._2;
 
     Preconditions.checkState(!resultSegments.isEmpty(), "Queue entry must not be empty");
 
     final String dataSource = resultSegments.get(0).getDataSource();
+    updateQueue(dataSource, compactionConfigs.get(dataSource), isMajor, 0);
 
-    updateQueue(dataSource, compactionConfigs.get(dataSource));
+    return entry.segmentsToCompactTuple2;
+  }
 
-    return resultSegments;
+  @Override
+  public void skip(String dataSource, int skipCount)
+  {
+    updateQueue(dataSource, compactionConfigs.get(dataSource), isMajor, skipCount);
   }
 
   /**
@@ -163,7 +199,7 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
    * {@link #timelineIterators} is updated according to the found segments. That is, the found segments are removed from
    * the timeline of the given dataSource.
    */
-  private void updateQueue(String dataSourceName, DataSourceCompactionConfig config)
+  private void updateQueue(String dataSourceName, DataSourceCompactionConfig config, boolean isMajorNew, int skipCount)
   {
     final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor = timelineIterators.get(
         dataSourceName
@@ -174,31 +210,156 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
       return;
     }
 
-    final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(
+    AtomicInteger skipAtomic = new AtomicInteger(skipCount);
+    for (; skipAtomic.get() > 0; ) {
+      log.info("Skip[%s] latest candidate segments.", skipCount);
+      findSegmentsToCompact(
+          dataSourceName,
+          compactibleTimelineObjectHolderCursor,
+          config,
+          isMajorNew,
+          skipAtomic
+      );
+    }
+
+    final Tuple2<Float, List<DataSegment>> segmentsToCompactTuple2 = findSegmentsToCompact(
         dataSourceName,
         compactibleTimelineObjectHolderCursor,
-        config
+        config,
+        isMajorNew,
+        skipAtomic
     );
 
-    if (!segmentsToCompact.isEmpty()) {
-      queue.add(new QueueEntry(segmentsToCompact.segments));
+    if (!segmentsToCompactTuple2._2.isEmpty()) {
+      if (isMajorNew == false) {
+        minorQueue.add(new QueueEntry(segmentsToCompactTuple2));
+      } else {
+        majorQueue.add(new QueueEntry(segmentsToCompactTuple2));
+      }
     }
+  }
+
+  @VisibleForTesting
+  static List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> computeTimelineScore(
+      List<TimelineObjectHolder<String, DataSegment>> holders,
+      final float timeWeightForRecentDays,
+      Period recentDays,
+      float smallFileNumWeight
+  )
+  {
+    List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> tempScoreHolders = new ArrayList<>();
+    final List<Long> times = new ArrayList<>();
+    final List<Long> timelineSizes = new ArrayList<>();
+    final List<Long> segmentNums = new ArrayList<>();
+    holders.forEach(h -> {
+      final long endMillis = h.getInterval().getEndMillis();
+      final List<Long> dataSegmentSizes = Streams.sequentialStreamFrom(h.getObject())
+                                                 .map(chunk -> chunk.getObject().getSize())
+                                                 .collect(Collectors.toList());
+      times.add(endMillis);
+      timelineSizes.add(-dataSegmentSizes.stream().mapToLong(Long::longValue).sum());
+      segmentNums.add((long) dataSegmentSizes.size());
+    });
+    int totalDay = getTimesDays(times);
+    float timeFactor = Math.max(1, totalDay / recentDays.getDays());
+    // transform list using min-max and compute score
+    double[] timeFloats = minMaxNormalization(times);
+    double[] timelineSizeFloats = minMaxNormalization(timelineSizes);
+    double[] segmentNumFloats = minMaxNormalization(segmentNums);
+    for (int i = 0; i < holders.size(); i++) {
+      float score = (float) (timeWeightForRecentDays * timeFactor * timeFloats[i] +
+                             (1 - smallFileNumWeight) * timelineSizeFloats[i] +
+                             smallFileNumWeight * segmentNumFloats[i]);
+      tempScoreHolders.add(new Tuple2(score, holders.get(i)));
+    }
+    // high score first: score asc sort
+    tempScoreHolders.sort(Comparator.comparingDouble(o -> o._1));
+    log.info("Compact iterator[%s] top 20 high score interval and score [%s]", tempScoreHolders.size(),
+             Iterables.skip(
+                 Iterables.transform(tempScoreHolders, t -> t._2.getInterval() + "=" + t._1),
+                 tempScoreHolders.size() > 20 ? tempScoreHolders.size() - 20 : 0
+             )
+    );
+    return tempScoreHolders;
+  }
+
+  static int getTimesDays(List<Long> needNorms)
+  {
+    long min = Long.MAX_VALUE;
+    long max = Long.MIN_VALUE;
+    for (Long n : needNorms) {
+      if (min > n) {
+        min = n;
+      }
+      if (max < n) {
+        max = n;
+      }
+    }
+    long finalMin = min;
+    long finalMax = max;
+    long days = (finalMax - finalMin) / (24 * 3600 * 1000L);
+    return (int) days;
+  }
+
+  @VisibleForTesting
+  static double[] minMaxNormalization(List<Long> needNorms)
+  {
+    long min = Long.MAX_VALUE;
+    long max = Long.MIN_VALUE;
+    for (Long n : needNorms) {
+      if (min > n) {
+        min = n;
+      }
+      if (max < n) {
+        max = n;
+      }
+    }
+    long finalMin = min;
+    long finalMax = max;
+    if (finalMin == finalMax) {
+      return needNorms.stream().mapToDouble(n -> 0).toArray();
+    }
+    return needNorms.stream().mapToDouble(n -> 1.0 * (n - finalMin) / (finalMax - finalMin)).toArray();
+  }
+
+  static boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
+  {
+    final Iterator<PartitionChunk<DataSegment>> chunks = holder.getObject().iterator();
+    if (!chunks.hasNext()) {
+      return false; // There should be at least one chunk for a holder to be compactible.
+    }
+    PartitionChunk<DataSegment> firstChunk = chunks.next();
+    if (!interval.contains(firstChunk.getObject().getInterval())) {
+      return false;
+    }
+    long partitionBytes = firstChunk.getObject().getSize();
+    while (partitionBytes == 0 && chunks.hasNext()) {
+      partitionBytes += chunks.next().getObject().getSize();
+    }
+    return partitionBytes > 0;
   }
 
   /**
    * Iterates the given {@link VersionedIntervalTimeline}. Only compactible {@link TimelineObjectHolder}s are returned,
    * which means the holder always has at least one {@link DataSegment}.
    */
-  private static class CompactibleTimelineObjectHolderCursor implements Iterator<List<DataSegment>>
+  static class CompactibleTimelineObjectHolderCursor implements Iterator<Tuple2<Float, List<DataSegment>>>
   {
-    private final List<TimelineObjectHolder<String, DataSegment>> holders;
+    private final float timeWeightForRecentDays = DataSourceCompactionConfig.DEFAULT_COMPACTION_TIME_WEIGHT_FOR_RECENT_DAYS;
+    private final float smallFileNumWeight = DataSourceCompactionConfig.DEFAULT_COMPACTION_SEGMENT_NUM_WEIGHT;
+    private final Period recentDays;
+    private volatile List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> minorHolders;
+    private volatile List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> majorHolders;
+    private volatile boolean curIsMajor = false;
 
     CompactibleTimelineObjectHolderCursor(
         VersionedIntervalTimeline<String, DataSegment> timeline,
-        List<Interval> totalIntervalsToSearch
+        List<Interval> totalIntervalsToSearch,
+        DataSourceCompactionConfig dataSourceCompactionConfig
     )
     {
-      this.holders = totalIntervalsToSearch
+      recentDays = dataSourceCompactionConfig.getMinorCompactRecentDays();
+      List<TimelineObjectHolder<String, DataSegment>> holders = totalIntervalsToSearch
           .stream()
           .flatMap(interval -> timeline
               .lookup(interval)
@@ -206,40 +367,66 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
               .filter(holder -> isCompactibleHolder(interval, holder))
           )
           .collect(Collectors.toList());
+      // compute score--timeline
+      minorHolders = computeTimelineScore(holders, timeWeightForRecentDays, recentDays, smallFileNumWeight);
     }
 
-    private boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
+    public void compareAndUpdateCompactIterator(boolean isMajorNew)
     {
-      final Iterator<PartitionChunk<DataSegment>> chunks = holder.getObject().iterator();
-      if (!chunks.hasNext()) {
-        return false; // There should be at least one chunk for a holder to be compactible.
+      if (this.curIsMajor != isMajorNew) {
+        if (isMajorNew) {
+          // update major from minor iterator
+          log.info("Update major iterator from minor.");
+          majorHolders = computeTimelineScore(minorHolders.stream().map(t -> t._2).collect(Collectors.toList()),
+                                              timeWeightForRecentDays * MAJOR_COMPACTION_IGNORE_TIME_LEVEL, recentDays,
+                                              smallFileNumWeight
+          );
+        } else {
+          log.info("Update minor iterator from major.");
+          minorHolders = computeTimelineScore(majorHolders.stream().map(t -> t._2).collect(Collectors.toList()),
+                                              timeWeightForRecentDays * MAJOR_COMPACTION_IGNORE_TIME_LEVEL, recentDays,
+                                              smallFileNumWeight
+          );
+        }
+        this.curIsMajor = isMajorNew;
       }
-      PartitionChunk<DataSegment> firstChunk = chunks.next();
-      if (!interval.contains(firstChunk.getObject().getInterval())) {
-        return false;
-      }
-      long partitionBytes = firstChunk.getObject().getSize();
-      while (partitionBytes == 0 && chunks.hasNext()) {
-        partitionBytes += chunks.next().getObject().getSize();
-      }
-      return partitionBytes > 0;
     }
 
     @Override
     public boolean hasNext()
     {
-      return !holders.isEmpty();
+      if (curIsMajor == false) {
+        return !minorHolders.isEmpty();
+      } else {
+        return !majorHolders.isEmpty();
+      }
     }
 
     @Override
-    public List<DataSegment> next()
+    public Tuple2<Float, List<DataSegment>> next()
     {
+      List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> holders = curIsMajor == false
+                                                                               ? minorHolders
+                                                                               : majorHolders;
       if (holders.isEmpty()) {
         throw new NoSuchElementException();
       }
-      return Streams.sequentialStreamFrom(holders.remove(holders.size() - 1).getObject())
-                    .map(PartitionChunk::getObject)
-                    .collect(Collectors.toList());
+      final Tuple2<Float, TimelineObjectHolder<String, DataSegment>> remove = holders.remove(holders.size() - 1);
+      return new Tuple2<>(remove._1, Streams.sequentialStreamFrom(remove._2.getObject())
+                                            .map(PartitionChunk::getObject)
+                                            .collect(Collectors.toList()));
+    }
+  }
+
+  public static class Tuple2<T1, T2>
+  {
+    public T1 _1;
+    public T2 _2;
+
+    public Tuple2(T1 _1, T2 _2)
+    {
+      this._1 = _1;
+      this._2 = _2;
     }
   }
 
@@ -251,18 +438,20 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
    *
    * @return segments to compact
    */
-  private SegmentsToCompact findSegmentsToCompact(
-      final String dataSourceName,
+  private Tuple2<Float, List<DataSegment>> findSegmentsToCompact(
+      String dataSourceName,
       final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor,
-      final DataSourceCompactionConfig config
+      final DataSourceCompactionConfig config,
+      boolean isMajorNew,
+      AtomicInteger skipAtomic
   )
   {
+    compactibleTimelineObjectHolderCursor.compareAndUpdateCompactIterator(isMajorNew);
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
-
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
-      final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-
-      if (!candidates.isEmpty()) {
+      final Tuple2<Float, List<DataSegment>> next = compactibleTimelineObjectHolderCursor.next();
+      final SegmentsToCompact candidates = new SegmentsToCompact(next._2);
+      if (!candidates.isEmpty() && candidates.getNumberOfSegments() >= config.getMinInputSegmentNum()) {
         final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
         final boolean needsCompaction = needsCompaction(
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
@@ -270,7 +459,8 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
         );
 
         if (isCompactibleSize && needsCompaction) {
-          return candidates;
+          skipAtomic.incrementAndGet();
+          return next;
         } else {
           if (!needsCompaction) {
             // Collect statistic for segments that is already compacted
@@ -289,12 +479,11 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
             );
           }
         }
-      } else {
-        throw new ISE("No segment is found?");
       }
     }
+    skipAtomic.incrementAndGet();
     log.info("All segments look good! Nothing to compact");
-    return new SegmentsToCompact();
+    return new Tuple2<>(0f, Collections.emptyList());
   }
 
   /**
@@ -323,15 +512,18 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
     );
 
     final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
+    // 查找过滤后的interval列表 filteredInterval
     final List<Interval> filteredInterval = filterSkipIntervals(totalInterval, fullSkipIntervals);
     final List<Interval> searchIntervals = new ArrayList<>();
 
     for (Interval lookupInterval : filteredInterval) {
+      // 从filteredInterval列表中过滤具有完整partition的interval对应的DataSegment列表segments
       final List<DataSegment> segments = timeline
           .findNonOvershadowedObjectsInInterval(lookupInterval, Partitions.ONLY_COMPLETE)
           .stream()
           // findNonOvershadowedObjectsInInterval() may return segments merely intersecting with lookupInterval, while
           // we are interested only in segments fully lying within lookupInterval here.
+          // 过滤掉没有完全被interval包含的DataSegment。
           .filter(segment -> lookupInterval.contains(segment.getInterval()))
           .collect(Collectors.toList());
 
@@ -339,6 +531,7 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
         continue;
       }
 
+      // 从segments中选择一个最小和最大的时间，作为新的interval
       DateTime searchStart = segments
           .stream()
           .map(segment -> segment.getId().getIntervalStart())
@@ -436,27 +629,22 @@ public class NewestSegmentFirstIterator extends CompactionSegmentIterator<List<D
   private static class QueueEntry
   {
     private final Interval interval; // whole interval for all segments
-    private final List<DataSegment> segments;
+    private final Tuple2<Float, List<DataSegment>> segmentsToCompactTuple2;
 
-    private QueueEntry(List<DataSegment> segments)
+    private QueueEntry(Tuple2<Float, List<DataSegment>> segmentsToCompactTuple2)
     {
-      Preconditions.checkArgument(segments != null && !segments.isEmpty());
-      DateTime minStart = DateTimes.MAX, maxEnd = DateTimes.MIN;
-      for (DataSegment segment : segments) {
-        if (segment.getInterval().getStart().compareTo(minStart) < 0) {
-          minStart = segment.getInterval().getStart();
-        }
-        if (segment.getInterval().getEnd().compareTo(maxEnd) > 0) {
-          maxEnd = segment.getInterval().getEnd();
-        }
-      }
-      this.interval = new Interval(minStart, maxEnd);
-      this.segments = segments;
+      Preconditions.checkArgument(segmentsToCompactTuple2._2 != null && !segmentsToCompactTuple2._2.isEmpty());
+      Collections.sort(segmentsToCompactTuple2._2);
+      this.interval = new Interval(
+          segmentsToCompactTuple2._2.get(0).getInterval().getStart(),
+          segmentsToCompactTuple2._2.get(segmentsToCompactTuple2._2.size() - 1).getInterval().getEnd()
+      );
+      this.segmentsToCompactTuple2 = segmentsToCompactTuple2;
     }
 
     private String getDataSource()
     {
-      return segments.get(0).getDataSource();
+      return segmentsToCompactTuple2._2.get(0).getDataSource();
     }
   }
 

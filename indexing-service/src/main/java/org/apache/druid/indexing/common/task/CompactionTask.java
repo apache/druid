@@ -305,6 +305,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   @Override
+  public boolean isWaitingToRun()
+  {
+    return false;
+  }
+
+  @Override
   public int getPriority()
   {
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);

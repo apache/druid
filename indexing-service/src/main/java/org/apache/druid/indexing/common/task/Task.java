@@ -123,6 +123,11 @@ public interface Task
    */
   String getType();
 
+  default boolean isWaitingToRun()
+  {
+    return true;
+  }
+
   /**
    * Get the nodeType for if/when this task publishes on zookeeper.
    *
