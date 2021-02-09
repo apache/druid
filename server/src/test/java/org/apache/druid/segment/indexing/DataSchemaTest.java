@@ -44,6 +44,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -52,6 +53,8 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -60,6 +63,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DataSchemaTest extends InitializedNullHandlingTest
 {
@@ -545,5 +549,32 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
     Assert.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
     Assert.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
+  }
+
+  @Test
+  public void testWithDimensionSpec()
+  {
+    TimestampSpec tsSpec = Mockito.mock(TimestampSpec.class);
+    GranularitySpec gSpec = Mockito.mock(GranularitySpec.class);
+    DimensionsSpec oldDimSpec = Mockito.mock(DimensionsSpec.class);
+    DimensionsSpec newDimSpec = Mockito.mock(DimensionsSpec.class);
+    AggregatorFactory aggFactory = Mockito.mock(AggregatorFactory.class);
+    TransformSpec transSpec = Mockito.mock(TransformSpec.class);
+    Map<String, Object> parserMap = Mockito.mock(Map.class);
+    Mockito.when(newDimSpec.withDimensionExclusions(ArgumentMatchers.any(Set.class))).thenReturn(newDimSpec);
+
+    DataSchema oldSchema = new DataSchema("dataSource", tsSpec, oldDimSpec,
+                                          new AggregatorFactory[]{aggFactory}, gSpec,
+                                          transSpec, parserMap, jsonMapper
+    );
+    DataSchema newSchema = oldSchema.withDimensionsSpec(newDimSpec);
+    Assert.assertSame(oldSchema.getDataSource(), newSchema.getDataSource());
+    Assert.assertSame(oldSchema.getTimestampSpec(), newSchema.getTimestampSpec());
+    Assert.assertSame(newDimSpec, newSchema.getDimensionsSpec());
+    Assert.assertSame(oldSchema.getAggregators(), newSchema.getAggregators());
+    Assert.assertSame(oldSchema.getGranularitySpec(), newSchema.getGranularitySpec());
+    Assert.assertSame(oldSchema.getTransformSpec(), newSchema.getTransformSpec());
+    Assert.assertSame(oldSchema.getParserMap(), newSchema.getParserMap());
+
   }
 }

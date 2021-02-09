@@ -54,7 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetType> implements SamplerSpec
+public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> implements SamplerSpec
 {
   static final long POLL_TIMEOUT_MS = 100;
 
@@ -106,7 +106,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
 
-  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> createRecordSupplier();
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> createRecordSupplier();
 
   private class SeekableStreamSamplerFirehoseFactory implements FiniteFirehoseFactory<ByteBufferInputRowParser, Object>
   {
@@ -159,7 +159,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         ((StringInputRowParser) parser).startFileFromBeginning();
       }
 
-      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> inputSource = new RecordSupplierInputSource<>(
+      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, RecordType> inputSource = new RecordSupplierInputSource<>(
           ioConfig.getStream(),
           createRecordSupplier(),
           ioConfig.isUseEarliestSequenceNumber()

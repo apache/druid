@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -57,6 +58,7 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -230,10 +232,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
                       if (hydrantDefinitelySwapped && cache.isLocal()) {
+                        StorageAdapter storageAdapter = segmentAndCloseable.lhs.asStorageAdapter();
+                        long segmentMinTime = storageAdapter.getMinTime().getMillis();
+                        long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
                         runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
                             cacheKeyPrefix,
                             descriptor,
+                            actualDataInterval,
                             objectMapper,
                             cache,
                             toolChest,

@@ -41,6 +41,7 @@ import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -114,10 +115,10 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testMaxIngestedEventTime() throws Exception
   {
-    final IncrementalIndex rtIndex = new IncrementalIndex.Builder()
+    final IncrementalIndex rtIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         new DataSourceMetadataQueryRunnerFactory(

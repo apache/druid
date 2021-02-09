@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 import {
   DimensionsSpec,
   getSpecType,
@@ -127,7 +129,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
     type: 'inline',
-    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+    data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');

@@ -183,8 +183,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   boolean canHandle(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
-      OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
+      OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, ?> record
   )
   {
     lock.lock();
@@ -240,7 +240,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   Supplier<Committer> getCommitterSupplier(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
       String stream,
       Map<PartitionIdType, SequenceOffsetType> lastPersistedOffsets
   )
@@ -304,7 +304,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   TransactionalSegmentPublisher createPublisher(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
       TaskToolbox toolbox,
       boolean useTransaction
   )
@@ -319,12 +319,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   private class SequenceMetadataTransactionalSegmentPublisher
       implements TransactionalSegmentPublisher
   {
-    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
+    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner;
     private final TaskToolbox toolbox;
     private final boolean useTransaction;
 
     public SequenceMetadataTransactionalSegmentPublisher(
-        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
         TaskToolbox toolbox,
         boolean useTransaction
     )

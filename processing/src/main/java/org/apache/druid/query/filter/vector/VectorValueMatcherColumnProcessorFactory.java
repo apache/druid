@@ -23,6 +23,7 @@ import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class VectorValueMatcherColumnProcessorFactory implements VectorColumnProcessorFactory<VectorValueMatcherFactory>
@@ -82,5 +83,14 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   )
   {
     return new LongVectorValueMatcher(selector);
+  }
+
+  @Override
+  public VectorValueMatcherFactory makeObjectProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorObjectSelector selector
+  )
+  {
+    return new NilVectorValueMatcher(selector);
   }
 }

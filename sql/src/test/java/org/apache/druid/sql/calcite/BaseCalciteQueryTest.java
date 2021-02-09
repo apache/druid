@@ -67,6 +67,8 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -99,6 +101,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class BaseCalciteQueryTest extends CalciteTestBase
@@ -678,39 +681,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ObjectMapper objectMapper
   ) throws Exception
   {
-    final InProcessViewManager viewManager =
-        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
-        conglomerate,
-        walker,
+    final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
-        viewManager,
-        authorizerMapper
-    );
-
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
-        plannerConfig,
         authorizerMapper,
-        objectMapper,
-        CalciteTests.DRUID_SCHEMA_NAME
-    );
-    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
-
-    viewManager.createView(
-        plannerFactory,
-        "aview",
-        "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "bview",
-        "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
+        objectMapper
     );
 
     return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
@@ -752,6 +728,95 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         );
       }
     }
+  }
+
+  public Set<Resource> analyzeResources(
+      PlannerConfig plannerConfig,
+      String sql,
+      AuthenticationResult authenticationResult
+  )
+  {
+    SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
+        plannerConfig,
+        CalciteTests.createOperatorTable(),
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    );
+
+    SqlLifecycle lifecycle = lifecycleFactory.factorize();
+    lifecycle.initialize(sql, ImmutableMap.of());
+    return lifecycle.runAnalyzeResources(authenticationResult).getResources();
+  }
+
+  public SqlLifecycleFactory getSqlLifecycleFactory(
+      PlannerConfig plannerConfig,
+      DruidOperatorTable operatorTable,
+      ExprMacroTable macroTable,
+      AuthorizerMapper authorizerMapper,
+      ObjectMapper objectMapper
+  )
+  {
+    final InProcessViewManager viewManager =
+        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
+    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        viewManager,
+        authorizerMapper
+    );
+
+    final PlannerFactory plannerFactory = new PlannerFactory(
+        rootSchema,
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        authorizerMapper,
+        objectMapper,
+        CalciteTests.DRUID_SCHEMA_NAME
+    );
+    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
+
+    viewManager.createView(
+        plannerFactory,
+        "aview",
+        "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "bview",
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "cview",
+        "SELECT SUBSTRING(bar.dim1, 1, 1) AS dim1_firstchar, bar.dim2 as dim2, dnf.l2 as l2\n"
+        + "FROM (SELECT * from foo WHERE dim2 = 'a') as bar INNER JOIN druid.numfoo dnf ON bar.dim2 = dnf.dim2"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "dview",
+        "SELECT SUBSTRING(dim1, 1, 1) AS numfoo FROM foo WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "forbiddenView",
+        "SELECT __time, SUBSTRING(dim1, 1, 1) AS dim1_firstchar, dim2 FROM foo WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "restrictedView",
+        "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
+    );
+    return sqlLifecycleFactory;
   }
 
   protected void cannotVectorize()

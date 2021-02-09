@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
@@ -29,11 +30,13 @@ import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
@@ -46,6 +49,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -87,7 +91,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       new Record().withData(jb("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
       new Record().withData(jb("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
   );
-  private static final List<Object> ALL_RECORDS = ImmutableList.builder()
+  private static final List<OrderedPartitionableRecord<String, String, ByteEntity>> ALL_RECORDS = ImmutableList.<OrderedPartitionableRecord<String, String, ByteEntity>>builder()
                                                                .addAll(SHARD0_RECORDS.stream()
                                                                                      .map(x -> new OrderedPartitionableRecord<>(
                                                                                          STREAM,
@@ -95,7 +99,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                          x.getSequenceNumber(),
                                                                                          Collections
                                                                                              .singletonList(
-                                                                                                 toByteArray(
+                                                                                                 new ByteEntity(
                                                                                                      x.getData()))
                                                                                      ))
                                                                                      .collect(
@@ -108,7 +112,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                          x.getSequenceNumber(),
                                                                                          Collections
                                                                                              .singletonList(
-                                                                                                 toByteArray(
+                                                                                                 new ByteEntity(
                                                                                                      x.getData()))
                                                                                      ))
                                                                                      .collect(
@@ -170,7 +174,9 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @After
   public void tearDownTest()
   {
-    recordSupplier.close();
+    if (null != recordSupplier) {
+      recordSupplier.close();
+    }
     recordSupplier = null;
   }
 
@@ -238,7 +244,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   // filter out EOS markers
-  private static List<OrderedPartitionableRecord<String, String>> cleanRecords(List<OrderedPartitionableRecord<String, String>> records)
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> cleanRecords(List<OrderedPartitionableRecord<String, String, ByteEntity>> records)
   {
     return records.stream()
                   .filter(x -> !x.getSequenceNumber()
@@ -312,7 +318,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -400,7 +406,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
             POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -408,6 +414,68 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
     Assert.assertEquals(SHARDS_LAG_MILLIS, recordSupplier.getPartitionResourcesTimeLag());
+  }
+
+  @Test
+  public void testPollWithKinesisNonRetryableFailure() throws InterruptedException
+  {
+    recordsPerFetch = 100;
+
+    EasyMock.expect(kinesis.getShardIterator(
+        EasyMock.anyObject(),
+        EasyMock.eq(SHARD_ID0),
+        EasyMock.anyString(),
+        EasyMock.anyString()
+    )).andReturn(
+        getShardIteratorResult0).anyTimes();
+
+    AmazonServiceException getException = new AmazonServiceException("BadRequest");
+    getException.setErrorCode("BadRequest");
+    getException.setStatusCode(400);
+    getException.setServiceName("AmazonKinesis");
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+            .andThrow(getException)
+            .once();
+
+    replayAll();
+
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+        StreamPartition.of(STREAM, SHARD_ID0)
+    );
+
+
+    recordSupplier = new KinesisRecordSupplier(
+        kinesis,
+        recordsPerFetch,
+        0,
+        1,
+        false,
+        100,
+        5000,
+        5000,
+        60000,
+        100,
+        true
+    );
+
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
+
+    int count = 0;
+    while (recordSupplier.isAnyFetchActive() && count++ < 10) {
+      Thread.sleep(100);
+    }
+    Assert.assertFalse(recordSupplier.isAnyFetchActive());
+
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+        POLL_TIMEOUT_MILLIS));
+
+    verifyAll();
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertEquals(0, polledRecords.size());
   }
 
   @Test
@@ -479,7 +547,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -644,7 +712,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    OrderedPartitionableRecord<String, String> firstRecord = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
+    OrderedPartitionableRecord<String, String, ByteEntity> firstRecord = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
 
     Assert.assertEquals(
         ALL_RECORDS.get(7),
@@ -662,7 +730,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
 
 
-    OrderedPartitionableRecord<String, String> record2 = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
+    OrderedPartitionableRecord<String, String, ByteEntity> record2 = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
 
     Assert.assertEquals(ALL_RECORDS.get(9), record2);
     // only one partition in this test. second results come from getRecordsResult0, which has SHARD0_LAG_MILLIS
@@ -737,7 +805,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -763,6 +831,47 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     KinesisRecordSupplier recordSupplier = getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper();
     Assert.assertNull(recordSupplier.getEarliestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
     verifyAll();
+  }
+
+  @Test
+  public void getLatestSequenceNumberWhenKinesisRetryableException()
+  {
+    EasyMock.expect(kinesis.getShardIterator(
+        EasyMock.eq(STREAM),
+        EasyMock.eq(SHARD_ID0),
+        EasyMock.eq(ShardIteratorType.LATEST.toString())
+    )).andReturn(
+        getShardIteratorResult0).once();
+
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).once();
+
+    AmazonClientException ex = new AmazonClientException(new IOException());
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, 1000)))
+            .andThrow(ex)
+            .andReturn(getRecordsResult0)
+            .once();
+
+    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS).once();
+    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).once();
+    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(0L).once();
+
+    replayAll();
+
+    recordSupplier = new KinesisRecordSupplier(
+        kinesis,
+        recordsPerFetch,
+        0,
+        2,
+        true,
+        100,
+        5000,
+        5000,
+        1000,
+        100,
+        true
+    );
+
+    Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
   }
 
   private KinesisRecordSupplier getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper()
@@ -886,23 +995,4 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
     verifyAll();
   }
-
-  /**
-   * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
-   * array itself. Does not modify position or limit of the buffer.
-   */
-  private static byte[] toByteArray(final ByteBuffer buffer)
-  {
-    if (buffer.hasArray()
-        && buffer.arrayOffset() == 0
-        && buffer.position() == 0
-        && buffer.array().length == buffer.limit()) {
-      return buffer.array();
-    } else {
-      final byte[] retVal = new byte[buffer.remaining()];
-      buffer.duplicate().get(retVal);
-      return retVal;
-    }
-  }
-
 }
