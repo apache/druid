@@ -143,7 +143,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -1119,57 +1118,58 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testChooseFinestGranularity()
-  {
-    List<Granularity> input = ImmutableList.of(
-        Granularities.DAY,
-        Granularities.SECOND,
-        Granularities.MINUTE,
-        Granularities.SIX_HOUR,
-        Granularities.DAY,
-        Granularities.NONE,
-        Granularities.MINUTE
-    );
-    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>(Granularities.QUARTER);
-    Set<Granularity> finer = new HashSet<>();
-    for (Granularity current : input) {
-      CompactionTask.chooseFinerGranularity(queryGranularity, current, finer);
-    }
-    Assert.assertEquals(Granularities.SECOND, queryGranularity.get());
-
-  }
-
-  @Test
-  public void testChooseFinestGranularityContainsAndStartWithNull()
+  public void testChooseFinestGranularityWithNulls()
   {
     List<Granularity> input = Arrays.asList(
         Granularities.DAY,
         Granularities.SECOND,
         Granularities.MINUTE,
         Granularities.SIX_HOUR,
+        Granularities.DAY,
         null,
+        Granularities.ALL,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.SECOND.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityNone()
+  {
+    List<Granularity> input = ImmutableList.of(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.NONE,
         Granularities.DAY,
         Granularities.NONE,
         Granularities.MINUTE
     );
-    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>(Granularities.MONTH);
-    Set<Granularity> finer = new HashSet<>();
-    for (Granularity current : input) {
-      CompactionTask.chooseFinerGranularity(queryGranularity, current, finer);
-    }
-    Assert.assertEquals(Granularities.SECOND, queryGranularity.get());
-
+    Assert.assertTrue(Granularities.NONE.equals(chooseFinestGranularityHelper(input)));
   }
 
   @Test
-  public void testChooseFinestGranularityFirstRound()
+  public void testChooseFinestGranularityAllNulls()
   {
-    Set<Granularity> finer = new HashSet<>();
-    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>(Granularities.MINUTE);
-    Granularity current = Granularities.HOUR;
-    CompactionTask.chooseFinerGranularity(queryGranularity, current, finer);
-    Assert.assertEquals(Granularities.MINUTE, queryGranularity.get());
+    List<Granularity> input = Arrays.asList(
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertNull(chooseFinestGranularityHelper(input));
   }
+
+  private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
+  {
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    for (Granularity current : granularities) {
+      queryGranularity.set(CompactionTask.compareWithCurrent(queryGranularity.get(), current));
+    }
+    return queryGranularity.get();
+  }
+
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {

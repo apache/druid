@@ -60,7 +60,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -98,11 +97,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -648,39 +645,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     // check index metadata &
     // Decide which values to propagate (i.e. carry over) for rollup & queryGranularity
     final SettableSupplier<Boolean> rollup = new SettableSupplier<>();
-    final SettableSupplier<Boolean> rollupIsValid = new SettableSupplier<>(true);
     final SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
-    Set<Granularity> finerGranularities = new HashSet<>();
-    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
-      final QueryableIndex index = pair.lhs;
-      if (index.getMetadata() == null) {
-        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
-      }
-      // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
-
-      // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
-      if (rollupIsValid.get()) {
-        Boolean isRollup = index.getMetadata().isRollup();
-        if (isRollup == null) {
-          rollupIsValid.set(false);
-          rollup.set(false);
-        } else if (rollup.get() == null) {
-          rollup.set(isRollup);
-        } else if (!rollup.get().equals(isRollup.booleanValue())) {
-          rollupIsValid.set(false);
-          rollup.set(false);
-        }
-      }
-
-      // Pick the finer, non-null, of the query granularities of the segments being compacted
-      Granularity current = index.getMetadata().getQueryGranularity();
-      if (queryGranularity.get() == null) {
-        queryGranularity.set(current);
-      } else if (current != queryGranularity.get()) {
-        // note that queryGranularity will be set if we are here...
-        chooseFinerGranularity(queryGranularity, current, finerGranularities);
-      }
-    }
+    decideRollupAndQueryGranularityCarryOver(rollup, queryGranularity, queryableIndexAndSegments);
 
     // find granularity spec
 
@@ -717,32 +683,62 @@ public class CompactionTask extends AbstractBatchIndexTask
     );
   }
 
-  @VisibleForTesting
+
   /**
-   * queryGranularity must contain a granularity otherwise this throws a null pointer
+   * Decide which rollup & queryCardinalities to propage for the compacted segment based on
+   * the data segments given
+   *
+   * @param rollup                    Reference to update with the rollup value
+   * @param queryGranularity          Reference to update with the queryGranularity value
+   * @param queryableIndexAndSegments The segments to compact
    */
-  static void chooseFinerGranularity(
+  private static void decideRollupAndQueryGranularityCarryOver(
+      SettableSupplier<Boolean> rollup,
       SettableSupplier<Granularity> queryGranularity,
-      Granularity current,
-      Set<Granularity> finerGranularities
+      List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments
   )
   {
-    // We will pick the finer since this is the non-destructive option that
-    // makes the most sense (the coarsest would be destructive and discarding
-    // the granularities loses more information)
-    if (finerGranularities.isEmpty()) {
-      // sanity
-      if (queryGranularity.get() == null) {
-        throw new IAE("queryGranularity must be set");
+    final SettableSupplier<Boolean> rollupIsValid = new SettableSupplier<>(true);
+    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
+      final QueryableIndex index = pair.lhs;
+      if (index.getMetadata() == null) {
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
       }
-      finerGranularities.addAll(Granularity.granularitiesFinerThan(queryGranularity.get()));
+      // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
+
+      // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
+      if (rollupIsValid.get()) {
+        Boolean isRollup = index.getMetadata().isRollup();
+        if (isRollup == null) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        } else if (rollup.get() == null) {
+          rollup.set(isRollup);
+        } else if (!rollup.get().equals(isRollup.booleanValue())) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        }
+      }
+
+      // Pick the finer, non-null, of the query granularities of the segments being compacted
+      Granularity current = index.getMetadata().getQueryGranularity();
+      queryGranularity.set(compareWithCurrent(queryGranularity.get(), current));
     }
-    if (current != null && finerGranularities.contains(current)) {
-      queryGranularity.set(current);
-      // throw away larger granularities:
-      finerGranularities.clear();
-      finerGranularities.addAll(Granularity.granularitiesFinerThan(current));
+  }
+
+  @VisibleForTesting
+  static Granularity compareWithCurrent(Granularity queryGranularity, Granularity current)
+  {
+    if (queryGranularity == null && current != null) {
+      queryGranularity = current;
+    } else if (queryGranularity != null
+               && current != null
+               && Granularity.IS_FINER_THAN.compare(current, queryGranularity) < 0) {
+      queryGranularity = current;
     }
+    // we never propagate nulls when there is at least one non-null granularity thus
+    // do nothing for the case queryGranularity != null && current == null
+    return queryGranularity;
   }
 
   private static AggregatorFactory[] createMetricsSpec(
