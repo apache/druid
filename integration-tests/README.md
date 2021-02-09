@@ -40,10 +40,17 @@ have at least 4GB of memory allocated to the docker engine. (You can verify it
 under Preferences > Resources > Advanced.)
 
 Also set the `DOCKER_IP`
-environment variable to localhost on your system, as follows:
+environment variable to `localhost` on your system, as follows:
 
 ```
 export DOCKER_IP=127.0.0.1
+```
+
+Also set the `ZK_VERSION`
+environment variable to either `3.4` or `3.5` on your system, as follows:
+
+```
+export ZK_VERSION=3.5
 ```
 
 ## Running tests
@@ -56,8 +63,10 @@ To run all tests from a test group using docker and mvn run the following comman
 
 To run only a single test using mvn run the following command:
 ```
-  mvn verify -P integration-tests -Dit.test=<test_name>
+  mvn verify -P integration-tests -Dgroups=<test_group> -Dit.test=<test_name>
 ```
+The test group should always be set, as certain test setup and cleanup tasks are based on the test group. You can find
+the test group for a given test as an annotation in the respective test class.
 
 Add `-rf :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
