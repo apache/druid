@@ -21,6 +21,7 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -39,7 +40,8 @@ public class MapLookupExtractionFnSerDeTest
   private static ObjectMapper mapper;
   private static final Map<String, String> RENAMES = ImmutableMap.of(
       "foo", "bar",
-      "bar", "baz"
+      "bar", "baz",
+      "", "empty"
   );
 
   @BeforeClass
@@ -51,6 +53,7 @@ public class MapLookupExtractionFnSerDeTest
   @Test
   public void testDeserialization() throws IOException
   {
+    NullHandling.initializeForTests();
     final DimExtractionFn fn = mapper.readerFor(DimExtractionFn.class).readValue(
         StringUtils.format(
             "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}}",
