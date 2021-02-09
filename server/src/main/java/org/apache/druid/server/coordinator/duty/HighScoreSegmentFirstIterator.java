@@ -345,8 +345,8 @@ public class HighScoreSegmentFirstIterator
    */
   static class CompactibleTimelineObjectHolderCursor implements Iterator<Tuple2<Float, List<DataSegment>>>
   {
-    private final float timeWeightForRecentDays = DataSourceCompactionConfig.DEFAULT_COMPACTION_TIME_WEIGHT_FOR_RECENT_DAYS;
-    private final float smallFileNumWeight = DataSourceCompactionConfig.DEFAULT_COMPACTION_SEGMENT_NUM_WEIGHT;
+    private static final float TIME_WEIGHT_FOR_RECENT_DAYS = DataSourceCompactionConfig.DEFAULT_COMPACTION_TIME_WEIGHT_FOR_RECENT_DAYS;
+    private static final float SMALLFILE_NUM_WEIGHT = DataSourceCompactionConfig.DEFAULT_COMPACTION_SEGMENT_NUM_WEIGHT;
     private final Period recentDays;
     private volatile List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> minorHolders;
     private volatile List<Tuple2<Float, TimelineObjectHolder<String, DataSegment>>> majorHolders;
@@ -368,7 +368,7 @@ public class HighScoreSegmentFirstIterator
           )
           .collect(Collectors.toList());
       // compute score--timeline
-      minorHolders = computeTimelineScore(holders, timeWeightForRecentDays, recentDays, smallFileNumWeight);
+      minorHolders = computeTimelineScore(holders, TIME_WEIGHT_FOR_RECENT_DAYS, recentDays, SMALLFILE_NUM_WEIGHT);
     }
 
     public void compareAndUpdateCompactIterator(boolean isMajorNew)
@@ -378,14 +378,16 @@ public class HighScoreSegmentFirstIterator
           // update major from minor iterator
           log.info("Update major iterator from minor.");
           majorHolders = computeTimelineScore(minorHolders.stream().map(t -> t._2).collect(Collectors.toList()),
-                                              timeWeightForRecentDays * MAJOR_COMPACTION_IGNORE_TIME_LEVEL, recentDays,
-                                              smallFileNumWeight
+                                              TIME_WEIGHT_FOR_RECENT_DAYS * MAJOR_COMPACTION_IGNORE_TIME_LEVEL,
+                                              recentDays,
+                                              SMALLFILE_NUM_WEIGHT
           );
         } else {
           log.info("Update minor iterator from major.");
           minorHolders = computeTimelineScore(majorHolders.stream().map(t -> t._2).collect(Collectors.toList()),
-                                              timeWeightForRecentDays * MAJOR_COMPACTION_IGNORE_TIME_LEVEL, recentDays,
-                                              smallFileNumWeight
+                                              TIME_WEIGHT_FOR_RECENT_DAYS * MAJOR_COMPACTION_IGNORE_TIME_LEVEL,
+                                              recentDays,
+                                              SMALLFILE_NUM_WEIGHT
           );
         }
         this.curIsMajor = isMajorNew;
