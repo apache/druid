@@ -812,7 +812,7 @@ public class CompactSegmentsTest
               50L,
               null,
               new Period("PT1H"), // smaller than segment interval
-              null,
+              true,
               new UserCompactionTaskQueryTuningConfig(
                   null,
                   null,
