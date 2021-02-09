@@ -40,7 +40,7 @@ have at least 4GB of memory allocated to the docker engine. (You can verify it
 under Preferences > Resources > Advanced.)
 
 Also set the `DOCKER_IP`
-environment variable to `localhost` on your system, as follows:
+environment variable to localhost on your system, as follows:
 
 ```
 export DOCKER_IP=127.0.0.1
