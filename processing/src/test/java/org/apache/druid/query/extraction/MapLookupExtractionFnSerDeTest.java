@@ -21,11 +21,8 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,8 +45,7 @@ public class MapLookupExtractionFnSerDeTest
   @BeforeClass
   public static void setup()
   {
-    Injector defaultInjector = GuiceInjectors.makeStartupInjector();
-    mapper = defaultInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    mapper = TestHelper.makeJsonMapper();
   }
 
   @Test
