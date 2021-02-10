@@ -23,9 +23,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -79,13 +77,13 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   @Test
   public void testCompactionWithSegmentGranularity() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_SEGMENT_GRANULARITY, Granularities.MONTH);
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_SEGMENT_GRANULARITY, GranularityType.MONTH);
   }
 
   @Test
   public void testCompactionWithGranularitySpec() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC, Granularities.MONTH);
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC, GranularityType.MONTH);
   }
 
   @Test
@@ -98,7 +96,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       String indexTask,
       String queriesResource,
       String compactionResource,
-      Granularity newSegmentGranularity
+      GranularityType newSegmentGranularity
   ) throws Exception
   {
     loadData(indexTask);
@@ -136,7 +134,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       if (newSegmentGranularity != null) {
         List<String> newIntervals = new ArrayList<>();
         for (String interval : expectedIntervalAfterCompaction) {
-          for (Interval newinterval : newSegmentGranularity.getIterable(new Interval(interval))) {
+          for (Interval newinterval : newSegmentGranularity.getDefaultGranularity().getIterable(new Interval(interval))) {
             newIntervals.add(newinterval.toString());
           }
         }
@@ -159,19 +157,19 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void compactData(String compactionResource, Granularity newSegmentGranularity) throws Exception
+  private void compactData(String compactionResource, GranularityType newSegmentGranularity) throws Exception
   {
-    final String template = getResourceAsString(compactionResource);
-    String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
+    String template = getResourceAsString(compactionResource);
+    template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
     if (newSegmentGranularity != null) {
-      taskSpec = StringUtils.replace(
+      template = StringUtils.replace(
           template,
           "%%SEGMENTGRANULARITY%%",
-          ((PeriodGranularity) Granularities.MONTH).getPeriod().toString()
+          newSegmentGranularity.name()
       );
     }
 
-    final String taskID = indexer.submitTask(taskSpec);
+    final String taskID = indexer.submitTask(template);
     LOG.info("TaskID for compaction task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
