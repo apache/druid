@@ -47,6 +47,7 @@ import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
@@ -301,7 +302,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -317,7 +318,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
