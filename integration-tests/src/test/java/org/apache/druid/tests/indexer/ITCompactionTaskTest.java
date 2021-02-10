@@ -41,7 +41,9 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -194,13 +196,13 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void checkCompactionIntervals(List<String> expectedIntervals)
   {
+    Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
     ITRetryUtil.retryUntilTrue(
         () -> {
-          final List<String> intervalsAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-          intervalsAfterCompaction.sort(null);
-          System.out.println("AFTER: " + intervalsAfterCompaction);
-          System.out.println("EXPECTED: " + expectedIntervals);
-          return intervalsAfterCompaction.equals(expectedIntervals);
+          final Set<String> intervalsAfterCompaction = new HashSet<>(coordinator.getSegmentIntervals(fullDatasourceName));
+          System.out.println("ACTUAL: " + intervalsAfterCompaction);
+          System.out.println("EXPECTED: " + expectedIntervalsSet);
+          return intervalsAfterCompaction.equals(expectedIntervalsSet);
         },
         "Compaction interval check"
     );

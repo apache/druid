@@ -58,8 +58,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Test(groups = {TestNGGroup.COMPACTION})
@@ -474,11 +476,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void checkCompactionIntervals(List<String> expectedIntervals)
   {
+    Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
     ITRetryUtil.retryUntilTrue(
         () -> {
-          final List<String> actualIntervals = coordinator.getSegmentIntervals(fullDatasourceName);
-          actualIntervals.sort(null);
-          return actualIntervals.equals(expectedIntervals);
+          final Set<String> actualIntervals = new HashSet<>(coordinator.getSegmentIntervals(fullDatasourceName));
+          System.out.println("ACTUAL: " + actualIntervals);
+          System.out.println("EXPECTED: " + expectedIntervalsSet);
+          return actualIntervals.equals(expectedIntervalsSet);
         },
         "Compaction interval check"
     );
