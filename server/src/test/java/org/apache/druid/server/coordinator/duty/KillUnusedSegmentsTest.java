@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
@@ -37,6 +38,111 @@ import java.util.List;
  */
 public class KillUnusedSegmentsTest
 {
+
+  /**
+   * Test that retainDuration is properly set based on the value available in the
+   * Coordinator config. Positive and Negative durations should work as well as
+   * null which sets the duration to the maximum date.
+   */
+  @Test
+  public void testRetainDurationValues()
+  {
+    KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            Duration.parse("PT86400S"),
+            1000,
+            Duration.ZERO,
+            false
+        )
+    );
+    Assert.assertEquals((Long) Duration.parse("PT86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
+
+    unusedSegmentsKiller = new KillUnusedSegments(
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            Duration.parse("PT-86400S"),
+            1000,
+            Duration.ZERO,
+            false
+        )
+    );
+    Assert.assertEquals((Long) Duration.parse("PT-86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
+  }
+
+  /**
+   *
+   */
+  @Test
+  public void testGetEndTimeUpperLimit()
+  {
+    KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            Duration.parse("PT86400S"),
+            1000,
+            Duration.ZERO,
+            true
+        )
+    );
+    Assert.assertEquals(DateTimes.MAX, unusedSegmentsKiller.getEndTimeUpperLimit());
+
+    unusedSegmentsKiller = new KillUnusedSegments(
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            Duration.parse("PT-86400S"),
+            1000,
+            Duration.ZERO,
+            false
+        )
+    );
+
+    DateTime expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT-86400S").getMillis());
+    Assert.assertEquals(expectedTime, unusedSegmentsKiller.getEndTimeUpperLimit());
+
+    unusedSegmentsKiller = new KillUnusedSegments(
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            Duration.parse("PT86400S"),
+            1000,
+            Duration.ZERO,
+            false
+        )
+    );
+    expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT86400S").getMillis());
+    Assert.assertEquals(expectedTime, unusedSegmentsKiller.getEndTimeUpperLimit());
+  }
+
   @Test
   public void testFindIntervalForKill()
   {
@@ -109,7 +215,8 @@ public class KillUnusedSegmentsTest
             Duration.parse("PT86400S"),
             Duration.parse("PT86400S"),
             1000,
-            Duration.ZERO
+            Duration.ZERO,
+            false
         )
     );
 
