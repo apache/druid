@@ -365,11 +365,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // Only enforce maxSegmentIntervalsPermitted if we dynamically discover populated intervals via mapreduce
       // Abort task if number of intervals is greater than limit specified in TuningConfig.
       if (indexerSchema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)
-          && indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get().size()
+          && indexerSchema.getDataSchema().getGranularitySpec().inputIntervals().size()
              > indexerSchema.getTuningConfig().getMaxSegmentIntervalsPermitted()) {
 
         errorMsg = "HadoopIndexTask Failed! The number of segment intervals ["
-                   + indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get().size()
+                   + indexerSchema.getDataSchema().getGranularitySpec().inputIntervals().size()
                    + "] is greater than the number allowed ["
                    + indexerSchema.getTuningConfig().getMaxSegmentIntervalsPermitted()
                    + "], as specified in TuningConfig.";
