@@ -23,11 +23,16 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -37,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 @Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
@@ -68,36 +74,41 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   @Test
   public void testCompaction() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK);
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK, null);
   }
 
   @Test
   public void testCompactionWithSegmentGranularity() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_SEGMENT_GRANULARITY);
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_SEGMENT_GRANULARITY, Granularities.MONTH);
   }
 
   @Test
   public void testCompactionWithGranularitySpec() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC);
+    loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC, Granularities.MONTH);
   }
 
   @Test
   public void testCompactionWithTimestampDimension() throws Exception
   {
-    loadDataAndCompact(INDEX_TASK_WITH_TIMESTAMP, INDEX_QUERIES_RESOURCE, COMPACTION_TASK);
+    loadDataAndCompact(INDEX_TASK_WITH_TIMESTAMP, INDEX_QUERIES_RESOURCE, COMPACTION_TASK, null);
   }
 
-  private void loadDataAndCompact(String indexTask, String queriesResource, String compactionResource) throws Exception
+  private void loadDataAndCompact(
+      String indexTask,
+      String queriesResource,
+      String compactionResource,
+      Granularity newSegmentGranularity
+  ) throws Exception
   {
     loadData(indexTask);
 
     // 4 segments across 2 days
     checkNumberOfSegments(4);
 
-    final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-    intervalsBeforeCompaction.sort(null);
+    List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+    expectedIntervalAfterCompaction.sort(null);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       String queryResponseTemplate;
       try {
@@ -116,12 +127,24 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
 
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      compactData(compactionResource);
+      compactData(compactionResource, newSegmentGranularity);
 
       // The original 4 segments should be compacted into 2 new segments
       checkNumberOfSegments(2);
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      checkCompactionIntervals(intervalsBeforeCompaction);
+
+
+      if (newSegmentGranularity != null) {
+        List<String> newIntervals = new ArrayList<>();
+        for (String interval : expectedIntervalAfterCompaction) {
+          for (Interval newinterval : newSegmentGranularity.getIterable(new Interval(interval)))
+          {
+            newIntervals.add(newinterval.toString());
+          }
+        }
+        expectedIntervalAfterCompaction = newIntervals;
+      }
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
   private void loadData(String indexTask) throws Exception
@@ -138,10 +161,17 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void compactData(String compactionResource) throws Exception
+  private void compactData(String compactionResource, Granularity newSegmentGranularity) throws Exception
   {
     final String template = getResourceAsString(compactionResource);
     String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
+    if (newSegmentGranularity != null) {
+      taskSpec = StringUtils.replace(
+          template,
+          "%%SEGMENTGRANULARITY%%",
+          ((PeriodGranularity) Granularities.MONTH).getPeriod().toString()
+      );
+    }
 
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for compaction task %s", taskID);

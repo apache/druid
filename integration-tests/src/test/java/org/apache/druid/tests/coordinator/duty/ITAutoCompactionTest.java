@@ -296,18 +296,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       LOG.info("Auto compaction test with MONTH segment granularity");
 
-      forceTriggerAutoCompaction(1);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(1, 1000);
-      checkCompactionIntervals(intervalsBeforeCompaction);
-
-      LOG.info("Auto compaction test with DAY segment granularity");
-
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(Granularities.DAY, null, null));
-      // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, 1000);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      LOG.info("Auto compaction test with HOUR segment granularity");
+
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(Granularities.HOUR, null, null));
+      // 2 segments published per day after compaction.
+      forceTriggerAutoCompaction(48);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(48, 1000);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }

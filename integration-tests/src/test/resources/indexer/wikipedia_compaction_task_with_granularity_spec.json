@@ -9,7 +9,7 @@
     }
   },
   "granularitySpec": {
-    "segmentGranularity": "MONTH"
+    "segmentGranularity": "%%SEGMENTGRANULARITY%%"
   },
   "context" : {
     "storeCompactionState" : true

@@ -86,8 +86,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   // compact.
   private final Map<String, CompactibleTimelineObjectHolderCursor> timelineIterators;
   // This is needed for datasource that has segmentGranularity configured
-  // If configured segmentGranularity is finer than current segmentGranularity, the same set of segments
-  // can belong to multiple intervals in the timeline. We keep track of the
+  // If configured segmentGranularity in config is finer than current segmentGranularity, the same set of segments
+  // can belong to multiple intervals in the timeline. We keep track of the compacted intervals between each
+  // run of the compaction job and skip any interval that was already previously compacted.
   private final Map<String, Set<Interval>> intervalCompactedForDatasource = new HashMap<>();
 
   private final PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
@@ -132,7 +133,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             int partitions = segmentSet.size();
             for (DataSegment segment : segmentSet) {
               DataSegment segmentsForCompact = segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
-              // PartitionHolder can only holds chucks of one partition space
+              // PartitionHolder can only holds chunks of one partition space
               // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
               // partitions of the original timeline (when the new segmentGranularity is larger than the original
               // segmentGranularity). Hence, we group all the segments of the original timeline into intervals bucket
