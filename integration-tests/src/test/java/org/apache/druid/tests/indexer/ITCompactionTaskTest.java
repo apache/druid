@@ -31,7 +31,6 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
@@ -137,8 +136,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       if (newSegmentGranularity != null) {
         List<String> newIntervals = new ArrayList<>();
         for (String interval : expectedIntervalAfterCompaction) {
-          for (Interval newinterval : newSegmentGranularity.getIterable(new Interval(interval)))
-          {
+          for (Interval newinterval : newSegmentGranularity.getIterable(new Interval(interval))) {
             newIntervals.add(newinterval.toString());
           }
         }
