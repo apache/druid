@@ -39,7 +39,7 @@ import java.util.List;
 /**
  * Completely removes information about unused segments who have an interval end that comes before
  * now - {@link #retainDuration}. retainDuration can be a positive or negative duration, negative meaning the interval
- * end target will be in the future. Also, retainDuration can be null, meaning that there is no upper bound to the
+ * end target will be in the future. Also, retainDuration can be ignored, meaning that there is no upper bound to the
  * end interval of segments that will be killed. This action is called "to kill a segment".
  *
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
@@ -151,7 +151,6 @@ public class KillUnusedSegments implements CoordinatorDuty
   }
 
   @VisibleForTesting
-  @Nullable
   Long getRetainDuration()
   {
     return retainDuration;
