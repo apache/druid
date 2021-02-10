@@ -46,13 +46,6 @@ environment variable to localhost on your system, as follows:
 export DOCKER_IP=127.0.0.1
 ```
 
-Also set the `ZK_VERSION`
-environment variable to either `3.4` or `3.5` on your system, as follows:
-
-```
-export ZK_VERSION=3.5
-```
-
 ## Running tests
 
 To run all tests from a test group using docker and mvn run the following command: 
