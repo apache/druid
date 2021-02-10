@@ -819,10 +819,16 @@ public class GranularityTest
     Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, MINUTE) < 0);
     Assert.assertTrue(Granularity.IS_FINER_THAN.compare(MINUTE, NONE) > 0);
     Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, MONTH) < 0);
-    Granularity day = DAY;
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, day) == 0);
     Assert.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.YEAR, ALL) < 0);
     Assert.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.ALL, YEAR) > 0);
+    // Distinct references are needed to avoid intelli-j complain about compare being called on itself
+    // thus the variables
+    Granularity day = DAY;
+    Granularity none = NONE;
+    Granularity all = ALL;
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, day) == 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, none) == 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(ALL, all) == 0);
   }
 
   private static class PathDate

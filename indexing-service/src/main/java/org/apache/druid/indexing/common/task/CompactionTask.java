@@ -670,12 +670,9 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                  : convertToCombiningFactories(metricsSpec);
 
     return new
-
         DataSchema(
         dataSource,
-        new TimestampSpec(null, null, null
-        ),
-
+        new TimestampSpec(null, null, null),
         finalDimensionsSpec,
         finalMetricsSpec,
         granularitySpec,

@@ -42,16 +42,16 @@ import java.util.regex.Pattern;
 public abstract class Granularity implements Cacheable
 {
 
-  /**
-   * Decide whether this granularity is finer than the other granularity
-   *
-   * @param left The left granularity
-   * @param right The right granularity
-   * @return -1 if left granularity is finer, 0 if it is the same, 1 if it is greater
-   */
   public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
   {
     @Override
+    /**
+     * Decide whether this granularity is finer than the other granularity
+     *
+     * @param left The left granularity
+     * @param right The right granularity
+     * @return -1 if left granularity is finer, 0 if it is the same, 1 if it is greater
+     */
     public int compare(Granularity left, Granularity right)
     {
       long leftDuration = left.bucket(DateTimes.EPOCH).toDurationMillis();
