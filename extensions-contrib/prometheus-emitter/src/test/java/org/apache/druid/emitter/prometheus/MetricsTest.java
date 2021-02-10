@@ -30,12 +30,16 @@ public class MetricsTest
   {
     Metrics metrics = new Metrics("test", null);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
     Assert.assertEquals("dataSource", dimensions[0]);
     Assert.assertEquals("type", dimensions[1]);
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+
+    DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
+    Assert.assertNotNull(d);
+    String[] dims = d.getDimensions();
+    Assert.assertEquals("server", dims[0]);
   }
 }
