@@ -41,12 +41,40 @@ public class ParserTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  VectorExprSanityTest.SettableVectorInputBinding emptyBinding = new VectorExprSanityTest.SettableVectorInputBinding(8);
+
   @Test
   public void testSimple()
   {
     String actual = Parser.parse("1", ExprMacroTable.nil()).toString();
     String expected = "1";
     Assert.assertEquals(expected, actual);
+  }
+
+
+  @Test
+  public void testParseConstants()
+  {
+    validateLiteral("null", ExprType.STRING, null);
+    validateLiteral("'hello'", ExprType.STRING, "hello");
+    validateLiteral("'hello \\uD83E\\uDD18'", ExprType.STRING, "hello \uD83E\uDD18");
+    validateLiteral("1", ExprType.LONG, 1L);
+    validateLiteral("1.", ExprType.DOUBLE, 1.0, false);
+    validateLiteral("1.234", ExprType.DOUBLE, 1.234);
+    validateLiteral("1e10", ExprType.DOUBLE, 1.0E10, false);
+    validateLiteral("1e-10", ExprType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1E10", ExprType.DOUBLE, 1.0E10, false);
+    validateLiteral("1E-10", ExprType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.E10", ExprType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.E-10", ExprType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.e10", ExprType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.e-10", ExprType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.1e10", ExprType.DOUBLE, 1.1E10, false);
+    validateLiteral("1.1e-10", ExprType.DOUBLE, 1.1E-10, false);
+    validateLiteral("1.1E10", ExprType.DOUBLE, 1.1E10);
+    validateLiteral("1.1E-10", ExprType.DOUBLE, 1.1E-10);
+    validateLiteral("Infinity", ExprType.DOUBLE, Double.POSITIVE_INFINITY);
+    validateLiteral("NaN", ExprType.DOUBLE, Double.NaN);
   }
 
   @Test
@@ -542,6 +570,26 @@ public class ParserTest extends InitializedNullHandlingTest
     );
   }
 
+  private void validateLiteral(String expr, ExprType type, Object expected)
+  {
+    validateLiteral(expr, type, expected, true);
+  }
+
+  private void validateLiteral(String expr, ExprType type, Object expected, boolean roundTrip)
+  {
+    Expr parsed = Parser.parse(expr, ExprMacroTable.nil(), false);
+    Expr parsedFlat = Parser.parse(expr, ExprMacroTable.nil(), true);
+    Assert.assertTrue(parsed.isLiteral());
+    Assert.assertTrue(parsedFlat.isLiteral());
+    Assert.assertEquals(type, parsed.getOutputType(emptyBinding));
+    Assert.assertEquals(type, parsedFlat.getOutputType(emptyBinding));
+    Assert.assertEquals(expected, parsed.getLiteralValue());
+    Assert.assertEquals(expected, parsedFlat.getLiteralValue());
+    if (roundTrip) {
+      Assert.assertEquals(expr, parsed.stringify());
+      Assert.assertEquals(expr, parsedFlat.stringify());
+    }
+  }
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {

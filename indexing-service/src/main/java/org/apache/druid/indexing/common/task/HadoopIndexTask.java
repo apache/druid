@@ -83,7 +83,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
@@ -190,12 +189,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    Optional<SortedSet<Interval>> intervals = spec.getDataSchema().getGranularitySpec().bucketIntervals();
-    if (intervals.isPresent()) {
+    Iterable<Interval> intervals = spec.getDataSchema().getGranularitySpec().sortedBucketIntervals();
+    if (intervals.iterator().hasNext()) {
       Interval interval = JodaUtils.umbrellaInterval(
-          JodaUtils.condenseIntervals(
-              intervals.get()
-          )
+          JodaUtils.condenseIntervals(intervals)
       );
       return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
     } else {
@@ -313,7 +310,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
     String hadoopJobIdFile = getHadoopJobIdFileName();
     final ClassLoader loader = buildClassLoader(toolbox);
-    boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
+    boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
 
     HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,
@@ -378,7 +375,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
-              indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
+              indexerSchema.getDataSchema().getGranularitySpec().sortedBucketIntervals()
           )
       );
       final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT_MILLIS);
@@ -636,7 +633,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
 
-  /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
+  /**
+   * Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}.
+   */
   @SuppressWarnings("unused")
   public static class HadoopDetermineConfigInnerProcessingRunner
   {
@@ -785,9 +784,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             jobId
         });
 
-        return new String[] {jobId, (res == 0 ? "Success" : "Fail")};
+        return new String[]{jobId, (res == 0 ? "Success" : "Fail")};
       }
-      return new String[] {jobId, "Fail"};
+      return new String[]{jobId, "Fail"};
     }
   }
 

@@ -35,9 +35,19 @@ public class ResourceLimitExceededException extends BadQueryException
 {
   public static final String ERROR_CODE = "Resource limit exceeded";
 
-  public ResourceLimitExceededException(String message, Object... arguments)
+  public static ResourceLimitExceededException withMessage(String message, Object... arguments)
   {
-    this(ERROR_CODE, StringUtils.nonStrictFormat(message, arguments), ResourceLimitExceededException.class.getName());
+    return new ResourceLimitExceededException(StringUtils.nonStrictFormat(message, arguments));
+  }
+
+  public ResourceLimitExceededException(String errorCode, String message, String errorClass, String host)
+  {
+    super(errorCode, message, errorClass, host);
+  }
+
+  public ResourceLimitExceededException(String message)
+  {
+    this(ERROR_CODE, message, ResourceLimitExceededException.class.getName());
   }
 
   @JsonCreator
@@ -47,6 +57,6 @@ public class ResourceLimitExceededException extends BadQueryException
       @JsonProperty("errorClass") String errorClass
   )
   {
-    super(errorCode, errorMessage, errorClass, resolveHostname());
+    this(errorCode, errorMessage, errorClass, resolveHostname());
   }
 }
