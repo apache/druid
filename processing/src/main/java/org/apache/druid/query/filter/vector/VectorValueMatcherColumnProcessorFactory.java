@@ -92,10 +92,9 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
       final VectorObjectSelector selector
   )
   {
-    // prevent complex filters... for now
     if (ValueType.STRING.equals(capabilities.getType())) {
       return new StringObjectVectorValueMatcher(selector);
     }
-    return new NilVectorValueMatcher(selector);
+    return new ObjectVectorValueMatcher(selector);
   }
 }

@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -129,23 +130,26 @@ public class ExpressionFilter implements Filter
 
     final ExprType outputType = theExpr.getOutputType(factory);
 
+    // for all vectorizable expressions, outputType will only ever be null in cases where there is absolutely no
+    // input type information, so composed entirely of null constants or missing columns. the expression is
+    // effectively constant
     if (outputType == null) {
-      // if an expression is vectorizable, but the output type is null, the result will be null (or the default
-      // value in default mode) because expression is either all null constants or missing columns
 
-      // in sql compatible mode, this means no matches ever, so just use the false matcher:
+      // in sql compatible mode, this means no matches ever because null doesn't equal anything so just use the
+      // false matcher
       if (NullHandling.sqlCompatible()) {
         return BooleanVectorValueMatcher.of(factory.getReadableVectorInspector(), false);
       }
-      // in default mode, just fallback to using a long matcher since nearly all boolean-ish expressions
-      // output a long value so it is probably a safe bet? idk, ending up here by using all null-ish things
-      // in default mode is dancing on the edge of insanity anyway...
-      return VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(
-          ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG),
-          ExpressionVectorSelectors.makeVectorValueSelector(factory, theExpr)
-      ).makeMatcher(predicateFactory);
+      // however in default mode, we still need to evaluate the expression since it might end up... strange, from
+      // default values. Since it is effectively constant though, we can just do that up front and decide if it matches
+      // or not.
+      return BooleanVectorValueMatcher.of(
+          factory.getReadableVectorInspector(),
+          theExpr.eval(ExprUtils.nilBindings()).asBoolean()
+      );
     }
 
+    // if we got here, we really have to evaluate the expressions to match
     switch (outputType) {
       case LONG:
         return VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(
@@ -163,7 +167,7 @@ public class ExpressionFilter implements Filter
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       default:
-        throw new UnsupportedOperationException("not implemented");
+        throw new UOE("Vectorized expression matchers not implemented for type: [%s]", outputType);
     }
   }
 

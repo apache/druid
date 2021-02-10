@@ -247,9 +247,18 @@ public class ExpressionFilterTest extends BaseFilterTest
           edf("missing == ''"),
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
       );
+      assertFilterMatches(
+          edf("missing == otherMissing"),
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+      );
     } else {
       // AS per SQL standard null == null returns false.
       assertFilterMatches(edf("missing == null"), ImmutableList.of());
+      // also this madness doesn't do madness
+      assertFilterMatches(
+          edf("missing == otherMissing"),
+          ImmutableList.of()
+      );
     }
     assertFilterMatches(edf("missing == '1'"), ImmutableList.of());
     assertFilterMatches(edf("missing == 2"), ImmutableList.of());

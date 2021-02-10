@@ -32,4 +32,15 @@ public interface DruidPredicateFactory
   DruidFloatPredicate makeFloatPredicate();
 
   DruidDoublePredicate makeDoublePredicate();
+
+  /**
+   * Object predicate is currently only used by vectorized matchers for non-string object selectors. To preserve
+   * behavior with non-vectorized matchers which use a string predicate with null inputs for these 'nil' matchers,
+   * do the same thing here...
+   */
+  default Predicate<Object> makeObjectPredicate()
+  {
+    final Predicate<String> stringPredicate = makeStringPredicate();
+    return o -> stringPredicate.apply(null);
+  }
 }
