@@ -29,6 +29,8 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -44,6 +46,7 @@ import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -292,23 +295,38 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(Granularities.YEAR, null, null));
+      Granularity newGranularity = Granularities.YEAR;
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
+      List<String> expectedIntervalAfterCompaction = new ArrayList<>();
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
       forceTriggerAutoCompaction(1);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, 1000);
-      checkCompactionIntervals(intervalsBeforeCompaction);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      newGranularity = Granularities.DAY;
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
 
       LOG.info("Auto compaction test with DAY segment granularity");
 
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(Granularities.DAY, null, null));
+      expectedIntervalAfterCompaction = new ArrayList<>();
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, 1000);
-      checkCompactionIntervals(intervalsBeforeCompaction);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
 
