@@ -1074,7 +1074,12 @@ public class CalciteTests
 
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     InformationSchema informationSchema =
-        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+        new InformationSchema(
+            rootSchema,
+            authorizerMapper,
+            CalciteTests.DRUID_SCHEMA_NAME,
+            CalciteTests.VIEW_SCHEMA_NAME
+        );
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
@@ -1096,7 +1101,12 @@ public class CalciteTests
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     InformationSchema informationSchema =
-        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+        new InformationSchema(
+            rootSchema,
+            authorizerMapper,
+            CalciteTests.DRUID_SCHEMA_NAME,
+            CalciteTests.VIEW_SCHEMA_NAME
+        );
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);

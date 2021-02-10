@@ -36,6 +36,7 @@ import org.apache.druid.sql.guice.SqlBindings;
 public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
+  private static final String VIEW_SCHEMA_NAME = "view";
   private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
   static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
 
@@ -43,6 +44,7 @@ public class DruidCalciteSchemaModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
+    binder.bind(String.class).annotatedWith(ViewSchemaName.class).toInstance(VIEW_SCHEMA_NAME);
 
     // Should only be used by the information schema
     binder.bind(SchemaPlus.class)

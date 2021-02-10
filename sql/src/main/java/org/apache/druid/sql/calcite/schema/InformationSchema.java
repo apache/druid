@@ -111,6 +111,9 @@ public class InformationSchema extends AbstractSchema
   private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
     return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
   };
+  private static final Function<String, Iterable<ResourceAction>> VIEW_TABLE_RA_GENERATOR = viewName -> {
+    return Collections.singletonList(AuthorizationUtils.VIEW_READ_RA_GENERATOR.apply(viewName));
+  };
 
   private static final String INFO_TRUE = "YES";
   private static final String INFO_FALSE = "NO";
@@ -119,12 +122,14 @@ public class InformationSchema extends AbstractSchema
   private final Map<String, Table> tableMap;
   private final AuthorizerMapper authorizerMapper;
   private final String druidSchemaName;
+  private final String viewSchemaName;
 
   @Inject
   public InformationSchema(
       @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final SchemaPlus rootSchema,
       final AuthorizerMapper authorizerMapper,
-      @DruidSchemaName String druidSchemaName
+      @DruidSchemaName String druidSchemaName,
+      @ViewSchemaName String viewSchemaName
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
@@ -135,6 +140,7 @@ public class InformationSchema extends AbstractSchema
     );
     this.authorizerMapper = authorizerMapper;
     this.druidSchemaName = druidSchemaName;
+    this.viewSchemaName = viewSchemaName;
   }
 
   @Override
@@ -492,14 +498,13 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (druidSchemaName.equals(subSchema.getName())) {
-      // The "druid" schema's functions represent views on Druid datasources, authorize them as if they were
-      // datasources for now
+    if (viewSchemaName.equals(subSchema.getName())) {
+      // The "view" subschema functions represent views on Druid datasources
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               subSchema.getFunctionNames(),
-              DRUID_TABLE_RA_GENERATOR,
+              VIEW_TABLE_RA_GENERATOR,
               authorizerMapper
           )
       );
