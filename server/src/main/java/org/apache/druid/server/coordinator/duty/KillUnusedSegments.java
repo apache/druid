@@ -146,15 +146,19 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   /**
    * Calculate the {@link DateTime} that wil form the upper bound when looking for segments that are
-   * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return the constant MAX date
-   * provided by {@link DateTimes}.
+   * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return a DateTime object
+   * for 9999-12-31T23:59. This static date has to be used becuse the metasore is not comparing date objects, but rather
+   * varchar columns. This means DateTimes.MAX is less than the 21st century and beyond for comparisions due to its
+   * year starting with a '1'
    *
    * @return {@link DateTime} representing the upper bound time used when looking for segments to kill.
    */
   @VisibleForTesting
   DateTime getEndTimeUpperLimit()
   {
-    return ignoreRetainDuration ? DateTimes.MAX : DateTimes.nowUtc().minus(retainDuration);
+    return ignoreRetainDuration
+           ? DateTimes.of(9999, 12, 31, 23, 59)
+           : DateTimes.nowUtc().minus(retainDuration);
   }
 
   @VisibleForTesting
