@@ -36,7 +36,7 @@ public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor
   {
     ExprEvalVector<?> result = delegate.evalVector(bindings);
     return new ExprEvalStringVector(
-        Arrays.stream(result.getObjectVector()).map(String::valueOf).toArray(String[]::new)
+        Arrays.stream(result.getObjectVector()).map(x -> x != null ? x.toString() : null).toArray(String[]::new)
     );
   }
 

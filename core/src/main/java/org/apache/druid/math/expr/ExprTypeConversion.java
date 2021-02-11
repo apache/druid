@@ -20,21 +20,12 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 public class ExprTypeConversion
 {
-  public static Pair<ExprType, ExprType> coerceNull(Expr.InputBindingInspector inspector, Expr left, Expr right)
-  {
-    return new Pair<>(
-        left.isNullLiteral() ? right.getOutputType(inspector) : left.getOutputType(inspector),
-        right.isNullLiteral() ? left.getOutputType(inspector) : right.getOutputType(inspector)
-    );
-  }
-
   /**
    * Infer the output type of a list of possible 'conditional' expression outputs (where any of these could be the
    * output expression if the corresponding case matching expression evaluates to true)
