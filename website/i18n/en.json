@@ -179,6 +179,9 @@
       "development/extensions-core/datasketches-tuple": {
         "title": "DataSketches Tuple Sketch module"
       },
+      "development/extensions-core/druid-aws-rds": {
+        "title": "Druid AWS RDS Module"
+      },
       "development/extensions-core/druid-basic-security": {
         "title": "Basic Security"
       },
@@ -213,6 +216,9 @@
       "development/extensions-core/kinesis-ingestion": {
         "title": "Amazon Kinesis ingestion",
         "sidebar_label": "Amazon Kinesis"
+      },
+      "development/extensions-core/druid-kubernetes": {
+        "title": "Kubernetes"
       },
       "development/extensions-core/lookups-cached-global": {
         "title": "Globally Cached Lookups"
@@ -323,6 +329,9 @@
       },
       "operations/dump-segment": {
         "title": "dump-segment tool"
+      },
+      "operations/dynamic-config-provider": {
+        "title": "Dynamic Config Providers"
       },
       "operations/export-metadata": {
         "title": "Export Metadata Tool"
