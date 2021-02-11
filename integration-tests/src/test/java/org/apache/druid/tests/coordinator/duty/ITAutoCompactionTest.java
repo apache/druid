@@ -315,6 +315,23 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.DAY;
       submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
+
+      LOG.info("Auto compaction test with DAY segment granularity");
+
+      // The earlier segment with YEAR granularity is still 'used' as it’s not fully overshaowed.
+      // This is because we only have newer version on 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02.
+      // The version for the YEAR segment is still the latest for 2013-01-01 to 2013-08-31 and 2013-09-02 to 2014-01-01.
+      // Hence, all three segments are available and the expected intervals are combined from the DAY and YEAR segment granularities
+      // (which are 2013-08-31 to 2013-09-01, 2013-09-01 to 2013-09-02 and 2013-01-01 to 2014-01-01)
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
+      forceTriggerAutoCompaction(3);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(3, 1000);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
 
