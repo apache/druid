@@ -66,13 +66,13 @@ The configuration steps are:
   druid.enableTlsPort=true
   
   druid.server.https.keyStoreType=jks
-  druid.server.https.keyStorePath=imply-keystore.jks
+  druid.server.https.keyStorePath=sample-keystore.jks
   druid.server.https.keyStorePassword=secret123 # replace with your own password
   druid.server.https.certAlias=druid 
   
   druid.client.https.protocol=TLSv1.2
   druid.client.https.trustStoreType=jks
-  druid.client.https.trustStorePath=imply-truststore.jks
+  druid.client.https.trustStorePath=sample-truststore.jks
   druid.client.https.trustStorePassword=secret123  # replace with your own password
 
   ``` 
@@ -92,7 +92,7 @@ The following takes you through sample configuration steps for enabling basic au
 
 1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
-   druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service", "imply-utility-belt"]
+   druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service"]
    ```
 2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. For example:
    ```
