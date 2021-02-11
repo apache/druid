@@ -1528,6 +1528,7 @@
                     <generateGitPropertiesFile>true</generateGitPropertiesFile>
                     <generateGitPropertiesFilename>${project.build.directory}/git.version</generateGitPropertiesFilename>
                     <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <useNativeGit>true</useNativeGit>
                     <excludeProperties>
                         <excludeProperty>git.build.user.email</excludeProperty>
                         <excludeProperty>git.build.host</excludeProperty>
