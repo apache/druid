@@ -27,6 +27,7 @@ import com.yahoo.oak.OakScopedReadBuffer;
 import com.yahoo.oak.OakScopedWriteBuffer;
 import com.yahoo.oak.OakSerializer;
 import com.yahoo.oak.OakUnsafeDirectBuffer;
+import com.yahoo.oak.UnsafeUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -34,10 +35,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
-import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -92,23 +91,6 @@ public final class OakKey
   // Marks a null dimension
   static final int NULL_DIM = -1;
 
-  // Used for direct access to the key's buffer
-  static final Unsafe UNSAFE;
-  static final long INT_ARRAY_OFFSET;
-
-  // static constructor - access and create a new instance of Unsafe
-  static {
-    try {
-      Constructor<Unsafe> unsafeConstructor = Unsafe.class.getDeclaredConstructor();
-      unsafeConstructor.setAccessible(true);
-      UNSAFE = unsafeConstructor.newInstance();
-      INT_ARRAY_OFFSET = UNSAFE.arrayBaseOffset(int[].class);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
   private OakKey()
   {
   }
@@ -120,17 +102,17 @@ public final class OakKey
 
   static long getTimestamp(long address)
   {
-    return UNSAFE.getLong(address + TIME_STAMP_OFFSET);
+    return UnsafeUtils.getLong(address + TIME_STAMP_OFFSET);
   }
 
   static int getRowIndex(long address)
   {
-    return UNSAFE.getInt(address + ROW_INDEX_OFFSET);
+    return UnsafeUtils.getInt(address + ROW_INDEX_OFFSET);
   }
 
   static int getDimsLength(long address)
   {
-    return UNSAFE.getInt(address + DIMS_LENGTH_OFFSET);
+    return UnsafeUtils.getInt(address + DIMS_LENGTH_OFFSET);
   }
 
   static int getDimOffsetInBuffer(int dimIndex)
@@ -146,14 +128,14 @@ public final class OakKey
   static boolean isDimNull(long address, int dimIndex)
   {
     long dimAddress = address + getDimOffsetInBuffer(dimIndex);
-    return isValueTypeNull(UNSAFE.getInt(dimAddress + DIM_VALUE_TYPE_OFFSET));
+    return isValueTypeNull(UnsafeUtils.getInt(dimAddress + DIM_VALUE_TYPE_OFFSET));
   }
 
   @Nullable
   static Object getDim(long address, int dimIndex)
   {
     long dimAddress = address + getDimOffsetInBuffer(dimIndex);
-    int dimValueTypeID = UNSAFE.getInt(dimAddress + DIM_VALUE_TYPE_OFFSET);
+    int dimValueTypeID = UnsafeUtils.getInt(dimAddress + DIM_VALUE_TYPE_OFFSET);
 
     if (isValueTypeNull(dimValueTypeID)) {
       return null;
@@ -161,16 +143,16 @@ public final class OakKey
 
     switch (VALUE_ORDINAL_TYPES[dimValueTypeID]) {
       case DOUBLE:
-        return UNSAFE.getDouble(dimAddress + DIM_DATA_OFFSET);
+        return UnsafeUtils.getDouble(dimAddress + DIM_DATA_OFFSET);
       case FLOAT:
-        return UNSAFE.getFloat(dimAddress + DIM_DATA_OFFSET);
+        return UnsafeUtils.getFloat(dimAddress + DIM_DATA_OFFSET);
       case LONG:
-        return UNSAFE.getLong(dimAddress + DIM_DATA_OFFSET);
+        return UnsafeUtils.getLong(dimAddress + DIM_DATA_OFFSET);
       case STRING:
-        int arrayPos = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
-        int arraySize = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
+        int arrayPos = UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
+        int arraySize = UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
         int[] array = new int[arraySize];
-        UNSAFE.copyMemory(null, address + arrayPos, array, INT_ARRAY_OFFSET, ((long) arraySize) * Integer.BYTES);
+        UnsafeUtils.copyToArray(address + arrayPos, array, arraySize);
         return array;
       default:
         return null;
@@ -222,8 +204,8 @@ public final class OakKey
       }
 
       long dimAddress = this.dimensionsAddress + getDimOffsetInBuffer(dimIndex);
-      arrayAddress = dimensionsAddress + UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
-      arraySize = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
+      arrayAddress = dimensionsAddress + UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
+      arraySize = UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
       initialized = true;
     }
 
@@ -244,7 +226,7 @@ public final class OakKey
     public int get(int index)
     {
       init();
-      return UNSAFE.getInt(arrayAddress + ((long) index) * Integer.BYTES);
+      return UnsafeUtils.getInt(arrayAddress + ((long) index) * Integer.BYTES);
     }
 
     @Override
@@ -290,9 +272,9 @@ public final class OakKey
         rowIndex = rowIndexGenerator.getAndIncrement();
         incrementalIndexRow.setRowIndex(rowIndex);
       }
-      UNSAFE.putLong(address + TIME_STAMP_OFFSET, timestamp);
-      UNSAFE.putInt(address + DIMS_LENGTH_OFFSET, dimsLength);
-      UNSAFE.putInt(address + ROW_INDEX_OFFSET, rowIndex);
+      UnsafeUtils.putLong(address + TIME_STAMP_OFFSET, timestamp);
+      UnsafeUtils.putInt(address + DIMS_LENGTH_OFFSET, dimsLength);
+      UnsafeUtils.putInt(address + ROW_INDEX_OFFSET, rowIndex);
 
       long dimsAddress = address + DIMS_OFFSET;
       // the index for writing the int arrays of the string-dim (after all the dims' data)
@@ -304,27 +286,25 @@ public final class OakKey
         boolean isDimHaveValue = dimValueType != null;
 
         int dimValueTypeID = isDimHaveValue ? dimValueType.ordinal() : NULL_DIM;
-        UNSAFE.putInt(dimsAddress + DIM_VALUE_TYPE_OFFSET, dimValueTypeID);
+        UnsafeUtils.putInt(dimsAddress + DIM_VALUE_TYPE_OFFSET, dimValueTypeID);
 
         if (isDimHaveValue) {
           switch (dimValueType) {
             case FLOAT:
-              UNSAFE.putFloat(dimsAddress + DIM_DATA_OFFSET, (Float) dim);
+              UnsafeUtils.putFloat(dimsAddress + DIM_DATA_OFFSET, (Float) dim);
               break;
             case DOUBLE:
-              UNSAFE.putDouble(dimsAddress + DIM_DATA_OFFSET, (Double) dim);
+              UnsafeUtils.putDouble(dimsAddress + DIM_DATA_OFFSET, (Double) dim);
               break;
             case LONG:
-              UNSAFE.putLong(dimsAddress + DIM_DATA_OFFSET, (Long) dim);
+              UnsafeUtils.putLong(dimsAddress + DIM_DATA_OFFSET, (Long) dim);
               break;
             case STRING:
               int[] arr = (int[]) dim;
               int length = arr.length;
-              UNSAFE.putInt(dimsAddress + STRING_DIM_ARRAY_POS_OFFSET, stringDimArraysPos);
-              UNSAFE.putInt(dimsAddress + STRING_DIM_ARRAY_LENGTH_OFFSET, length);
-
-              int lengthBytes = length * Integer.BYTES;
-              UNSAFE.copyMemory(arr, INT_ARRAY_OFFSET, null, address + stringDimArraysPos, lengthBytes);
+              UnsafeUtils.putInt(dimsAddress + STRING_DIM_ARRAY_POS_OFFSET, stringDimArraysPos);
+              UnsafeUtils.putInt(dimsAddress + STRING_DIM_ARRAY_LENGTH_OFFSET, length);
+              long lengthBytes = UnsafeUtils.copyFromArray(arr, address + stringDimArraysPos, length);
               stringDimArraysPos += lengthBytes;
               break;
           }
