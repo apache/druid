@@ -27,7 +27,7 @@ title: "Security overview"
 
 By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features include TLS, authentication, and authorization.
 
-To implement Druid security, you configure authenticators and authorizers. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves consideration of your datasource scheme, given they represent the granularity at which data access permissions are allocated. 
+To implement Druid security, you configure authenticators and authorizers. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves considering your datasource scheme, since that scheme represents the granularity at which data access permissions are allocated. 
 
 The following graphic depicts the course of request through the authentication process: 
 
@@ -40,7 +40,7 @@ This document gives you an overview of security features in Druid and how to con
 
 ## Best practices
 
-* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelist the specific APIs that your users need to access, and implements account lockout and throttling features.
+* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, allow list the specific APIs that your users need to access, and implements account lockout and throttling features.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.  
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 * Run Druid as an unprivileged Unix user on the installation machine (not root).
