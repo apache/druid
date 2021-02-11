@@ -1077,8 +1077,7 @@ public class CalciteTests
         new InformationSchema(
             rootSchema,
             authorizerMapper,
-            CalciteTests.DRUID_SCHEMA_NAME,
-            CalciteTests.VIEW_SCHEMA_NAME
+            CalciteTests.DRUID_SCHEMA_NAME
         );
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
@@ -1104,8 +1103,7 @@ public class CalciteTests
         new InformationSchema(
             rootSchema,
             authorizerMapper,
-            CalciteTests.DRUID_SCHEMA_NAME,
-            CalciteTests.VIEW_SCHEMA_NAME
+            CalciteTests.DRUID_SCHEMA_NAME
         );
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);

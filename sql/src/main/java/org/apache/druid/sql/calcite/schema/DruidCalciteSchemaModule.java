@@ -44,7 +44,6 @@ public class DruidCalciteSchemaModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
-    binder.bind(String.class).annotatedWith(ViewSchemaName.class).toInstance(VIEW_SCHEMA_NAME);
 
     // Should only be used by the information schema
     binder.bind(SchemaPlus.class)

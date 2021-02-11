@@ -122,14 +122,12 @@ public class InformationSchema extends AbstractSchema
   private final Map<String, Table> tableMap;
   private final AuthorizerMapper authorizerMapper;
   private final String druidSchemaName;
-  private final String viewSchemaName;
 
   @Inject
   public InformationSchema(
       @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final SchemaPlus rootSchema,
       final AuthorizerMapper authorizerMapper,
-      @DruidSchemaName String druidSchemaName,
-      @ViewSchemaName String viewSchemaName
+      @DruidSchemaName String druidSchemaName
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
@@ -140,7 +138,6 @@ public class InformationSchema extends AbstractSchema
     );
     this.authorizerMapper = authorizerMapper;
     this.druidSchemaName = druidSchemaName;
-    this.viewSchemaName = viewSchemaName;
   }
 
   @Override
@@ -498,7 +495,7 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (viewSchemaName.equals(subSchema.getName())) {
+    if (NamedViewSchema.NAME.equals(subSchema.getName())) {
       // The "view" subschema functions represent views on Druid datasources
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
