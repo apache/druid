@@ -36,7 +36,6 @@ import org.apache.druid.sql.guice.SqlBindings;
 public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
-  private static final String VIEW_SCHEMA_NAME = "view";
   private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
   static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
 
