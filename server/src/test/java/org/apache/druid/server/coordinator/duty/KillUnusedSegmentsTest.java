@@ -83,7 +83,9 @@ public class KillUnusedSegmentsTest
   }
 
   /**
-   *
+   * Test that the end time upper limit is properly computated for both positive and
+   * negative durations. Also ensure that if durationToRetain is to be ignored, that
+   * the upper limit is {@link DateTime} max time.
    */
   @Test
   public void testGetEndTimeUpperLimit()

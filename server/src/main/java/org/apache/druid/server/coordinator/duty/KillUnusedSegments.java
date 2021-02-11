@@ -144,6 +144,13 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
   }
 
+  /**
+   * Calculate the {@link DateTime} that wil form the upper bound when looking for segments that are
+   * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return the constant MAX date
+   * provided by {@link DateTimes}.
+   *
+   * @return {@link DateTime} representing the upper bound time used when looking for segments to kill.
+   */
   @VisibleForTesting
   DateTime getEndTimeUpperLimit()
   {
