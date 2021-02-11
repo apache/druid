@@ -315,20 +315,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.DAY;
       submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
-
-      LOG.info("Auto compaction test with DAY segment granularity");
-
-      expectedIntervalAfterCompaction = new ArrayList<>();
-      for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
-          expectedIntervalAfterCompaction.add(newinterval.toString());
-        }
-      }
-      // 2 segments published per day after compaction.
-      forceTriggerAutoCompaction(2);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(2, 1000);
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
 
