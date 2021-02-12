@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -47,6 +48,7 @@ import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
@@ -216,13 +218,19 @@ public class ITBasicAuthConfigurationTest
     );
 
     final List<Map<String, Object>> adminServerSegments = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE),
+        fillSegementServersTemplate(
+            config,
+            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
+        ),
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
     final List<Map<String, Object>> adminServers = getServersWithoutCurrentSize(
         jsonMapper.readValue(
-            TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE),
+            fillServersTemplate(
+                config,
+                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
+            ),
             SYS_SCHEMA_RESULTS_TYPE_REFERENCE
         )
     );
@@ -542,7 +550,7 @@ public class ITBasicAuthConfigurationTest
   private void testOptionsRequests(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getOverlordUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
@@ -601,7 +609,7 @@ public class ITBasicAuthConfigurationTest
   private void checkNodeAccess(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getOverlordUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
     HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
@@ -610,7 +618,7 @@ public class ITBasicAuthConfigurationTest
   private void checkLoadStatus(HttpClient httpClient) throws Exception
   {
     checkLoadStatusSingle(httpClient, config.getCoordinatorUrl());
-    checkLoadStatusSingle(httpClient, config.getIndexerUrl());
+    checkLoadStatusSingle(httpClient, config.getOverlordUrl());
     checkLoadStatusSingle(httpClient, config.getBrokerUrl());
     checkLoadStatusSingle(httpClient, config.getHistoricalUrl());
     checkLoadStatusSingle(httpClient, config.getRouterUrl());
@@ -793,5 +801,19 @@ public class ITBasicAuthConfigurationTest
           return newServer;
         }
     );
+  }
+
+  private static String fillSegementServersTemplate(IntegrationTestingConfig config, String template)
+  {
+    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
+    return json;
+  }
+
+  private static String fillServersTemplate(IntegrationTestingConfig config, String template)
+  {
+    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
+    json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
+    json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
+    return json;
   }
 }

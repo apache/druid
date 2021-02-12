@@ -204,8 +204,10 @@ public class ClientCompactionTaskQuerySerdeTest
             new ParallelIndexTuningConfig(
                 null,
                 null,
+                null,
                 40000,
                 2000L,
+                null,
                 null,
                 null,
                 new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
@@ -235,6 +237,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 7,
                 1000,
                 100,
+                null,
                 null,
                 null,
                 null

@@ -305,8 +305,10 @@ public class CompactionTaskTest
     return new ParallelIndexTuningConfig(
         null,
         null, // null to compute maxRowsPerSegment automatically
+        null,
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -322,6 +324,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -438,8 +441,10 @@ public class CompactionTaskTest
         new IndexTuningConfig(
             null,
             null, // null to compute maxRowsPerSegment automatically
+            null,
             500000,
             1000000L,
+            null,
             null,
             null,
             null,
@@ -456,6 +461,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,
@@ -545,6 +551,21 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testSegmentProviderFindSegmentsWithEmptySegmentsThrowException()
+  {
+    final SegmentProvider provider = new SegmentProvider(
+        "datasource",
+        new CompactionIntervalSpec(Intervals.of("2021-01-01/P1D"), null)
+    );
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage(
+        "No segments found for compaction. Please check that datasource name and interval are correct."
+    );
+    provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
+  }
+
+  @Test
   public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
@@ -583,8 +604,10 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         100000,
         null,
+        null,
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -603,6 +626,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -650,8 +674,10 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         500000,
         1000000L,
+        null,
         1000000L,
         null,
         null,
@@ -667,6 +693,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -717,8 +744,10 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -737,6 +766,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1105,8 +1135,10 @@ public class CompactionTaskTest
         new ParallelIndexTuningConfig(
             null,
             null,
+            null,
             500000,
             1000000L,
+            null,
             Long.MAX_VALUE,
             null,
             null,
@@ -1122,6 +1154,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,

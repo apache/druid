@@ -27,7 +27,9 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
@@ -240,6 +242,21 @@ public class BaseHashJoinSegmentStorageAdapterTest
             virtualColumns,
             originalFilter
         )
+    );
+  }
+
+  protected VirtualColumn makeExpressionVirtualColumn(String expression)
+  {
+    return makeExpressionVirtualColumn(expression, "virtual");
+  }
+
+  protected VirtualColumn makeExpressionVirtualColumn(String expression, String columnName)
+  {
+    return new ExpressionVirtualColumn(
+        columnName,
+        expression,
+        ValueType.STRING,
+        ExprMacroTable.nil()
     );
   }
 }

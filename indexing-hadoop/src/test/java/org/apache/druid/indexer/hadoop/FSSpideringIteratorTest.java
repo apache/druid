@@ -40,7 +40,7 @@ import java.util.List;
 public class FSSpideringIteratorTest
 {
   @Test
-  public void testIterator()
+  public void testNonEmptyDirs()
   {
     String[] testFiles = {"file1", "file2", "file3", "file4", "file5"};
 
@@ -77,6 +77,51 @@ public class FSSpideringIteratorTest
       for (String testFile : testFiles) {
         Assert.assertTrue(files.remove(testFile));
       }
+
+      Assert.assertTrue(files.isEmpty());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      try {
+        FileUtils.deleteDirectory(baseDir);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  @Test
+  public void testEmptyDirs()
+  {
+    File baseDir = FileUtils.createTempDir();
+
+    try {
+      new File(baseDir, "dir1").mkdir();
+
+      new File(baseDir, "dir2/subDir1").mkdirs();
+      new File(baseDir, "dir2/subDir2").mkdirs();
+
+      new File(baseDir, "dir3/subDir1").mkdirs();
+
+      List<String> files = Lists.newArrayList(
+          Iterables.transform(
+              FSSpideringIterator.spiderIterable(
+                  FileSystem.getLocal(new Configuration()),
+                  new Path(baseDir.toString())
+              ),
+              new Function<FileStatus, String>()
+              {
+                @Override
+                public String apply(@Nullable FileStatus input)
+                {
+                  return input.getPath().getName();
+                }
+              }
+          )
+      );
 
       Assert.assertTrue(files.isEmpty());
     }

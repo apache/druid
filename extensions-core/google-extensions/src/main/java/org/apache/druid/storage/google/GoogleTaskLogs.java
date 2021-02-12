@@ -142,10 +142,7 @@ public class GoogleTaskLogs implements TaskLogs
                   start = 0;
                 }
 
-                InputStream stream = new GoogleByteSource(storage, config.getBucket(), taskKey).openStream();
-                stream.skip(start);
-
-                return stream;
+                return new GoogleByteSource(storage, config.getBucket(), taskKey).openStream(start);
               }
               catch (Exception e) {
                 throw new IOException(e);

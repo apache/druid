@@ -41,6 +41,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.BroadcastTableJoinableFactory;
@@ -59,7 +60,9 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,6 +73,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -79,6 +83,11 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
 {
   private static final String TABLE_NAME = "test";
   private static final String PREFIX = "j0";
+  private static final JoinConditionAnalysis JOIN_CONDITION_ANALYSIS = JoinConditionAnalysis.forExpression(
+      StringUtils.format("market == \"%s.market\"", PREFIX),
+      PREFIX,
+      ExprMacroTable.nil()
+  );
   private static final Set<String> KEY_COLUMNS =
       ImmutableSet.of("market", "longNumericNull", "doubleNumericNull", "floatNumericNull", "partial_null_column");
 
@@ -151,7 +160,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
     final String interval = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
     DataSegment segment = createSegment(data, interval, version);
-    Assert.assertTrue(segmentManager.loadSegment(segment, false));
+    Assert.assertTrue(segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP));
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -170,6 +179,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertTrue(bytes.isPresent());
+    assertSegmentIdEquals(segment.getId(), bytes.get());
 
     // dropping the segment should make the table no longer available
     segmentManager.dropSegment(segment);
@@ -177,6 +189,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     maybeJoinable = makeJoinable(dataSource);
 
     Assert.assertFalse(maybeJoinable.isPresent());
+
+    bytes = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertFalse(bytes.isPresent());
   }
 
   @Test
@@ -194,8 +209,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     DataSegment segment1 = createSegment(data, interval, version);
     DataSegment segment2 = createSegment(data2, interval2, version2);
-    Assert.assertTrue(segmentManager.loadSegment(segment1, false));
-    Assert.assertTrue(segmentManager.loadSegment(segment2, false));
+    Assert.assertTrue(segmentManager.loadSegment(segment1, false, SegmentLazyLoadFailCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(segment2, false, SegmentLazyLoadFailCallback.NOOP));
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -215,6 +230,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    Optional<byte[]> cacheKey = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertTrue(cacheKey.isPresent());
+    assertSegmentIdEquals(segment2.getId(), cacheKey.get());
 
     segmentManager.dropSegment(segment2);
 
@@ -236,6 +254,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             false
         )
     );
+    cacheKey = joinableFactory.computeJoinCacheKey(dataSource, JOIN_CONDITION_ANALYSIS);
+    Assert.assertTrue(cacheKey.isPresent());
+    assertSegmentIdEquals(segment1.getId(), cacheKey.get());
   }
 
 
@@ -251,7 +272,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final String interval2 = "2011-01-12T00:00:00.000Z/2011-03-28T00:00:00.000Z";
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.top");
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), false));
+    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), false, SegmentLazyLoadFailCallback.NOOP));
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
 
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -273,7 +294,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
 
     // add another segment with smaller interval, only partially overshadows so there will be 2 segments in timeline
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false));
+    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false, SegmentLazyLoadFailCallback.NOOP));
 
 
     expectedException.expect(ISE.class);
@@ -287,16 +308,19 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     makeJoinable(dataSource);
   }
 
+  @Test
+  public void emptyCacheKeyForUnsupportedCondition()
+  {
+    final DataSource dataSource = new GlobalTableDataSource(TABLE_NAME);
+    JoinConditionAnalysis condition = EasyMock.mock(JoinConditionAnalysis.class);
+    EasyMock.expect(condition.canHashJoin()).andReturn(false);
+    EasyMock.replay(condition);
+    Assert.assertNull(joinableFactory.build(dataSource, condition).orElse(null));
+  }
+
   private Optional<Joinable> makeJoinable(DataSource dataSource)
   {
-    return joinableFactory.build(
-        dataSource,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("market == \"%s.market\"", PREFIX),
-            PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
+    return joinableFactory.build(dataSource, JOIN_CONDITION_ANALYSIS);
   }
 
   private DataSegment createSegment(IncrementalIndex data, String interval, String version) throws IOException
@@ -339,5 +363,23 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     return tmpSegment.withLoadSpec(
         ImmutableMap.of("type", "local", "path", segmentDir.getAbsolutePath())
     );
+  }
+
+  private void assertSegmentIdEquals(SegmentId id, byte[] bytes)
+  {
+    // Call byteBuffer.get to skip the type keys
+    ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+    byteBuffer.get(); // skip the cache key prefix
+    byteBuffer.get();
+    long start = byteBuffer.getLong();
+    byteBuffer.get();
+    long end = byteBuffer.getLong();
+    byteBuffer.get();
+    String version = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getVersion()));
+    byteBuffer.get();
+    String dataSource = StringUtils.fromUtf8(byteBuffer, StringUtils.estimatedBinaryLengthAsUTF8(id.getDataSource()));
+    byteBuffer.get();
+    int partition = byteBuffer.getInt();
+    Assert.assertEquals(id, SegmentId.of(dataSource, Intervals.utc(start, end), version, partition));
   }
 }

@@ -41,3 +41,4 @@ export * from './table-cell/table-cell';
 export * from './table-column-selector/table-column-selector';
 export * from './timed-button/timed-button';
 export * from './view-control-bar/view-control-bar';
+export * from './form-json-selector/form-json-selector';

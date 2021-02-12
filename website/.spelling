@@ -63,6 +63,7 @@ Dropwizard
 dropwizard
 DruidInputSource
 DruidSQL
+DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
@@ -87,6 +88,7 @@ HLL
 HashSet
 Homebrew
 HyperLogLog
+IAM
 IANA
 IETF
 IP
@@ -114,6 +116,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -141,6 +144,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -149,6 +153,7 @@ ParseSpecs
 Protobuf
 RDBMS
 RDDs
+RDS
 Rackspace
 Redis
 S3
@@ -164,6 +169,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -214,6 +220,7 @@ colocation
 compactable
 config
 configs
+consumerProperties
 cron
 csv
 customizable
@@ -234,6 +241,7 @@ deserialize
 deserialized
 downtimes
 druid
+druid–kubernetes-extensions
 e.g.
 encodings
 endian
@@ -273,6 +281,7 @@ joinable
 kerberos
 keystore
 keytab
+kubernetes
 laning
 lifecycle
 localhost
@@ -382,6 +391,7 @@ subsecond
 substring
 subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -403,6 +413,7 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
@@ -613,6 +624,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository
@@ -692,6 +704,12 @@ OAuth
 Okta
 OpenID
 pac4j
+ - ../docs/development/extensions-core/kubernetes.md
+Env
+POD_NAME
+POD_NAMESPACE
+ConfigMap
+PT17S
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
@@ -856,6 +874,7 @@ DistinctCount
 artifactId
 com.example
 common.runtime.properties
+druid-aws-rds-extensions
 druid-cassandra-storage
 druid-distinctcount
 druid-ec2-extensions
@@ -1016,6 +1035,7 @@ httpAuthenticationUsername
 ingestSegment
 InputSource
 DruidInputSource
+maxColumnsToMerge
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
@@ -1070,6 +1090,15 @@ array_to_string
 asin
 atan
 atan2
+bitwise
+bitwiseAnd
+bitwiseComplement
+bitwiseConvertDoubleToLongBits
+bitwiseConvertLongBitsToDouble
+bitwiseOr
+bitwiseShiftLeft
+bitwiseShiftRight
+bitwiseXor
 bloom_filter_test
 cartesian_fold
 cartesian_map
@@ -1498,6 +1527,7 @@ exprs
 group_id
 interval_expr
 is_available
+is_leader
 is_overshadowed
 is_published
 is_realtime
@@ -1513,6 +1543,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys
@@ -1573,6 +1604,9 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+10KiB
+2GiB
+512KiB
 1GiB
 KiB
 GiB
@@ -1642,6 +1676,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+allowList
 ANDed
 array_mod
 autoscale
@@ -1655,6 +1690,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+denyList
 doubleMax
 doubleMin
 doubleSum
@@ -1770,6 +1806,7 @@ expr
 jackson-jq
 missingValue
 schemaless
+skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
  - ../docs/tutorials/index.md

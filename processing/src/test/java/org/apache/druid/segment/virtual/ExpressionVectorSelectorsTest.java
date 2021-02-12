@@ -65,23 +65,30 @@ public class ExpressionVectorSelectorsTest
 {
   private static List<String> EXPRESSIONS = ImmutableList.of(
       "long1 * long2",
+      "long1 * nonexistent",
       "double1 * double3",
       "float1 + float3",
       "(long1 - long4) / double3",
       "long5 * float3 * long1 * long4 * double1",
       "long5 * double3 * long1 * long4 * double1",
       "max(double3, double5)",
+      "max(nonexistent, double5)",
       "min(double4, double1)",
       "cos(float3)",
       "sin(long4)",
       "parse_long(string1)",
+      "parse_long(nonexistent)",
       "parse_long(string1) * double3",
       "parse_long(string5) * parse_long(string1)",
       "parse_long(string5) * parse_long(string1) * double3",
       "'string constant'",
       "1",
       "192412.24124",
-      "null"
+      "null",
+      "long2",
+      "float2",
+      "double2",
+      "string3"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;
@@ -216,10 +223,19 @@ public class ExpressionVectorSelectorsTest
             }
             break;
           case DOUBLE:
-            nulls = selector.getNullVector();
-            double[] doubles = selector.getDoubleVector();
-            for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-              results.add(nulls != null && nulls[i] ? null : doubles[i]);
+            // special case to test floats just to get coverage on getFloatVector
+            if ("float2".equals(expression)) {
+              nulls = selector.getNullVector();
+              float[] floats = selector.getFloatVector();
+              for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+                results.add(nulls != null && nulls[i] ? null : (double) floats[i]);
+              }
+            } else {
+              nulls = selector.getNullVector();
+              double[] doubles = selector.getDoubleVector();
+              for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+                results.add(nulls != null && nulls[i] ? null : doubles[i]);
+              }
             }
             break;
           case STRING:

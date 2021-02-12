@@ -17,13 +17,12 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import axios from 'axios';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import { Loader } from '../../components';
 import { useQueryManager } from '../../hooks';
-import { UrlBaser } from '../../singletons/url-baser';
+import { Api, UrlBaser } from '../../singletons';
 
 import './status-dialog.scss';
 
@@ -50,7 +49,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
   const { onClose } = props;
   const [responseState] = useQueryManager<null, StatusResponse>({
     processQuery: async () => {
-      const resp = await axios.get(`/status`);
+      const resp = await Api.instance.get(`/status`);
       return resp.data;
     },
     initQuery: null,

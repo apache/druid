@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ValueType;
 
@@ -127,7 +126,7 @@ public enum ExprType
     }
   }
 
-  public static boolean isNumeric(ExprType type)
+  public static boolean isNumeric(@Nullable ExprType type)
   {
     return LONG.equals(type) || DOUBLE.equals(type);
   }
@@ -169,107 +168,4 @@ public enum ExprType
     return elementType;
   }
 
-  /**
-   * Given 2 'input' types, choose the most appropriate combined type, if possible
-   *
-   * arrays must be the same type
-   * if both types are {@link #STRING}, the output type will be preserved as string
-   * if both types are {@link #LONG}, the output type will be preserved as long
-   *
-   */
-  @Nullable
-  public static ExprType operatorAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
-  {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
-    }
-    // arrays cannot be auto converted
-    if (isArray(type) || isArray(other)) {
-      if (!type.equals(other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
-      }
-      return type;
-    }
-    // if both arguments are a string, type becomes a string
-    if (STRING.equals(type) && STRING.equals(other)) {
-      return STRING;
-    }
-
-    // otherwise a decimal or integer number
-    return numericAutoTypeConversion(type, other);
-  }
-
-  /**
-   * Given 2 'input' types, choose the most appropriate combined type, if possible
-   *
-   * arrays must be the same type
-   * if either type is {@link #STRING}, the output type will be preserved as string
-   * if both types are {@link #LONG}, the output type will be preserved as long, otherwise {@link #DOUBLE}
-   */
-  @Nullable
-  public static ExprType doubleMathFunctionAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
-  {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
-    }
-    // arrays cannot be auto converted
-    if (isArray(type) || isArray(other)) {
-      if (!type.equals(other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
-      }
-      return type;
-    }
-    // if either argument is a string, type becomes a string
-    if (STRING.equals(type) || STRING.equals(other)) {
-      return STRING;
-    }
-
-    return numericAutoTypeConversion(type, other);
-  }
-
-  /**
-   * Given 2 'input' types, choose the most appropriate combined type, if possible
-   *
-   * arrays must be the same type
-   * if either type is {@link #STRING}, the output type will be preserved as string
-   * any number will be coerced to {@link #LONG}
-   */
-  @Nullable
-  public static ExprType integerMathFunctionAutoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
-  {
-    if (type == null || other == null) {
-      // cannot auto conversion unknown types
-      return null;
-    }
-    // arrays cannot be auto converted
-    if (isArray(type) || isArray(other)) {
-      if (!type.equals(other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
-      }
-      return type;
-    }
-    // if either argument is a string, type becomes a string
-    if (STRING.equals(type) || STRING.equals(other)) {
-      return STRING;
-    }
-
-    // any number is long
-    return LONG;
-  }
-
-  /**
-   * Default best effort numeric type conversion. If both types are {@link #LONG}, returns {@link #LONG}, else
-   * {@link #DOUBLE}
-   */
-  public static ExprType numericAutoTypeConversion(ExprType type, ExprType other)
-  {
-    // all numbers win over longs
-    if (LONG.equals(type) && LONG.equals(other)) {
-      return LONG;
-    }
-    // floats vs doubles would be handled here, but we currently only support doubles...
-    return DOUBLE;
-  }
 }

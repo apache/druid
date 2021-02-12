@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
@@ -57,6 +59,7 @@ import java.util.stream.Collectors;
 public class BroadcastSegmentIndexedTable implements IndexedTable
 {
   private static final Logger LOG = new Logger(BroadcastSegmentIndexedTable.class);
+  private static final byte CACHE_PREFIX = 0x01;
 
   private final QueryableIndexSegment segment;
   private final QueryableIndexStorageAdapter adapter;
@@ -244,6 +247,26 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         offset,
         new HashMap<>()
     );
+  }
+
+  @Override
+  public byte[] computeCacheKey()
+  {
+    SegmentId segmentId = segment.getId();
+    CacheKeyBuilder keyBuilder = new CacheKeyBuilder(CACHE_PREFIX);
+    return keyBuilder
+        .appendLong(segmentId.getInterval().getStartMillis())
+        .appendLong(segmentId.getInterval().getEndMillis())
+        .appendString(segmentId.getVersion())
+        .appendString(segmentId.getDataSource())
+        .appendInt(segmentId.getPartitionNum())
+        .build();
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return true;
   }
 
   @Override

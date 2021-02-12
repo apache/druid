@@ -17,14 +17,12 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils/capabilities';
-import { deepGet } from '../../../utils/object-change';
+import { Api } from '../../../singletons';
+import { Capabilities, deepGet, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SegmentCounts {
@@ -48,11 +46,13 @@ FROM sys.segments`,
         });
         return segments.length === 1 ? segments[0] : null;
       } else if (capabilities.hasCoordinatorAccess()) {
-        const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
+        const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple');
         const loadstatus = loadstatusResp.data;
         const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
-        const datasourcesMetaResp = await axios.get('/druid/coordinator/v1/datasources?simple');
+        const datasourcesMetaResp = await Api.instance.get(
+          '/druid/coordinator/v1/datasources?simple',
+        );
         const datasourcesMeta = datasourcesMetaResp.data;
         const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
           deepGet(curr, 'properties.segments.count'),

@@ -21,9 +21,9 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { Transform } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
-import { Transform } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './transform-table.scss';

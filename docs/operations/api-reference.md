@@ -67,7 +67,7 @@ monitoring checks such as AWS load balancer health checks are not able to look a
 ## Master Server
 
 This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords)
-in the suggested [three-server configuration](../design/processes.html#server-types).
+in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Coordinator
 
@@ -410,6 +410,32 @@ Returns total size and count for each datasource for each interval within given 
 Returns the total size of segments awaiting compaction for the given dataSource. 
 This is only valid for dataSource which has compaction enabled. 
 
+##### GET
+
+* `/druid/coordinator/v1/compaction/status`
+
+Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
+The `latestStatus` object has the following keys:
+* `dataSource`: name of the datasource for this status information
+* `scheduleStatus`: auto compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto compaction config submitted otherwise, `NOT_ENABLED`
+* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto compaction config.
+* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.
+* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
+* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.
+* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+
+##### GET
+
+* `/druid/coordinator/v1/compaction/status?dataSource={dataSource}`
+
+Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the {dataSource} given. 
+Note that {dataSource} given must have/had auto compaction enabled.
+
 #### Compaction Configuration
 
 ##### GET
@@ -435,7 +461,7 @@ will be set for them.
 * `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource.
-See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
+See [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE
@@ -558,7 +584,7 @@ Retrieve list of task status objects for list of task id strings in request body
 
 Manually clean up pending segments table in metadata storage for `datasource`. Returns a JSON object response with
 `numDeleted` and count of rows deleted from the pending segments table. This API is used by the
-`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.html#coordinator-operation)
+`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.md#coordinator-operation)
 which automates this operation to perform periodically.
 
 #### Supervisors
@@ -576,8 +602,8 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
 
@@ -588,8 +614,8 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
 
@@ -652,7 +678,7 @@ Shutdown a supervisor.
 
 #### Dynamic configuration
 
-See [Overlord Dynamic Configuration](../configuration/index.html#overlord-dynamic-configuration) for details.
+See [Overlord Dynamic Configuration](../configuration/index.md#overlord-dynamic-configuration) for details.
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 (e.g., 2016-06-27_2016-06-28).
@@ -668,6 +694,10 @@ Retrieves current overlord dynamic configuration.
 Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
 to filter by interval and limit the number of results respectively.
 
+* `/druid/indexer/v1/workers`
+
+Retrieves a list of all the worker nodes in the cluster along with its metadata.
+
 * `/druid/indexer/v1/scaling`
 
 Retrieves overlord scaling events if auto-scaling runners are in use.
@@ -681,7 +711,7 @@ Update overlord dynamic worker configuration.
 ## Data Server
 
 This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals)
-in the suggested [three-server configuration](../design/processes.html#server-types).
+in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### MiddleManager
 
@@ -772,7 +802,7 @@ in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven'
 
 ## Query Server
 
-This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Broker
 

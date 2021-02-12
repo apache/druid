@@ -33,11 +33,20 @@ import java.util.Map;
 public class ConfigFileConfigProvider implements IntegrationTestingConfigProvider
 {
   private static final Logger LOG = new Logger(ConfigFileConfigProvider.class);
+  private String routerHost;
+  private String brokerHost;
+  private String historicalHost;
+  private String coordinatorHost;
+  private String coordinatorTwoHost;
+  private String overlordHost;
+  private String overlordTwoHost;
   private String routerUrl;
   private String brokerUrl;
   private String historicalUrl;
   private String coordinatorUrl;
-  private String indexerUrl;
+  private String coordinatorTwoUrl;
+  private String overlordUrl;
+  private String overlordTwoUrl;
   private String permissiveRouterUrl;
   private String noClientAuthRouterUrl;
   private String customCertCheckRouterUrl;
@@ -45,7 +54,9 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private String brokerTLSUrl;
   private String historicalTLSUrl;
   private String coordinatorTLSUrl;
-  private String indexerTLSUrl;
+  private String coordinatorTwoTLSUrl;
+  private String overlordTLSUrl;
+  private String overlordTwoTLSUrl;
   private String permissiveRouterTLSUrl;
   private String noClientAuthRouterTLSUrl;
   private String customCertCheckRouterTLSUrl;
@@ -79,17 +90,16 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     catch (IOException ex) {
       throw new RuntimeException(ex);
     }
+    routerHost = props.get("router_host");
     // there might not be a router; we want routerHost to be null in that case
     routerUrl = props.get("router_url");
     if (routerUrl == null) {
-      String routerHost = props.get("router_host");
       if (null != routerHost) {
         routerUrl = StringUtils.format("http://%s:%s", routerHost, props.get("router_port"));
       }
     }
     routerTLSUrl = props.get("router_tls_url");
     if (routerTLSUrl == null) {
-      String routerHost = props.get("router_host");
       if (null != routerHost) {
         routerTLSUrl = StringUtils.format("https://%s:%s", routerHost, props.get("router_tls_port"));
       }
@@ -137,51 +147,74 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       }
     }
 
+    brokerHost = props.get("broker_host");
     brokerUrl = props.get("broker_url");
     if (brokerUrl == null) {
       brokerUrl = StringUtils.format("http://%s:%s", props.get("broker_host"), props.get("broker_port"));
     }
     brokerTLSUrl = props.get("broker_tls_url");
     if (brokerTLSUrl == null) {
-      String brokerHost = props.get("broker_host");
       if (null != brokerHost) {
         brokerTLSUrl = StringUtils.format("https://%s:%s", brokerHost, props.get("broker_tls_port"));
       }
     }
-    
+
+    historicalHost = props.get("historical_host");
     historicalUrl = props.get("historical_url");
     if (historicalUrl == null) {
       historicalUrl = StringUtils.format("http://%s:%s", props.get("historical_host"), props.get("historical_port"));
     }
     historicalTLSUrl = props.get("historical_tls_url");
     if (historicalTLSUrl == null) {
-      String historicalHost = props.get("historical_host");
       if (null != historicalHost) {
         historicalTLSUrl = StringUtils.format("https://%s:%s", historicalHost, props.get("historical_tls_port"));
       }
     }
 
+    coordinatorHost = props.get("coordinator_host");
     coordinatorUrl = props.get("coordinator_url");
     if (coordinatorUrl == null) {
-      coordinatorUrl = StringUtils.format("http://%s:%s", props.get("coordinator_host"), props.get("coordinator_port"));
+      coordinatorUrl = StringUtils.format("http://%s:%s", coordinatorHost, props.get("coordinator_port"));
     }
     coordinatorTLSUrl = props.get("coordinator_tls_url");
     if (coordinatorTLSUrl == null) {
-      String coordinatorHost = props.get("coordinator_host");
       if (null != coordinatorHost) {
         coordinatorTLSUrl = StringUtils.format("https://%s:%s", coordinatorHost, props.get("coordinator_tls_port"));
       }
     }
 
-    indexerUrl = props.get("indexer_url");
-    if (indexerUrl == null) {
-      indexerUrl = StringUtils.format("http://%s:%s", props.get("indexer_host"), props.get("indexer_port"));
+    overlordHost = props.get("indexer_host");
+    overlordUrl = props.get("indexer_url");
+    if (overlordUrl == null) {
+      overlordUrl = StringUtils.format("http://%s:%s", overlordHost, props.get("indexer_port"));
     }
-    indexerTLSUrl = props.get("indexer_tls_url");
-    if (indexerTLSUrl == null) {
-      String indexerHost = props.get("indexer_host");
-      if (null != indexerHost) {
-        indexerTLSUrl = StringUtils.format("https://%s:%s", indexerHost, props.get("indexer_tls_port"));
+    overlordTLSUrl = props.get("indexer_tls_url");
+    if (overlordTLSUrl == null) {
+      if (null != overlordHost) {
+        overlordTLSUrl = StringUtils.format("https://%s:%s", overlordHost, props.get("indexer_tls_port"));
+      }
+    }
+    coordinatorTwoHost = props.get("coordinator_two_host");
+    coordinatorTwoUrl = props.get("coordinator_two_url");
+    if (coordinatorTwoUrl == null) {
+      coordinatorTwoUrl = StringUtils.format("http://%s:%s", coordinatorTwoHost, props.get("coordinator_two_port"));
+    }
+    coordinatorTwoTLSUrl = props.get("coordinator_two_tls_url");
+    if (coordinatorTwoTLSUrl == null) {
+      if (null != coordinatorTwoHost) {
+        coordinatorTwoTLSUrl = StringUtils.format("https://%s:%s", coordinatorTwoHost, props.get("coordinator_two_tls_port"));
+      }
+    }
+
+    overlordTwoHost = props.get("overlord_two_host");
+    overlordTwoUrl = props.get("overlord_two_url");
+    if (overlordTwoUrl == null) {
+      overlordTwoUrl = StringUtils.format("http://%s:%s", overlordTwoHost, props.get("overlord_two_port"));
+    }
+    overlordTwoTLSUrl = props.get("overlord_two_tls_url");
+    if (overlordTwoTLSUrl == null) {
+      if (null != overlordTwoHost) {
+        overlordTwoTLSUrl = StringUtils.format("https://%s:%s", overlordTwoHost, props.get("overlord_two_tls_port"));
       }
     }
     
@@ -205,7 +238,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     LOG.info("broker: [%s], [%s]", brokerUrl, brokerTLSUrl);
     LOG.info("historical: [%s], [%s]", historicalUrl, historicalTLSUrl);
     LOG.info("coordinator: [%s], [%s]", coordinatorUrl, coordinatorTLSUrl);
-    LOG.info("overlord: [%s], [%s]", indexerUrl, indexerTLSUrl);
+    LOG.info("overlord: [%s], [%s]", overlordUrl, overlordTLSUrl);
     LOG.info("middle manager: [%s]", middleManagerHost);
     LOG.info("zookeepers: [%s]", zookeeperHosts);
     LOG.info("kafka: [%s]", kafkaHost);
@@ -231,15 +264,53 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       }
 
       @Override
+      public String getCoordinatorTwoUrl()
+      {
+        return coordinatorTwoUrl;
+      }
+
+      @Override
+      public String getCoordinatorTwoTLSUrl()
+      {
+        return coordinatorTwoTLSUrl;
+      }
+
+      @Override
+      public String getOverlordUrl()
+      {
+        return overlordUrl;
+      }
+
+      @Override
+      public String getOverlordTLSUrl()
+      {
+        return overlordTLSUrl;
+      }
+
+      @Override
+      public String getOverlordTwoUrl()
+      {
+        return overlordTwoUrl;
+      }
+
+      @Override
+      public String getOverlordTwoTLSUrl()
+      {
+        return overlordTwoTLSUrl;
+      }
+
+      @Override
       public String getIndexerUrl()
       {
-        return indexerUrl;
+        // no way to configure this since the config was stolen by the overlord
+        return null;
       }
 
       @Override
       public String getIndexerTLSUrl()
       {
-        return indexerTLSUrl;
+        // no way to configure this since the config was stolen by the overlord
+        return null;
       }
 
       @Override
@@ -321,6 +392,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       }
 
       @Override
+      public String getHistoricalHost()
+      {
+        return historicalHost;
+      }
+
+      @Override
       public String getZookeeperHosts()
       {
         return zookeeperHosts;
@@ -330,6 +407,42 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getKafkaHost()
       {
         return kafkaHost;
+      }
+
+      @Override
+      public String getBrokerHost()
+      {
+        return brokerHost;
+      }
+
+      @Override
+      public String getRouterHost()
+      {
+        return routerHost;
+      }
+
+      @Override
+      public String getCoordinatorHost()
+      {
+        return coordinatorHost;
+      }
+
+      @Override
+      public String getCoordinatorTwoHost()
+      {
+        return coordinatorTwoHost;
+      }
+
+      @Override
+      public String getOverlordHost()
+      {
+        return overlordHost;
+      }
+
+      @Override
+      public String getOverlordTwoHost()
+      {
+        return overlordTwoHost;
       }
 
       @Override
@@ -402,6 +515,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getExtraDatasourceNameSuffix()
       {
         return "";
+      }
+
+      @Override
+      public boolean isDocker()
+      {
+        return false;
       }
     };
   }

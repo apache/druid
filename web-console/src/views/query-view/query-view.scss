@@ -30,13 +30,14 @@ $nav-width: 250px;
     left: 0;
     height: 100%;
     width: $nav-width;
+    @include card-like;
   }
 
   .splitter-layout {
     position: absolute;
     top: 0;
     height: 100%;
-    left: $nav-width + $standard-padding;
+    left: $nav-width + $thin-padding;
     right: 0;
     width: auto;
 
@@ -51,10 +52,12 @@ $nav-width: 250px;
         top: 0;
         left: 0;
         right: 0;
-        bottom: 30px + $standard-padding;
+        bottom: 30px + $thin-padding;
+        @include card-like;
+        overflow: hidden;
       }
 
-      .control-bar {
+      .query-control-bar {
         position: absolute;
         bottom: 0;
         width: 100%;
@@ -64,10 +67,10 @@ $nav-width: 250px;
           margin-right: 10px;
         }
 
-        .smart-query-limit {
+        .auto-limit {
           display: inline-block;
           margin-bottom: 6px;
-          font-size: 14px;
+          font-size: $pt-font-size;
 
           .bp3-control-indicator {
             margin-top: -1px;
@@ -85,7 +88,7 @@ $nav-width: 250px;
 
     &.splitter-layout-vertical > .layout-splitter {
       height: 3px;
-      background-color: #6d8ea9;
+      background-color: $gray1;
     }
 
     .output-pane {
@@ -93,6 +96,8 @@ $nav-width: 250px;
       width: 100%;
       top: 10px;
       bottom: 0;
+      @include card-like;
+      overflow: hidden;
 
       > * {
         position: absolute;
@@ -101,13 +106,12 @@ $nav-width: 250px;
       }
 
       .init-state {
-        background: #232d35;
         text-align: center;
 
         p {
           position: relative;
           top: 38%;
-          font-size: 14px;
+          font-size: 15px;
         }
       }
     }

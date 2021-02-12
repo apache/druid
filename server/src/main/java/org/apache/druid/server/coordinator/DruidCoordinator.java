@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -41,6 +42,7 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -58,8 +60,10 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -91,6 +95,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -132,7 +137,10 @@ public class DruidCoordinator
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
+
+  @Nullable // Null if zk is disabled
   private final CuratorFramework curator;
+
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
@@ -153,6 +161,10 @@ public class DruidCoordinator
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
 
+  private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
+  private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
+
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
@@ -161,7 +173,7 @@ public class DruidCoordinator
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      CuratorFramework curator,
+      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -172,7 +184,8 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments
+      CompactSegments compactSegments,
+      ZkEnablementConfig zkEnablementConfig
   )
   {
     this(
@@ -182,7 +195,7 @@ public class DruidCoordinator
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curator,
+        curatorProvider,
         emitter,
         scheduledExecutorFactory,
         indexingServiceClient,
@@ -194,7 +207,8 @@ public class DruidCoordinator
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        compactSegments
+        compactSegments,
+        zkEnablementConfig
     );
   }
 
@@ -205,7 +219,7 @@ public class DruidCoordinator
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      CuratorFramework curator,
+      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -217,7 +231,8 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments
+      CompactSegments compactSegments,
+      ZkEnablementConfig zkEnablementConfig
   )
   {
     this.config = config;
@@ -227,7 +242,11 @@ public class DruidCoordinator
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
-    this.curator = curator;
+    if (zkEnablementConfig.isEnabled()) {
+      this.curator = curatorProvider.get();
+    } else {
+      this.curator = null;
+    }
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
@@ -472,7 +491,7 @@ public class DruidCoordinator
             () -> {
               try {
                 if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
-                    curator.checkExists().forPath(toLoadQueueSegPath) == null &&
+                    (curator == null || curator.checkExists().forPath(toLoadQueueSegPath) == null) &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {
@@ -503,7 +522,7 @@ public class DruidCoordinator
   {
     return cachedBalancerThreadNumber;
   }
-  
+
   @VisibleForTesting
   public ListeningExecutorService getBalancerExec()
   {
@@ -561,7 +580,7 @@ public class DruidCoordinator
   public void runCompactSegmentsDuty()
   {
     final int startingLeaderCounter = coordLeaderSelector.localTerm();
-    DutiesRunnable compactSegmentsDuty = new DutiesRunnable(makeCompactSegmentsDuty(), startingLeaderCounter);
+    DutiesRunnable compactSegmentsDuty = new DutiesRunnable(makeCompactSegmentsDuty(), startingLeaderCounter, COMPACT_SEGMENTS_DUTIES_DUTY_GROUP);
     compactSegmentsDuty.run();
   }
 
@@ -586,14 +605,14 @@ public class DruidCoordinator
       final List<Pair<? extends DutiesRunnable, Duration>> dutiesRunnables = new ArrayList<>();
       dutiesRunnables.add(
           Pair.of(
-              new DutiesRunnable(makeHistoricalManagementDuties(), startingLeaderCounter),
+              new DutiesRunnable(makeHistoricalManagementDuties(), startingLeaderCounter, HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP),
               config.getCoordinatorPeriod()
           )
       );
       if (indexingServiceClient != null) {
         dutiesRunnables.add(
             Pair.of(
-                new DutiesRunnable(makeIndexingServiceDuties(), startingLeaderCounter),
+                new DutiesRunnable(makeIndexingServiceDuties(), startingLeaderCounter, INDEXING_SERVICE_DUTIES_DUTY_GROUP),
                 config.getCoordinatorIndexingPeriod()
             )
         );
@@ -694,11 +713,13 @@ public class DruidCoordinator
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
+    private final String dutiesRunnableAlias;
 
-    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
+    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;
+      this.dutiesRunnableAlias = alias;
     }
 
     @VisibleForTesting
@@ -735,6 +756,7 @@ public class DruidCoordinator
     public void run()
     {
       try {
+        final long globalStart = System.nanoTime();
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
             log.info("LEGGO MY EGGO. [%s] is leader.", coordLeaderSelector.getCurrentLeader());
@@ -789,14 +811,24 @@ public class DruidCoordinator
               && coordLeaderSelector.isLeader()
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
+            final long start = System.nanoTime();
             params = duty.run(params);
+            final long end = System.nanoTime();
 
             if (params == null) {
               // This duty wanted to cancel the run. No log message, since the duty should have logged a reason.
               return;
+            } else {
+              params.getCoordinatorStats().addToDutyStat("runtime", duty.getClass().getName(), TimeUnit.NANOSECONDS.toMillis(end - start));
             }
           }
         }
+        // Emit the runtime of the full DutiesRunnable
+        params.getEmitter().emit(
+            new ServiceMetricEvent.Builder()
+                .setDimension(DruidMetrics.DUTY_GROUP, dutiesRunnableAlias)
+                .build("coordinator/global/time", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - globalStart))
+        );
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();

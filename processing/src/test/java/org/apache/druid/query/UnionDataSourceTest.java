@@ -95,7 +95,8 @@ public class UnionDataSourceTest
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(unionDataSource.isCacheable());
+    Assert.assertFalse(unionDataSource.isCacheable(true));
+    Assert.assertFalse(unionDataSource.isCacheable(false));
   }
 
   @Test

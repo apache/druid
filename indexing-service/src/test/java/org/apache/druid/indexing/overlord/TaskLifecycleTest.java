@@ -746,7 +746,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -757,6 +759,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -826,7 +829,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -837,6 +842,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -1251,6 +1257,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1258,7 +1265,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 indexSpec,
+                null,
                 null,
                 null,
                 null,
@@ -1358,7 +1367,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -1369,6 +1380,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -1468,7 +1480,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
+        null,
         null,
         new Period("P1Y"),
         null, //default window period of 10 minutes

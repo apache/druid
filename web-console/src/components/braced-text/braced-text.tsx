@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { max } from 'd3-array';
 import React from 'react';
 
 import './braced-text.scss';
@@ -23,6 +24,7 @@ import './braced-text.scss';
 export interface BracedTextProps {
   text: string;
   braces: string[];
+  padFractionalPart?: boolean;
 }
 
 export function findMostNumbers(strings: string[]): string {
@@ -43,13 +45,54 @@ export function findMostNumbers(strings: string[]): string {
   return longest;
 }
 
+function lengthAfterLastDot(str: string): number | undefined {
+  const parts = str.split('.');
+  const n = parts.length;
+  if (n < 2) return;
+  return parts[n - 1].length;
+}
+
+function zerosOfLength(n: number): string {
+  return new Array(n + 1).join('0');
+}
+
 export const BracedText = React.memo(function BracedText(props: BracedTextProps) {
-  const { text, braces } = props;
+  const { text, braces, padFractionalPart } = props;
+
+  let effectiveBraces = braces.concat(text);
+
+  let zeroPad: JSX.Element | undefined;
+  if (padFractionalPart) {
+    const lengthsAfterDot = effectiveBraces.map(lengthAfterLastDot);
+    const maxLengthAfterLastDot = max(lengthsAfterDot, x => x);
+    if (maxLengthAfterLastDot) {
+      const textLengthAfterLastDot = lengthAfterLastDot(text);
+      if (typeof textLengthAfterLastDot !== 'undefined') {
+        const padLength = Math.max(maxLengthAfterLastDot - textLengthAfterLastDot, 0);
+        zeroPad = <span className="zero-pad">{zerosOfLength(padLength)}</span>;
+      } else {
+        zeroPad = <span className="zero-pad">{`.${zerosOfLength(maxLengthAfterLastDot)}`}</span>;
+      }
+
+      effectiveBraces = effectiveBraces.map((brace, i) => {
+        const braceLengthAfterLastDot = lengthsAfterDot[i];
+        if (typeof braceLengthAfterLastDot !== 'undefined') {
+          const padLength = Math.max(maxLengthAfterLastDot - braceLengthAfterLastDot, 0);
+          return `${brace}${zerosOfLength(padLength)}`;
+        } else {
+          return `${brace}.${zerosOfLength(maxLengthAfterLastDot)}`;
+        }
+      });
+    }
+  }
 
   return (
     <span className="braced-text">
-      <span className="brace-text">{findMostNumbers(braces.concat(text))}</span>
-      <span className="real-text">{text}</span>
+      <span className="brace-text">{findMostNumbers(effectiveBraces)}</span>
+      <span className="real-text">
+        {text}
+        {zeroPad}
+      </span>
     </span>
   );
 });

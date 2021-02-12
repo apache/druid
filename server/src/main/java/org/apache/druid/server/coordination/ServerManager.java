@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -57,8 +58,9 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -76,7 +78,7 @@ import java.util.function.Function;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
- *
+ * <p>
  * In tests, this class's behavior is partially mimicked by TestClusterQuerySegmentWalker.
  */
 public class ServerManager implements QuerySegmentWalker
@@ -90,7 +92,7 @@ public class ServerManager implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final ServerConfig serverConfig;
 
   @Inject
@@ -117,7 +119,7 @@ public class ServerManager implements QuerySegmentWalker
 
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.serverConfig = serverConfig;
   }
 
@@ -197,12 +199,15 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
     );
+    // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
 
     final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
@@ -215,7 +220,8 @@ public class ServerManager implements QuerySegmentWalker
                     toolChest,
                     timeline,
                     segmentMapFn,
-                    cpuTimeAccumulator
+                    cpuTimeAccumulator,
+                    cacheKeyPrefix
                 )
             )
         );
@@ -239,7 +245,8 @@ public class ServerManager implements QuerySegmentWalker
       final QueryToolChest<T, Query<T>> toolChest,
       final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
-      final AtomicLong cpuTimeAccumulator
+      final AtomicLong cpuTimeAccumulator,
+      Optional<byte[]> cacheKeyPrefix
   )
   {
     final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
@@ -261,6 +268,7 @@ public class ServerManager implements QuerySegmentWalker
         factory,
         toolChest,
         segmentMapFn.apply(segment),
+        cacheKeyPrefix,
         descriptor,
         cpuTimeAccumulator
     );
@@ -270,6 +278,7 @@ public class ServerManager implements QuerySegmentWalker
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
       final SegmentReference segment,
+      final Optional<byte[]> cacheKeyPrefix,
       final SegmentDescriptor segmentDescriptor,
       final AtomicLong cpuTimeAccumulator
   )
@@ -293,9 +302,15 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
+    StorageAdapter storageAdapter = segment.asStorageAdapter();
+    long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+    long segmentMinTime = storageAdapter.getMinTime().getMillis();
+    Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
+        cacheKeyPrefix,
         segmentDescriptor,
+        actualDataInterval,
         objectMapper,
         cache,
         toolChest,

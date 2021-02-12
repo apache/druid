@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
+import { clickButton, getLabeledInput, setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
+import { readPartitionSpec } from '../load-data/config/partition';
 
 import { CompactionConfig } from './compaction';
 import { Datasource } from './datasource';
@@ -32,13 +34,18 @@ enum DatasourceColumn {
   SEGMENT_LOAD_DROP,
   TOTAL_DATA_SIZE,
   SEGMENT_SIZE,
+  SEGMENT_GRANULARITY,
   TOTAL_ROWS,
   AVG_ROW_SIZE,
   REPLICATED_SIZE,
   COMPACTION,
+  PERCENT_COMPACTED,
+  LEFT_TO_BE_COMPACTED,
   RETENTION,
   ACTIONS,
 }
+
+const SKIP_OFFSET_FROM_LATEST = 'Skip offset from latest';
 
 /**
  * Represents datasource overview tab.
@@ -54,7 +61,7 @@ export class DatasourcesOverview {
 
   async getDatasources(): Promise<Datasource[]> {
     await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle0' });
+    await this.page.reload({ waitUntil: 'networkidle' });
 
     const data = await extractTable(this.page, 'div div.rt-tr-group', 'div.rt-td');
 
@@ -76,13 +83,37 @@ export class DatasourcesOverview {
     datasourceName: string,
     compactionConfig: CompactionConfig,
   ): Promise<void> {
-    await this.openEditActions(datasourceName);
+    await this.openCompactionConfigurationDialog(datasourceName);
 
-    await this.page.click('"Edit compaction configuration"');
-    await this.setInput('Skip offset from latest', compactionConfig.skipOffsetFromLatest);
+    await setLabeledInput(
+      this.page,
+      SKIP_OFFSET_FROM_LATEST,
+      compactionConfig.skipOffsetFromLatest,
+    );
     await compactionConfig.partitionsSpec.apply(this.page);
 
-    await this.clickButton('Submit');
+    await clickButton(this.page, 'Submit');
+  }
+
+  private async openCompactionConfigurationDialog(datasourceName: string): Promise<void> {
+    await this.openEditActions(datasourceName);
+    await this.clickMenuItem('Edit compaction configuration');
+    await this.page.waitForSelector('div.compaction-dialog');
+  }
+
+  private async clickMenuItem(text: string): Promise<void> {
+    const menuItemSelector = `//a[*[contains(text(),"${text}")]]`;
+    await this.page.click(menuItemSelector);
+  }
+
+  async getCompactionConfiguration(datasourceName: string): Promise<CompactionConfig> {
+    await this.openCompactionConfigurationDialog(datasourceName);
+
+    const skipOffsetFromLatest = await getLabeledInput(this.page, SKIP_OFFSET_FROM_LATEST);
+    const partitionsSpec = await readPartitionSpec(this.page);
+
+    await clickButton(this.page, 'Close');
+    return new CompactionConfig({ skipOffsetFromLatest, partitionsSpec: partitionsSpec! });
   }
 
   private async openEditActions(datasourceName: string): Promise<void> {
@@ -94,16 +125,22 @@ export class DatasourcesOverview {
 
     const editActions = await this.page.$$('span[icon=wrench]');
     editActions[index].click();
-    await this.page.waitFor(5000);
+    await this.waitForPopupMenu();
   }
 
-  private async setInput(label: string, value: string) {
-    const input = await this.page.$(`//*[text()="${label}"]/following-sibling::div//input`);
-    await input!.fill('');
-    await input!.type(value);
+  private async waitForPopupMenu(): Promise<void> {
+    await this.page.waitForSelector('ul.bp3-menu');
   }
 
-  private async clickButton(text: string) {
-    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
+  async triggerCompaction(): Promise<void> {
+    await this.page.goto(this.baseUrl);
+    await this.clickMoreButton({ modifiers: ['Alt'] });
+    await this.clickMenuItem('Force compaction run');
+    await clickButton(this.page, 'Force compaction run');
+  }
+
+  private async clickMoreButton(options: any): Promise<void> {
+    await this.page.click('//button[span[@icon="more"]]', options);
+    await this.waitForPopupMenu();
   }
 }

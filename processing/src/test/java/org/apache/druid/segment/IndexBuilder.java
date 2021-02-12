@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -176,7 +177,8 @@ public class IndexBuilder
                   AggregatorFactory.class
               ),
               new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
-              indexSpec
+              indexSpec,
+              -1
           )
       );
       for (QueryableIndex index : persisted) {
@@ -225,10 +227,10 @@ public class IndexBuilder
   )
   {
     Preconditions.checkNotNull(schema, "schema");
-    final IncrementalIndex incrementalIndex = new IncrementalIndex.Builder()
+    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(maxRows)
-        .buildOnheap();
+        .build();
 
     for (InputRow row : rows) {
       try {

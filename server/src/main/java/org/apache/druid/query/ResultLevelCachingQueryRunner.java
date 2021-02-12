@@ -162,6 +162,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     }
   }
 
+  @Nullable
   private byte[] fetchResultsFromResultLevelCache(
       final String queryCacheKey
   )

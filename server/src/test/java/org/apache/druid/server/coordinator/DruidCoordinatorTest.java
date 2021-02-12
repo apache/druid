@@ -38,6 +38,7 @@ import org.apache.druid.client.SingleServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -188,7 +189,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -214,7 +215,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 
@@ -692,7 +694,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
-        null,
+        () -> null,
         null,
         scheduledExecutorFactory,
         null,
@@ -703,10 +705,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
 
-    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0);
+    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0, "TEST");
     // before initialization
     Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
     Assert.assertNull(c.getBalancerExec());

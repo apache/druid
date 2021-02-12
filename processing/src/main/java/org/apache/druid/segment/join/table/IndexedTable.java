@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ReferenceCountedObject;
@@ -86,6 +87,26 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
   default ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
   {
     return null;
+  }
+
+  /**
+   * Computes a {@code byte[]} key for the table that can be used for computing cache keys for join operations.
+   * see {@link org.apache.druid.segment.join.JoinableFactory#computeJoinCacheKey}
+   *
+   * @return the byte array for cache key
+   * @throws {@link IAE} if caching is not supported
+   */
+  default byte[] computeCacheKey()
+  {
+    throw new IAE("Caching is not supported. Check `isCacheable` before calling computeCacheKey");
+  }
+
+  /**
+   * Returns whether this indexed table can be cached for the join operations
+   */
+  default boolean isCacheable()
+  {
+    return false;
   }
 
   /**

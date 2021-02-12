@@ -25,7 +25,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
-public interface ColumnInspector extends Expr.InputBindingTypes
+public interface ColumnInspector extends Expr.InputBindingInspector
 {
   /**
    * Returns capabilities of a particular column.

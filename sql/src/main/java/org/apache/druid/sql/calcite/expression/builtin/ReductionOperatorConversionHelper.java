@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.math.expr.ExprTypeConversion;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
@@ -38,7 +39,7 @@ class ReductionOperatorConversionHelper
    * https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
    *
    * @see org.apache.druid.math.expr.Function.ReduceFunction#apply
-   * @see org.apache.druid.math.expr.ExprType#doubleMathFunctionAutoTypeConversion
+   * @see ExprTypeConversion#function
    */
   static final SqlReturnTypeInference TYPE_INFERENCE =
       opBinding -> {

@@ -2358,12 +2358,12 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     String rewrittenCountryIsoCodeColumnName = hasLhsExpressionInJoinCondition
-                                               ? "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0"
+                                               ? "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-1"
                                                : "countryIsoCode";
 
 
     String rewrittenRegionIsoCodeColumnName = hasLhsExpressionInJoinCondition
-                                              ? "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-1"
+                                              ? "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0"
                                               : "regionIsoCode";
 
     Set<VirtualColumn> expectedVirtualColumns;
@@ -2410,6 +2410,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ImmutableList.of(
                 new SelectorFilter(rewrittenRegionIsoCodeColumnName, "ON"),
                 new SelectorFilter(rewrittenCountryIsoCodeColumnName, "CA"),
+                new InDimFilter(rewrittenCountryIsoCodeColumnName, ImmutableSet.of("CA"), null, null).toFilter(),
                 new BoundFilter(new BoundDimFilter(
                     rewrittenCountryIsoCodeColumnName,
                     "CA",
@@ -2426,7 +2427,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                     null,
                     null
                 ).toFilter(),
-                new InDimFilter(rewrittenCountryIsoCodeColumnName, ImmutableSet.of("CA"), null, null).toFilter(),
                 new OrFilter(
                     ImmutableList.of(
                         new SelectorFilter("channel", "#fr.wikipedia"),
@@ -2545,18 +2545,10 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
-                new AndFilter(
-                    ImmutableList.of(
-                        new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM", "AAAA"), null, null).toFilter(),
-                        new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM", "AAAA"), null, null).toFilter()
-                    )
-                ),
-                new AndFilter(
-                    ImmutableList.of(
-                        new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter(),
-                        new InDimFilter("regionIsoCode", ImmutableSet.of("CA"), null, null).toFilter()
-                    )
-                )
+                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("CA"), null, null).toFilter(),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM", "AAAA"), null, null).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM", "AAAA"), null, null).toFilter()
             )
         ),
         originalFilter,

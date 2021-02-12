@@ -181,7 +181,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   // ZK_CLEANUP_TODO : Remove these when RemoteTaskRunner and WorkerTaskMonitor are removed.
   private static final Joiner JOINER = Joiner.on("/");
+
+  @Nullable // Null, if zk is disabled
   private final CuratorFramework cf;
+
+  @Nullable // Null, if zk is disabled
   private final ScheduledExecutorService zkCleanupExec;
   private final IndexerZkConfig indexerZkConfig;
 
@@ -193,7 +197,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       TaskStorage taskStorage,
-      CuratorFramework cf,
+      @Nullable CuratorFramework cf,
       IndexerZkConfig indexerZkConfig
   )
   {
@@ -218,12 +222,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         ScheduledExecutors.fixed(1, "HttpRemoteTaskRunner-Worker-Cleanup-%d")
     );
 
-    this.cf = cf;
+    if (cf != null) {
+      this.cf = cf;
+      this.zkCleanupExec = ScheduledExecutors.fixed(
+          1,
+          "HttpRemoteTaskRunner-zk-cleanup-%d"
+      );
+    } else {
+      this.cf = null;
+      this.zkCleanupExec = null;
+    }
+
     this.indexerZkConfig = indexerZkConfig;
-    this.zkCleanupExec = ScheduledExecutors.fixed(
-        1,
-        "HttpRemoteTaskRunner-zk-cleanup-%d"
-    );
 
     this.provisioningStrategy = provisioningStrategy;
   }
@@ -270,6 +280,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private void scheduleCompletedTaskStatusCleanupFromZk()
   {
+    if (cf == null) {
+      return;
+    }
+
     zkCleanupExec.scheduleAtFixedRate(
         () -> {
           try {

@@ -144,8 +144,8 @@ Types of column analyses are described below:
 
 ### cardinality
 
-* `cardinality` in the result will return the estimated floor of cardinality for each column. Only relevant for
-dimension columns.
+* `cardinality` in the result will return the size of the bitmap index or dictionary encoding for string dimensions, or null for other dimension types.
+ If `merge` was set, the result will be the max of this value across segments. Only relevant for dimension columns.
 
 ### minmax
 

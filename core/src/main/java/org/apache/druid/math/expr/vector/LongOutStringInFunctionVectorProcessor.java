@@ -29,7 +29,7 @@ public abstract class LongOutStringInFunctionVectorProcessor
 {
   public LongOutStringInFunctionVectorProcessor(ExprVectorProcessor<String[]> processor, int maxVectorSize)
   {
-    super(processor, maxVectorSize, new long[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExprType.STRING), maxVectorSize, new long[maxVectorSize]);
   }
 
   @Override

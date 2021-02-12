@@ -25,12 +25,27 @@ import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.ProvisionException;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.JsonConfigurator;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ServerModule;
+import org.apache.druid.jackson.JacksonModule;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.validation.Validation;
+import javax.validation.Validator;
+import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 public class InputSourceModuleTest
@@ -41,7 +56,8 @@ public class InputSourceModuleTest
   @Before
   public void setUp()
   {
-    for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
+    InputSourceModule inputSourceModule = new InputSourceModule();
+    for (Module jacksonModule : inputSourceModule.getJacksonModules()) {
       mapper.registerModule(jacksonModule);
     }
   }
@@ -58,5 +74,63 @@ public class InputSourceModuleTest
                                   .collect(Collectors.toList());
     Assert.assertNotNull(subtypes);
     Assert.assertEquals(SQL_NAMED_TYPE, Iterables.getOnlyElement(subtypes));
+  }
+
+  @Test
+  public void testHttpInputSourceAllowConfig()
+  {
+    Properties props = new Properties();
+    props.put("druid.ingestion.http.allowListDomains", "[\"allow.com\"]");
+    Injector injector = makeInjectorWithProperties(props);
+    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
+    Assert.assertEquals(new HttpInputSourceConfig(Collections.singletonList("allow.com"), null), instance);
+  }
+
+  @Test
+  public void testHttpInputSourceDenyConfig()
+  {
+    Properties props = new Properties();
+    props.put("druid.ingestion.http.denyListDomains", "[\"deny.com\"]");
+    Injector injector = makeInjectorWithProperties(props);
+    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
+    Assert.assertEquals(new HttpInputSourceConfig(null, Collections.singletonList("deny.com")), instance);
+  }
+
+  @Test(expected = ProvisionException.class)
+  public void testHttpInputSourceBothAllowDenyConfig()
+  {
+    Properties props = new Properties();
+    props.put("druid.ingestion.http.allowListDomains", "[\"allow.com\"]");
+    props.put("druid.ingestion.http.denyListDomains", "[\"deny.com\"]");
+    Injector injector = makeInjectorWithProperties(props);
+    injector.getInstance(HttpInputSourceConfig.class);
+  }
+
+  @Test
+  public void testHttpInputSourceDefaultConfig()
+  {
+    Properties props = new Properties();
+    Injector injector = makeInjectorWithProperties(props);
+    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
+    Assert.assertEquals(new HttpInputSourceConfig(null, null), instance);
+    Assert.assertNull(instance.getAllowListDomains());
+    Assert.assertNull(instance.getDenyListDomains());
+  }
+
+  private Injector makeInjectorWithProperties(final Properties props)
+  {
+    return Guice.createInjector(
+        ImmutableList.of(
+            new DruidGuiceExtensions(),
+            new LifecycleModule(),
+            new ServerModule(),
+            binder -> {
+              binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+              binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+              binder.bind(Properties.class).toInstance(props);
+            },
+            new JacksonModule(),
+            new InputSourceModule()
+        ));
   }
 }

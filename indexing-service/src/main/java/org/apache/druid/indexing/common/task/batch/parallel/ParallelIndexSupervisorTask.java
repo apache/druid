@@ -62,6 +62,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRun
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -108,7 +109,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -140,7 +140,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * the segment granularity of existing segments until the task reads all data because we don't know what segments
    * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
    * are missing and force to use timeChunk lock.
-   *
+   * <p>
    * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
    * in the task logs.
    */
@@ -187,20 +187,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
-
-      if (ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
-        throw new ISE("forceGuaranteedRollup is set but intervals is missing in granularitySpec");
-      }
     }
 
     this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
-                                           && !ingestionSchema.getDataSchema()
-                                                              .getGranularitySpec()
-                                                              .bucketIntervals()
-                                                              .isPresent();
+                                           && ingestionSchema.getDataSchema()
+                                                             .getGranularitySpec()
+                                                             .inputIntervals()
+                                                             .isEmpty();
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
@@ -289,7 +285,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   PartialHashSegmentGenerateParallelIndexTaskRunner createPartialHashSegmentGenerateRunner(
       TaskToolbox toolbox,
-      Integer numShardsOverride
+      ParallelIndexIngestionSpec ingestionSchema,
+      @Nullable Map<Interval, Integer> intervalToNumShardsOverride
   )
   {
     return new PartialHashSegmentGenerateParallelIndexTaskRunner(
@@ -298,7 +295,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getGroupId(),
         ingestionSchema,
         getContext(),
-        numShardsOverride
+        intervalToNumShardsOverride
     );
   }
 
@@ -317,32 +314,34 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   PartialRangeSegmentGenerateParallelIndexTaskRunner createPartialRangeSegmentGenerateRunner(
       TaskToolbox toolbox,
-      Map<Interval, PartitionBoundaries> intervalToPartitions
+      Map<Interval, PartitionBoundaries> intervalToPartitions,
+      ParallelIndexIngestionSpec ingestionSchema
   )
   {
     return new PartialRangeSegmentGenerateParallelIndexTaskRunner(
-       toolbox,
-       getId(),
-       getGroupId(),
-       ingestionSchema,
-       getContext(),
-       intervalToPartitions
+        toolbox,
+        getId(),
+        getGroupId(),
+        ingestionSchema,
+        getContext(),
+        intervalToPartitions
     );
   }
 
   @VisibleForTesting
   PartialGenericSegmentMergeParallelIndexTaskRunner createPartialGenericSegmentMergeRunner(
       TaskToolbox toolbox,
-      List<PartialGenericSegmentMergeIOConfig> ioConfigs
+      List<PartialGenericSegmentMergeIOConfig> ioConfigs,
+      ParallelIndexIngestionSpec ingestionSchema
   )
   {
     return new PartialGenericSegmentMergeParallelIndexTaskRunner(
         toolbox,
         getId(),
         getGroupId(),
-        getIngestionSchema().getDataSchema(),
+        ingestionSchema.getDataSchema(),
         ioConfigs,
-        getIngestionSchema().getTuningConfig(),
+        ingestionSchema.getTuningConfig(),
         getContext()
     );
   }
@@ -350,7 +349,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
+    return determineLockGranularityAndTryLock(
+        taskActionClient,
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+    );
   }
 
   @Override
@@ -466,18 +468,29 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
   }
 
-  private boolean isParallelMode()
+  /**
+   * Returns true if this task can run in the parallel mode with the given inputSource and tuningConfig.
+   * This method should be synchronized with CompactSegments.isParallelMode(ClientCompactionTaskQueryTuningConfig).
+   */
+  public static boolean isParallelMode(InputSource inputSource, @Nullable ParallelIndexTuningConfig tuningConfig)
   {
+    if (null == tuningConfig) {
+      return false;
+    }
+    boolean useRangePartitions = useRangePartitions(tuningConfig);
     // Range partitioning is not implemented for runSequential() (but hash partitioning is)
-    int minRequiredNumConcurrentSubTasks = useRangePartitions() ? 1 : 2;
-
-    return baseInputSource.isSplittable()
-           && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+    int minRequiredNumConcurrentSubTasks = useRangePartitions ? 1 : 2;
+    return inputSource.isSplittable() && tuningConfig.getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
   }
 
-  private boolean useRangePartitions()
+  private static boolean useRangePartitions(ParallelIndexTuningConfig tuningConfig)
   {
-    return ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+  }
+
+  private boolean isParallelMode()
+  {
+    return isParallelMode(baseInputSource, ingestionSchema.getTuningConfig());
   }
 
   /**
@@ -502,24 +515,45 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   /**
    * Run the multi phase parallel indexing for perfect rollup. In this mode, the parallel indexing is currently
    * executed in two phases.
-   *
+   * <p>
    * - In the first phase, each task partitions input data and stores those partitions in local storage.
-   *   - The partition is created based on the segment granularity (primary partition key) and the partition dimension
-   *     values in {@link PartitionsSpec} (secondary partition key).
-   *   - Partitioned data is maintained by {@link org.apache.druid.indexing.worker.IntermediaryDataManager}.
+   * - The partition is created based on the segment granularity (primary partition key) and the partition dimension
+   * values in {@link PartitionsSpec} (secondary partition key).
+   * - Partitioned data is maintained by {@link IntermediaryDataManager}.
    * - In the second phase, each task reads partitioned data from the intermediary data server (middleManager
-   *   or indexer) and merges them to create the final segments.
+   * or indexer) and merges them to create the final segments.
    */
   private TaskStatus runMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
-    return useRangePartitions()
+    return useRangePartitions(ingestionSchema.getTuningConfig())
            ? runRangePartitionMultiPhaseParallel(toolbox)
            : runHashPartitionMultiPhaseParallel(toolbox);
+  }
+
+  private static ParallelIndexIngestionSpec rewriteIngestionSpecWithIntervalsIfMissing(
+      ParallelIndexIngestionSpec ingestionSchema,
+      Collection<Interval> intervals
+  )
+  {
+    if (ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+      return ingestionSchema
+          .withDataSchema(
+              ingestionSchema.getDataSchema().withGranularitySpec(
+                  ingestionSchema
+                      .getDataSchema()
+                      .getGranularitySpec()
+                      .withIntervals(new ArrayList<>(intervals))
+              )
+          );
+    } else {
+      return ingestionSchema;
+    }
   }
 
   private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     TaskState state;
+    ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
 
     if (!(ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof HashedPartitionsSpec)) {
       // only range and hash partitioning is supported for multiphase parallel ingestion, see runMultiPhaseParallel()
@@ -529,49 +563,64 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
     }
 
-    final Integer numShardsOverride;
+    final Map<Interval, Integer> intervalToNumShards;
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec();
-    if (partitionsSpec.getNumShards() == null) {
-      // 0. need to determine numShards by scanning the data
-      LOG.info("numShards is unspecified, beginning %s phase.", PartialDimensionCardinalityTask.TYPE);
+    final boolean needsInputSampling =
+        partitionsSpec.getNumShards() == null
+        || ingestionSchemaToUse.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
+    if (needsInputSampling) {
+      // 0. need to determine intervals and numShards by scanning the data
+      LOG.info("Needs to determine intervals or numShards, beginning %s phase.", PartialDimensionCardinalityTask.TYPE);
       ParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport> cardinalityRunner =
           createRunner(
               toolbox,
               this::createPartialDimensionCardinalityRunner
           );
 
-      if (cardinalityRunner == null) {
-        throw new ISE("Could not create cardinality runner for hash partitioning.");
-      }
-
       state = runNextPhase(cardinalityRunner);
       if (state.isFailure()) {
         return TaskStatus.failure(getId());
       }
 
-      int effectiveMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
-                                       ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
-                                       : partitionsSpec.getMaxRowsPerSegment();
-      LOG.info("effective maxRowsPerSegment is: " + effectiveMaxRowsPerSegment);
-
-      if (cardinalityRunner.getReports() == null) {
-        throw new ISE("Could not determine cardinalities for hash partitioning.");
+      if (cardinalityRunner.getReports().isEmpty()) {
+        String msg = "No valid rows for hash partitioning."
+                     + " All rows may have invalid timestamps or have been filtered out.";
+        LOG.warn(msg);
+        return TaskStatus.success(getId(), msg);
       }
-      numShardsOverride = determineNumShardsFromCardinalityReport(
-          cardinalityRunner.getReports().values(),
-          effectiveMaxRowsPerSegment
-      );
 
-      LOG.info("Automatically determined numShards: " + numShardsOverride);
+      if (partitionsSpec.getNumShards() == null) {
+        int effectiveMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
+                                         ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
+                                         : partitionsSpec.getMaxRowsPerSegment();
+        LOG.info("effective maxRowsPerSegment is: " + effectiveMaxRowsPerSegment);
+
+        intervalToNumShards = determineNumShardsFromCardinalityReport(
+            cardinalityRunner.getReports().values(),
+            effectiveMaxRowsPerSegment
+        );
+      } else {
+        intervalToNumShards = CollectionUtils.mapValues(
+            mergeCardinalityReports(cardinalityRunner.getReports().values()),
+            k -> partitionsSpec.getNumShards()
+        );
+      }
+
+      ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
+          ingestionSchemaToUse,
+          intervalToNumShards.keySet()
+      );
     } else {
-      numShardsOverride = null;
+      // numShards will be determined in PartialHashSegmentGenerateTask
+      intervalToNumShards = null;
     }
 
     // 1. Partial segment generation phase
+    final ParallelIndexIngestionSpec segmentCreateIngestionSpec = ingestionSchemaToUse;
     ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner =
         createRunner(
             toolbox,
-            f -> createPartialHashSegmentGenerateRunner(toolbox, numShardsOverride)
+            f -> createPartialHashSegmentGenerateRunner(toolbox, segmentCreateIngestionSpec, intervalToNumShards)
         );
 
     state = runNextPhase(indexingRunner);
@@ -588,9 +637,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         partitionToLocations
     );
 
+    final ParallelIndexIngestionSpec segmentMergeIngestionSpec = ingestionSchemaToUse;
     final ParallelIndexTaskRunner<PartialGenericSegmentMergeTask, PushedSegmentsReport> mergeRunner = createRunner(
         toolbox,
-        tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs)
+        tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     state = runNextPhase(mergeRunner);
     if (state.isSuccess()) {
@@ -603,6 +653,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
+    ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
     ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
         createRunner(
             toolbox,
@@ -619,13 +670,22 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (intervalToPartitions.isEmpty()) {
       String msg = "No valid rows for single dimension partitioning."
-          + " All rows may have invalid timestamps or multiple dimension values.";
+                   + " All rows may have invalid timestamps or multiple dimension values.";
       LOG.warn(msg);
       return TaskStatus.success(getId(), msg);
     }
 
+    ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
+        ingestionSchemaToUse,
+        intervalToPartitions.keySet()
+    );
+
+    final ParallelIndexIngestionSpec segmentCreateIngestionSpec = ingestionSchemaToUse;
     ParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner =
-        createRunner(toolbox, tb -> createPartialRangeSegmentGenerateRunner(tb, intervalToPartitions));
+        createRunner(
+            toolbox,
+            tb -> createPartialRangeSegmentGenerateRunner(tb, intervalToPartitions, segmentCreateIngestionSpec)
+        );
 
     TaskState indexingState = runNextPhase(indexingRunner);
     if (indexingState.isFailure()) {
@@ -640,9 +700,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         partitionToLocations
     );
 
+    final ParallelIndexIngestionSpec segmentMergeIngestionSpec = ingestionSchemaToUse;
     ParallelIndexTaskRunner<PartialGenericSegmentMergeTask, PushedSegmentsReport> mergeRunner = createRunner(
         toolbox,
-        tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs)
+        tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     TaskState mergeState = runNextPhase(mergeRunner);
     if (mergeState.isSuccess()) {
@@ -652,48 +713,45 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TaskStatus.fromCode(getId(), mergeState);
   }
 
+  private static Map<Interval, Union> mergeCardinalityReports(Collection<DimensionCardinalityReport> reports)
+  {
+    Map<Interval, Union> finalCollectors = new HashMap<>();
+    reports.forEach(report -> {
+      Map<Interval, byte[]> intervalToCardinality = report.getIntervalToCardinalities();
+      for (Map.Entry<Interval, byte[]> entry : intervalToCardinality.entrySet()) {
+        HllSketch entryHll = HllSketch.wrap(Memory.wrap(entry.getValue()));
+        finalCollectors.computeIfAbsent(
+            entry.getKey(),
+            k -> new Union(DimensionCardinalityReport.HLL_SKETCH_LOG_K)
+        ).update(entryHll);
+      }
+    });
+    return finalCollectors;
+  }
+
   @VisibleForTesting
-  public static int determineNumShardsFromCardinalityReport(
+  public static Map<Interval, Integer> determineNumShardsFromCardinalityReport(
       Collection<DimensionCardinalityReport> reports,
       int maxRowsPerSegment
   )
   {
     // aggregate all the sub-reports
-    Map<Interval, Union> finalCollectors = new HashMap<>();
-    reports.forEach(report -> {
-      Map<Interval, byte[]> intervalToCardinality = report.getIntervalToCardinalities();
-      for (Map.Entry<Interval, byte[]> entry : intervalToCardinality.entrySet()) {
-        Union union = finalCollectors.computeIfAbsent(
-            entry.getKey(),
-            (key) -> {
-              return new Union(DimensionCardinalityReport.HLL_SKETCH_LOG_K);
-            }
-        );
-        HllSketch entryHll = HllSketch.wrap(Memory.wrap(entry.getValue()));
-        union.update(entryHll);
-      }
-    });
+    Map<Interval, Union> finalCollectors = mergeCardinalityReports(reports);
 
-    // determine the highest cardinality in any interval
-    long maxCardinality = 0;
-    for (Union union : finalCollectors.values()) {
-      maxCardinality = Math.max(maxCardinality, (long) union.getEstimate());
-    }
-
-    LOG.info("Estimated max cardinality: " + maxCardinality);
-
-    // determine numShards based on maxRowsPerSegment and the highest per-interval cardinality
-    long numShards = maxCardinality / maxRowsPerSegment;
-    if (maxCardinality % maxRowsPerSegment != 0) {
-      // if there's a remainder add 1 so we stay under maxRowsPerSegment
-      numShards += 1;
-    }
-    try {
-      return Math.toIntExact(numShards);
-    }
-    catch (ArithmeticException ae) {
-      throw new ISE("Estimated numShards [%s] exceeds integer bounds.", numShards);
-    }
+    return CollectionUtils.mapValues(
+        finalCollectors,
+        union -> {
+          final double estimatedCardinality = union.getEstimate();
+          // determine numShards based on maxRowsPerSegment and the cardinality
+          final long estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
+          try {
+            return Math.max(Math.toIntExact(estimatedNumShards), 1);
+          }
+          catch (ArithmeticException ae) {
+            throw new ISE("Estimated numShards [%s] exceeds integer bounds.", estimatedNumShards);
+          }
+        }
+    );
   }
 
   private Map<Interval, PartitionBoundaries> determineAllRangePartitions(Collection<DimensionDistributionReport> reports)
@@ -761,7 +819,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private static <S extends PartitionStat, L extends PartitionLocation>
-        Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
+      Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
       Map<String, ? extends GeneratedPartitionsReport<S>> subTaskIdToReport,
       BiFunction<String, S, L> createPartitionLocationFunction
   )
@@ -835,7 +893,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * @param index  index of partition
    * @param total  number of items to partition
    * @param splits number of desired partitions
-   *
    * @return partition range: [lhs, rhs)
    */
   private static Pair<Integer, Integer> getPartitionBoundaries(int index, int total, int splits)
@@ -917,8 +974,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return new IndexTuningConfig(
         null,
         null,
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
+        tuningConfig.isSkipBytesInMemoryOverheadCheck(),
         null,
         null,
         null,
@@ -934,7 +993,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getSegmentWriteOutMediumFactory(),
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        tuningConfig.getMaxColumnsToMerge()
     );
   }
 
@@ -979,7 +1039,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
+    // This method is called whenever subtasks need to allocate a new segment via the supervisor task.
+    // As a result, this code is never called in the Overlord. For now using the materialized intervals
+    // here is ok for performance reasons
+    final Set<Interval> materializedBucketIntervals = granularitySpec.materializedBucketIntervals();
 
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
     final List<TaskLock> locks = toolbox
@@ -995,7 +1058,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Interval interval;
     String version;
-    if (bucketIntervals.isPresent()) {
+    if (!materializedBucketIntervals.isEmpty()) {
       // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
       // This is because we should have gotten all required locks up front when the task starts up.
       final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
@@ -1004,7 +1067,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
 
       interval = maybeInterval.get();
-      if (!bucketIntervals.get().contains(interval)) {
+      if (!materializedBucketIntervals.contains(interval)) {
         throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
       }
 

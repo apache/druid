@@ -23,7 +23,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.hamcrest.Matchers;
+import org.apache.druid.query.QueryTimeoutException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,7 +39,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
@@ -511,8 +510,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
     input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
+    expectedException.expect(QueryTimeoutException.class);
     expectedException.expectMessage("Sequence iterator timed out waiting for data");
 
     assertException(
@@ -534,8 +532,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
+    expectedException.expect(QueryTimeoutException.class);
     expectedException.expectMessage("Sequence iterator timed out");
     assertException(input, 8, 64, 1000, 500);
   }
