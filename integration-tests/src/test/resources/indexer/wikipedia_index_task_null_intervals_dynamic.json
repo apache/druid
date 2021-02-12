@@ -83,7 +83,7 @@
       "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
       "maxAggregateSegmentsPermitted": %%MAX_AGGREGATE_SEGMENTS_PERMITTED%%,
       "partitionsSpec": {
-        "type": "hashed",
+        "type": "dynamic",
         "maxRowsPerSegment": 3
       }
     }

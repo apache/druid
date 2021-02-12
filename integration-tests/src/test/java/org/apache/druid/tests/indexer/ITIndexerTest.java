@@ -34,7 +34,9 @@ import java.util.function.Function;
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_TASK_HASHED_PARTITIONING = "/indexer/wikipedia_index_task_hashed_partitioning.json";
   private static final String INDEX_TASK_NULL_INTERVALS = "/indexer/wikipedia_index_task_null_intervals.json";
+  private static final String INDEX_TASK_NULL_INTERVALS_DYNAMIC_PARTITIONING = "/indexer/wikipedia_index_task_null_intervals_dynamic.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
@@ -75,6 +77,14 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   {
     return new Object[][]{
         {Integer.MAX_VALUE, 0}
+    };
+  }
+
+  @DataProvider
+  public static Object[][] failureResourcesZeroMax()
+  {
+    return new Object[][]{
+        {0, Integer.MAX_VALUE}
     };
   }
 
@@ -273,13 +283,13 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   }
 
   /**
-   * Test that ingestion properly fails due to tuningConfig paramaters. Both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentsPermitted are tested for ingestion with non-null intervals and hashed partitioning.
+   * Test that ingestion properly fails due to tuningConfig paramaters. maxAggregateSegmentsPermitted is tested for
+   * ingestion with non-null intervals and hashed partitioning.
    *
    * @param resourceArray tuningConfig values to populate ingestion spec.
    * @throws Exception
    */
-  @Test(dataProvider = "failureResourcesZeroMaxThenMaxZero")
+  @Test(dataProvider = "failureResourcesMaxZero")
   public void testHashedPartitioningNonNullIntervalsIndexFailure(int[] resourceArray) throws Exception
   {
     final Function<String, String> transform = spec -> {
@@ -309,7 +319,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
     doIndexTest(
         INDEX_DATASOURCE,
-        INDEX_TASK,
+        INDEX_TASK_HASHED_PARTITIONING,
         transform,
         INDEX_QUERIES_RESOURCE,
         false,
@@ -326,7 +336,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
    * @param resourceArray tuningConfig values to populate ingestion spec.
    * @throws Exception
    */
-  @Test(dataProvider = "failureResourcesMaxZero")
+  @Test(dataProvider = "failureResourcesZeroMax")
   public void testDynamicPartitioningNullIntervalsIndexFailure(int[] resourceArray) throws Exception
   {
     final Function<String, String> transform = spec -> {
@@ -356,7 +366,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
     doIndexTest(
         INDEX_DATASOURCE,
-        INDEX_TASK_NULL_INTERVALS,
+        INDEX_TASK_NULL_INTERVALS_DYNAMIC_PARTITIONING,
         transform,
         INDEX_QUERIES_RESOURCE,
         false,
