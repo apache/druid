@@ -82,7 +82,7 @@
       "forceGuaranteedRollup": %%FORCE_GUARANTEED_ROLLUP%%,
       "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
       "maxAggregateSegmentsPermitted": %%MAX_AGGREGATE_SEGMENTS_PERMITTED%%,
-      "patitionsSpec": {
+      "partitionsSpec": {
         "type": "hashed",
         "maxRowsPerSegment": 3
       }

@@ -305,62 +305,6 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
 
   /**
    * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses single dimension partitioning
-   * and null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentsPermitted.
-   *
-   * @param resourceArray DataProvider used to parameterize tuningConfig values
-   * @throws Exception
-   */
-  @Test(dataProvider = "failureResourcesZeroMaxThenMaxZero")
-  public void testSingleDimPartitioningNullIntervalsIndexFailure(int[] resourceArray) throws Exception
-  {
-    String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
-
-    final Function<String, String> specPathsTransform = spec -> {
-      try {
-        String path = "/batch_index/json";
-        spec = StringUtils.replace(
-            spec,
-            "%%INPUT_PATHS%%",
-            path
-        );
-        spec = StringUtils.replace(
-            spec,
-            "%%PARTITIONS_SPEC%%",
-            jsonMapper.writeValueAsString(new SingleDimensionPartitionsSpec(1, null, "page", false))
-        );
-        spec = StringUtils.replace(
-            spec,
-            "%%MAX_SEGMENT_INTERVALS_PERMITTED%%",
-            jsonMapper.writeValueAsString(resourceArray[0])
-        );
-        spec = StringUtils.replace(
-            spec,
-            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
-            jsonMapper.writeValueAsString(resourceArray[1])
-        );
-
-        return spec;
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    };
-
-    doIndexTest(
-        indexDatasource,
-        INDEX_TASK_NULL_INTERVALS,
-        specPathsTransform,
-        INDEX_QUERIES_RESOURCE,
-        false,
-        false,
-        false,
-        false
-    );
-  }
-
-  /**
-   * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses single dimension partitioning
    * and non-null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
    * maxAggregateSegmentsPermitted.
    *
