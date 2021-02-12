@@ -214,6 +214,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private RowIngestionMeters rowIngestionMeters;
   @MonotonicNonNull
   private ParseExceptionHandler parseExceptionHandler;
+  @MonotonicNonNull
+  private FireDepartmentMetrics fireDepartmentMetrics;
 
   @MonotonicNonNull
   private AuthorizerMapper authorizerMapper;
@@ -395,7 +397,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         new RealtimeIOConfig(null, null),
         null
     );
-    FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    this.fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     toolbox.addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
@@ -710,6 +712,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               recordSupplier.assign(assignment);
               stillReading = !assignment.isEmpty();
             }
+          }
+
+          if (!stillReading) {
+            // We let the fireDepartmentMetrics know that all messages have been read. This way, some metrics such as
+            // high message gap need not be reported
+            fireDepartmentMetrics.markProcessingDone();
           }
 
           if (System.currentTimeMillis() > nextCheckpointTime) {
@@ -1354,6 +1362,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public RowIngestionMeters getRowIngestionMeters()
   {
     return rowIngestionMeters;
+  }
+
+  @VisibleForTesting
+  public FireDepartmentMetrics getFireDepartmentMetrics()
+  {
+    return fireDepartmentMetrics;
   }
 
   public void stopForcefully()

@@ -36,21 +36,21 @@ public class HttpInputSourceConfigTest
   @Test
   public void testNullAllowedProtocolsUseDefault()
   {
-    HttpInputSourceConfig config = new HttpInputSourceConfig(null, null, null);
+    HttpInputSourceConfig config = new HttpInputSourceConfig(null);
     Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
   }
 
   @Test
   public void testEmptyAllowedProtocolsUseDefault()
   {
-    HttpInputSourceConfig config = new HttpInputSourceConfig(null, null, ImmutableSet.of());
+    HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of());
     Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
   }
 
   @Test
   public void testCustomAllowedProtocols()
   {
-    HttpInputSourceConfig config = new HttpInputSourceConfig(null, null, ImmutableSet.of("druid"));
+    HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of("druid"));
     Assert.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
   }
 }

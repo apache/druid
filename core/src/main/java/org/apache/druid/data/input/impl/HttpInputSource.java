@@ -60,10 +60,6 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
     throwIfInvalidProtocols(config, uris);
-    uris.forEach(uri -> Preconditions.checkArgument(
-        config.isURIAllowed(uri),
-        StringUtils.format("Access to [%s] DENIED!", uri)
-    ));
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;

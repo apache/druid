@@ -19,12 +19,16 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.guice.DruidSecondaryModule;
+import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -71,9 +75,26 @@ public class TestHelper
     return new IndexIO(JSON_MAPPER, columnConfig);
   }
 
+  public static AnnotationIntrospector makeAnnotationIntrospector()
+  {
+    // Prepare annotationIntrospector with similar logic, except skip Guice loading
+    // because most tests don't use Guice injection.
+    return new GuiceAnnotationIntrospector()
+    {
+      @Override
+      public Object findInjectableValueId(AnnotatedMember m)
+      {
+        return null;
+      }
+    };
+  }
+
   public static ObjectMapper makeJsonMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
+    AnnotationIntrospector introspector = makeAnnotationIntrospector();
+    DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
+
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -86,6 +107,7 @@ public class TestHelper
   public static ObjectMapper makeSmileMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
+    DruidSecondaryModule.setupAnnotationIntrospector(mapper, makeAnnotationIntrospector());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)

@@ -41,12 +41,23 @@ addons:
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
+install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
+# There are 3 stages of tests
+# 1. Tests - phase 1
+# 2. Tests - phase 2
+# 3. cron
+#
+# The cron type only runs jobs that are marked with stage cron.
+# The test type is split into 2 stages. This is done so that more PRs can run their validation
+# in parallel. The first phase is meant to include sanity test jobs. The jobs in this phase are
+# meant to be fast. The second phase is meant to run all other tests.
+# Jobs with known flaky tests should be put in the second phase since the second phase will not
+# start if there are any failures in the second stage.
 stages:
-  - name: test  # jobs that do not specify a stage get this default value
+  - name: Tests - phase 1
     if: type != cron
-  - name: it
+  - name: Tests - phase 2
     if: type != cron
   - name: cron
     if: type = cron
@@ -54,6 +65,7 @@ stages:
 jobs:
   include:
     - name: "animal sniffer checks"
+      stage: Tests - phase 1
       script: ${MVN} animal-sniffer:check --fail-at-end
 
     - name: "checkstyle"
@@ -138,15 +150,18 @@ jobs:
 
     - <<: *package
       name: "(openjdk11) packaging check"
+      stage: Tests - phase 2
       jdk: openjdk11
     
     - <<: *package
       name: "Build and test on ARM64 CPU architecture"
+      stage: Tests - phase 2
       arch: arm64
       jdk: openjdk11
 
     - &test_processing_module
       name: "(openjdk8) processing module test"
+      stage: Tests - phase 1
       env:
       - MAVEN_PROJECTS='processing'
       before_script:
@@ -207,16 +222,19 @@ jobs:
 
     - <<: *test_processing_module
       name: "(openjdk11) processing module test"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_processing_module_sqlcompat
       <<: *test_processing_module
       name: "(openjdk8) processing module test (SQL Compatibility)"
+      stage: Tests - phase 1
       before_script: &setup_sqlcompat
       - export DRUID_USE_DEFAULT_VALUE_FOR_NULL=false
 
     - <<: *test_processing_module_sqlcompat
       name: "(openjdk11) processing module test (SQL Compatibility)"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_indexing_module
@@ -227,15 +245,18 @@ jobs:
 
     - <<: *test_indexing_module
       name: "(openjdk11) indexing modules test"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_indexing_module_sqlcompat
       <<: *test_indexing_module
       name: "(openjdk8) indexing modules test (SQL Compatibility)"
+      stage: Tests - phase 1
       before_script: *setup_sqlcompat
 
     - <<: *test_indexing_module_sqlcompat
       name: "(openjdk11) indexing modules test (SQL Compatibility)"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_server_module
@@ -246,6 +267,7 @@ jobs:
 
     - <<: *test_server_module
       name: "(openjdk11) server module test"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_server_module_sqlcompat
@@ -255,6 +277,7 @@ jobs:
 
     - <<: *test_server_module_sqlcompat
       name: "(openjdk11) server module test (SQL Compatibility)"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_other_modules
@@ -265,6 +288,7 @@ jobs:
 
     - <<: *test_other_modules
       name: "(openjdk11) other modules test"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - &test_other_modules_sqlcompat
@@ -274,10 +298,12 @@ jobs:
 
     - <<: *test_other_modules_sqlcompat
       name: "(openjdk11) other modules test (SQL Compatibility)"
+      stage: Tests - phase 2
       jdk: openjdk11
 
     - name: "web console"
       install: skip
+      stage: Tests - phase 1
       script:
         - ${MVN} test -pl 'web-console'
       after_success:
@@ -314,13 +340,13 @@ jobs:
     # START - Integration tests for Compile with Java 8 and Run with Java 8
     - &integration_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) batch index integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: &integration_test_services
         - docker
       env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: &run_integration_test
-        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} ${MAVEN_SKIP}
+        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} -Dzk.version=${ZK_VERSION} ${MAVEN_SKIP}
       after_failure: &integration_test_diags
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
@@ -336,7 +362,7 @@ jobs:
 
     - &integration_input_format
       name: "(Compile=openjdk8, Run=openjdk8) input format integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -349,7 +375,7 @@ jobs:
 
     - &integration_input_source
       name: "(Compile=openjdk8, Run=openjdk8) input source integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -363,7 +389,7 @@ jobs:
     - &integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test"
       jdk: openjdk8
-      stage: it
+      stage: Tests - phase 2
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
@@ -375,7 +401,7 @@ jobs:
 
     - &integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -388,7 +414,7 @@ jobs:
 
     - &integration_kafka_index_slow
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test slow"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -401,7 +427,7 @@ jobs:
 
     - &integration_kafka_transactional_index
       name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -410,7 +436,7 @@ jobs:
 
     - &integration_kafka_transactional_index_slow
       name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test slow"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -423,7 +449,7 @@ jobs:
 
     - &integration_kafka_format_tests
       name: "(Compile=openjdk8, Run=openjdk8) Kafka index integration test with various formats"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -436,7 +462,7 @@ jobs:
 
     - &integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -445,7 +471,7 @@ jobs:
 
     - &integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk8) query retry integration test for missing segments"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -454,7 +480,7 @@ jobs:
 
     - &integration_security
       name: "(Compile=openjdk8, Run=openjdk8) security integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -463,7 +489,7 @@ jobs:
 
     - &integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk8) realtime index integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -472,7 +498,7 @@ jobs:
 
     - &integration_append_ingestion
       name: "(Compile=openjdk8, Run=openjdk8) append ingestion integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -485,7 +511,7 @@ jobs:
 
     - &integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk8) compaction integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -498,7 +524,7 @@ jobs:
 
     - &integration_tests
       name: "(Compile=openjdk8, Run=openjdk8) other integration tests"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -597,7 +623,7 @@ jobs:
 
     - &integration_batch_index_k8s
       name: "(Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test"
-      stage: it
+      stage: Tests - phase 2
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker

@@ -24,11 +24,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -61,12 +59,11 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.sql.calcite.view.DruidViewMacro;
-import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -104,7 +101,6 @@ public class DruidSchema extends AbstractSchema
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerConfig config;
   private final SegmentManager segmentManager;
-  private final ViewManager viewManager;
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ConcurrentMap<String, DruidTable> tables;
@@ -152,7 +148,6 @@ public class DruidSchema extends AbstractSchema
       final SegmentManager segmentManager,
       final JoinableFactory joinableFactory,
       final PlannerConfig config,
-      final ViewManager viewManager,
       final Escalator escalator
   )
   {
@@ -161,7 +156,6 @@ public class DruidSchema extends AbstractSchema
     this.segmentManager = segmentManager;
     this.joinableFactory = joinableFactory;
     this.config = Preconditions.checkNotNull(config, "config");
-    this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.tables = new ConcurrentHashMap<>();
     this.escalator = escalator;
@@ -349,16 +343,6 @@ public class DruidSchema extends AbstractSchema
   protected Map<String, Table> getTableMap()
   {
     return ImmutableMap.copyOf(tables);
-  }
-
-  @Override
-  protected Multimap<String, org.apache.calcite.schema.Function> getFunctionMultimap()
-  {
-    final ImmutableMultimap.Builder<String, org.apache.calcite.schema.Function> builder = ImmutableMultimap.builder();
-    for (Map.Entry<String, DruidViewMacro> entry : viewManager.getViews().entrySet()) {
-      builder.put(entry);
-    }
-    return builder.build();
   }
 
   @VisibleForTesting
@@ -689,7 +673,7 @@ public class DruidSchema extends AbstractSchema
         false
     );
 
-    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, null);
+    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, Access.OK);
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)

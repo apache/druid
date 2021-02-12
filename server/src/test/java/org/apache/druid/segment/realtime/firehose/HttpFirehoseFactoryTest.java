@@ -42,7 +42,7 @@ public class HttpFirehoseFactoryTest
   @Test
   public void testSerde() throws IOException
   {
-    final HttpInputSourceConfig inputSourceConfig = new HttpInputSourceConfig(null, null, null);
+    final HttpInputSourceConfig inputSourceConfig = new HttpInputSourceConfig(null);
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(new Std().addValue(
         HttpInputSourceConfig.class,
@@ -82,7 +82,7 @@ public class HttpFirehoseFactoryTest
         null,
         null,
         null,
-        new HttpInputSourceConfig(null, null, null)
+        new HttpInputSourceConfig(null)
     );
 
     new HttpFirehoseFactory(
@@ -94,7 +94,7 @@ public class HttpFirehoseFactoryTest
         null,
         null,
         null,
-        new HttpInputSourceConfig(null, null, null)
+        new HttpInputSourceConfig(null)
     );
 
     expectedException.expect(IllegalArgumentException.class);
@@ -108,14 +108,14 @@ public class HttpFirehoseFactoryTest
         null,
         null,
         null,
-        new HttpInputSourceConfig(null, null, null)
+        new HttpInputSourceConfig(null)
     );
   }
 
   @Test
   public void testConstructorAllowsOnlyCustomProtocols()
   {
-    final HttpInputSourceConfig customConfig = new HttpInputSourceConfig(null, null, ImmutableSet.of("druid"));
+    final HttpInputSourceConfig customConfig = new HttpInputSourceConfig(ImmutableSet.of("druid"));
     new HttpFirehoseFactory(
         ImmutableList.of(URI.create("druid:///")),
         null,

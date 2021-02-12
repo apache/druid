@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.AmazonServiceException;
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
@@ -62,7 +63,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -106,14 +106,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    */
   private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
   private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
-
-  private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
-  {
-    final boolean isIOException = ex.getCause() instanceof IOException;
-    final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    final boolean isInternalError = ex.getStatusCode() == 500 || ex.getStatusCode() == 503;
-    return isIOException || isTimeout || isInternalError;
-  }
 
   /**
    * Catch any exception and wrap it in a {@link StreamException}
@@ -357,8 +349,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
           log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
           throw e;
         }
-        catch (AmazonServiceException e) {
-          if (isServiceExceptionRecoverable(e)) {
+        catch (AmazonClientException e) {
+          if (AWSClientUtil.isClientExceptionRecoverable(e)) {
             log.warn(e, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
             scheduleBackgroundFetch(EXCEPTION_RETRY_DELAY_MS);
           } else {
@@ -750,6 +742,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     return partitionsFetchStarted.get();
   }
 
+  @VisibleForTesting
+  public boolean isAnyFetchActive()
+  {
+    return partitionResources.values()
+                             .stream()
+                             .map(pr -> pr.currentFetch)
+                             .anyMatch(fetch -> (fetch != null && !fetch.isDone()));
+  }
+
   /**
    * Check that a {@link PartitionResource} has been assigned to this record supplier, and if so call
    * {@link PartitionResource#seek} to move it to the latest offsets. Note that this method does not restart background
@@ -803,9 +804,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
                 );
                 return true;
               }
-              if (throwable instanceof AmazonServiceException) {
-                AmazonServiceException ase = (AmazonServiceException) throwable;
-                return isServiceExceptionRecoverable(ase);
+              if (throwable instanceof AmazonClientException) {
+                AmazonClientException ase = (AmazonClientException) throwable;
+                return AWSClientUtil.isClientExceptionRecoverable(ase);
               }
               return false;
             },
