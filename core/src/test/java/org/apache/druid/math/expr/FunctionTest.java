@@ -522,6 +522,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testBitwise()
   {
+    // happy path maths
     assertExpr("bitwiseAnd(3, 1)", 1L);
     assertExpr("bitwiseAnd(2, 1)", 0L);
     assertExpr("bitwiseOr(3, 1)", 3L);
@@ -531,8 +532,17 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseShiftLeft(2, 1)", 4L);
     assertExpr("bitwiseShiftRight(2, 1)", 1L);
     assertExpr("bitwiseAnd(bitwiseComplement(1), 7)", 6L);
+
+    // funny types
+    // two strings is sad
     assertExpr("bitwiseAnd('2', '1')", null);
-    assertExpr("bitwiseAnd(2, '1')", 0L);
+    // but one is ok, druid forgives you
+    assertExpr("bitwiseAnd(3, '1')", 1L);
+    assertExpr("bitwiseAnd(2, null)", NullHandling.replaceWithDefault() ? 0L : null);
+
+    // unary doesn't accept any slop
+    assertExpr("bitwiseComplement('1')", null);
+    assertExpr("bitwiseComplement(null)", null);
 
     // doubles are cast
     assertExpr("bitwiseOr(2.345, 1)", 3L);
@@ -552,6 +562,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseConvertDoubleToLongBits(bitwiseConvertDoubleToLongBits(2.0))", 4886405595696988160L);
     assertExpr("bitwiseConvertLongBitsToDouble(4611686018427387904)", 2.0);
     assertExpr("bitwiseConvertLongBitsToDouble(bitwiseConvertLongBitsToDouble(4611686018427387904))", 1.0E-323);
+
+    // conversion returns null if nonsense inputs
+    assertExpr("bitwiseConvertLongBitsToDouble('wat')", null);
+    assertExpr("bitwiseConvertLongBitsToDouble('1')", null);
+    assertExpr("bitwiseConvertLongBitsToDouble(null)", null);
+    assertExpr("bitwiseConvertDoubleToLongBits('wat')", null);
+    assertExpr("bitwiseConvertDoubleToLongBits('1.0')", null);
+    assertExpr("bitwiseConvertDoubleToLongBits(null)", null);
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)

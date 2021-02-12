@@ -103,7 +103,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   public void testUnivariateFunctions()
   {
     final String[] functions = new String[]{"parse_long"};
-    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)"};
+    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)", "%s(nonexistent)"};
     testFunctions(types, templates, functions);
   }
 
