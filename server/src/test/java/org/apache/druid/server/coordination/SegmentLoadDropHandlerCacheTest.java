@@ -63,6 +63,9 @@ import java.util.Random;
 
 import static org.mockito.ArgumentMatchers.any;
 
+/**
+ * This class includes tests that cover the storage location layer as well. 
+ */
 public class SegmentLoadDropHandlerCacheTest
 {
   private static final long MAX_SIZE = 1000L;
