@@ -118,6 +118,33 @@ public class StorageLocation
   }
 
   /**
+   * Reserves space to store the given segment, only if it has not been done already. This can be used
+   * when segment is already downloaded on the disk. Unlike {@link #reserve(String, DataSegment)}, this function
+   * skips the check on disk availability. We also account for segment usage even if available size dips below 0.
+   * Such a situation indicates a configuration problem or a bug and we don't let segment loading fail because
+   * of this.
+   */
+  public synchronized void maybeReserve(String segmentFilePathToAdd, DataSegment segment)
+  {
+    final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
+    if (files.contains(segmentFileToAdd)) {
+      // Already reserved
+      return;
+    }
+    files.add(segmentFileToAdd);
+    currSizeBytes += segment.getSize();
+    if (availableSizeBytes() < 0) {
+      log.error(
+          "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Check your druid.segmentCache.locations maxSize param",
+          getPath(),
+          availableSizeBytes(),
+          segment.getId(),
+          segment.getSize()
+      );
+    }
+  }
+
+  /**
    * Reserves space to store the given segment.
    * If it succeeds, it returns a file for the given segmentFilePathToAdd in this storage location.
    * Returns null otherwise.
