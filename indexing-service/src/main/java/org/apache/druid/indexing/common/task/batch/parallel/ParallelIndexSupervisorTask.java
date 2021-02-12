@@ -996,8 +996,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions(),
         tuningConfig.getMaxColumnsToMerge(),
-        null,
-        null
+        tuningConfig.getMaxSegmentIntervalsPermitted(),
+        tuningConfig.getMaxAggregateSegmentsPermitted()
     );
   }
 
