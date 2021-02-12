@@ -3424,7 +3424,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     SeekableStreamSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
-    reportingExec.scheduleAtFixedRate(
+    // Lag is collected with fixed delay instead of fixed rate as lag collection can involve calling external
+    // services and with fixed delay, a cooling buffer is guaranteed between successive calls
+    reportingExec.scheduleWithFixedDelay(
         this::updateCurrentAndLatestOffsets,
         ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
         Math.max(
