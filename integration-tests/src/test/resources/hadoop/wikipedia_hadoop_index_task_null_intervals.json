@@ -2,21 +2,37 @@
   "type": "index_hadoop",
   "spec": {
     "dataSchema": {
-      "dataSource": "%%REINDEX_DATASOURCE%%",
+      "dataSource": "%%DATASOURCE%%",
       "parser": {
         "type": "hadoopyString",
         "parseSpec": {
           "format" : "json",
           "timestampSpec": {
-            "column": "timestamp",
-            "format": "iso"
+            "column": "timestamp"
           },
           "dimensionsSpec": {
-            "dimensionExclusions" : ["robot", "continent"]
+            "dimensions": [
+              "page",
+              {"type": "string", "name": "language", "createBitmapIndex": false},
+              "user",
+              "unpatrolled",
+              "newPage",
+              "robot",
+              "anonymous",
+              "namespace",
+              "continent",
+              "country",
+              "region",
+              "city"
+            ]
           }
         }
       },
       "metricsSpec": [
+        {
+          "type": "count",
+          "name": "count"
+        },
         {
           "type": "doubleSum",
           "name": "added",
@@ -31,6 +47,21 @@
           "type": "doubleSum",
           "name": "delta",
           "fieldName": "delta"
+        },
+        {
+          "name": "thetaSketch",
+          "type": "thetaSketch",
+          "fieldName": "user"
+        },
+        {
+          "name": "quantilesDoublesSketch",
+          "type": "quantilesDoublesSketch",
+          "fieldName": "delta"
+        },
+        {
+          "name": "HLLSketchBuild",
+          "type": "HLLSketchBuild",
+          "fieldName": "user"
         }
       ],
       "granularitySpec": {
@@ -42,20 +73,13 @@
     "ioConfig": {
       "type": "hadoop",
       "inputSpec": {
-        "type": "dataSource",
-        "ingestionSpec": {
-          "dataSource": "%%DATASOURCE%%",
-          "intervals": ["2013-08-31/2013-09-01"]
-        }
+        "type": "static",
+        "paths": "%%INPUT_PATHS%%"
       }
     },
     "tuningConfig": {
       "type": "hadoop",
-      "partitionsSpec": {
-        "assumeGrouped": true,
-        "targetPartitionSize": 75000,
-        "type": "hashed"
-      },
+      "partitionsSpec": %%PARTITIONS_SPEC%%,
       "jobProperties": {
         "fs.permissions.umask-mode": "022",
         "fs.default.name" : "hdfs://druid-it-hadoop:9000",
@@ -71,7 +95,9 @@
         "mapreduce.map.memory.mb" : 1024,
         "mapreduce.reduce.memory.mb" : 1024
       },
-      "rowFlushBoundary": 10000
+      "rowFlushBoundary": 10000,
+      "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
+      "maxAggregateSegmentsPermitted": %%MAX_AGGREGATE_SEGMENTS_PERMITTED%%
     }
   }
 }
