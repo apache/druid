@@ -1571,6 +1571,7 @@
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
                 <version>6.0.3</version>
+                <inherited>false</inherited>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1579,7 +1580,6 @@
                     <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>  <!-- plugin author (jeremylong) recommends to disable, since this analyzer is retired -->
                     <nodeAuditSkipDevDependencies>true</nodeAuditSkipDevDependencies>
                     <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
-                    <inherited>false</inherited>
                 </configuration>
                 <executions>
                     <execution>
