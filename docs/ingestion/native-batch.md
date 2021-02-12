@@ -1129,7 +1129,7 @@ Sample specs:
 
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
 However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
-If you want to use a non-hdfs protocol with the HDFS input source, you need to include the protocol you want
+If you want to use a non-hdfs protocol with the HDFS input source, include the protocol
 in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
 ### HTTP Input Source
@@ -1208,7 +1208,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 |httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 
-The protocols that the HTTP input source can use is restricted by `druid.ingestion.http.allowedProtocols`.
+You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP input sources.
 The `http` and `https` protocols are allowed by default. See [HTTP input source security configuration](../configuration/index.md#http-input-source) for more details.
 
 ### Inline Input Source
@@ -1599,7 +1599,7 @@ A sample HTTP Firehose spec is shown below:
 }
 ```
 
-The protocols that the HTTP firehose can use is restricted by `druid.ingestion.http.allowedProtocols`.
+You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP firehose input sources.
 The `http` and `https` protocols are allowed by default. See [HTTP firehose security configuration](../configuration/index.md#http-input-source) for more details.
 
 The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.

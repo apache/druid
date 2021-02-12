@@ -519,22 +519,22 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 
 #### HDFS input source
 
-You can set the following property to control what protocols are allowed for
+You can set the following property to specify permissible protocols for
 the [HDFS input source](../ingestion/native-batch.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch.md#hdfsfirehose).
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols that HDFS input source and HDFS firehose can use.|["hdfs"]|
+|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols for the HDFS input source and HDFS firehose.|["hdfs"]|
 
 
 #### HTTP input source
 
-You can set the following property to control what protocols are allowed for
+You can set the following property to specify permissible protocols for
 the [HTTP input source](../ingestion/native-batch.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch.md#httpfirehose).
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols that HTTP input source and HTTP firehose can use.|["http", "https"]|
+|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source and HTTP firehose.|["http", "https"]|
 
 
 ### Task Logging
