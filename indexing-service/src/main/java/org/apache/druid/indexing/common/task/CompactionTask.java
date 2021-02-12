@@ -141,6 +141,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final Granularity segmentGranularity;
   @Nullable
+  private final GranularitySpec granularitySpec;
+  @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
@@ -172,7 +174,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
-      @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
+      @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
+      @JsonProperty("granularitySpec") @Nullable final GranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
@@ -202,6 +205,16 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
+    if (granularitySpec == null && segmentGranularity != null) {
+      this.granularitySpec = new UniformGranularitySpec(
+          segmentGranularity,
+          null,
+          null,
+          null
+      );
+    } else {
+      this.granularitySpec = granularitySpec;
+    }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
@@ -288,7 +301,14 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Override
   public Granularity getSegmentGranularity()
   {
-    return segmentGranularity;
+    return granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
+  }
+
+  @JsonProperty
+  @Nullable
+  public GranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
   }
 
   @Nullable
@@ -348,7 +368,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         partitionConfigurationManager,
         dimensionsSpec,
         metricsSpec,
-        segmentGranularity,
+        getSegmentGranularity(),
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory
@@ -892,6 +912,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private Granularity segmentGranularity;
     @Nullable
+    private GranularitySpec granularitySpec;
+    @Nullable
     private TuningConfig tuningConfig;
     @Nullable
     private Map<String, Object> context;
@@ -941,6 +963,12 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
+    public Builder granularitySpec(GranularitySpec granularitySpec)
+    {
+      this.granularitySpec = granularitySpec;
+      return this;
+    }
+
     public Builder tuningConfig(TuningConfig tuningConfig)
     {
       this.tuningConfig = tuningConfig;
@@ -966,6 +994,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           dimensionsSpec,
           metricsSpec,
           segmentGranularity,
+          granularitySpec,
           tuningConfig,
           context,
           segmentLoaderFactory,

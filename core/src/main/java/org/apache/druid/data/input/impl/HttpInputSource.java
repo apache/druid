@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -29,7 +28,6 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
@@ -48,25 +46,17 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
-  private final HttpInputSourceConfig config;
-
   @JsonCreator
   public HttpInputSource(
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
-      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
-      @JacksonInject HttpInputSourceConfig config
+      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider
   )
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
-    uris.forEach(uri -> Preconditions.checkArgument(
-        config.isURIAllowed(uri),
-        StringUtils.format("Access to [%s] DENIED!", uri)
-    ));
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
-    this.config = config;
   }
 
   @JsonProperty
@@ -107,8 +97,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     return new HttpInputSource(
         Collections.singletonList(split.get()),
         httpAuthenticationUsername,
-        httpAuthenticationPasswordProvider,
-        config
+        httpAuthenticationPasswordProvider
     );
   }
 

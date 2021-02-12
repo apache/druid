@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.introspect.Annotated;
+import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.AnnotatedParameter;
@@ -32,6 +33,7 @@ import com.google.inject.Key;
 import org.apache.druid.java.util.common.IAE;
 
 import java.lang.annotation.Annotation;
+import java.util.Map;
 
 /**
  */
@@ -101,6 +103,7 @@ public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
     // delegate creators. I'm not 100% sure why it's not called, but guess it's because the argument
     // is some Java type that Jackson already knows how to deserialize. Since there is only one argument,
     // Jackson perhaps is able to just deserialize it without introspection.
+
     if (ac instanceof AnnotatedParameter) {
       final AnnotatedParameter ap = (AnnotatedParameter) ac;
       if (ap.hasAnnotation(JsonProperty.class)) {
@@ -108,6 +111,20 @@ public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
       }
     }
 
-    return JsonIgnoreProperties.Value.forIgnoredProperties("");
+    // A map can have empty string keys e.g. https://github.com/apache/druid/issues/10859. By returning empty ignored
+    // list for map, we can allow for empty string keys in a map. A nested class within map
+    // can still be annotated with JacksonInject and still be non-deserializable from user input
+    // Refer to {@link com.fasterxml.jackson.databind.deser.BasicDeserializerFactory.createMapDeserializer} for details
+    // on how the ignored list is passed to map deserializer
+    if (ac instanceof AnnotatedClass) {
+      final AnnotatedClass aClass = (AnnotatedClass) ac;
+      if (Map.class.isAssignableFrom(aClass.getAnnotated())) {
+        return JsonIgnoreProperties.Value.empty();
+      }
+    }
+
+    // We will allow serialization on empty properties. Properties marked with {@code @JacksonInject} are still
+    // not serialized if there is no getter marked with {@code @JsonProperty}
+    return JsonIgnoreProperties.Value.forIgnoredProperties("").withAllowGetters();
   }
 }

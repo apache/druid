@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -38,6 +39,8 @@ import javax.annotation.Nullable;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 @RunWith(Enclosed.class)
@@ -90,6 +93,89 @@ public class DruidSecondaryModuleTest
       Assert.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
+    @Test
+    public void testInjectNormalWithEmptyKeysInMap() throws JsonProcessingException
+    {
+      final Properties props = new Properties();
+      props.setProperty(PROPERTY_NAME, PROPERTY_VALUE);
+      final Injector injector = makeInjectorWithProperties(props);
+      final ObjectMapper mapper = makeObjectMapper(injector);
+      final String json = "{\n"
+                          + "  \"map1\" : {\n"
+                          + "    \"foo\" : \"bar\",\n"
+                          + "    \"\" : \"empty\"\n"
+                          + "  },\n"
+                          + "  \"map2\" : {\n"
+                          + "    \"foo\" : {\n"
+                          + "      \"test\" : \"value1\"\n"
+                          + "    },\n"
+                          + "    \"\" : {\n"
+                          + "      \"test\" : \"value2\"\n"
+                          + "    }\n"
+                          + "  }\n"
+                          + "}";
+      final ClassWithMapAndJacksonInject object = new ClassWithMapAndJacksonInject(
+          ImmutableMap.of("foo", "bar", "", "empty"),
+          ImmutableMap.of("foo", new ClassWithJacksonInject("value1", injector.getInstance(InjectedParameter.class)),
+          "", new ClassWithJacksonInject("value2", injector.getInstance(InjectedParameter.class)))
+      );
+      final String jsonWritten = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
+      Assert.assertEquals(json, jsonWritten);
+      final ClassWithMapAndJacksonInject objectRead = mapper.readValue(json, ClassWithMapAndJacksonInject.class);
+      Assert.assertEquals(object, objectRead);
+      Assert.assertEquals("empty", objectRead.getStringStringMap().get(""));
+    }
+
+    @Test
+    public void testInjectNormalWithEmptyKeysAndInjectClass() throws JsonProcessingException
+    {
+      final Properties props = new Properties();
+      props.setProperty(PROPERTY_NAME, PROPERTY_VALUE);
+      final Injector injector = makeInjectorWithProperties(props);
+      final ObjectMapper mapper = makeObjectMapper(injector);
+      final String json = "{\n"
+                          + "  \"map1\" : {\n"
+                          + "    \"foo\" : \"bar\",\n"
+                          + "    \"\" : \"empty\"\n"
+                          + "  },\n"
+                          + "  \"map2\" : {\n"
+                          + "    \"foo\" : {\n"
+                          + "      \"test\" : \"value1\",\n"
+                          + "      \"\"     : \"nice try\"\n"
+                          + "    },\n"
+                          + "    \"\" : {\n"
+                          + "      \"test\" : \"value2\",\n"
+                          + "      \"\"     : \"nice try\"\n"
+                          + "    }\n"
+                          + "  }\n"
+                          + "}";
+      final String expectedSerializedJson
+          = "{\n"
+            + "  \"map1\" : {\n"
+            + "    \"foo\" : \"bar\",\n"
+            + "    \"\" : \"empty\"\n"
+            + "  },\n"
+            + "  \"map2\" : {\n"
+            + "    \"foo\" : {\n"
+            + "      \"test\" : \"value1\"\n"
+            + "    },\n"
+            + "    \"\" : {\n"
+            + "      \"test\" : \"value2\"\n"
+            + "    }\n"
+            + "  }\n"
+            + "}";
+      final ClassWithMapAndJacksonInject object = new ClassWithMapAndJacksonInject(
+          ImmutableMap.of("foo", "bar", "", "empty"),
+          ImmutableMap.of("foo", new ClassWithJacksonInject("value1", injector.getInstance(InjectedParameter.class)),
+                          "", new ClassWithJacksonInject("value2", injector.getInstance(InjectedParameter.class)))
+      );
+      final String jsonWritten = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
+      Assert.assertEquals(expectedSerializedJson, jsonWritten);
+      final ClassWithMapAndJacksonInject objectRead = mapper.readValue(json, ClassWithMapAndJacksonInject.class);
+      Assert.assertEquals(object, objectRead);
+      Assert.assertEquals("empty", objectRead.getStringStringMap().get(""));
+    }
+
     private static class ClassWithJacksonInject
     {
       private final String test;
@@ -106,10 +192,29 @@ public class DruidSecondaryModuleTest
         this.injected = injected;
       }
 
-      @JsonProperty
+      @JsonProperty("test")
       public String getTest()
       {
         return test;
+      }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (this == o) {
+          return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+          return false;
+        }
+        ClassWithJacksonInject that = (ClassWithJacksonInject) o;
+        return Objects.equals(test, that.test) && Objects.equals(injected.val, that.injected.val);
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return Objects.hash(test, injected.val);
       }
     }
 
@@ -133,6 +238,56 @@ public class DruidSecondaryModuleTest
       public String getTest()
       {
         return test;
+      }
+    }
+
+    private static class ClassWithMapAndJacksonInject
+    {
+      private final Map<String, String> stringStringMap;
+      private final Map<String, ClassWithJacksonInject> stringJacksonInjectMap;
+
+      @JsonCreator
+      public ClassWithMapAndJacksonInject(
+          @JsonProperty("map1") Map<String, String> stringStringMap,
+          @JsonProperty("map2") Map<String, ClassWithJacksonInject> stringJacksonInjectMap
+      )
+      {
+        this.stringStringMap = stringStringMap;
+        this.stringJacksonInjectMap = stringJacksonInjectMap;
+      }
+
+      @JsonProperty("map1")
+      public Map<String, String> getStringStringMap()
+      {
+        return stringStringMap;
+      }
+
+      @JsonProperty("map2")
+      public Map<String, ClassWithJacksonInject> getStringJacksonInjectMap()
+      {
+        return stringJacksonInjectMap;
+      }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (this == o) {
+          return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+          return false;
+        }
+        ClassWithMapAndJacksonInject that = (ClassWithMapAndJacksonInject) o;
+        return Objects.equals(stringStringMap, that.stringStringMap) && Objects.equals(
+            stringJacksonInjectMap,
+            that.stringJacksonInjectMap
+        );
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return Objects.hash(stringStringMap, stringJacksonInjectMap);
       }
     }
   }
