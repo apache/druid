@@ -385,17 +385,17 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         );
       }
 
-      // Only enforce maxAggregateSegmentIntervalShardsPermitted if we are going to dynamically determine partition
+      // Only enforce maxAggregateSegmentsPermitted if we are going to dynamically determine partition
       // counts via MapReduce.
       if (indexerSchema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)) {
         // Gather the aggregate number of shards in the intervals being indexed
         int aggregateBuckets = indexerSchema.getTuningConfig().getShardSpecs().size();
         // Abort task if aggregate number of segments is greater than limit specified in TuningConfig.
-        if (aggregateBuckets > indexerSchema.getTuningConfig().getMaxAggregateSegmentIntervalShardsPermitted()) {
+        if (aggregateBuckets > indexerSchema.getTuningConfig().getMaxAggregateSegmentsPermitted()) {
           errorMsg = "HadoopIndexTask Failed! The aggregate number of segments that will be created ["
                      + aggregateBuckets
                      + "] is greater than the number allowed ["
-                     + indexerSchema.getTuningConfig().getMaxAggregateSegmentIntervalShardsPermitted()
+                     + indexerSchema.getTuningConfig().getMaxAggregateSegmentsPermitted()
                      + "], as specified in the tuning config";
           log.error(errorMsg);
 

@@ -310,7 +310,7 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
     Assert.assertEquals(taskTuningConfig.getMaxSegmentIntervalsPermitted(), task2TuningConfig.getMaxSegmentIntervalsPermitted());
-    Assert.assertEquals(taskTuningConfig.getMaxAggregateSegmentIntervalShardsPermitted(), task2TuningConfig.getMaxAggregateSegmentIntervalShardsPermitted());
+    Assert.assertEquals(taskTuningConfig.getMaxAggregateSegmentsPermitted(), task2TuningConfig.getMaxAggregateSegmentsPermitted());
   }
 
   @Test

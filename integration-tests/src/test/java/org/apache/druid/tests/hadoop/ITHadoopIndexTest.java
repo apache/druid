@@ -160,7 +160,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           );
           spec = StringUtils.replace(
               spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+              "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
               jsonMapper.writeValueAsString(Integer.MAX_VALUE)
           );
 
@@ -194,7 +194,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   /**
    * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses hashed partitioning
    * and null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentIntervalShardsPermitted.
+   * maxAggregateSegmentsPermitted.
    *
    * @param resourceArray DataProvider used to parameterize tuningConfig values
    * @throws Exception
@@ -224,7 +224,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
 
@@ -250,7 +250,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   /**
    * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses hashed partitioning
    * and non-null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentIntervalShardsPermitted.
+   * maxAggregateSegmentsPermitted.
    *
    * @param resourceArray DataProvider used to parameterize tuningConfig values
    * @throws Exception
@@ -280,7 +280,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
 
@@ -306,7 +306,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   /**
    * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses single dimension partitioning
    * and null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentIntervalShardsPermitted.
+   * maxAggregateSegmentsPermitted.
    *
    * @param resourceArray DataProvider used to parameterize tuningConfig values
    * @throws Exception
@@ -336,7 +336,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
 
@@ -362,7 +362,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   /**
    * Test that indexing fails due to tuningConfig limits for a hadoop indexing task that uses single dimension partitioning
    * and non-null intervals. Tests the failure of indexing for both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentIntervalShardsPermitted.
+   * maxAggregateSegmentsPermitted.
    *
    * @param resourceArray DataProvider used to parameterize tuningConfig values
    * @throws Exception
@@ -392,7 +392,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
 

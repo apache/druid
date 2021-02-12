@@ -150,7 +150,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVALS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
-    taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
+    taskSpec = StringUtils.replace(taskSpec, "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
     taskSpec = StringUtils.replace(taskSpec, "%%FORCE_GUARANTEED_ROLLUP%%", jsonMapper.writeValueAsString(false));
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
@@ -174,7 +174,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       );
     }
     template = StringUtils.replace(template, "%%MAX_SEGMENT_INTERVALS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
-    template = StringUtils.replace(template, "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
+    template = StringUtils.replace(template, "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
     template = StringUtils.replace(template, "%%FORCE_GUARANTEED_ROLLUP%%", jsonMapper.writeValueAsString(false));
 
     final String taskID = indexer.submitTask(template);

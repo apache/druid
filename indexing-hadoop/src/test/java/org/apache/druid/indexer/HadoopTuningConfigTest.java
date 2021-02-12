@@ -89,7 +89,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(true, actual.isForceExtendableShardSpecs());
     Assert.assertEquals(true, actual.isUseExplicitVersion());
     Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxSegmentIntervalsPermitted());
-    Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxAggregateSegmentIntervalShardsPermitted());
+    Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxAggregateSegmentsPermitted());
   }
 
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)

@@ -54,7 +54,7 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
           );
           spec = StringUtils.replace(
               spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+              "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
               jsonMapper.writeValueAsString(Integer.MAX_VALUE)
           );
           spec = StringUtils.replace(

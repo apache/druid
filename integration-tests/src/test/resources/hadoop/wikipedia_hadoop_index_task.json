@@ -15,7 +15,7 @@
               "page",
               {"type": "string", "name": "language", "createBitmapIndex": false},
               "user",
-              "unpatrolled",
+              "unpatrolled"
               "newPage",
               "robot",
               "anonymous",
@@ -97,7 +97,7 @@
       },
       "rowFlushBoundary": 10000,
       "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
-      "maxAggregateSegmentIntervalShardsPermitted": %%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%
+      "maxAggregateSegmentsPermitted": %%MAX_AGGREGATE_SEGMENTS_PERMITTED%%
     }
   }
 }

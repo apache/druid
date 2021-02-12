@@ -82,7 +82,7 @@
       "forceGuaranteedRollup": %%FORCE_GUARANTEED_ROLLUP%%,
       "maxRowsPerSegment": 3,
       "maxSegmentIntervalsPermitted": %%MAX_SEGMENT_INTERVALS_PERMITTED%%,
-      "maxAggregateSegmentIntervalShardsPermitted": %%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%
+      "maxAggregateSegmentsPermitted": %%MAX_AGGREGATE_SEGMENTS_PERMITTED%%
     }
   }
 }

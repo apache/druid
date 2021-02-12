@@ -2184,7 +2184,7 @@ public class IndexTaskTest extends IngestionTestBase
       boolean forceGuaranteedRollup,
       boolean reportParseException,
       @Nullable Integer maxSegmentIntervalsPermitted,
-      @Nullable Integer maxAggregateSegmentIntervalShardsPermitted
+      @Nullable Integer maxAggregateSegmentsPermitted
   )
   {
     return new IndexTuningConfig(
@@ -2212,7 +2212,7 @@ public class IndexTaskTest extends IngestionTestBase
         1,
         null,
         maxSegmentIntervalsPermitted,
-        maxAggregateSegmentIntervalShardsPermitted
+        maxAggregateSegmentsPermitted
     );
   }
 

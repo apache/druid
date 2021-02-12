@@ -97,7 +97,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           );
           spec = StringUtils.replace(
               spec,
-              "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+              "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
               jsonMapper.writeValueAsString(Integer.MAX_VALUE)
           );
           spec = StringUtils.replace(
@@ -227,7 +227,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
   /**
    * Test that ingestion properly fails due to tuningConfig paramaters. Both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentIntervalShardsPermitted are tested for ingestion with null intervals and hashed partitioning.
+   * maxAggregateSegmentsPermitted are tested for ingestion with null intervals and hashed partitioning.
    *
    * @param resourceArray tuningConfig values to populate ingestion spec.
    * @throws Exception
@@ -244,7 +244,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
         spec = StringUtils.replace(
@@ -274,7 +274,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
   /**
    * Test that ingestion properly fails due to tuningConfig paramaters. Both maxSegmentIntervalsPermitted and
-   * maxAggregateSegmentIntervalShardsPermitted are tested for ingestion with non-null intervals and hashed partitioning.
+   * maxAggregateSegmentsPermitted are tested for ingestion with non-null intervals and hashed partitioning.
    *
    * @param resourceArray tuningConfig values to populate ingestion spec.
    * @throws Exception
@@ -291,7 +291,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
         spec = StringUtils.replace(
@@ -338,7 +338,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
-            "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%",
+            "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%",
             jsonMapper.writeValueAsString(resourceArray[1])
         );
         spec = StringUtils.replace(

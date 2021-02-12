@@ -340,7 +340,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVALS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
-    taskSpec = StringUtils.replace(taskSpec, "%%MAX_SEGMENT_INTERVAL_SHARDS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
+    taskSpec = StringUtils.replace(taskSpec, "%%MAX_AGGREGATE_SEGMENTS_PERMITTED%%", jsonMapper.writeValueAsString(Integer.MAX_VALUE));
     taskSpec = StringUtils.replace(taskSpec, "%%FORCE_GUARANTEED_ROLLUP%%", jsonMapper.writeValueAsString(false));
 
     final String taskID = indexer.submitTask(taskSpec);

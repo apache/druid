@@ -525,11 +525,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                      + "intervals specified by this indexing task! I'm going to move on to the next Interval.");
           }
         }
-        if (aggregateBuckets > tuningConfig.getMaxAggregateSegmentIntervalShardsPermitted()) {
+        if (aggregateBuckets > tuningConfig.getMaxAggregateSegmentsPermitted()) {
           errorMsg = "HadoopIndexTask Failed! The aggregate number of segments that will be created ["
                      + aggregateBuckets
                      + "] is greater than the number allowed ["
-                     + tuningConfig.getMaxAggregateSegmentIntervalShardsPermitted()
+                     + tuningConfig.getMaxAggregateSegmentsPermitted()
                      + "], as specified in the tuning config";
           log.error(errorMsg);
           toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
@@ -1198,7 +1198,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
     private final int maxSegmentIntervalsPermitted;
-    private final int maxAggregateSegmentIntervalShardsPermitted;
+    private final int maxAggregateSegmentsPermitted;
 
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -1270,7 +1270,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
         @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
         @JsonProperty("maxSegmentIntervalsPermitted") @Nullable Integer maxSegmentIntervalsPermitted,
-        @JsonProperty("maxAggregateSegmentIntervalShardsPermitted") @Nullable Integer maxAggregateSegmentIntervalShardsPermitted
+        @JsonProperty("maxAggregateSegmentsPermitted") @Nullable Integer maxAggregateSegmentsPermitted
     )
     {
       this(
@@ -1299,7 +1299,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxSavedParseExceptions,
           maxColumnsToMerge,
           maxSegmentIntervalsPermitted,
-          maxAggregateSegmentIntervalShardsPermitted
+          maxAggregateSegmentsPermitted
       );
 
       Preconditions.checkArgument(
@@ -1332,7 +1332,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxSavedParseExceptions,
         @Nullable Integer maxColumnsToMerge,
         @Nullable Integer maxSegmentIntervalsPermitted,
-        @Nullable Integer maxAggregateSegmentIntervalShardsPermitted
+        @Nullable Integer maxAggregateSegmentsPermitted
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1376,9 +1376,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.maxSegmentIntervalsPermitted = maxSegmentIntervalsPermitted == null
                                           ? DEFAULT_MAX_SEGMENT_INTERVALS_PERMITTED
                                           : maxSegmentIntervalsPermitted;
-      this.maxAggregateSegmentIntervalShardsPermitted = maxAggregateSegmentIntervalShardsPermitted == null
+      this.maxAggregateSegmentsPermitted = maxAggregateSegmentsPermitted == null
                                                         ? DEFAULT_MAX_AGGREGATE_SEGMENT_INTERVAL_SHARDS_PERMITTED
-                                                        : maxAggregateSegmentIntervalShardsPermitted;
+                                                        : maxAggregateSegmentsPermitted;
     }
 
     @Override
@@ -1403,7 +1403,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxSavedParseExceptions,
           maxColumnsToMerge,
           maxSegmentIntervalsPermitted,
-          maxAggregateSegmentIntervalShardsPermitted
+          maxAggregateSegmentsPermitted
       );
     }
 
@@ -1428,7 +1428,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxSavedParseExceptions,
           maxColumnsToMerge,
           maxSegmentIntervalsPermitted,
-          maxAggregateSegmentIntervalShardsPermitted
+          maxAggregateSegmentsPermitted
       );
     }
 
@@ -1615,9 +1615,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     @JsonProperty
-    public int getMaxAggregateSegmentIntervalShardsPermitted()
+    public int getMaxAggregateSegmentsPermitted()
     {
-      return maxAggregateSegmentIntervalShardsPermitted;
+      return maxAggregateSegmentsPermitted;
     }
 
     @Override
@@ -1660,7 +1660,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
              Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
              maxSegmentIntervalsPermitted == that.maxSegmentIntervalsPermitted &&
-             maxAggregateSegmentIntervalShardsPermitted == that.maxAggregateSegmentIntervalShardsPermitted;
+             maxAggregateSegmentsPermitted == that.maxAggregateSegmentsPermitted;
     }
 
     @Override
@@ -1685,7 +1685,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxSavedParseExceptions,
           segmentWriteOutMediumFactory,
           maxSegmentIntervalsPermitted,
-          maxAggregateSegmentIntervalShardsPermitted
+          maxAggregateSegmentsPermitted
       );
     }
 
@@ -1710,7 +1710,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
              ", maxSegmentIntervalsPermitted=" + maxSegmentIntervalsPermitted +
-             ", maxAggregateSegmentIntervalShardsPermitted=" + maxAggregateSegmentIntervalShardsPermitted +
+             ", maxAggregateSegmentsPermitted=" + maxAggregateSegmentsPermitted +
              '}';
     }
   }
