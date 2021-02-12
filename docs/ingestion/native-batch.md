@@ -1128,7 +1128,7 @@ Sample specs:
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
 
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
-However, if you want to ingest from cloud storage, consider using the proper input sources for them.
+However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
 If you want to use a non-hdfs protocol with the HDFS input source, you need to include the protocol you want
 in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
@@ -1558,7 +1558,7 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 |maxFetchRetry|Maximum number of retries for fetching each file.|3|
 
 You can also ingest from other storage using the HDFS firehose if the HDFS client supports that storage.
-However, if you want to ingest from cloud storage, consider using the proper input sources for them.
+However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
 If you want to use a non-hdfs protocol with the HDFS firehose, you need to include the protocol you want
 in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS firehose security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
