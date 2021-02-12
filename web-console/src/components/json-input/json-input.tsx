@@ -19,6 +19,7 @@
 import { Editor } from 'brace';
 import classNames from 'classnames';
 import Hjson from 'hjson';
+import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useRef, useState } from 'react';
 import AceEditor from 'react-ace';
 
@@ -44,7 +45,7 @@ export function extractRowColumnFromHjsonError(
 
 function stringifyJson(item: any): string {
   if (item != null) {
-    const str = JSON.stringify(item, null, 2);
+    const str = JSONBig.stringify(item, undefined, 2);
     if (str === '{}') return '{\n\n}'; // Very special case for an empty object to make it more beautiful
     return str;
   } else {
@@ -54,7 +55,7 @@ function stringifyJson(item: any): string {
 
 // Not the best way to check for deep equality but good enough for what we need
 function deepEqual(a: any, b: any): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return JSONBig.stringify(a) === JSONBig.stringify(b);
 }
 
 interface InternalValue {

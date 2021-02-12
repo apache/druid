@@ -41,9 +41,9 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -129,7 +129,7 @@ public class BoundFilter implements Filter
   @Override
   public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
   {
-    return DimensionHandlerUtils.makeVectorProcessor(
+    return ColumnProcessors.makeVectorProcessor(
         boundDimFilter.getDimension(),
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
@@ -147,6 +147,7 @@ public class BoundFilter implements Filter
   {
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
   }
+
   @Override
   public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
@@ -311,6 +312,12 @@ public class BoundFilter implements Filter
   public int hashCode()
   {
     return Objects.hash(boundDimFilter, extractionFn, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return boundDimFilter.toString();
   }
 
   @VisibleForTesting

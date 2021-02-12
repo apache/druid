@@ -42,7 +42,7 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -175,7 +175,7 @@ public class VectorGroupByEngine
               final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
               final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
                   dimensionSpec ->
-                      DimensionHandlerUtils.makeVectorProcessor(
+                      ColumnProcessors.makeVectorProcessor(
                           dimensionSpec,
                           GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory

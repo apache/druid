@@ -84,7 +84,11 @@ public class ExpressionVectorSelectorsTest
       "'string constant'",
       "1",
       "192412.24124",
-      "null"
+      "null",
+      "long2",
+      "float2",
+      "double2",
+      "string3"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;
@@ -219,10 +223,19 @@ public class ExpressionVectorSelectorsTest
             }
             break;
           case DOUBLE:
-            nulls = selector.getNullVector();
-            double[] doubles = selector.getDoubleVector();
-            for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-              results.add(nulls != null && nulls[i] ? null : doubles[i]);
+            // special case to test floats just to get coverage on getFloatVector
+            if ("float2".equals(expression)) {
+              nulls = selector.getNullVector();
+              float[] floats = selector.getFloatVector();
+              for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+                results.add(nulls != null && nulls[i] ? null : (double) floats[i]);
+              }
+            } else {
+              nulls = selector.getNullVector();
+              double[] doubles = selector.getDoubleVector();
+              for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
+                results.add(nulls != null && nulls[i] ? null : doubles[i]);
+              }
             }
             break;
           case STRING:
