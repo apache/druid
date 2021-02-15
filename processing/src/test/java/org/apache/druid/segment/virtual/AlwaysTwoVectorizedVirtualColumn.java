@@ -109,7 +109,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
     Assert.assertEquals(outputName, dimensionSpec.getOutputName());
     return new SingleValueDimensionVectorSelector()
     {
-      private final VectorSizeInspector inspector = factory.getVectorSizeInspector();
+      private final VectorSizeInspector inspector = factory.getReadableVectorInspector();
       private final int[] rowVector = new int[inspector.getMaxVectorSize()];
 
       @Override
@@ -166,11 +166,11 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   )
   {
     Assert.assertEquals(outputName, dimensionSpec.getOutputName());
-    final IndexedInts[] rowVector = new IndexedInts[factory.getVectorSizeInspector().getMaxVectorSize()];
+    final IndexedInts[] rowVector = new IndexedInts[factory.getReadableVectorInspector().getMaxVectorSize()];
     Arrays.fill(rowVector, new ArrayBasedIndexedInts(new int[]{0, 0}));
     return new MultiValueDimensionVectorSelector()
     {
-      private final VectorSizeInspector inspector = factory.getVectorSizeInspector();
+      private final VectorSizeInspector inspector = factory.getReadableVectorInspector();
 
       @Override
       public IndexedInts[] getRowVector()
@@ -225,9 +225,9 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   )
   {
     Assert.assertEquals(outputName, columnName);
-    final long[] longs = new long[factory.getVectorSizeInspector().getMaxVectorSize()];
-    final double[] doubles = new double[factory.getVectorSizeInspector().getMaxVectorSize()];
-    final float[] floats = new float[factory.getVectorSizeInspector().getMaxVectorSize()];
+    final long[] longs = new long[factory.getReadableVectorInspector().getMaxVectorSize()];
+    final double[] doubles = new double[factory.getReadableVectorInspector().getMaxVectorSize()];
+    final float[] floats = new float[factory.getReadableVectorInspector().getMaxVectorSize()];
     Arrays.fill(longs, 2L);
     Arrays.fill(doubles, 2.0);
     Arrays.fill(floats, 2.0f);
@@ -261,13 +261,13 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       @Override
       public int getMaxVectorSize()
       {
-        return factory.getVectorSizeInspector().getMaxVectorSize();
+        return factory.getReadableVectorInspector().getMaxVectorSize();
       }
 
       @Override
       public int getCurrentVectorSize()
       {
-        return factory.getVectorSizeInspector().getCurrentVectorSize();
+        return factory.getReadableVectorInspector().getCurrentVectorSize();
       }
     };
   }
@@ -279,7 +279,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   )
   {
     Assert.assertEquals(outputName, columnName);
-    final Object[] objects = new Object[factory.getVectorSizeInspector().getMaxVectorSize()];
+    final Object[] objects = new Object[factory.getReadableVectorInspector().getMaxVectorSize()];
     if (capabilities.hasMultipleValues().isTrue()) {
       Arrays.fill(objects, ImmutableList.of("2", "2"));
     } else {
@@ -290,13 +290,13 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       @Override
       public int getMaxVectorSize()
       {
-        return factory.getVectorSizeInspector().getMaxVectorSize();
+        return factory.getReadableVectorInspector().getMaxVectorSize();
       }
 
       @Override
       public int getCurrentVectorSize()
       {
-        return factory.getVectorSizeInspector().getCurrentVectorSize();
+        return factory.getReadableVectorInspector().getCurrentVectorSize();
       }
 
       @Override

@@ -101,6 +101,15 @@ import java.util.stream.Collectors;
 
 public class AppenderatorImpl implements Appenderator
 {
+  // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER = 1000;
+  public static final int ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER = 700;
+  public static final int ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER = 600;
+  // Rough estimate of memory footprint of empty Sink based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
+  // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+
   private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
   private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
@@ -125,6 +134,7 @@ public class AppenderatorImpl implements Appenderator
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
+  private final boolean skipBytesInMemoryOverheadCheck;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -199,6 +209,7 @@ public class AppenderatorImpl implements Appenderator
     }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
+    skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
   }
 
   @Override
@@ -408,6 +419,7 @@ public class AppenderatorImpl implements Appenderator
           maxBytesTuningConfig,
           null
       );
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -501,7 +513,7 @@ public class AppenderatorImpl implements Appenderator
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     throwPersistErrorIfExists();
-
+    long bytesInMemoryBeforePersist = bytesCurrentlyInMemory.get();
     final Map<String, Integer> currentHydrants = new HashMap<>();
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
@@ -527,7 +539,13 @@ public class AppenderatorImpl implements Appenderator
       }
 
       if (sink.swappable()) {
+        // After swapping the sink, we use memory mapped segment instead. However, the memory mapped segment still consumes memory.
+        // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
+        int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
+        bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
+
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
+
       }
     }
 
@@ -617,6 +635,36 @@ public class AppenderatorImpl implements Appenderator
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
+
+    log.info("Persisted rows[%,d] and bytes[%,d]", numPersistedRows, bytesPersisted);
+
+    // bytesCurrentlyInMemory can change while persisting due to concurrent ingestion.
+    // Hence, we use bytesInMemoryBeforePersist to determine the change of this persist
+    if (!skipBytesInMemoryOverheadCheck && bytesInMemoryBeforePersist - bytesPersisted > maxBytesTuningConfig) {
+      // We are still over maxBytesTuningConfig even after persisting.
+      // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
+      final String alertMessage = StringUtils.format(
+          "Task has exceeded safe estimated heap usage limits, failing "
+          + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])",
+          sinks.size(),
+          sinks.values().stream().mapToInt(Iterables::size).sum(),
+          getTotalRowCount()
+      );
+      final String errorMessage = StringUtils.format(
+          "%s.\nThis can occur when the overhead from too many intermediary segment persists becomes to "
+          + "great to have enough space to process additional input rows. This check, along with metering the overhead "
+          + "of these objects to factor into the 'maxBytesInMemory' computation, can be disabled by setting "
+          + "'skipBytesInMemoryOverheadCheck' to 'true' (note that doing so might allow the task to naturally encounter "
+          + "a 'java.lang.OutOfMemoryError'). Alternatively, 'maxBytesInMemory' can be increased which will cause an "
+          + "increase in heap footprint, but will allow for more intermediary segment persists to occur before "
+          + "reaching this condition.",
+          alertMessage
+      );
+      log.makeAlert(alertMessage)
+         .addData("dataSource", schema.getDataSource())
+         .emit();
+      throw new RuntimeException(errorMessage);
+    }
     return future;
   }
 
@@ -1173,6 +1221,13 @@ public class AppenderatorImpl implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      for (FireHydrant hydrant : sink) {
+        // Decrement memory used by all Memory Mapped Hydrant
+        if (!hydrant.equals(sink.getCurrHydrant())) {
+          bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+        }
+      }
       totalRows.addAndGet(-sink.getNumRows());
     }
 
@@ -1381,5 +1436,28 @@ public class AppenderatorImpl implements Appenderator
            .emit();
       }
     }
+  }
+
+  private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
+  {
+    if (skipBytesInMemoryOverheadCheck) {
+      return 0;
+    }
+    // These calculations are approximated from actual heap dumps.
+    // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
+    // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
+    return Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT +
+           (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
+           (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+           ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+  }
+
+  private int calculateSinkMemoryInUsed(Sink sink)
+  {
+    if (skipBytesInMemoryOverheadCheck) {
+      return 0;
+    }
+    // Rough estimate of memory footprint of empty Sink based on actual heap dumps
+    return ROUGH_OVERHEAD_PER_SINK;
   }
 }

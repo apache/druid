@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -59,7 +58,7 @@ public class HadoopDruidDetermineConfigurationJobTest
     final HadoopDruidIndexerConfig config = Mockito.mock(HadoopDruidIndexerConfig.class);
     Mockito.when(config.isDeterminingPartitions()).thenReturn(false);
     Mockito.when(config.getPartitionsSpec()).thenReturn(partitionsSpec);
-    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(Optional.of(intervals));
+    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(intervals);
     final ArgumentCaptor<Map<Long, List<HadoopyShardSpec>>> resultCaptor = ArgumentCaptor.forClass(Map.class);
     Mockito.doNothing().when(config).setShardSpecs(resultCaptor.capture());
 
@@ -99,7 +98,7 @@ public class HadoopDruidDetermineConfigurationJobTest
     final HadoopDruidIndexerConfig config = Mockito.mock(HadoopDruidIndexerConfig.class);
     Mockito.when(config.isDeterminingPartitions()).thenReturn(false);
     Mockito.when(config.getPartitionsSpec()).thenReturn(partitionsSpec);
-    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(Optional.of(intervals));
+    Mockito.when(config.getSegmentGranularIntervals()).thenReturn(intervals);
     final ArgumentCaptor<Map<Long, List<HadoopyShardSpec>>> resultCaptor = ArgumentCaptor.forClass(Map.class);
     Mockito.doNothing().when(config).setShardSpecs(resultCaptor.capture());
 

@@ -17,35 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.segment.vector;
 
-import org.apache.druid.segment.vector.VectorSizeInspector;
-
-public class TrueVectorMatcher implements VectorValueMatcher
+/**
+ * Vector inspector that can supply a unique identifier of the vector to use with caching in addition to
+ * sizing information
+ */
+public interface ReadableVectorInspector extends VectorSizeInspector
 {
-  private final VectorSizeInspector vectorSizeInspector;
+  /**
+   * A marker value that will never be returned by "getId".
+   */
+  int NULL_ID = -1;
 
-  public TrueVectorMatcher(VectorSizeInspector vectorSizeInspector)
-  {
-    this.vectorSizeInspector = vectorSizeInspector;
-  }
-
-  @Override
-  public ReadableVectorMatch match(ReadableVectorMatch mask)
-  {
-    // The given mask is all true for its valid selections.
-    return mask;
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return vectorSizeInspector.getMaxVectorSize();
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return vectorSizeInspector.getCurrentVectorSize();
-  }
+  /**
+   * Returns an integer that uniquely identifies the current vector. This is useful for caching: it is safe to assume
+   * nothing has changed in the vector so long as the id remains the same.
+   */
+  int getId();
 }

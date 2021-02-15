@@ -17,15 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.sql.calcite.schema;
 
-/**
- * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
- */
-public class InsufficientResourcesException extends RuntimeException
+import com.google.inject.Inject;
+import org.apache.calcite.schema.Schema;
+
+public class NamedViewSchema implements NamedSchema
 {
-  public InsufficientResourcesException(String message)
+  public static final String NAME = "view";
+  private final ViewSchema viewSchema;
+
+  @Inject
+  NamedViewSchema(ViewSchema viewSchema)
   {
-    super(message);
+    this.viewSchema = viewSchema;
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return NAME;
+  }
+
+  @Override
+  public Schema getSchema()
+  {
+    return viewSchema;
   }
 }

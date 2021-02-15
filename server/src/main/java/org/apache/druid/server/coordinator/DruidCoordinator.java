@@ -522,7 +522,7 @@ public class DruidCoordinator
   {
     return cachedBalancerThreadNumber;
   }
-  
+
   @VisibleForTesting
   public ListeningExecutorService getBalancerExec()
   {

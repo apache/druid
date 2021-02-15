@@ -189,7 +189,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
             return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
           }
-          throw new ResourceLimitExceededException(
+          throw ResourceLimitExceededException.withMessage(
               "Time ordering is not supported for a Scan query with %,d segments per time chunk and a row limit of %,d. "
               + "Try reducing your query limit below maxRowsQueuedForOrdering (currently %,d), or using compaction to "
               + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "

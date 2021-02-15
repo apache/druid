@@ -28,9 +28,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -39,36 +36,22 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-@RunWith(Parameterized.class)
 public class SegmentLoaderLocalCacheManagerTest
 {
-  @Parameterized.Parameters
-  public static Collection<?> constructorFeeder()
-  {
-    return ImmutableList.of(
-        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
-        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
-    );
-  }
-
   @Rule
   public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private final ObjectMapper jsonMapper;
-  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   private File localSegmentCacheFolder;
   private SegmentLoaderLocalCacheManager manager;
 
-  public SegmentLoaderLocalCacheManagerTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public SegmentLoaderLocalCacheManagerTest()
   {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
@@ -78,7 +61,6 @@ public class SegmentLoaderLocalCacheManagerTest
             new LocalDataSegmentPuller()
         )
     );
-    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Before
@@ -750,4 +732,43 @@ public class SegmentLoaderLocalCacheManagerTest
     Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload3));
   }
 
+  @Test
+  public void testGetSegmentFilesWhenDownloadStartMarkerExists() throws Exception
+  {
+    final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
+
+    final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
+        ImmutableMap.of(
+            "type",
+            "local",
+            "path",
+            localStorageFolder.getCanonicalPath()
+            + "/test_segment_loader"
+            + "/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z"
+            + "/0/index.zip"
+        )
+    );
+
+    // manually create a local segment under localStorageFolder
+    final File localSegmentFile = new File(
+        localStorageFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    Assert.assertTrue(localSegmentFile.mkdirs());
+    final File indexZip = new File(localSegmentFile, "index.zip");
+    Assert.assertTrue(indexZip.createNewFile());
+
+    final File cachedSegmentDir = manager.getSegmentFiles(segmentToDownload);
+    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload));
+
+    // Emulate a corrupted segment file
+    final File downloadMarker = new File(
+        cachedSegmentDir,
+        SegmentLoaderLocalCacheManager.DOWNLOAD_START_MARKER_FILE_NAME
+    );
+    Assert.assertTrue(downloadMarker.createNewFile());
+
+    Assert.assertFalse("Expect cache miss for corrupted segment file", manager.isSegmentLoaded(segmentToDownload));
+    Assert.assertFalse(cachedSegmentDir.exists());
+  }
 }

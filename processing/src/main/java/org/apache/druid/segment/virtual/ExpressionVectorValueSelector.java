@@ -21,16 +21,24 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 
 public class ExpressionVectorValueSelector implements VectorValueSelector
 {
-  final Expr.VectorInputBinding bindings;
-  final ExprVectorProcessor<?> processor;
-  final float[] floats;
+  private final Expr.VectorInputBinding bindings;
+  private final ExprVectorProcessor<?> processor;
+  private final float[] floats;
+
+  @MonotonicNonNull
+  private ExprEvalVector<?> evalResult;
+  private int currentOffsetId = ReadableVectorInspector.NULL_ID;
+  private int currentFloatsId = ReadableVectorInspector.NULL_ID;
 
   public ExpressionVectorValueSelector(ExprVectorProcessor<?> processor, Expr.VectorInputBinding bindings)
   {
@@ -42,15 +50,20 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
   @Override
   public long[] getLongVector()
   {
-    return processor.evalVector(bindings).getLongVector();
+    eval();
+    return evalResult.getLongVector();
   }
 
   @Override
   public float[] getFloatVector()
   {
-    final double[] doubles = processor.evalVector(bindings).getDoubleVector();
-    for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
-      floats[i] = (float) doubles[i];
+    if (currentFloatsId != bindings.getCurrentVectorId()) {
+      eval();
+      currentFloatsId = currentOffsetId;
+      final double[] doubles = evalResult.getDoubleVector();
+      for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
+        floats[i] = (float) doubles[i];
+      }
     }
     return floats;
   }
@@ -58,14 +71,16 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
   @Override
   public double[] getDoubleVector()
   {
-    return processor.evalVector(bindings).getDoubleVector();
+    eval();
+    return evalResult.getDoubleVector();
   }
 
   @Nullable
   @Override
   public boolean[] getNullVector()
   {
-    return processor.evalVector(bindings).getNullVector();
+    eval();
+    return evalResult.getNullVector();
   }
 
   @Override
@@ -78,5 +93,13 @@ public class ExpressionVectorValueSelector implements VectorValueSelector
   public int getCurrentVectorSize()
   {
     return bindings.getCurrentVectorSize();
+  }
+
+  private void eval()
+  {
+    if (currentOffsetId != bindings.getCurrentVectorId()) {
+      currentOffsetId = bindings.getCurrentVectorId();
+      evalResult = processor.evalVector(bindings);
+    }
   }
 }

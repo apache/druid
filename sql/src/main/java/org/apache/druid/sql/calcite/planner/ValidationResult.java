@@ -17,34 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.segment.vector.VectorSizeInspector;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.server.security.Resource;
 
-public class FalseVectorMatcher implements VectorValueMatcher
+import java.util.Set;
+
+/**
+ * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
+ * corresponding to the datasources and views which an authenticated request must be authorized for to process the
+ * query.
+ */
+public class ValidationResult
 {
-  private final VectorSizeInspector vectorSizeInspector;
+  private final Set<Resource> resources;
 
-  public FalseVectorMatcher(VectorSizeInspector vectorSizeInspector)
+  public ValidationResult(
+      final Set<Resource> resources
+  )
   {
-    this.vectorSizeInspector = vectorSizeInspector;
+    this.resources = ImmutableSet.copyOf(resources);
   }
 
-  @Override
-  public ReadableVectorMatch match(ReadableVectorMatch mask)
+  public Set<Resource> getResources()
   {
-    return VectorMatch.allFalse();
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return vectorSizeInspector.getMaxVectorSize();
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return vectorSizeInspector.getCurrentVectorSize();
+    return resources;
   }
 }

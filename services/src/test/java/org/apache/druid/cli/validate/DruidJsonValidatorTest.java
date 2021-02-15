@@ -159,6 +159,7 @@ public class DruidJsonValidatorTest
                 null,
                 1,
                 null,
+                null,
                 new Period("PT10M"),
                 null,
                 null,

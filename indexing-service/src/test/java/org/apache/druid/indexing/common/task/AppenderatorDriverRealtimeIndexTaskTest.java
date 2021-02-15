@@ -1398,6 +1398,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         1000,
         null,
+        null,
         maxRowsPerSegment,
         maxTotalRows,
         null,
