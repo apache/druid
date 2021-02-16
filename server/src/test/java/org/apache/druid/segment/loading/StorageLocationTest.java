@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -51,6 +52,18 @@ public class StorageLocationTest
     StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
     Assert.assertTrue(locationFull.canHandle(newSegmentId("2012/2013").toString(), 4_000));
     Assert.assertFalse(locationFull.canHandle(newSegmentId("2012/2013").toString(), 6_000));
+  }
+
+  @Test
+  public void testStorageLocationRealFileSystem()
+  {
+    File file = Files.createTempDir();
+    file.deleteOnExit();
+    StorageLocation location = new StorageLocation(file, 10_000, 100.0d);
+    Assert.assertFalse(location.canHandle(newSegmentId("2012/2013").toString(), 5_000));
+
+    location = new StorageLocation(file, 10_000, 0.0001d);
+    Assert.assertTrue(location.canHandle(newSegmentId("2012/2013").toString(), 1));
   }
 
   private StorageLocation fakeLocation(long total, long free, long max, Double percent)

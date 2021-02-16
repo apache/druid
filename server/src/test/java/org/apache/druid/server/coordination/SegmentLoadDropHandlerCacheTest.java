@@ -59,12 +59,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.mockito.ArgumentMatchers.any;
 
 /**
- * This class includes tests that cover the storage location layer as well. 
+ * This class includes tests that cover the storage location layer as well.
  */
 public class SegmentLoadDropHandlerCacheTest
 {
@@ -198,7 +198,7 @@ public class SegmentLoadDropHandlerCacheTest
 
       try {
         byte[] bytes = new byte[size];
-        new Random().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         Files.write(bytes, segmentFile);
         Files.write("{\"type\":\"testSegmentFactory\"}".getBytes(StandardCharsets.UTF_8), factoryJson);
       }
@@ -223,7 +223,7 @@ public class SegmentLoadDropHandlerCacheTest
         File parentDir,
         boolean lazy,
         SegmentLazyLoadFailCallback loadFailed
-    ) throws SegmentLoadingException
+    )
     {
       return Mockito.mock(Segment.class);
     }
