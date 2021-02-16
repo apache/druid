@@ -85,7 +85,6 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -233,12 +232,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
               final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
                   new VersionedIntervalTimeline<>(Ordering.natural());
               for (SegmentDescriptor spec : specs) {
-                final PartitionHolder<ServerSelector> entry = timeline.findEntry(spec.getInterval(), spec.getVersion());
-                if (entry != null) {
-                  final PartitionChunk<ServerSelector> chunk = entry.getChunk(spec.getPartitionNumber());
-                  if (chunk != null) {
-                    timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
-                  }
+                final PartitionChunk<ServerSelector> chunk = timeline.findChunk(
+                    spec.getInterval(),
+                    spec.getVersion(),
+                    spec.getPartitionNumber()
+                );
+                if (chunk != null) {
+                  timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
                 }
               }
               return timeline2;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
@@ -52,4 +53,7 @@ public interface TimelineLookup<VersionType, ObjectType extends Overshadowable<O
   List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval);
 
   @Nullable PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
+
+  @Nullable
+  PartitionChunk<ObjectType> findChunk(Interval interval, VersionType version, int partitionNum);
 }

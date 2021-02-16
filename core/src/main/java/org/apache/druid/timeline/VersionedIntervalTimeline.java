@@ -305,6 +305,34 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   }
 
   /**
+   * It may be cheaper to use this method instead of {@link #findEntry(Interval, Object)} since creating an immutable
+   * view of {@link PartitionHolder} is an expensive operation. This methods avoids that expensive operation by
+   * returning {@link PartitionChunk} directly. The effect is particularly visible when number of segments being
+   * operated on is very large.
+   */
+  @Override
+  @Nullable
+  public PartitionChunk<ObjectType> findChunk(Interval interval, VersionType version, int partitionNum)
+  {
+    lock.readLock().lock();
+    try {
+      for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
+        if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
+          TimelineEntry foundEntry = entry.getValue().get(version);
+          if (foundEntry != null) {
+            return foundEntry.getPartitionHolder().getChunk(partitionNum);
+          }
+        }
+      }
+
+      return null;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
    * Does a lookup for the objects representing the given time interval.  Will *only* return
    * PartitionHolders that are {@linkplain PartitionHolder#isComplete() complete}.
    *
