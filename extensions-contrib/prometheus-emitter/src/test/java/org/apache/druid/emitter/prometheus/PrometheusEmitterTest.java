@@ -20,11 +20,19 @@
 package org.apache.druid.emitter.prometheus;
 
 import com.google.common.collect.ImmutableMap;
+import io.prometheus.client.Collector;
 import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.exporter.PushGateway;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
+
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.anyString;
+import static org.easymock.EasyMock.mock;
 
 
 public class PrometheusEmitterTest
@@ -51,7 +59,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterMetric()
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "localhost");
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway");
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -67,5 +75,38 @@ public class PrometheusEmitterTest
     Assert.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
             "namespace_task_run_time_bucket", new String[]{"dataSource", "taskType", "le"}, new String[]{"test", "index_parallel", "0.5"}
     ), assertEpsilon);
+  }
+
+  @Test
+  public void testEmitterStart()
+  {
+    PrometheusEmitterConfig exportEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "namespace1", null, 0, null);
+    PrometheusEmitter exportEmitter = new PrometheusEmitter(exportEmitterConfig);
+    exportEmitter.start();
+    Assert.assertNotNull(exportEmitter.getServer());
+
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace2", null, 0, "pushgateway");
+    PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
+    pushEmitter.start();
+    Assert.assertNotNull(pushEmitter.getPushGateway());
+  }
+
+  @Test
+  public void testEmitterPush() throws IOException
+  {
+    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway");
+
+    PushGateway mockPushGateway = mock(PushGateway.class);
+    mockPushGateway.push(anyObject(Collector.class), anyString(), anyObject(ImmutableMap.class));
+
+    PrometheusEmitter emitter = new PrometheusEmitter(emitterConfig);
+    emitter.start();
+    emitter.setPushGateway(mockPushGateway);
+    ServiceMetricEvent build = ServiceMetricEvent.builder()
+            .setDimension("task", "index_parallel")
+            .build("task/run/time", 500)
+            .build(ImmutableMap.of("service", "peon"));
+    emitter.emit(build);
+    emitter.flush();
   }
 }

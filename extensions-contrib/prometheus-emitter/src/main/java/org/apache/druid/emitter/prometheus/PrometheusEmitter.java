@@ -129,7 +129,9 @@ public class PrometheusEmitter implements Emitter
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     try {
       for (DimensionsAndCollector collector : map.values()) {
-        pushGateway.push(collector.getCollector(), config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+        if (config.getNamespace() != null) {
+          pushGateway.push(collector.getCollector(), config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+        }
       }
     }
     catch (IOException e) {
@@ -155,5 +157,20 @@ public class PrometheusEmitter implements Emitter
     } else {
       flush();
     }
+  }
+
+  public HTTPServer getServer()
+  {
+    return server;
+  }
+
+  public PushGateway getPushGateway()
+  {
+    return pushGateway;
+  }
+
+  public void setPushGateway(PushGateway pushGateway)
+  {
+    this.pushGateway = pushGateway;
   }
 }
