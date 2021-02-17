@@ -30,7 +30,7 @@ All query caches have a pair of parameters that control the way individual queri
 - `useCache` to instruct queries to use the cached for results.
 - `populateCache` to instruct a query to cache its results.
 
-The separation of concerns, usage and population, lets you include cached results for queries on uncommon data without polluting the cache with results that are unlikely to be reused by other queries, for example large reports or queries on very old data.
+The separation of concerns, usage and population, lets you include cached results for queries on uncommon data without polluting the cache with results that are unlikely to be reused by other queries, for example, large reports or queries on very old data.
 
 To use caching, you must first enable the settings for a service in the runtime properties. Afterward, you can control which queries use the cache or populate the cache on a per-query basis within the query context.
 
