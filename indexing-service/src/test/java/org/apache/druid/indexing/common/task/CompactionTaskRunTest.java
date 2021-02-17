@@ -248,7 +248,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          getDefaultCompactionState(Granularities.HOUR, Granularities.NONE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
           segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
@@ -339,7 +339,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 getObjectMapper().writeValueAsString(
                     new UniformGranularitySpec(
                         Granularities.HOUR,
-                        Granularities.NONE,
+                        Granularities.MINUTE,
                         true,
                         ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
                     )
@@ -385,7 +385,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          getDefaultCompactionState(Granularities.HOUR, Granularities.NONE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
           segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
@@ -415,7 +415,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          getDefaultCompactionState(Granularities.HOUR, Granularities.NONE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
           segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
@@ -517,7 +517,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          getDefaultCompactionState(Granularities.HOUR, Granularities.NONE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
           segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
@@ -559,7 +559,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
     Assert.assertEquals(
-        getDefaultCompactionState(Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        getDefaultCompactionState(Granularities.DAY, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
         segments.get(0).getLastCompactionState()
     );
 
@@ -580,7 +580,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
       Assert.assertEquals(
-          getDefaultCompactionState(Granularities.HOUR, Granularities.NONE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
           segments.get(i).getLastCompactionState()
       );
     }
