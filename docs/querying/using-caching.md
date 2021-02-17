@@ -70,7 +70,7 @@ druid.realtime.cache.populateCache=true
 See [Peon caching](configuration/index.md#peon-caching) for a description of all available task executor service caching options.
 
 ## Enabling caching in the query context
-After you enable cacheing for a service, set cache options for individual queries in the query [context](./query-context.md). For example, you can `POST` a Druid SQL request to the HTTP POST API and include the context as a JSON object:
+After you enable caching for a service, set cache options for individual queries in the query [context](./query-context.md). For example, you can `POST` a Druid SQL request to the HTTP POST API and include the context as a JSON object:
 
 ```
 {
