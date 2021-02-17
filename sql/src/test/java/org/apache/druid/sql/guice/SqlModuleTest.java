@@ -27,7 +27,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-
 import com.google.inject.TypeLiteral;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.TimelineServerView;
@@ -224,14 +223,20 @@ public class SqlModuleTest
 
     @Override
     public void createView(
-        PlannerFactory plannerFactory, String viewName, String viewSql
+        PlannerFactory plannerFactory,
+        String viewName,
+        String viewSql
     )
     {
 
     }
 
     @Override
-    public void alterView(PlannerFactory plannerFactory, String viewName, String viewSql)
+    public void alterView(
+        PlannerFactory plannerFactory,
+        String viewName,
+        String viewSql
+    )
     {
 
     }
