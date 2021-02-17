@@ -1571,9 +1571,9 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>5.3.2</version>
+                <version>6.0.3</version>
+                <inherited>false</inherited>
                 <configuration>
-                    <cveValidForHours>24</cveValidForHours>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
@@ -1584,6 +1584,9 @@
                 </configuration>
                 <executions>
                     <execution>
+                        <goals>
+                            <goal>aggregate</goal>
+                        </goals>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
                     </execution>
                 </executions>
