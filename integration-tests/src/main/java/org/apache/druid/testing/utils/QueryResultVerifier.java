@@ -39,7 +39,7 @@ public class QueryResultVerifier
       Map<String, Object> expRes = expectedIter.next();
 
       if (fieldsToTest != null && !fieldsToTest.isEmpty()) {
-        for (String field: fieldsToTest) {
+        for (String field : fieldsToTest) {
           if (!actualRes.get(field).equals(expRes.get(field))) {
             return false;
           }
