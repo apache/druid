@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -46,9 +47,15 @@ public class SqlModule implements Module
   public static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
   public static final String PROPERTY_SQL_VIEW_MANAGER_TYPE = "druid.sql.viewmanager.type";
 
-  private final Properties props;
-
   @Inject
+  private Properties props;
+
+  public SqlModule()
+  {
+
+  }
+
+  @VisibleForTesting
   public SqlModule(
       Properties props
   )
