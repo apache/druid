@@ -39,7 +39,7 @@ The query context settings do not override the server settings. For example, it 
 ## Enabling query caching on Brokers
 Brokers support both segment-level and whole-query result level caching.
 
-To control **segment caching** on the Broker, set the `useCache` and `populateCache`runtime properties. For example, to set the Broker to both use and populate the segment cache for queries:
+To control **segment caching** on the Broker, set the `useCache` and `populateCache`runtime properties. For example, to set the Broker to use and populate the segment cache for queries:
 ```
 druid.broker.cache.useCache=true
 druid.broker.cache.populateCache=true
