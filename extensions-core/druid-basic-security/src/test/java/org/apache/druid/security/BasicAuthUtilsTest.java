@@ -23,11 +23,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDruidModule;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -61,7 +61,7 @@ public class BasicAuthUtilsTest
     final ResourceAction fooRead = new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ);
     final ResourceAction barRead = new ResourceAction(new Resource("bar", ResourceType.DATASOURCE), Action.READ);
 
-    final ObjectMapper mapper = new DefaultObjectMapper();
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     mapper.registerModules(new BasicSecurityDruidModule().getJacksonModules());
     Map<String, Object> rawMap = new HashMap<>();
     rawMap.put(
