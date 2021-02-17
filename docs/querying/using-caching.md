@@ -23,7 +23,7 @@ title: "Using query caching"
   -->
 
 
-This topic covers how to configure services populate and use the Druid query cache. For a conceptual overview and use cases, see [Query caching](./caching.md). For information on how to configure the caching mechanism, see [Cache configuration](../configuration/index.md#cache-configuration).
+This topic covers how to configure services to populate and use the Druid query cache. For a conceptual overview and use cases, see [Query caching](./caching.md). For information on how to configure the caching mechanism, see [Cache configuration](../configuration/index.md#cache-configuration).
 
 All query caches have a pair of parameters that control the way individual queries interact with the cache:
 
