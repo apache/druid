@@ -121,3 +121,8 @@ notice: |
 
   The licenses for these third party components are included in LICENSE.txt
 ```
+
+### Updating licenses
+
+When you update the version of existing dependencies, you need to update the version not only in the `pom.xml` file but
+also in the `licenses.yaml` file.
