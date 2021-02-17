@@ -526,7 +526,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           }
         }
         if (aggregateBuckets > tuningConfig.getMaxAggregateSegmentsPermitted()) {
-          errorMsg = "HadoopIndexTask Failed! The aggregate number of segments that will be created ["
+          errorMsg = "IndexTask Failed! The aggregate number of segments that will be created ["
                      + aggregateBuckets
                      + "] is greater than the number allowed ["
                      + tuningConfig.getMaxAggregateSegmentsPermitted()
