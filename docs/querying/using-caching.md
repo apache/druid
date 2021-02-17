@@ -27,7 +27,7 @@ This topic covers how to configure services populate and use the Druid query cac
 
 All query caches have a pair of parameters that control the way individual queries interact with the cache:
 
-- `useCache` to instruct queries to use the cached for results.
+- `useCache` to instruct queries to use the cache for results.
 - `populateCache` to instruct a query to cache its results.
 
 The separation of concerns, usage and population, lets you include cached results for queries on uncommon data without polluting the cache with results that are unlikely to be reused by other queries, for example, large reports or queries on very old data.
