@@ -628,7 +628,9 @@ public class DruidMeta extends MetaImpl
   }
 
   /**
-   * Determine JDBC 'fetch' size (is a user hint, we don't have to honor it), ensuring user supplied count falls within
+   * Determine JDBC 'frame' size, that is the number of results which will be returned to a single
+   * {@link java.sql.ResultSet}. This value corresponds to {@link java.sql.Statement#setFetchSize(int)} (which is a user
+   * hint, we don't have to honor it), and this method modifies it, ensuring the actual chosen value falls within
    * {@link AvaticaServerConfig#minRowsPerFrame} and {@link AvaticaServerConfig#maxRowsPerFrame}.
    *
    * A value of -1 supplied as input indicates that the client has no preference for fetch size, and can handle
@@ -653,7 +655,7 @@ public class DruidMeta extends MetaImpl
   }
 
   /**
-   * coerce frame size to minimum number of rows per frame to the minimum of {@link AvaticaServerConfig#minRowsPerFrame}
+   * coerce fetch size to be, at minimum, {@link AvaticaServerConfig#minRowsPerFrame}
    */
   private int adjustForMinumumRowsPerFrame(int rowsPerFrame)
   {
