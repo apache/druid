@@ -1,0 +1,29 @@
+[
+  {
+    "query": {
+      "queryType": "segmentMetadata",
+      "dataSource": "%%DATASOURCE%%",
+      "analysisTypes": [
+        "%%ANALYSIS_TYPE%%"
+      ],
+      "intervals": [
+        "%%INTERVALS%%"
+      ]
+    },
+    "expectedResults": [
+      {
+        "queryGranularity": "SECOND"
+      },
+      {
+        "queryGranularity": "SECOND"
+      },
+      {
+        "queryGranularity": "SECOND"
+      },
+      {
+        "queryGranularity": "SECOND"
+      }
+     ],
+    "fieldsToTest": ["queryGranularity"]
+  }
+]
