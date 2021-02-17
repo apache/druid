@@ -81,7 +81,7 @@ After you enable cacheing for a service, set cache options for individual querie
   }
 }
 ```
-In this example `populateCahce` is `false` because the query references data that is over a year old. For more information, see [Druid SQL client APIs](./sql.html#client-apis).
+In this example `populateCache` is `false` because the query references data that is over a year old. For more information, see [Druid SQL client APIs](./sql.md#client-apis).
 
 reiterate that populateCache : true must be set somehwere on at least 1 service. By defaults it's on on Historical and that serves the majority of use cases. 
 
