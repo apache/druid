@@ -3595,7 +3595,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.11.0
+version: 1.11.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column

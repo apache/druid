@@ -904,7 +904,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           compactionStateAnnotateFunction(
               storeCompactionState,
               toolbox,
-              ingestionSchema.getTuningConfig()
+              ingestionSchema.getTuningConfig(),
+              ingestionSchema.getDataSchema().getGranularitySpec()
           );
 
       // Probably we can publish atomicUpdateGroup along with segments.
