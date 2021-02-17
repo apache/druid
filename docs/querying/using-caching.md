@@ -88,5 +88,5 @@ reiterate that populateCache : true must be set somehwere on at least 1 service.
 ## Learn more
 See the following topics for more information:
 - [Query caching](./caching.md) for an overview of caching.
-- [Query context](./query-context.md)
+- [Query context](./query-context.md) for more details and usage for the query context.
 - [Cache configuration](../configuration/index.md#cache-configuration) for information about different cache types and additional configuration options.
