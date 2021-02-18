@@ -39,8 +39,8 @@ import java.util.Set;
  */
 public class HyperUniqueFinalizingPostAggregator implements PostAggregator
 {
-  private static final Comparator<Double> DOUBLE_COMPARATOR =
-      Ordering.from((Comparator<Double>) (lhs, rhs) -> Double.compare(lhs, rhs)).nullsFirst();
+  private static final Comparator<Number> NUMBER_COMPARATOR =
+      Ordering.from((Comparator<Number>) (lhs, rhs) -> Double.compare(lhs.doubleValue(), rhs.doubleValue())).nullsFirst();
 
   private final String name;
   private final String fieldName;
@@ -76,9 +76,9 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator<Double> getComparator()
+  public Comparator<Number> getComparator()
   {
-    return DOUBLE_COMPARATOR;
+    return NUMBER_COMPARATOR;
   }
 
   @Override
