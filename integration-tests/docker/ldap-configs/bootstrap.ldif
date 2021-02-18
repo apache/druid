@@ -1,0 +1,130 @@
+dn: ou=Users,dc=example,dc=org
+objectClass: top
+objectClass: organizationalUnit
+ou: Users
+
+dn: ou=Groups,dc=example,dc=org
+objectClass: top
+objectClass: organizationalUnit
+ou: Groups
+
+dn: uid=admin,ou=Users,dc=example,dc=org
+uid: admin
+cn: admin
+sn: admin
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+loginShell: /bin/bash
+homeDirectory: /home/admin
+uidNumber: 14583100
+gidNumber: 14564100
+userPassword: priest
+mail: admin@example.org
+gecos: admin
+
+dn: uid=druid_system,ou=Users,dc=example,dc=org
+uid: druid_system
+cn: druid_system
+sn: druid_system
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+loginShell: /bin/bash
+homeDirectory: /home/druid_system
+uidNumber: 14583101
+gidNumber: 14564101
+userPassword: warlock
+mail: druid_system@example.org
+gecos: druid_system
+
+dn: cn=admin,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: admin
+description: Admin users
+uniqueMember: uid=admin,ou=Users,dc=example,dc=org
+uniqueMember: uid=druid_system,ou=Users,dc=example,dc=org
+
+dn: uid=datasourceOnlyUser,ou=Users,dc=example,dc=org
+uid: datasourceOnlyUser
+cn: datasourceOnlyUser
+sn: datasourceOnlyUser
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+loginShell: /bin/bash
+homeDirectory: /home/datasourceOnlyUser
+uidNumber: 14583102
+gidNumber: 14564102
+userPassword: helloworld
+mail: datasourceOnlyUser@example.org
+gecos: datasourceOnlyUser
+
+dn: cn=datasourceOnlyGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: datasourceOnlyGroup
+description: datasourceOnlyGroup users
+uniqueMember: uid=datasourceOnlyUser,ou=Users,dc=example,dc=org
+
+dn: uid=datasourceWithStateUser,ou=Users,dc=example,dc=org
+uid: datasourceWithStateUser
+cn: datasourceWithStateUser
+sn: datasourceWithStateUser
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+loginShell: /bin/bash
+homeDirectory: /home/datasourceWithStateUser
+uidNumber: 14583103
+gidNumber: 14564103
+userPassword: helloworld
+mail: datasourceWithStateUser@example.org
+gecos: datasourceWithStateUser
+
+dn: cn=datasourceWithStateGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: datasourceWithStateGroup
+description: datasourceWithStateGroup users
+uniqueMember: uid=datasourceWithStateUser,ou=Users,dc=example,dc=org
+
+dn: uid=stateOnlyUser,ou=Users,dc=example,dc=org
+uid: stateOnlyUser
+cn: stateOnlyUser
+sn: stateOnlyUser
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+loginShell: /bin/bash
+homeDirectory: /home/stateOnlyUser
+uidNumber: 14583104
+gidNumber: 14564104
+userPassword: helloworld
+mail: stateOnlyUser@example.org
+gecos: stateOnlyUser
+
+dn: cn=stateOnlyGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: stateOnlyGroup
+description: stateOnlyGroup users
+uniqueMember: uid=stateOnlyUser,ou=Users,dc=example,dc=org
+
+dn: uid=druid,ou=Users,dc=example,dc=org
+uid: druid
+cn: druid
+sn: druid
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+loginShell: /bin/bash
+homeDirectory: /home/druid
+uidNumber: 14583105
+gidNumber: 14564105
+userPassword: helloworld
+mail: druid@example.org
+gecos: druid
+
+dn: cn=druidGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: druidGroup
+description: druidGroup users
+uniqueMember: uid=druid,ou=Users,dc=example,dc=org
