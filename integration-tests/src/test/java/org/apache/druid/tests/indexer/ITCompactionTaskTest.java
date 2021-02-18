@@ -54,6 +54,9 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
+  private static final String SEGMENT_METADATA_QUERY_RESOURCE_QR4 = "/indexer/segment_metadata_qr4.json";
+  private static final String SEGMENT_METADATA_QUERY_RESOURCE_QR2 = "/indexer/segment_metadata_qr2.json";
+
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
   private static final String COMPACTION_TASK_WITH_SEGMENT_GRANULARITY = "/indexer/wikipedia_compaction_task_with_segment_granularity.json";
   private static final String COMPACTION_TASK_WITH_GRANULARITY_SPEC = "/indexer/wikipedia_compaction_task_with_granularity_spec.json";
@@ -125,14 +128,14 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
           fullDatasourceName
       );
 
-
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE_QR4);
       queryHelper.testQueriesFromString(queryResponseTemplate);
       compactData(compactionResource, newSegmentGranularity);
 
       // The original 4 segments should be compacted into 2 new segments
       checkNumberOfSegments(2);
       queryHelper.testQueriesFromString(queryResponseTemplate);
-
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE_QR2);
 
       if (newSegmentGranularity != null) {
         List<String> newIntervals = new ArrayList<>();
@@ -146,6 +149,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
+
   private void loadData(String indexTask) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
@@ -180,6 +184,35 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Compaction"
     );
+  }
+
+  private void checkQueryGranularity(String queryResource) throws Exception
+  {
+    String queryResponseTemplate;
+    try {
+      InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryResource);
+      queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "could not read query file: %s", queryResource);
+    }
+
+    queryResponseTemplate = StringUtils.replace(
+        queryResponseTemplate,
+        "%%DATASOURCE%%",
+        fullDatasourceName
+    );
+    queryResponseTemplate = StringUtils.replace(
+        queryResponseTemplate,
+        "%%ANALYSIS_TYPE%%",
+        "queryGranularity"
+    );
+    queryResponseTemplate = StringUtils.replace(
+        queryResponseTemplate,
+        "%%INTERVALS%%",
+        "2013-08-31/2013-09-02"
+    );
+    queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 
   private void checkNumberOfSegments(int numExpectedSegments)

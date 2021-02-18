@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
@@ -65,7 +66,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -642,21 +642,13 @@ public class CompactionTask extends AbstractBatchIndexTask
       Granularity segmentGranularity
   )
   {
-    // check index metadata
-    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
-      final QueryableIndex index = pair.lhs;
-      if (index.getMetadata() == null) {
-        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
-      }
-    }
+    // check index metadata &
+    // Decide which values to propagate (i.e. carry over) for rollup & queryGranularity
+    final SettableSupplier<Boolean> rollup = new SettableSupplier<>();
+    final SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    decideRollupAndQueryGranularityCarryOver(rollup, queryGranularity, queryableIndexAndSegments);
 
     // find granularity spec
-    // set rollup only if rollup is set for all segments
-    final boolean rollup = queryableIndexAndSegments.stream().allMatch(pair -> {
-      // We have already checked getMetadata() doesn't return null
-      final Boolean isRollup = pair.lhs.getMetadata().isRollup();
-      return isRollup != null && isRollup;
-    });
 
     final Interval totalInterval = JodaUtils.umbrellaInterval(
         queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
@@ -664,8 +656,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
         Preconditions.checkNotNull(segmentGranularity),
-        Granularities.NONE,
-        rollup,
+        queryGranularity.get(),
+        rollup.get(),
         Collections.singletonList(totalInterval)
     );
 
@@ -677,7 +669,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                  ? createMetricsSpec(queryableIndexAndSegments)
                                                  : convertToCombiningFactories(metricsSpec);
 
-    return new DataSchema(
+    return new
+        DataSchema(
         dataSource,
         new TimestampSpec(null, null, null),
         finalDimensionsSpec,
@@ -685,6 +678,64 @@ public class CompactionTask extends AbstractBatchIndexTask
         granularitySpec,
         null
     );
+  }
+
+
+  /**
+   * Decide which rollup & queryCardinalities to propage for the compacted segment based on
+   * the data segments given
+   *
+   * @param rollup                    Reference to update with the rollup value
+   * @param queryGranularity          Reference to update with the queryGranularity value
+   * @param queryableIndexAndSegments The segments to compact
+   */
+  private static void decideRollupAndQueryGranularityCarryOver(
+      SettableSupplier<Boolean> rollup,
+      SettableSupplier<Granularity> queryGranularity,
+      List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments
+  )
+  {
+    final SettableSupplier<Boolean> rollupIsValid = new SettableSupplier<>(true);
+    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
+      final QueryableIndex index = pair.lhs;
+      if (index.getMetadata() == null) {
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
+      }
+      // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
+
+      // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
+      if (rollupIsValid.get()) {
+        Boolean isRollup = index.getMetadata().isRollup();
+        if (isRollup == null) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        } else if (rollup.get() == null) {
+          rollup.set(isRollup);
+        } else if (!rollup.get().equals(isRollup.booleanValue())) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        }
+      }
+
+      // Pick the finer, non-null, of the query granularities of the segments being compacted
+      Granularity current = index.getMetadata().getQueryGranularity();
+      queryGranularity.set(compareWithCurrent(queryGranularity.get(), current));
+    }
+  }
+
+  @VisibleForTesting
+  static Granularity compareWithCurrent(Granularity queryGranularity, Granularity current)
+  {
+    if (queryGranularity == null && current != null) {
+      queryGranularity = current;
+    } else if (queryGranularity != null
+               && current != null
+               && Granularity.IS_FINER_THAN.compare(current, queryGranularity) < 0) {
+      queryGranularity = current;
+    }
+    // we never propagate nulls when there is at least one non-null granularity thus
+    // do nothing for the case queryGranularity != null && current == null
+    return queryGranularity;
   }
 
   private static AggregatorFactory[] createMetricsSpec(
@@ -881,8 +932,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     ParallelIndexTuningConfig computeTuningConfig()
     {
       ParallelIndexTuningConfig newTuningConfig = tuningConfig == null
-                                          ? ParallelIndexTuningConfig.defaultConfig()
-                                          : tuningConfig;
+                                                  ? ParallelIndexTuningConfig.defaultConfig()
+                                                  : tuningConfig;
       PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
       if (partitionsSpec instanceof DynamicPartitionsSpec) {
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
