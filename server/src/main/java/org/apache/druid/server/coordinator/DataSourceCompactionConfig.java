@@ -22,10 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;

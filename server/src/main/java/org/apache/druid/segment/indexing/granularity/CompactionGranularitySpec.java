@@ -22,9 +22,7 @@ package org.apache.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Objects;
 
 public class CompactionGranularitySpec

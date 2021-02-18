@@ -22,7 +22,6 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
 
 import java.util.Objects;
 
