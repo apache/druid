@@ -146,8 +146,8 @@ public class SqlModuleTest
     Assert.assertNotNull(viewManager);
     Assert.assertTrue(viewManager instanceof NoopViewManager);
   }
-
-
+  
+  @Test
   public void testNonDefaultViewManagerBind()
   {
     final Properties props = new Properties();
