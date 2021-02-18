@@ -186,7 +186,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     addAll(Iterators.singletonIterator(object), o -> interval, o -> version);
   }
 
-  private void addAll(
+  public void addAll(
       final Iterator<PartitionChunk<ObjectType>> objects,
       final Function<ObjectType, Interval> intervalFunction,
       final Function<ObjectType, VersionType> versionFunction

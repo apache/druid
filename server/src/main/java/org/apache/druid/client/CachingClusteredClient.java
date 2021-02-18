@@ -26,6 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
@@ -97,6 +98,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -228,21 +230,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return CachingClusteredClient.this.run(
             queryPlus,
             responseContext,
-            timeline -> {
-              final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-                  new VersionedIntervalTimeline<>(Ordering.natural());
-              for (SegmentDescriptor spec : specs) {
-                final PartitionChunk<ServerSelector> chunk = timeline.findChunk(
-                    spec.getInterval(),
-                    spec.getVersion(),
-                    spec.getPartitionNumber()
-                );
-                if (chunk != null) {
-                  timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
-                }
-              }
-              return timeline2;
-            },
+            new TimelineConverter(specs),
             true
         );
       }
@@ -854,6 +842,39 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
       }
       return strategy.computeCacheKey(query);
+    }
+  }
+
+  private static class TimelineConverter implements UnaryOperator<TimelineLookup<String, ServerSelector>>
+  {
+    private final Iterable<SegmentDescriptor> specs;
+
+    TimelineConverter(final Iterable<SegmentDescriptor> specs)
+    {
+      this.specs = specs;
+    }
+
+    @Override
+    public TimelineLookup<String, ServerSelector> apply(TimelineLookup<String, ServerSelector> timeline)
+    {
+      final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
+          new VersionedIntervalTimeline<>(Ordering.natural());
+      Iterator<PartitionChunk<ServerSelector>> unfilteredIterator =
+          Iterators.transform(specs.iterator(), spec -> timeline.findChunk(
+              spec.getInterval(),
+              spec.getVersion(),
+              spec.getPartitionNumber()
+          ));
+      Iterator<PartitionChunk<ServerSelector>> iterator = Iterators.filter(
+          unfilteredIterator,
+          Objects::nonNull
+      );
+      timeline2.addAll(
+          iterator,
+          input -> input.getSegment().getInterval(),
+          input -> input.getSegment().getVersion()
+      );
+      return timeline2;
     }
   }
 }
