@@ -314,8 +314,7 @@ public class CompactSegments implements CoordinatorDuty
         if (config.getGranularitySpec() != null) {
           queryGranularitySpec = new ClientCompactionTaskQueryGranularitySpec(
               config.getGranularitySpec().getSegmentGranularity(),
-              config.getGranularitySpec().getQueryGranularity(),
-              config.getGranularitySpec().isRollup()
+              config.getGranularitySpec().getQueryGranularity()
           );
         } else {
           queryGranularitySpec = null;

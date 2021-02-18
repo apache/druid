@@ -52,6 +52,7 @@ import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -116,7 +117,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR),
         ImmutableMap.of("key", "value")
     );
 
@@ -198,10 +199,6 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
     );
-    Assert.assertEquals(
-        query.getGranularitySpec().isRollup(),
-        task.getGranularitySpec().isRollup()
-    );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
 
@@ -259,7 +256,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
-        .granularitySpec(new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, null))
+        .granularitySpec(new CompactionGranularitySpec(Granularities.DAY, Granularities.HOUR))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -301,7 +298,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR),
         new HashMap<>()
     );
 

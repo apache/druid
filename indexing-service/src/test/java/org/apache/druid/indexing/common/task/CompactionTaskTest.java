@@ -108,6 +108,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -376,7 +377,7 @@ public class CompactionTaskTest
     );
     builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder2.tuningConfig(createTuningConfig());
-    builder2.granularitySpec(new UniformGranularitySpec(Granularities.HOUR, Granularities.DAY, null));
+    builder2.granularitySpec(new CompactionGranularitySpec(Granularities.HOUR, Granularities.DAY));
     final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
     Assert.assertEquals(taskCreatedWithGranularitySpec.getSegmentGranularity(), taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
@@ -392,7 +393,7 @@ public class CompactionTaskTest
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
-    builder.granularitySpec(new UniformGranularitySpec(Granularities.MINUTE, Granularities.DAY, null));
+    builder.granularitySpec(new CompactionGranularitySpec(Granularities.MINUTE, Granularities.DAY));
     final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
     Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
@@ -1059,10 +1060,10 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
-        new PeriodGranularity(Period.months(3), null, null),
-        COORDINATOR_CLIENT,
-        segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        new CompactionGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
+                                      COORDINATOR_CLIENT,
+                                      segmentLoaderFactory,
+                                      RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))

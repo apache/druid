@@ -78,6 +78,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -90,7 +91,9 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -141,7 +144,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final Granularity segmentGranularity;
   @Nullable
-  private final GranularitySpec granularitySpec;
+  private final CompactionGranularitySpec granularitySpec;
   @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
   @JsonIgnore
@@ -175,7 +178,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
-      @JsonProperty("granularitySpec") @Nullable final GranularitySpec granularitySpec,
+      @JsonProperty("granularitySpec") @Nullable final CompactionGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
@@ -206,12 +209,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
     if (granularitySpec == null && segmentGranularity != null) {
-      this.granularitySpec = new UniformGranularitySpec(
-          segmentGranularity,
-          null,
-          null,
-          null
-      );
+      this.granularitySpec = new CompactionGranularitySpec(segmentGranularity, null);
     } else {
       this.granularitySpec = granularitySpec;
     }
@@ -306,7 +304,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonProperty
   @Nullable
-  public GranularitySpec getGranularitySpec()
+  public CompactionGranularitySpec getGranularitySpec()
   {
     return granularitySpec;
   }
@@ -368,7 +366,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         partitionConfigurationManager,
         dimensionsSpec,
         metricsSpec,
-        getSegmentGranularity(),
+        granularitySpec,
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory
@@ -476,7 +474,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
-      @Nullable final Granularity segmentGranularity,
+      @Nullable final CompactionGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
       final RetryPolicyFactory retryPolicyFactory
@@ -504,7 +502,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     final ParallelIndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig();
 
-    if (segmentGranularity == null) {
+    if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
       // original granularity
       final Map<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> intervalToSegments = new TreeMap<>(
           Comparators.intervalsByStartThenEnd()
@@ -539,12 +537,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       for (NonnullPair<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> entry : intervalToSegmentsUnified) {
         final Interval interval = entry.lhs;
         final List<NonnullPair<QueryableIndex, DataSegment>> segmentsToCompact = entry.rhs;
+        // If granularitySpec is not null, then set segmentGranularity. Otherwise,
+        // creates new granularitySpec and set segmentGranularity
+        Granularity segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
             segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
-            GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity()
+            granularitySpec == null ? new CompactionGranularitySpec(segmentGranularityToUse, null) : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
 
         specs.add(
@@ -571,7 +572,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           queryableIndexAndSegments,
           dimensionsSpec,
           metricsSpec,
-          segmentGranularity
+          granularitySpec
       );
 
       return Collections.singletonList(
@@ -639,7 +640,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      Granularity segmentGranularity
+      @Nonnull CompactionGranularitySpec granularitySpec
   )
   {
     // check index metadata &
@@ -648,15 +649,22 @@ public class CompactionTask extends AbstractBatchIndexTask
     final SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
     decideRollupAndQueryGranularityCarryOver(rollup, queryGranularity, queryableIndexAndSegments);
 
-    // find granularity spec
-
     final Interval totalInterval = JodaUtils.umbrellaInterval(
         queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
     );
 
-    final GranularitySpec granularitySpec = new UniformGranularitySpec(
-        Preconditions.checkNotNull(segmentGranularity),
-        queryGranularity.get(),
+    final Granularity queryGranularityToUse;
+    if (granularitySpec.getQueryGranularity() == null) {
+      queryGranularityToUse = queryGranularity.get();
+      log.info("Generate compaction task spec with segments original query granularity [%s]", queryGranularityToUse);
+    } else {
+      queryGranularityToUse = granularitySpec.getQueryGranularity();
+      log.info("Generate compaction task spec with new query granularity overrided from input [%s]", queryGranularityToUse);
+    }
+
+    final GranularitySpec uniformGranularitySpec = new UniformGranularitySpec(
+        Preconditions.checkNotNull(granularitySpec.getSegmentGranularity()),
+        queryGranularityToUse,
         rollup.get(),
         Collections.singletonList(totalInterval)
     );
@@ -675,7 +683,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         new TimestampSpec(null, null, null),
         finalDimensionsSpec,
         finalMetricsSpec,
-        granularitySpec,
+        uniformGranularitySpec,
         null
     );
   }
@@ -963,7 +971,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private Granularity segmentGranularity;
     @Nullable
-    private GranularitySpec granularitySpec;
+    private CompactionGranularitySpec granularitySpec;
     @Nullable
     private TuningConfig tuningConfig;
     @Nullable
@@ -1014,7 +1022,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
-    public Builder granularitySpec(GranularitySpec granularitySpec)
+    public Builder granularitySpec(CompactionGranularitySpec granularitySpec)
     {
       this.granularitySpec = granularitySpec;
       return this;

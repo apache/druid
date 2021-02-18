@@ -17,22 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
+import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Objects;
 
-public class ClientCompactionTaskQueryGranularitySpec
+public class CompactionGranularitySpec
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
 
   @JsonCreator
-  public ClientCompactionTaskQueryGranularitySpec(
+  public CompactionGranularitySpec(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("queryGranularity") Granularity queryGranularity
   )
@@ -41,16 +42,21 @@ public class ClientCompactionTaskQueryGranularitySpec
     this.segmentGranularity = segmentGranularity;
   }
 
-  @JsonProperty
+  @JsonProperty("segmentGranularity")
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
   }
 
-  @JsonProperty
+  @JsonProperty("queryGranularity")
   public Granularity getQueryGranularity()
   {
     return queryGranularity;
+  }
+
+  public CompactionGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
+  {
+    return new CompactionGranularitySpec(segmentGranularity, queryGranularity);
   }
 
   @Override
@@ -62,7 +68,7 @@ public class ClientCompactionTaskQueryGranularitySpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ClientCompactionTaskQueryGranularitySpec that = (ClientCompactionTaskQueryGranularitySpec) o;
+    CompactionGranularitySpec that = (CompactionGranularitySpec) o;
     return Objects.equals(segmentGranularity, that.segmentGranularity) &&
            Objects.equals(queryGranularity, that.queryGranularity);
   }
@@ -76,7 +82,7 @@ public class ClientCompactionTaskQueryGranularitySpec
   @Override
   public String toString()
   {
-    return "ClientCompactionTaskQueryGranularitySpec{" +
+    return "CompactionGranularitySpec{" +
            "segmentGranularity=" + segmentGranularity +
            ", queryGranularity=" + queryGranularity +
            '}';

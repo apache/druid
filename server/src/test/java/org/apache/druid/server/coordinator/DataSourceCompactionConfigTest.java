@@ -33,6 +33,7 @@ import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
@@ -238,7 +239,7 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new UniformGranularitySpec(Granularities.HOUR, null, null),
+        new CompactionGranularitySpec(Granularities.HOUR, null),
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -264,55 +265,8 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new UniformGranularitySpec(Granularities.HOUR, Granularities.MONTH, null),
+        new CompactionGranularitySpec(Granularities.HOUR, Granularities.MONTH),
         ImmutableMap.of("key", "val")
     );
   }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testFailIfGranularitySpecContainsNonDefaultRollup()
-  {
-    new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UniformGranularitySpec(Granularities.HOUR, Granularities.MONTH, false, null),
-        ImmutableMap.of("key", "val")
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testFailIfGranularitySpecContainsNonEmptyInterval()
-  {
-    new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UniformGranularitySpec(Granularities.HOUR, Granularities.MONTH, ImmutableList.of(Intervals.of("2012-01-08T00Z/2012-01-11T00Z"))),
-        ImmutableMap.of("key", "val")
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testFailIfGranularitySpecIsNotUniform()
-  {
-    new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new ArbitraryGranularitySpec(null, null, null),
-        ImmutableMap.of("key", "val")
-    );
-  }
-
-
 }

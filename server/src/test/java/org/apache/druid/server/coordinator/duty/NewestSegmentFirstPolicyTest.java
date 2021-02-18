@@ -29,8 +29,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -383,7 +382,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UniformGranularitySpec(Granularities.DAY, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new CompactionGranularitySpec(Granularities.DAY, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -410,7 +409,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new CompactionGranularitySpec(Granularities.MONTH, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -436,7 +435,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UniformGranularitySpec(Granularities.MINUTE, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new CompactionGranularitySpec(Granularities.MINUTE, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -545,7 +544,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new CompactionGranularitySpec(Granularities.MONTH, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -594,7 +593,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UniformGranularitySpec(Granularities.MONTH, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new CompactionGranularitySpec(Granularities.MONTH, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -629,7 +628,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P0D"), new UniformGranularitySpec(Granularities.MINUTE, null, null))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P0D"), new CompactionGranularitySpec(Granularities.MINUTE, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -735,7 +734,7 @@ public class NewestSegmentFirstPolicyTest
   private DataSourceCompactionConfig createCompactionConfig(
       long inputSegmentSizeBytes,
       Period skipOffsetFromLatest,
-      GranularitySpec granularitySpec
+      CompactionGranularitySpec granularitySpec
   )
   {
     return new DataSourceCompactionConfig(

@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -644,7 +645,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
-            new UniformGranularitySpec(Granularities.YEAR, null, null),
+            new CompactionGranularitySpec(Granularities.YEAR, null),
             null
         )
     );
@@ -696,7 +697,7 @@ public class CompactSegmentsTest
                 )
             ),
             null,
-            new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, null, null),
+            new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, null),
             null
         )
     );
@@ -731,7 +732,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
-            new UniformGranularitySpec(Granularities.YEAR, null, null),
+            new CompactionGranularitySpec(Granularities.YEAR, null),
             null
         )
     );
