@@ -579,7 +579,11 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
 
-    final List<Object[]> rows = segmentsTable.scan(dataContext).toList();
+    final int[] projects = new int[segmentsTable.getRowType(new JavaTypeFactoryImpl()).getFieldCount()];
+    for (int i = 0; i < projects.length; i++) {
+      projects[i] = i;
+    }
+    final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), projects).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
     // total segments = 8
@@ -709,6 +713,86 @@ public class SystemSchemaTest extends CalciteTestBase
     verifyTypes(rows, SystemSchema.SEGMENTS_SIGNATURE);
   }
 
+  @Test
+  public void testSegmentsTableProjectPushDown() throws Exception
+  {
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),
+        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false),
+        new SegmentWithOvershadowedStatus(segment1, true),
+        new SegmentWithOvershadowedStatus(segment2, false)
+    ));
+
+    EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
+
+    EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
+    DataContext dataContext = new DataContext()
+    {
+      @Override
+      public SchemaPlus getRootSchema()
+      {
+        return null;
+      }
+
+      @Override
+      public JavaTypeFactory getTypeFactory()
+      {
+        return null;
+      }
+
+      @Override
+      public QueryProvider getQueryProvider()
+      {
+        return null;
+      }
+
+      @Override
+      public Object get(String name)
+      {
+        return CalciteTests.SUPER_USER_AUTH_RESULT;
+      }
+    };
+
+    // Reordered, duplicate columns
+    final int[] projects = new int[]{
+        SystemSchema.SEGMENT_COLUMN_SIZE,
+        SystemSchema.SEGMENT_COLUMN_DATASOURCE,
+        SystemSchema.SEGMENT_COLUMN_SIZE
+    };
+
+    final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), projects).toList();
+    rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[1]).compareTo(row2[1]));
+
+    // total segments = 8
+    // segments test1, test2  are published and available
+    // segment test3 is served by historical but unpublished or unused
+    // segments test4, test5 are not published but available (realtime segments)
+    // segment test2 is both published and served by a realtime server.
+
+    Assert.assertEquals(8, rows.size());
+
+    Assert.assertArrayEquals(new Object[]{100L, "test1", 100L}, rows.get(0));
+    Assert.assertArrayEquals(new Object[]{100L, "test2", 100L}, rows.get(1));
+    Assert.assertArrayEquals(new Object[]{100L, "test3", 100L}, rows.get(2));
+    Assert.assertArrayEquals(new Object[]{100L, "test4", 100L}, rows.get(3));
+    Assert.assertArrayEquals(new Object[]{100L, "test5", 100L}, rows.get(4));
+    Assert.assertArrayEquals(new Object[]{53000L, "wikipedia1", 53000L}, rows.get(5));
+    Assert.assertArrayEquals(new Object[]{83000L, "wikipedia2", 83000L}, rows.get(6));
+    Assert.assertArrayEquals(new Object[]{47000L, "wikipedia3", 47000L}, rows.get(7));
+
+    // Verify value types.
+    verifyTypes(
+        rows,
+        RowSignature.builder()
+                    .add("size", ValueType.LONG)
+                    .add("dataSource", ValueType.STRING)
+                    .add("size", ValueType.LONG)
+                    .build()
+    );
+  }
+
   private void verifyRow(
       Object[] row,
       String segmentId,
@@ -724,23 +808,26 @@ public class SystemSchemaTest extends CalciteTestBase
   ) throws Exception
   {
     Assert.assertEquals(segmentId, row[0].toString());
-    SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), 0);
-    Assert.assertEquals(id.getDataSource(), row[1]);
-    Assert.assertEquals(id.getIntervalStart().toString(), row[2]);
-    Assert.assertEquals(id.getIntervalEnd().toString(), row[3]);
-    Assert.assertEquals(size, row[4]);
-    Assert.assertEquals(id.getVersion(), row[5]);
-    Assert.assertEquals(partitionNum, row[6]);
-    Assert.assertEquals(numReplicas, row[7]);
-    Assert.assertEquals(numRows, row[8]);
-    Assert.assertEquals(isPublished, row[9]);
-    Assert.assertEquals(isAvailable, row[10]);
-    Assert.assertEquals(isRealtime, row[11]);
-    Assert.assertEquals(isOvershadowed, row[12]);
+    SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), SystemSchema.SEGMENT_COLUMN_ID);
+    Assert.assertEquals(id.getDataSource(), row[SystemSchema.SEGMENT_COLUMN_DATASOURCE]);
+    Assert.assertEquals(id.getIntervalStart().toString(), row[SystemSchema.SEGMENT_COLUMN_START]);
+    Assert.assertEquals(id.getIntervalEnd().toString(), row[SystemSchema.SEGMENT_COLUMN_END]);
+    Assert.assertEquals(size, row[SystemSchema.SEGMENT_COLUMN_SIZE]);
+    Assert.assertEquals(id.getVersion(), row[SystemSchema.SEGMENT_COLUMN_VERSION]);
+    Assert.assertEquals(partitionNum, row[SystemSchema.SEGMENT_COLUMN_PARTITION_NUM]);
+    Assert.assertEquals(numReplicas, row[SystemSchema.SEGMENT_COLUMN_NUM_REPLICAS]);
+    Assert.assertEquals(numRows, row[SystemSchema.SEGMENT_COLUMN_NUM_ROWS]);
+    Assert.assertEquals(isPublished, row[SystemSchema.SEGMENT_COLUMN_IS_PUBLISHED]);
+    Assert.assertEquals(isAvailable, row[SystemSchema.SEGMENT_COLUMN_IS_AVAILABLE]);
+    Assert.assertEquals(isRealtime, row[SystemSchema.SEGMENT_COLUMN_IS_REALTIME]);
+    Assert.assertEquals(isOvershadowed, row[SystemSchema.SEGMENT_COLUMN_IS_OVERSHADOWED]);
     if (compactionState == null) {
-      Assert.assertNull(row[16]);
+      Assert.assertNull(row[SystemSchema.SEGMENT_COLUMN_LAST_COMPACTION_STATE]);
     } else {
-      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[16]);
+      Assert.assertEquals(
+          mapper.writeValueAsString(compactionState),
+          row[SystemSchema.SEGMENT_COLUMN_LAST_COMPACTION_STATE]
+      );
     }
   }
 
@@ -787,7 +874,9 @@ public class SystemSchemaTest extends CalciteTestBase
             .once();
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(peonNodeDiscovery).once();
 
-    EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator, coordinator2)).once();
+    EasyMock.expect(coordinatorNodeDiscovery.getAllNodes())
+            .andReturn(ImmutableList.of(coordinator, coordinator2))
+            .once();
     EasyMock.expect(overlordNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(overlord, overlord2)).once();
     EasyMock.expect(brokerNodeDiscovery.getAllNodes())
             .andReturn(ImmutableList.of(broker1, broker2, brokerWithBroadcastSegments))
@@ -800,7 +889,9 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
-    EasyMock.expect(coordinatorClient.findCurrentLeader()).andReturn(coordinator.getDruidNode().getHostAndPortToUse()).once();
+    EasyMock.expect(coordinatorClient.findCurrentLeader())
+            .andReturn(coordinator.getDruidNode().getHostAndPortToUse())
+            .once();
     EasyMock.expect(overlordClient.findCurrentLeader()).andReturn(overlord.getDruidNode().getHostAndPortToUse()).once();
 
     final List<DruidServer> servers = new ArrayList<>();
@@ -1187,7 +1278,9 @@ public class SystemSchemaTest extends CalciteTestBase
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
 
-    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(responseHolder)
+            .once();
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     String json = "[{\n"
@@ -1311,7 +1404,9 @@ public class SystemSchemaTest extends CalciteTestBase
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
 
-    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(responseHolder)
+            .once();
 
     EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.getStatus().getCode()).anyTimes();
     EasyMock.expect(request.getUrl())
