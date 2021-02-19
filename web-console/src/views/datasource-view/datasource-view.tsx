@@ -249,41 +249,43 @@ export class DatasourcesView extends React.PureComponent<
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
 
   static query(hiddenColumns: LocalStorageBackedArray<string>) {
-    const columns = compact([
-      hiddenColumns.exists('Datasource name') && `datasource`,
-      hiddenColumns.exists('Availability') &&
-        `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
-      hiddenColumns.exists('Availability') &&
-        `COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments`,
-      hiddenColumns.exists('Segment load/drop queues') &&
-        `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
-      hiddenColumns.exists('Segment load/drop queues') &&
-        `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
-      hiddenColumns.exists('Total data size') &&
-        `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
-      hiddenColumns.exists('Segment size') &&
-        `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
-      hiddenColumns.exists('Segment size') &&
-        `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
-      hiddenColumns.exists('Segment size') &&
-        `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
-      hiddenColumns.exists('Segment granularity') &&
-        `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
-      hiddenColumns.exists('Segment granularity') &&
-        `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
-      hiddenColumns.exists('Segment granularity') &&
-        `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
-      hiddenColumns.exists('Segment granularity') &&
-        `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
-      hiddenColumns.exists('Segment granularity') &&
-        `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
-      hiddenColumns.exists('Total rows') &&
-        `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
-      hiddenColumns.exists('Avg. row size') &&
-        `CASE WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0 THEN (SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) / SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)) ELSE 0 END AS avg_row_size`,
-      hiddenColumns.exists('Replicated size') &&
-        `SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size`,
-    ]);
+    const columns = compact(
+      [
+        hiddenColumns.exists('Datasource name') && `datasource`,
+        (hiddenColumns.exists('Availability') || hiddenColumns.exists('Segment granularity')) &&
+          `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
+        hiddenColumns.exists('Availability') &&
+          `COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments`,
+        hiddenColumns.exists('Segment load/drop queues') &&
+          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
+        hiddenColumns.exists('Segment load/drop queues') &&
+          `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
+        hiddenColumns.exists('Total data size') &&
+          `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
+        hiddenColumns.exists('Segment size') && [
+          `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
+          `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
+          `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
+        ],
+        hiddenColumns.exists('Segment granularity') && [
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
+        ],
+        hiddenColumns.exists('Total rows') &&
+          `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
+        hiddenColumns.exists('Avg. row size') &&
+          `CASE WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0 THEN (SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) / SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)) ELSE 0 END AS avg_row_size`,
+        hiddenColumns.exists('Replicated size') &&
+          `SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size`,
+      ].flat(),
+    );
+
+    if (!columns.length) {
+      columns.push(`datasource`);
+    }
 
     return `SELECT
 ${columns.join(',\n')}
@@ -1109,21 +1111,25 @@ ORDER BY 1`;
               accessor: 'avg_segment_rows',
               filterable: false,
               width: 220,
-              Cell: ({ value, original }) => (
-                <>
-                  <BracedText
-                    text={formatSegmentRows(original.min_segment_rows)}
-                    braces={minSegmentRowsValues}
-                  />{' '}
-                  &nbsp;{' '}
-                  <BracedText text={formatSegmentRows(value)} braces={avgSegmentRowsValues} />{' '}
-                  &nbsp;{' '}
-                  <BracedText
-                    text={formatSegmentRows(original.max_segment_rows)}
-                    braces={maxSegmentRowsValues}
-                  />
-                </>
-              ),
+              Cell: ({ value, original }) => {
+                const { min_segment_rows, max_segment_rows } = original;
+                if (isNaN(value) || isNaN(min_segment_rows) || isNaN(max_segment_rows)) return '-';
+                return (
+                  <>
+                    <BracedText
+                      text={formatSegmentRows(min_segment_rows)}
+                      braces={minSegmentRowsValues}
+                    />{' '}
+                    &nbsp;{' '}
+                    <BracedText text={formatSegmentRows(value)} braces={avgSegmentRowsValues} />{' '}
+                    &nbsp;{' '}
+                    <BracedText
+                      text={formatSegmentRows(max_segment_rows)}
+                      braces={maxSegmentRowsValues}
+                    />
+                  </>
+                );
+              },
             },
             {
               Header: twoLines('Segment', 'granularity'),
@@ -1133,24 +1139,32 @@ ORDER BY 1`;
               filterable: false,
               width: 100,
               Cell: ({ original }) => {
+                const {
+                  num_segments,
+                  minute_aligned_segments,
+                  hour_aligned_segments,
+                  day_aligned_segments,
+                  month_aligned_segments,
+                  year_aligned_segments,
+                } = original;
                 const segmentGranularities: string[] = [];
-                if (!original.num_segments) return '-';
-                if (original.num_segments - original.minute_aligned_segments) {
+                if (!num_segments || isNaN(year_aligned_segments)) return '-';
+                if (num_segments - minute_aligned_segments) {
                   segmentGranularities.push('Sub minute');
                 }
-                if (original.minute_aligned_segments - original.hour_aligned_segments) {
+                if (minute_aligned_segments - hour_aligned_segments) {
                   segmentGranularities.push('Minute');
                 }
-                if (original.hour_aligned_segments - original.day_aligned_segments) {
+                if (hour_aligned_segments - day_aligned_segments) {
                   segmentGranularities.push('Hour');
                 }
-                if (original.day_aligned_segments - original.month_aligned_segments) {
+                if (day_aligned_segments - month_aligned_segments) {
                   segmentGranularities.push('Day');
                 }
-                if (original.month_aligned_segments - original.year_aligned_segments) {
+                if (month_aligned_segments - year_aligned_segments) {
                   segmentGranularities.push('Month');
                 }
-                if (original.year_aligned_segments) {
+                if (year_aligned_segments) {
                   segmentGranularities.push('Year');
                 }
                 return segmentGranularities.join(', ');
@@ -1162,9 +1176,10 @@ ORDER BY 1`;
               accessor: 'total_rows',
               filterable: false,
               width: 100,
-              Cell: ({ value }) => (
-                <BracedText text={formatTotalRows(value)} braces={totalRowsValues} />
-              ),
+              Cell: ({ value }) => {
+                if (isNaN(value)) return '-';
+                return <BracedText text={formatTotalRows(value)} braces={totalRowsValues} />;
+              },
             },
             {
               Header: twoLines('Avg. row size', '(bytes)'),
@@ -1172,9 +1187,10 @@ ORDER BY 1`;
               accessor: 'avg_row_size',
               filterable: false,
               width: 100,
-              Cell: ({ value }) => (
-                <BracedText text={formatAvgRowSize(value)} braces={avgRowSizeValues} />
-              ),
+              Cell: ({ value }) => {
+                if (isNaN(value)) return '-';
+                return <BracedText text={formatAvgRowSize(value)} braces={avgRowSizeValues} />;
+              },
             },
             {
               Header: twoLines('Replicated', 'size'),
@@ -1182,9 +1198,12 @@ ORDER BY 1`;
               accessor: 'replicated_size',
               filterable: false,
               width: 100,
-              Cell: ({ value }) => (
-                <BracedText text={formatReplicatedSize(value)} braces={replicatedSizeValues} />
-              ),
+              Cell: ({ value }) => {
+                if (isNaN(value)) return '-';
+                return (
+                  <BracedText text={formatReplicatedSize(value)} braces={replicatedSizeValues} />
+                );
+              },
             },
             {
               Header: 'Compaction',

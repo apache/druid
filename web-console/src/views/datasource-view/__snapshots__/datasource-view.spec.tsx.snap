@@ -26,7 +26,7 @@ exports[`data source view matches snapshot 1`] = `
       }
     >
       <Blueprint3.MenuItem
-        disabled={false}
+        disabled={true}
         icon="application"
         multiline={false}
         onClick={[Function]}
@@ -76,6 +76,7 @@ exports[`data source view matches snapshot 1`] = `
         ]
       }
       onChange={[Function]}
+      onClose={[Function]}
       tableColumnsHidden={Array []}
     />
   </Memo(ViewControlBar)>
