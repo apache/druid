@@ -108,12 +108,10 @@ public class ExpressionFilter implements Filter
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
-      // DruidPredicateFactory doesn't really need equals or hashcode, in fact only the 'toString' method is called
-      // when testing equality of DimensionPredicateFilter, so it's the truly required method, but even that seems
-      // strange at best.
-      // Rather than tackle removing the annotation and reworking equality tests for now, will leave this to refactor
-      // as part of https://github.com/apache/druid/issues/8256 which suggests combining Filter and DimFilter
-      // implementations, which should clean up some of this mess.
+      // DruidPredicateFactory currently doesn't really need equals or hashcode since 'toString' method that is actually
+      // called when testing equality of DimensionPredicateFilter, so it's the truly required method, but that seems
+      // a bit strange. DimensionPredicateFilter should probably be reworked to use equals from DruidPredicateFactory
+      // instead of using toString.
       @Override
       public int hashCode()
       {
