@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -156,7 +157,7 @@ class IdentifierExpr implements Expr
         @Override
         public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
         {
-          return new ExprEvalStringVector(bindings.getObjectVector(binding));
+          return new ExprEvalStringVector(Arrays.stream(bindings.getObjectVector(binding)).map(x -> (String) x).toArray(String[]::new));
         }
       };
     }
