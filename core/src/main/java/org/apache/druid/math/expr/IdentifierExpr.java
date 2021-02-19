@@ -157,7 +157,10 @@ class IdentifierExpr implements Expr
         @Override
         public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
         {
-          return new ExprEvalStringVector(Arrays.stream(bindings.getObjectVector(binding)).map(x -> (String) x).toArray(String[]::new));
+          // need to cast to string[] because null columns come out as object[]
+          return new ExprEvalStringVector(
+              Arrays.stream(bindings.getObjectVector(binding)).map(x -> (String) x).toArray(String[]::new)
+          );
         }
       };
     }
