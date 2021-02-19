@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -298,7 +299,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       Granularity newGranularity = Granularities.YEAR;
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new CompactionGranularitySpec(newGranularity, null));
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -314,7 +315,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
       newGranularity = Granularities.DAY;
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new CompactionGranularitySpec(newGranularity, null));
 
       LOG.info("Auto compaction test with DAY segment granularity");
 
@@ -374,7 +375,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, GranularitySpec granularitySpec) throws Exception
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, CompactionGranularitySpec granularitySpec) throws Exception
   {
     submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec);
   }
@@ -383,7 +384,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       PartitionsSpec partitionsSpec,
       Period skipOffsetFromLatest,
       int maxNumConcurrentSubTasks,
-      GranularitySpec granularitySpec
+      CompactionGranularitySpec granularitySpec
   ) throws Exception
   {
     DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
