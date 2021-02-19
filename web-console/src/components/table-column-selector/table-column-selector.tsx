@@ -18,7 +18,7 @@
 
 import { Button, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
@@ -27,13 +27,15 @@ import './table-column-selector.scss';
 interface TableColumnSelectorProps {
   columns: string[];
   onChange: (column: string) => void;
+  onClose?: (added: number) => void;
   tableColumnsHidden: string[];
 }
 
 export const TableColumnSelector = React.memo(function TableColumnSelector(
   props: TableColumnSelectorProps,
 ) {
-  const { columns, onChange, tableColumnsHidden } = props;
+  const { columns, onChange, onClose, tableColumnsHidden } = props;
+  const [added, setAdded] = useState(0);
 
   const isColumnShown = (column: string) => !tableColumnsHidden.includes(column);
 
@@ -44,7 +46,12 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
           text={column}
           key={column}
           checked={isColumnShown(column)}
-          onChange={() => onChange(column)}
+          onChange={() => {
+            if (!isColumnShown(column)) {
+              setAdded(added + 1);
+            }
+            onChange(column);
+          }}
         />
       ))}
     </Menu>
@@ -57,6 +64,11 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
       className="table-column-selector"
       content={checkboxes}
       position={Position.BOTTOM_RIGHT}
+      onOpened={() => setAdded(0)}
+      onClose={() => {
+        if (!onClose) return;
+        onClose(added);
+      }}
     >
       <Button rightIcon={IconNames.CARET_DOWN}>
         Columns <span className="counter">{counterText}</span>

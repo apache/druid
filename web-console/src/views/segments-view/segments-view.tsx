@@ -125,6 +125,7 @@ interface TableState {
 }
 
 interface SegmentsQuery extends TableState {
+  hiddenColumns: LocalStorageBackedArray<string>;
   capabilities: Capabilities;
   groupByInterval: boolean;
 }
@@ -164,30 +165,48 @@ export interface SegmentsViewState {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   static PAGE_SIZE = 25;
 
-  static WITH_QUERY = `WITH s AS (
-  SELECT
-    "segment_id", "datasource", "start", "end", "size", "version",
-    CASE
-      WHEN "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z' THEN 'Year'
-      WHEN "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z' THEN 'Month'
-      WHEN "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z' THEN 'Day'
-      WHEN "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z' THEN 'Hour'
-      WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
-      ELSE 'Sub minute'
-    END AS "time_span",
-    CASE
-      WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
-      WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
-      WHEN "shard_spec" LIKE '%"type":"single"%' THEN 'single_dim'
-      WHEN "shard_spec" LIKE '%"type":"none"%' THEN 'none'
-      WHEN "shard_spec" LIKE '%"type":"linear"%' THEN 'linear'
-      WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
-      ELSE '-'
-    END AS "partitioning",
-    "partition_num", "num_replicas", "num_rows",
-    "is_published", "is_available", "is_realtime", "is_overshadowed"
-  FROM sys.segments
-)`;
+  static baseQuery(hiddenColumns: LocalStorageBackedArray<string>) {
+    const columns = compact([
+      hiddenColumns.exists('Segment ID') && `"segment_id"`,
+      hiddenColumns.exists('Datasource') && `"datasource"`,
+      hiddenColumns.exists('Start') && `"start"`,
+      hiddenColumns.exists('End') && `"end"`,
+      hiddenColumns.exists('Version') && `"version"`,
+      hiddenColumns.exists('Time span') &&
+        `CASE
+  WHEN "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z' THEN 'Year'
+  WHEN "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z' THEN 'Month'
+  WHEN "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z' THEN 'Day'
+  WHEN "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z' THEN 'Hour'
+  WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
+  ELSE 'Sub minute'
+END AS "time_span"`,
+      hiddenColumns.exists('Partitioning') &&
+        `CASE
+  WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
+  WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
+  WHEN "shard_spec" LIKE '%"type":"single"%' THEN 'single_dim'
+  WHEN "shard_spec" LIKE '%"type":"none"%' THEN 'none'
+  WHEN "shard_spec" LIKE '%"type":"linear"%' THEN 'linear'
+  WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
+  ELSE '-'
+END AS "partitioning"`,
+      hiddenColumns.exists('Partition') && `"partition_num"`,
+      hiddenColumns.exists('Size') && `"size"`,
+      hiddenColumns.exists('Num rows') && `"num_rows"`,
+      hiddenColumns.exists('Replicas') && `"num_replicas"`,
+      hiddenColumns.exists('Is published') && `"is_published"`,
+      hiddenColumns.exists('Is available') && `"is_available"`,
+      hiddenColumns.exists('Is realtime') && `"is_realtime"`,
+      hiddenColumns.exists('Is overshadowed') && `"is_overshadowed"`,
+    ]);
+
+    if (!columns.length) {
+      columns.push(`"segment_id"`);
+    }
+
+    return `WITH s AS (SELECT\n${columns.join(',\n')}\nFROM sys.segments)`;
+  }
 
   static computeTimeSpan(start: string, end: string): string {
     if (start.endsWith('-01-01T00:00:00.000Z') && end.endsWith('-01-01T00:00:00.000Z')) {
@@ -237,7 +256,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
       processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
-        const { page, pageSize, filtered, sorted, capabilities, groupByInterval } = query;
+        const {
+          page,
+          pageSize,
+          filtered,
+          sorted,
+          hiddenColumns,
+          capabilities,
+          groupByInterval,
+        } = query;
 
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
@@ -272,7 +299,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               .join(', ');
 
             queryParts = compact([
-              SegmentsView.WITH_QUERY,
+              SegmentsView.baseQuery(hiddenColumns),
               `SELECT "start" || '/' || "end" AS "interval", *`,
               `FROM s`,
               `WHERE`,
@@ -291,7 +318,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
             queryParts.push(`LIMIT ${pageSize * 1000}`);
           } else {
-            queryParts = [SegmentsView.WITH_QUERY, `SELECT *`, `FROM s`];
+            queryParts = [SegmentsView.baseQuery(hiddenColumns), `SELECT *`, `FROM s`];
 
             if (whereClause) {
               queryParts.push(`WHERE ${whereClause}`);
@@ -398,6 +425,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
     const { capabilities } = this.props;
+    const { hiddenColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
     const { page, pageSize, filtered, sorted } = this.lastTableState!;
     this.segmentsQueryManager.runQuery({
@@ -405,6 +433,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       pageSize,
       filtered,
       sorted,
+      hiddenColumns,
       capabilities,
       groupByInterval,
     });
@@ -761,6 +790,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                   hiddenColumns: prevState.hiddenColumns.toggle(column),
                 }))
               }
+              onClose={added => {
+                if (!added) return;
+                this.fetchData(groupByInterval);
+              }}
               tableColumnsHidden={hiddenColumns.storedArray}
             />
           </ViewControlBar>
