@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.SumZeroSqlAggregator;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.BinaryOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
@@ -237,6 +238,28 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new IPv4AddressStringifyOperatorConversion())
           .build();
 
+  private static final List<SqlOperatorConversion> BITWISE_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd"))
+          .add(OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement"))
+          .add(OperatorConversions.druidBinaryLongFn("BITWISE_OR", "bitwiseOr"))
+          .add(OperatorConversions.druidBinaryLongFn("BITWISE_SHIFT_LEFT", "bitwiseShiftLeft"))
+          .add(OperatorConversions.druidBinaryLongFn("BITWISE_SHIFT_RIGHT", "bitwiseShiftRight"))
+          .add(OperatorConversions.druidBinaryLongFn("BITWISE_XOR", "bitwiseXor"))
+          .add(
+              OperatorConversions.druidUnaryLongFn(
+                  "BITWISE_CONVERT_DOUBLE_TO_LONG_BITS",
+                  "bitwiseConvertDoubleToLongBits"
+              )
+          )
+          .add(
+              OperatorConversions.druidUnaryDoubleFn(
+                  "BITWISE_CONVERT_LONG_BITS_TO_DOUBLE",
+                  "bitwiseConvertLongBitsToDouble"
+              )
+          )
+          .build();
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
           .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
@@ -295,6 +318,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .addAll(MULTIVALUE_STRING_OPERATOR_CONVERSIONS)
           .addAll(REDUCTION_OPERATOR_CONVERSIONS)
           .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
+          .addAll(BITWISE_OPERATOR_CONVERSIONS)
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

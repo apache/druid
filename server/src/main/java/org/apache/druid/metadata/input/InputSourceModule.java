@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import org.apache.druid.data.input.impl.HttpInputSourceConfig;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
@@ -49,6 +47,5 @@ public class InputSourceModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.ingestion.http", HttpInputSourceConfig.class);
   }
 }

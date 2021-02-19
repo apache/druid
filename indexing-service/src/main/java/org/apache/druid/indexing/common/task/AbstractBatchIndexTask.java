@@ -473,12 +473,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
       boolean storeCompactionState,
       TaskToolbox toolbox,
-      IndexTuningConfig tuningConfig
+      IndexTuningConfig tuningConfig,
+      GranularitySpec granularitySpec
   )
   {
     if (storeCompactionState) {
       final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
-      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap);
+      final Map<String, Object> granularitySpecMap = granularitySpec.asMap(toolbox.getJsonMapper());
+      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap, granularitySpecMap);
       return segments -> segments
           .stream()
           .map(s -> s.withLastCompactionState(compactionState))

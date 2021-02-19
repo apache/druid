@@ -58,7 +58,7 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    * Returns true if this chunk is the end of the partition.  Most commonly, that means it represents the range
    * [X, infinity] for some concrete X.
    *
-   * @return true if the chunk is the beginning of the partition
+   * @return true if the chunk is the end of the partition
    */
   boolean isEnd();
 
