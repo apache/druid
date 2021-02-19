@@ -106,7 +106,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 searchIntervals.get(0).getStart(),
                 searchIntervals.get(searchIntervals.size() - 1).getEnd()
             );
-            searchIntervals = indexingServiceClient.getNonLockIntervals(dataSource, totalSearchInterval);
+            List<Interval> unlockedIntervals = indexingServiceClient.getNonLockIntervals(dataSource, totalSearchInterval);
+            List<Interval> searchUnlockedIntervals = new ArrayList<>();
+            for (Interval searchInterval : searchIntervals) {
+              searchUnlockedIntervals.addAll(filterLockedIntervals(searchInterval, unlockedIntervals));
+            }
+            searchIntervals = searchUnlockedIntervals;
           }
           if (!searchIntervals.isEmpty()) {
             timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
@@ -453,6 +458,25 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     return searchIntervals;
+  }
+
+  /**
+   * Returns a list of intervals which are contained by totalInterval
+   *
+   * @param totalInterval     total interval
+   * @param unlockedIntervals unlocked intervals
+   */
+  private static List<Interval> filterLockedIntervals(Interval totalInterval, List<Interval> unlockedIntervals)
+  {
+    final List<Interval> filteredIntervals = new ArrayList<>(unlockedIntervals.size() + 1);
+
+    for (Interval searchInterval : unlockedIntervals) {
+      if (totalInterval.contains(searchInterval)) {
+        filteredIntervals.add(searchInterval);
+      }
+    }
+
+    return filteredIntervals;
   }
 
   @VisibleForTesting
