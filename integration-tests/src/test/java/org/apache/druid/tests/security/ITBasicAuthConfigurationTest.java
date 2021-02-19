@@ -20,16 +20,8 @@
 package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
-import org.apache.calcite.avatica.AvaticaSqlException;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -41,8 +33,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.avatica.DruidAvaticaHandler;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -57,61 +47,26 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
 @Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITBasicAuthConfigurationTest
+public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
+
+  private static final String BASIC_AUTHENTICATOR = "basic";
+  private static final String BASIC_AUTHORIZER = "basic";
+
+  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed.";
 
   private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
       new TypeReference<List<Map<String, Object>>>()
       {
       };
-
-  private static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_segments.json";
-  private static final String SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_server_segments.json";
-  private static final String SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_servers.json";
-  private static final String SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_tasks.json";
-
-  private static final String SYS_SCHEMA_SEGMENTS_QUERY =
-      "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
-
-  private static final String SYS_SCHEMA_SERVERS_QUERY =
-      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
-
-  private static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
-      "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";
-
-  private static final String SYS_SCHEMA_TASKS_QUERY =
-      "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
-
-  @Inject
-  IntegrationTestingConfig config;
-
-  @Inject
-  ObjectMapper jsonMapper;
-
-  @Inject
-  @Client
-  HttpClient httpClient;
-
-  @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
 
   @BeforeMethod
   public void before()
@@ -418,7 +373,7 @@ public class ITBasicAuthConfigurationTest
     checkNodeAccess(newUserClient);
 
     // check loadStatus
-    checkLoadStatus(adminClient);
+    checkLoadStatus(adminClient, BASIC_AUTHENTICATOR, BASIC_AUTHORIZER);
 
     // create 100 users
     for (int i = 0; i < 100; i++) {
@@ -472,10 +427,10 @@ public class ITBasicAuthConfigurationTest
     testAvaticaQuery(routerUrl);
 
     LOG.info("Testing Avatica query on broker with incorrect credentials.");
-    testAvaticaAuthFailure(brokerUrl);
+    testAvaticaAuthFailure(brokerUrl, EXPECTED_AVATICA_AUTH_ERROR);
 
     LOG.info("Testing Avatica query on router with incorrect credentials.");
-    testAvaticaAuthFailure(routerUrl);
+    testAvaticaAuthFailure(routerUrl, EXPECTED_AVATICA_AUTH_ERROR);
 
     LOG.info("Checking OPTIONS requests on services...");
     testOptionsRequests(adminClient);
@@ -545,110 +500,6 @@ public class ITBasicAuthConfigurationTest
     String responseContent = responseHolder.getContent();
     Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
     Assert.assertFalse(responseContent.contains(maliciousUsername));
-  }
-
-  private void testOptionsRequests(HttpClient httpClient)
-  {
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getOverlordUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
-  }
-
-  private void checkUnsecuredCoordinatorLoadQueuePath(HttpClient client)
-  {
-    HttpUtil.makeRequest(client, HttpMethod.GET, config.getCoordinatorUrl() + "/druid/coordinator/v1/loadqueue", null);
-  }
-
-  private void testAvaticaQuery(String url)
-  {
-    LOG.info("URL: " + url);
-    try {
-      Properties connectionProperties = new Properties();
-      connectionProperties.setProperty("user", "admin");
-      connectionProperties.setProperty("password", "priest");
-      Connection connection = DriverManager.getConnection(url, connectionProperties);
-      Statement statement = connection.createStatement();
-      statement.setMaxRows(450);
-      String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
-      ResultSet resultSet = statement.executeQuery(query);
-      Assert.assertTrue(resultSet.next());
-      statement.close();
-      connection.close();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private void testAvaticaAuthFailure(String url) throws Exception
-  {
-    LOG.info("URL: " + url);
-    try {
-      Properties connectionProperties = new Properties();
-      connectionProperties.setProperty("user", "admin");
-      connectionProperties.setProperty("password", "wrongpassword");
-      Connection connection = DriverManager.getConnection(url, connectionProperties);
-      Statement statement = connection.createStatement();
-      statement.setMaxRows(450);
-      String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
-      statement.executeQuery(query);
-    }
-    catch (AvaticaSqlException ase) {
-      Assert.assertEquals(
-          ase.getErrorMessage(),
-          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed."
-      );
-      return;
-    }
-    Assert.fail("Test failed, did not get AvaticaSqlException.");
-  }
-
-
-  private void checkNodeAccess(HttpClient httpClient)
-  {
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getOverlordUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
-  }
-
-  private void checkLoadStatus(HttpClient httpClient) throws Exception
-  {
-    checkLoadStatusSingle(httpClient, config.getCoordinatorUrl());
-    checkLoadStatusSingle(httpClient, config.getOverlordUrl());
-    checkLoadStatusSingle(httpClient, config.getBrokerUrl());
-    checkLoadStatusSingle(httpClient, config.getHistoricalUrl());
-    checkLoadStatusSingle(httpClient, config.getRouterUrl());
-  }
-
-  private void checkLoadStatusSingle(HttpClient httpClient, String baseUrl) throws Exception
-  {
-    StatusResponseHolder holder = HttpUtil.makeRequest(
-        httpClient,
-        HttpMethod.GET,
-        baseUrl + "/druid-ext/basic-security/authentication/loadStatus",
-        null
-    );
-    String content = holder.getContent();
-    Map<String, Boolean> loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
-
-    Assert.assertNotNull(loadStatus.get("basic"));
-    Assert.assertTrue(loadStatus.get("basic"));
-
-    holder = HttpUtil.makeRequest(
-        httpClient,
-        HttpMethod.GET,
-        baseUrl + "/druid-ext/basic-security/authorization/loadStatus",
-        null
-    );
-    content = holder.getContent();
-    loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
-
-    Assert.assertNotNull(loadStatus.get("basic"));
-    Assert.assertTrue(loadStatus.get("basic"));
   }
 
   private void createUserAndRoleWithPermissions(
@@ -721,99 +572,5 @@ public class ITBasicAuthConfigurationTest
         ),
         permissionsBytes
     );
-  }
-
-  private StatusResponseHolder makeSQLQueryRequest(
-      HttpClient httpClient,
-      String query,
-      HttpResponseStatus expectedStatus
-  ) throws Exception
-  {
-    Map<String, Object> queryMap = ImmutableMap.of(
-        "query", query
-    );
-    return HttpUtil.makeRequestWithExpectedStatus(
-        httpClient,
-        HttpMethod.POST,
-        config.getBrokerUrl() + "/druid/v2/sql",
-        jsonMapper.writeValueAsBytes(queryMap),
-        expectedStatus
-    );
-  }
-
-  private void verifySystemSchemaQueryBase(
-      HttpClient client,
-      String query,
-      List<Map<String, Object>> expectedResults,
-      boolean isServerQuery
-  ) throws Exception
-  {
-    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.OK);
-    String content = responseHolder.getContent();
-    List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
-    if (isServerQuery) {
-      responseMap = getServersWithoutCurrentSize(responseMap);
-    }
-    Assert.assertEquals(responseMap, expectedResults);
-  }
-
-  private void verifySystemSchemaQuery(
-      HttpClient client,
-      String query,
-      List<Map<String, Object>> expectedResults
-  ) throws Exception
-  {
-    verifySystemSchemaQueryBase(client, query, expectedResults, false);
-  }
-
-  private void verifySystemSchemaServerQuery(
-      HttpClient client,
-      String query,
-      List<Map<String, Object>> expectedResults
-  ) throws Exception
-  {
-    verifySystemSchemaQueryBase(client, query, expectedResults, true);
-  }
-
-  private void verifySystemSchemaQueryFailure(
-      HttpClient client,
-      String query,
-      HttpResponseStatus expectedErrorStatus,
-      String expectedErrorMessage
-  ) throws Exception
-  {
-    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, expectedErrorStatus);
-    Assert.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
-    Assert.assertEquals(responseHolder.getContent(), expectedErrorMessage);
-  }
-
-  /**
-   * curr_size on historicals changes because cluster state is not isolated across different
-   * integration tests, zero it out for consistent test results
-   */
-  private static List<Map<String, Object>> getServersWithoutCurrentSize(List<Map<String, Object>> servers)
-  {
-    return Lists.transform(
-        servers,
-        (server) -> {
-          Map<String, Object> newServer = new HashMap<>(server);
-          newServer.put("curr_size", 0);
-          return newServer;
-        }
-    );
-  }
-
-  private static String fillSegementServersTemplate(IntegrationTestingConfig config, String template)
-  {
-    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
-    return json;
-  }
-
-  private static String fillServersTemplate(IntegrationTestingConfig config, String template)
-  {
-    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
-    json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
-    json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
-    return json;
   }
 }
