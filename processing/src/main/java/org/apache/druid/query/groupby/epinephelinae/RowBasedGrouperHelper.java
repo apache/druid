@@ -448,7 +448,7 @@ public class RowBasedGrouperHelper
         if (query.getGranularity() instanceof AllGranularity) {
           return row -> query.getIntervals().get(0).getStartMillis();
         } else {
-          return row -> query.getGranularity().bucketStart(DateTimes.utc(row.getLong(0))).getMillis();
+          return row -> query.getGranularity().bucketStart(row.getLong(0));
         }
       }
     } else {

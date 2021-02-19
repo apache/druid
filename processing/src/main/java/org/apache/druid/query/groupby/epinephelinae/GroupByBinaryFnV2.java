@@ -88,7 +88,7 @@ public class GroupByBinaryFnV2 implements BinaryOperator<ResultRow>
     if (query.getGranularity() instanceof AllGranularity) {
       return row.getLong(0);
     } else {
-      return query.getGranularity().bucketStart(DateTimes.utc(row.getLong(0))).getMillis();
+      return query.getGranularity().bucketStart(row.getLong(0));
     }
   }
 }
