@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
