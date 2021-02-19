@@ -151,7 +151,6 @@ interface SegmentQueryResultRow {
 
 export interface SegmentsViewState {
   segmentsState: QueryState<SegmentQueryResultRow[]>;
-  trimmedSegments?: SegmentQueryResultRow[];
   segmentFilter: Filter[];
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
@@ -451,16 +450,10 @@ END AS "partitioning"`,
   }
 
   renderSegmentsTable() {
-    const {
-      segmentsState,
-      trimmedSegments,
-      segmentFilter,
-      hiddenColumns,
-      groupByInterval,
-    } = this.state;
+    const { segmentsState, segmentFilter, hiddenColumns, groupByInterval } = this.state;
     const { capabilities } = this.props;
 
-    const segments = trimmedSegments || segmentsState.data || [];
+    const segments = segmentsState.data || [];
 
     const sizeValues = segments.map(d => formatBytes(d.size)).concat('(realtime)');
 
