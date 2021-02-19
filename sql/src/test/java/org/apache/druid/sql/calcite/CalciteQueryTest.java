@@ -773,6 +773,64 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testBitwiseExpressions() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{0L, 7L, 7L, -8L, 28L, 1L, 4607182418800017408L, 3.5E-323},
+          new Object[]{325323L, 325323L, 0L, -325324L, 1301292L, 81330L, 4610334938539176755L, 1.60731E-318},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, null, null, -8L, 28L, 1L, 4607182418800017408L, 3.5E-323},
+          new Object[]{325323L, 325323L, 0L, -325324L, 1301292L, 81330L, 4610334938539176755L, 1.60731E-318},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{null, null, null, null, null, null, null, null},
+          new Object[]{null, null, null, null, null, null, null, null},
+          new Object[]{null, null, null, null, null, null, null, null}
+      );
+    }
+    testQuery(
+        "SELECT\n"
+        + "BITWISE_AND(l1, l2),\n"
+        + "BITWISE_OR(l1, l2),\n"
+        + "BITWISE_XOR(l1, l2),\n"
+        + "BITWISE_COMPLEMENT(l1),\n"
+        + "BITWISE_SHIFT_LEFT(l1, 2),\n"
+        + "BITWISE_SHIFT_RIGHT(l1, 2),\n"
+        + "BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(d1),\n"
+        + "BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(l1)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "bitwiseAnd(\"l1\",\"l2\")", ValueType.LONG),
+                      expressionVirtualColumn("v1", "bitwiseOr(\"l1\",\"l2\")", ValueType.LONG),
+                      expressionVirtualColumn("v2", "bitwiseXor(\"l1\",\"l2\")", ValueType.LONG),
+                      expressionVirtualColumn("v3", "bitwiseComplement(\"l1\")", ValueType.LONG),
+                      expressionVirtualColumn("v4", "bitwiseShiftLeft(\"l1\",2)", ValueType.LONG),
+                      expressionVirtualColumn("v5", "bitwiseShiftRight(\"l1\",2)", ValueType.LONG),
+                      expressionVirtualColumn("v6", "bitwiseConvertDoubleToLongBits(\"d1\")", ValueType.LONG),
+                      expressionVirtualColumn("v7", "bitwiseConvertLongBitsToDouble(\"l1\")", ValueType.DOUBLE)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        expected
+    );
+  }
+
 
   @Test
   public void testExplainSelectConstantExpression() throws Exception
