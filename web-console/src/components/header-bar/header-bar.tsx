@@ -22,6 +22,7 @@ import {
   Button,
   Intent,
   Menu,
+  MenuDivider,
   MenuItem,
   Navbar,
   NavbarDivider,
@@ -39,11 +40,19 @@ import {
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
 import { getLink } from '../../links';
-import { Capabilities } from '../../utils';
+import {
+  Capabilities,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageRemove,
+  localStorageSetJson,
+} from '../../utils';
 import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
 
 import './header-bar.scss';
+
+const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
 
 export type HeaderActiveTab =
   | null
@@ -243,6 +252,38 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         href="#lookups"
         disabled={!capabilities.hasCoordinatorAccess()}
       />
+      <MenuDivider />
+      <MenuItem icon={IconNames.COG} text="Console options">
+        {capabilitiesOverride ? (
+          <MenuItem
+            text="Clear forced mode"
+            onClick={() => {
+              localStorageRemove(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+              location.reload();
+            }}
+          />
+        ) : (
+          <>
+            <MenuItem
+              text="Force Coordinator mode"
+              onClick={() => {
+                localStorageSetJson(
+                  LocalStorageKeys.CAPABILITIES_OVERRIDE,
+                  Capabilities.COORDINATOR,
+                );
+                location.reload();
+              }}
+            />
+            <MenuItem
+              text="Force Overlord mode"
+              onClick={() => {
+                localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, Capabilities.OVERLORD);
+                location.reload();
+              }}
+            />
+          </>
+        )}
+      </MenuItem>
     </Menu>
   );
 

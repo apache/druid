@@ -98,7 +98,8 @@ interface NeedleAndMode {
   mode: 'exact' | 'includes';
 }
 
-function getNeedleAndMode(input: string): NeedleAndMode {
+export function getNeedleAndMode(filter: Filter): NeedleAndMode {
+  const input = filter.value.toLowerCase();
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
@@ -114,7 +115,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (value == null) return false;
   const haystack = String(value).toLowerCase();
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
     return needle === haystack;
@@ -123,13 +124,13 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
     return SqlRef.columnWithQuotes(filter.id).equal(SqlLiteral.create(needle));
   } else {
     return SqlFunction.simple('LOWER', [SqlRef.columnWithQuotes(filter.id)]).like(
-      SqlLiteral.create(`%${needle.toLowerCase()}%`),
+      SqlLiteral.create(`%${needle}%`),
     );
   }
 }

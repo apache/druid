@@ -44,6 +44,7 @@ import {
   filterMap,
   formatBytes,
   formatInteger,
+  getNeedleAndMode,
   LocalStorageKeys,
   makeBooleanFilter,
   queryDruidSql,
@@ -320,14 +321,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           )).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
-          // let restFiltered: Filter[];
           if (datasourceFilter) {
-            // restFiltered = filtered.filter(({ id }) => id !== 'datasource');
             datasourceList = datasourceList.filter(datasource =>
               booleanCustomTableFilter(datasourceFilter, datasource),
             );
-          } else {
-            // restFiltered = filtered;
           }
 
           if (sorted.length && sorted[0].id === 'datasource') {
@@ -344,36 +341,42 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const segments = (await Api.instance.get(
               `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
             )).data.segments;
+            if (!Array.isArray(segments)) continue;
 
-            if (segments) {
-              results = results.concat(
-                segments
-                  .map(
-                    (segment: any): SegmentQueryResultRow => {
-                      const [start, end] = segment.interval.split('/');
-                      return {
-                        segment_id: segment.identifier,
-                        datasource: segment.dataSource,
-                        start,
-                        end,
-                        interval: segment.interval,
-                        version: segment.version,
-                        time_span: SegmentsView.computeTimeSpan(start, end),
-                        partitioning: deepGet(segment, 'shardSpec.type') || '-',
-                        partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
-                        size: segment.size,
-                        num_rows: -1,
-                        num_replicas: -1,
-                        is_available: -1,
-                        is_published: -1,
-                        is_realtime: -1,
-                        is_overshadowed: -1,
-                      };
-                    },
-                  )
-                  .filter(Boolean),
-              );
+            let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {
+              const [start, end] = segment.interval.split('/');
+              return {
+                segment_id: segment.identifier,
+                datasource: segment.dataSource,
+                start,
+                end,
+                interval: segment.interval,
+                version: segment.version,
+                time_span: SegmentsView.computeTimeSpan(start, end),
+                partitioning: deepGet(segment, 'shardSpec.type') || '-',
+                partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
+                size: segment.size,
+                num_rows: -1,
+                num_replicas: -1,
+                is_available: -1,
+                is_published: -1,
+                is_realtime: -1,
+                is_overshadowed: -1,
+              };
+            });
+
+            if (filtered.length) {
+              segmentQueryResultRows = segmentQueryResultRows.filter((d: SegmentQueryResultRow) => {
+                return filtered.every(filter => {
+                  return booleanCustomTableFilter(
+                    filter,
+                    d[filter.id as keyof SegmentQueryResultRow],
+                  );
+                });
+              });
             }
+
+            results = results.concat(segmentQueryResultRows);
           }
 
           return results.slice(page * pageSize, maxResults);
@@ -406,37 +409,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       groupByInterval,
     });
   };
-
-  // private fetchClientSideData = (tableState?: TableState) => {
-  //   if (tableState) this.lastTableState = tableState;
-  //   const { page, pageSize, filtered, sorted } = this.lastTableState!;
-  //
-  //   this.setState(state => {
-  //     const allSegments = state.segmentsState.data;
-  //     if (!allSegments) return {};
-  //     const sortKey = sorted[0].id as keyof SegmentQueryResultRow;
-  //     const sortDesc = sorted[0].desc;
-  //
-  //     return {
-  //       trimmedSegments: allSegments
-  //         .filter(d => {
-  //           return filtered.every((f: any) => {
-  //             return String(d[f.id as keyof SegmentQueryResultRow]).includes(f.value);
-  //           });
-  //         })
-  //         .sort((d1, d2) => {
-  //           const v1 = d1[sortKey] as any;
-  //           const v2 = d2[sortKey] as any;
-  //           if (typeof v1 === 'string') {
-  //             return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
-  //           } else {
-  //             return sortDesc ? v2 - v1 : v1 - v2;
-  //           }
-  //         })
-  //         .slice(page * pageSize, (page + 1) * pageSize),
-  //     };
-  //   });
-  // };
 
   private getSegmentActions(id: string, datasource: string): BasicAction[] {
     const actions: BasicAction[] = [];
@@ -483,6 +455,14 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     };
 
     const hasSql = capabilities.hasSql();
+
+    // Only allow filtering of columns other than datasource if in SQL mode or we are filtering on an exact datasource
+    const allowGeneralFilter =
+      hasSql ||
+      segmentFilter.some(
+        filter => filter.id === 'datasource' && getNeedleAndMode(filter).mode === 'exact',
+      );
+
     return (
       <ReactTable
         data={segments}
@@ -509,6 +489,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'segment_id',
             width: 300,
             sortable: hasSql,
+            filterable: allowGeneralFilter,
           },
           {
             Header: 'Datasource',
@@ -523,6 +504,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
             sortable: hasSql,
             defaultSortDesc: true,
+            filterable: allowGeneralFilter,
             Cell: renderFilterableCell('interval'),
           },
           {
@@ -532,6 +514,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
             sortable: hasSql,
             defaultSortDesc: true,
+            filterable: allowGeneralFilter,
             Cell: renderFilterableCell('start'),
           },
           {
@@ -541,6 +524,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
             sortable: hasSql,
             defaultSortDesc: true,
+            filterable: allowGeneralFilter,
             Cell: renderFilterableCell('end'),
           },
           {
@@ -550,6 +534,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 120,
             sortable: hasSql,
             defaultSortDesc: true,
+            filterable: allowGeneralFilter,
           },
           {
             Header: 'Time span',
@@ -557,6 +542,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'time_span',
             width: 100,
             sortable: hasSql,
+            filterable: allowGeneralFilter,
             Cell: renderFilterableCell('time_span'),
           },
           {
@@ -565,7 +551,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'partitioning',
             width: 100,
             sortable: hasSql,
-            filterable: true,
+            filterable: allowGeneralFilter,
             Cell: renderFilterableCell('partitioning'),
           },
           {
