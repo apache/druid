@@ -85,6 +85,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.VersionedIntervalTimeline.PartitionChunkEntry;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
@@ -859,22 +860,32 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
           new VersionedIntervalTimeline<>(Ordering.natural());
-      Iterator<PartitionChunk<ServerSelector>> unfilteredIterator =
-          Iterators.transform(specs.iterator(), spec -> timeline.findChunk(
-              spec.getInterval(),
-              spec.getVersion(),
-              spec.getPartitionNumber()
-          ));
-      Iterator<PartitionChunk<ServerSelector>> iterator = Iterators.filter(
+      Iterator<PartitionChunkEntry<String, ServerSelector>> unfilteredIterator =
+          Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
+      Iterator<PartitionChunkEntry<String, ServerSelector>> iterator = Iterators.filter(
           unfilteredIterator,
           Objects::nonNull
       );
-      timeline2.addAll(
-          iterator,
-          input -> input.getSegment().getInterval(),
-          input -> input.getSegment().getVersion()
-      );
+      timeline2.addAll(iterator);
       return timeline2;
+    }
+
+    @Nullable
+    private PartitionChunkEntry<String, ServerSelector> toChunkEntry(
+        TimelineLookup<String, ServerSelector> timeline,
+        SegmentDescriptor spec
+    )
+    {
+      PartitionChunk<ServerSelector> chunk = timeline.findChunk(
+          spec.getInterval(),
+          spec.getVersion(),
+          spec.getPartitionNumber()
+      );
+      if (null == chunk) {
+        return null;
+      }
+      return new PartitionChunkEntry<>(spec.getInterval(), spec.getVersion(), chunk);
+
     }
   }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.timeline;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
@@ -117,10 +116,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   )
   {
     timeline.addAll(
-        Iterators.transform(segments, segment -> segment.getShardSpec().createChunk(segment)),
-        DataSegment::getInterval,
-        DataSegment::getVersion
-    );
+        Iterators.transform(
+            segments,
+            segment -> new PartitionChunkEntry<>(
+                segment.getInterval(),
+                segment.getVersion(),
+                segment.getShardSpec().createChunk(segment)
+            )
+        ));
   }
 
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
@@ -183,13 +186,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
   {
-    addAll(Iterators.singletonIterator(object), o -> interval, o -> version);
+    addAll(Iterators.singletonIterator(new PartitionChunkEntry<>(interval, version, object)));
   }
 
   public void addAll(
-      final Iterator<PartitionChunk<ObjectType>> objects,
-      final Function<ObjectType, Interval> intervalFunction,
-      final Function<ObjectType, VersionType> versionFunction
+      final Iterator<PartitionChunkEntry<VersionType, ObjectType>> objects
   )
   {
     lock.writeLock().lock();
@@ -198,9 +199,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       final IdentityHashMap<TimelineEntry, Interval> allEntries = new IdentityHashMap<>();
 
       while (objects.hasNext()) {
-        PartitionChunk<ObjectType> object = objects.next();
-        Interval interval = intervalFunction.apply(object.getObject());
-        VersionType version = versionFunction.apply(object.getObject());
+        PartitionChunkEntry<VersionType, ObjectType> chunkEntry = objects.next();
+        PartitionChunk<ObjectType> object = chunkEntry.getChunk();
+        Interval interval = chunkEntry.getInterval();
+        VersionType version = chunkEntry.getVersion();
         Map<VersionType, TimelineEntry> exists = allTimelineEntries.get(interval);
         TimelineEntry entry;
 
@@ -847,6 +849,39 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     public int hashCode()
     {
       return Objects.hash(trueInterval, version, partitionHolder);
+    }
+  }
+
+  public static class PartitionChunkEntry<VersionType, ObjectType>
+  {
+    private final Interval interval;
+    private final VersionType version;
+    private final PartitionChunk<ObjectType> chunk;
+
+    public PartitionChunkEntry(
+        Interval interval,
+        VersionType version,
+        PartitionChunk<ObjectType> chunk
+    )
+    {
+      this.interval = interval;
+      this.version = version;
+      this.chunk = chunk;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    public VersionType getVersion()
+    {
+      return version;
+    }
+
+    public PartitionChunk<ObjectType> getChunk()
+    {
+      return chunk;
     }
   }
 }
