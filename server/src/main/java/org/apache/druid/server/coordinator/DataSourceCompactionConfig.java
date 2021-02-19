@@ -22,6 +22,9 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -47,6 +50,7 @@ public class DataSourceCompactionConfig
   private final Period skipOffsetFromLatest;
   private final Boolean enableFilterLockedInterval;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
+  private final GranularitySpec granularitySpec;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -58,6 +62,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("enableFilterLockedInterval") @Nullable Boolean enableFilterLockedInterval,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
+      @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -72,6 +77,24 @@ public class DataSourceCompactionConfig
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.enableFilterLockedInterval = enableFilterLockedInterval == null ? false : enableFilterLockedInterval;
     this.tuningConfig = tuningConfig;
+    if (granularitySpec != null) {
+      Preconditions.checkArgument(
+          granularitySpec instanceof UniformGranularitySpec,
+          "Auto compaction granularitySpec only supports uniform type"
+      );
+      Preconditions.checkArgument(
+          granularitySpec.isRollup() == BaseGranularitySpec.DEFAULT_ROLLUP,
+          "Auto compaction granularitySpec only supports default rollup value"
+      );
+      Preconditions.checkArgument(
+          granularitySpec.getQueryGranularity().equals(BaseGranularitySpec.DEFAULT_QUERY_GRANULARITY),
+          "Auto compaction granularitySpec only supports default query granularity value");
+      Preconditions.checkArgument(
+          granularitySpec.inputIntervals().isEmpty(),
+          "Auto compaction granularitySpec does not supports interval value"
+      );
+    }
+    this.granularitySpec = granularitySpec;
     this.taskContext = taskContext;
   }
 
@@ -122,6 +145,13 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
+  public GranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
+  @JsonProperty
+  @Nullable
   public Map<String, Object> getTaskContext()
   {
     return taskContext;
@@ -140,9 +170,11 @@ public class DataSourceCompactionConfig
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(enableFilterLockedInterval, that.enableFilterLockedInterval) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -153,9 +185,11 @@ public class DataSourceCompactionConfig
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
+        maxRowsPerSegment,
         skipOffsetFromLatest,
         enableFilterLockedInterval,
         tuningConfig,
+        granularitySpec,
         taskContext
     );
   }

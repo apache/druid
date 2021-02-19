@@ -71,6 +71,7 @@ public class NewestSegmentFirstIteratorTest
     final List<Interval> fullSkipIntervals = NewestSegmentFirstIterator.sortAndAddSkipIntervalFromLatest(
         DateTimes.of("2019-01-01"),
         new Period(72, 0, 0, 0),
+        null,
         ImmutableList.of(
             Intervals.of("2018-12-30/2018-12-31"),
             Intervals.of("2018-12-24/2018-12-25")
@@ -85,6 +86,7 @@ public class NewestSegmentFirstIteratorTest
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "datasource",
+        null,
         null,
         null,
         null,
@@ -130,6 +132,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -169,6 +172,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -208,6 +212,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -247,6 +252,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -286,6 +292,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -325,6 +332,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -364,6 +372,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(
@@ -403,6 +412,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null
     );
     Assert.assertEquals(

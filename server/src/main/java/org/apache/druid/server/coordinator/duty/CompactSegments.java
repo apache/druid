@@ -24,12 +24,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
@@ -123,8 +125,27 @@ public class CompactSegments implements CoordinatorDuty
           }
           if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
+            DataSourceCompactionConfig dataSourceCompactionConfig = compactionConfigs.get(status.getDataSource());
+            if (dataSourceCompactionConfig != null && dataSourceCompactionConfig.getGranularitySpec() != null) {
+              Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec().getSegmentGranularity();
+              if (configuredSegmentGranularity != null
+                  && compactionTaskQuery.getGranularitySpec() != null
+                  && !configuredSegmentGranularity.equals(compactionTaskQuery.getGranularitySpec().getSegmentGranularity())) {
+                // We will cancel active compaction task if segmentGranularity changes and we will need to
+                // re-compact the interval
+                LOG.info("Canceled task[%s] as task segmentGranularity is [%s] but compaction config "
+                         + "segmentGranularity is [%s]",
+                         status.getId(),
+                         compactionTaskQuery.getGranularitySpec().getSegmentGranularity(),
+                         configuredSegmentGranularity);
+                indexingServiceClient.cancelTask(status.getId());
+                continue;
+              }
+            }
+            // Skip interval as the current active compaction task is good
             final Interval interval = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
             compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
+            // Since we keep the current active compaction task running, we count the active task slots
             numEstimatedNonCompleteCompactionTasks += findMaxNumTaskSlotsUsedByOneCompactionTask(
                 compactionTaskQuery.getTuningConfig()
             );
@@ -289,12 +310,24 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+        ClientCompactionTaskQueryGranularitySpec queryGranularitySpec;
+        if (config.getGranularitySpec() != null) {
+          queryGranularitySpec = new ClientCompactionTaskQueryGranularitySpec(
+              config.getGranularitySpec().getSegmentGranularity(),
+              config.getGranularitySpec().getQueryGranularity(),
+              config.getGranularitySpec().isRollup()
+          );
+        } else {
+          queryGranularitySpec = null;
+        }
+
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            queryGranularitySpec,
             newAutoCompactionContext(config.getTaskContext())
         );
 

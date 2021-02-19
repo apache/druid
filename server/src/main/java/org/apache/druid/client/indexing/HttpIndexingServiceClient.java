@@ -78,7 +78,8 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
-      ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryGranularitySpec granularitySpec,
       @Nullable Map<String, Object> context
   )
   {
@@ -99,6 +100,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         dataSource,
         new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
         tuningConfig,
+        granularitySpec,
         context
     );
     return runTask(taskId, taskQuery);
