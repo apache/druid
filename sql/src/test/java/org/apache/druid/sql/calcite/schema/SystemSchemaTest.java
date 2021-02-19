@@ -538,7 +538,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSegmentsTable() throws Exception
+  public void testSegmentsTable()
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
@@ -714,7 +714,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSegmentsTableProjectPushDown() throws Exception
+  public void testSegmentsTableProjectPushDown()
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
@@ -805,7 +805,7 @@ public class SystemSchemaTest extends CalciteTestBase
       long isRealtime,
       long isOvershadowed,
       CompactionState compactionState
-  ) throws Exception
+  )
   {
     Assert.assertEquals(segmentId, row[0].toString());
     SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), SystemSchema.SEGMENT_COLUMN_ID);
