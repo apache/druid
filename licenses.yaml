@@ -1107,16 +1107,6 @@ libraries:
 
 ---
 
-name: kubernetes official java client extended
-license_category: binary
-module: extensions-contrib/kubernetes-middlemanager-extensions
-license_name: Apache License version 2.0
-version: 10.0.0
-libraries:
-  - io.kubernetes: client-java-extended
-
----
-
 name: io.prometheus simpleclient_common
 license_category: binary
 module: extensions-contrib/kubernetes-middlemanager-extensions
