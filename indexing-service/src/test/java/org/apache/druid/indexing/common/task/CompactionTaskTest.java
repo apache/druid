@@ -637,7 +637,8 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -707,7 +708,8 @@ public class CompactionTaskTest
         AGGREGATORS,
         SEGMENT_INTERVALS,
         tuningConfig,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -777,7 +779,8 @@ public class CompactionTaskTest
         AGGREGATORS,
         SEGMENT_INTERVALS,
         tuningConfig,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -847,7 +850,8 @@ public class CompactionTaskTest
         AGGREGATORS,
         SEGMENT_INTERVALS,
         tuningConfig,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -908,7 +912,8 @@ public class CompactionTaskTest
         dimensionsSpecs,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -949,7 +954,8 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         Arrays.asList(customMetricsSpec),
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -982,7 +988,8 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -1051,7 +1058,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testSegmentGranularity() throws IOException, SegmentLoadingException
+  public void testSegmentGranularityAndNullQueryGranularity() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1061,9 +1068,9 @@ public class CompactionTaskTest
         null,
         null,
         new CompactionGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
-                                      COORDINATOR_CLIENT,
-                                      segmentLoaderFactory,
-                                      RETRY_POLICY_FACTORY
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1081,12 +1088,86 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         Collections.singletonList(COMPACTION_INTERVAL),
+        new PeriodGranularity(Period.months(3), null, null),
+        Granularities.NONE
+    );
+  }
+
+  @Test
+  public void testQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new CompactionGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null)),
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(6, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        AGGREGATORS,
+        SEGMENT_INTERVALS,
+        Granularities.MONTH,
         new PeriodGranularity(Period.months(3), null, null)
     );
   }
 
   @Test
-  public void testNullSegmentGranularityAnd() throws IOException, SegmentLoadingException
+  public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new CompactionGranularitySpec(
+            new PeriodGranularity(Period.months(3), null, null),
+            new PeriodGranularity(Period.months(3), null, null)
+        ),
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+        new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
+    );
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(1, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        AGGREGATORS,
+        Collections.singletonList(COMPACTION_INTERVAL),
+        new PeriodGranularity(Period.months(3), null, null),
+        new PeriodGranularity(Period.months(3), null, null)
+    );
+  }
+
+  @Test
+  public void testNullGranularitySpec() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1114,7 +1195,42 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
+    );
+  }
+
+  @Test
+  public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new CompactionGranularitySpec(null, null),
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(6, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        AGGREGATORS,
+        SEGMENT_INTERVALS,
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -1221,7 +1337,8 @@ public class CompactionTaskTest
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
       List<Interval> expectedSegmentIntervals,
-      Granularity expectedSegmentGranularity
+      Granularity expectedSegmentGranularity,
+      Granularity expectedQueryGranularity
   )
   {
     assertIngestionSchema(
@@ -1265,7 +1382,8 @@ public class CompactionTaskTest
             null,
             null
         ),
-        expectedSegmentGranularity
+        expectedSegmentGranularity,
+        expectedQueryGranularity
     );
   }
 
@@ -1275,7 +1393,8 @@ public class CompactionTaskTest
       List<AggregatorFactory> expectedMetricsSpec,
       List<Interval> expectedSegmentIntervals,
       ParallelIndexTuningConfig expectedTuningConfig,
-      Granularity expectedSegmentGranularity
+      Granularity expectedSegmentGranularity,
+      Granularity expectedQueryGranularity
   )
   {
     Preconditions.checkArgument(
@@ -1308,7 +1427,7 @@ public class CompactionTaskTest
       Assert.assertEquals(
           new UniformGranularitySpec(
               expectedSegmentGranularity,
-              Granularities.NONE,
+              expectedQueryGranularity,
               false,
               Collections.singletonList(expectedSegmentIntervals.get(i))
           ),
