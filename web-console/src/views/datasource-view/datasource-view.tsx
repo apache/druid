@@ -74,7 +74,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   full: [
     'Datasource name',
     'Availability',
-    'Segment load/drop queues',
+    'Availability detail',
     'Total data size',
     'Segment size',
     'Segment granularity',
@@ -90,7 +90,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-sql': [
     'Datasource name',
     'Availability',
-    'Segment load/drop queues',
+    'Availability detail',
     'Total data size',
     'Compaction',
     '% Compacted',
@@ -101,7 +101,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-proxy': [
     'Datasource name',
     'Availability',
-    'Segment load/drop queues',
+    'Availability detail',
     'Total data size',
     'Segment size',
     'Segment granularity',
@@ -151,7 +151,6 @@ const PERCENT_BRACES = [formatPercent(1)];
 interface DatasourceQueryResultRow {
   readonly datasource: string;
   readonly num_segments: number;
-  readonly num_available_segments: number;
   readonly num_segments_to_load: number;
   readonly num_segments_to_drop: number;
   readonly minute_aligned_segments: number;
@@ -254,12 +253,10 @@ export class DatasourcesView extends React.PureComponent<
         hiddenColumns.exists('Datasource name') && `datasource`,
         (hiddenColumns.exists('Availability') || hiddenColumns.exists('Segment granularity')) &&
           `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
-        hiddenColumns.exists('Availability') &&
-          `COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments`,
-        hiddenColumns.exists('Segment load/drop queues') &&
+        (hiddenColumns.exists('Availability') || hiddenColumns.exists('Availability detail')) && [
           `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
-        hiddenColumns.exists('Segment load/drop queues') &&
           `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
+        ],
         hiddenColumns.exists('Total data size') &&
           `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
         hiddenColumns.exists('Segment size') && [
@@ -360,7 +357,6 @@ ORDER BY 1`;
               const numSegments = availableSegments + segmentsToLoad;
               return {
                 datasource: d.name,
-                num_available_segments: availableSegments,
                 num_segments: numSegments,
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
@@ -1016,18 +1012,11 @@ ORDER BY 1`;
             {
               Header: 'Availability',
               show: hiddenColumns.exists('Availability'),
-              id: 'availability',
               filterable: false,
               minWidth: 200,
-              accessor: row => {
-                return {
-                  num_available: row.num_available_segments,
-                  num_total: row.num_segments,
-                };
-              },
-              Cell: ({ original }) => {
-                const { datasource, num_available_segments, num_segments, unused } = original;
-
+              accessor: 'num_segments',
+              Cell: ({ value: num_segments, original }) => {
+                const { datasource, unused, num_segments_to_load } = original;
                 if (unused) {
                   return (
                     <span>
@@ -1042,12 +1031,9 @@ ORDER BY 1`;
                     {pluralIfNeeded(num_segments, 'segment')}
                   </a>
                 );
-                if (
-                  typeof num_available_segments !== 'number' ||
-                  typeof num_segments !== 'number'
-                ) {
+                if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
                   return '-';
-                } else if (num_available_segments === num_segments) {
+                } else if (num_segments_to_load === 0) {
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
@@ -1057,22 +1043,16 @@ ORDER BY 1`;
                     </span>
                   );
                 } else {
+                  const numAvailableSegments = num_segments - num_segments_to_load;
                   const percentAvailable = (
-                    Math.floor((num_available_segments / num_segments) * 1000) / 10
+                    Math.floor((numAvailableSegments / num_segments) * 1000) / 10
                   ).toFixed(1);
-                  const missing = num_segments - num_available_segments;
-                  const segmentsMissingEl = (
-                    <a onClick={() => goToSegments(datasource, true)}>{`${pluralIfNeeded(
-                      missing,
-                      'segment',
-                    )} unavailable`}</a>
-                  );
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        {num_available_segments ? '\u25cf' : '\u25cb'}&nbsp;
+                        {numAvailableSegments ? '\u25cf' : '\u25cb'}&nbsp;
                       </span>
-                      {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
+                      {percentAvailable}% available ({segmentsEl})
                     </span>
                   );
                 }
@@ -1084,9 +1064,8 @@ ORDER BY 1`;
               },
             },
             {
-              Header: twoLines('Segment load/drop', 'queues'),
-              show: hiddenColumns.exists('Segment load/drop queues'),
-              id: 'load-drop',
+              Header: twoLines('Availability', 'detail'),
+              show: hiddenColumns.exists('Availability detail'),
               accessor: 'num_segments_to_load',
               filterable: false,
               minWidth: 100,
