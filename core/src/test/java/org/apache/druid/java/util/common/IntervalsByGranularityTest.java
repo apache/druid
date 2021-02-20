@@ -21,11 +21,13 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -34,8 +36,8 @@ import java.util.NoSuchElementException;
 
 public class IntervalsByGranularityTest
 {
-  private static final long SECONDS_IN_YEAR = 31536000;
-
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testTrivialIntervalExplosion()
@@ -46,17 +48,17 @@ public class IntervalsByGranularityTest
 
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         ImmutableList.of(first, second, third),
-        Granularity.fromString("DAY")
+        Granularities.DAY
     );
 
     // get count:
     Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
-    long count = getCount(granularityIntervals);
-    Assert.assertTrue(count == 62 + 365);
+    long count = verifyIteratorAndReturnIntervalCount(granularityIntervals);
+    Assert.assertEquals(62 + 365, count);
 
     granularityIntervals = intervals.granularityIntervalsIterator();
     count = getCountWithNoHasNext(granularityIntervals);
-    Assert.assertTrue(count == 62 + 365);
+    Assert.assertEquals(62 + 365, count);
   }
 
 
@@ -69,13 +71,13 @@ public class IntervalsByGranularityTest
 
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         ImmutableList.of(first, second, third),
-        Granularity.fromString("DAY")
+        Granularities.DAY
     );
 
     // get count:
     Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
-    long count = getCount(granularityIntervals);
-    Assert.assertTrue(count == 61);
+    long count = verifyIteratorAndReturnIntervalCount(granularityIntervals);
+    Assert.assertEquals(61, count);
   }
 
 
@@ -88,7 +90,7 @@ public class IntervalsByGranularityTest
     Interval first = Intervals.of("2012-01-01T00Z/P1Y");
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         ImmutableList.of(first),
-        Granularity.fromString("SECOND")
+        Granularities.SECOND
     );
     Assert.assertEquals(
         ImmutableList.of(Intervals.of("2012-01-01T00Z/2013-01-01T00Z")),
@@ -96,22 +98,29 @@ public class IntervalsByGranularityTest
     );
   }
 
+  /**
+   * This test iterates huge intervals (2.5 years) with the SECOND granularity.
+   * The motivation behind this test is ensuring that IntervalsByGranularity can handle
+   * these huge intervals with a tiny granularity. However, this test takes a long time
+   * to populate all intervals based on the SECOND granularity (more than 1 min), so
+   * is ignored by default. We should make this test not a unit test, but a load test.
+   */
+  @Ignore
   @Test
-  public void testIntervalExplosion()
+  public void testIterateHugeIntervalsWithTinyGranularity()
   {
     Interval first = Intervals.of("2012-01-01T00Z/2012-12-31T00Z");
     Interval second = Intervals.of("2002-01-01T00Z/2002-12-31T00Z");
     Interval third = Intervals.of("2021-01-01T00Z/2021-06-30T00Z");
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         ImmutableList.of(first, second, third),
-        Granularity.fromString("SECOND")
+        Granularities.SECOND
     );
 
     // get count:
     Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
-    long count = getCount(granularityIntervals);
-    Assert.assertTrue(count == 78537600);
-
+    long count = verifyIteratorAndReturnIntervalCount(granularityIntervals);
+    Assert.assertEquals(78537600, count);
   }
 
   @Test
@@ -132,7 +141,6 @@ public class IntervalsByGranularityTest
         ImmutableList.of(Intervals.of("2012-01-01T00Z/2012-02-01T00Z")),
         ImmutableList.copyOf(intervals.granularityIntervalsIterator())
     );
-
   }
 
   @Test
@@ -160,10 +168,9 @@ public class IntervalsByGranularityTest
         ),
         ImmutableList.copyOf(intervals.granularityIntervalsIterator())
     );
-
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testOverlappingShouldThrow()
   {
     List<Interval> inputIntervals = ImmutableList.of(
@@ -174,10 +181,13 @@ public class IntervalsByGranularityTest
 
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         inputIntervals,
-        Granularity.fromString("DAY")
+        Granularities.DAY
     );
-  }
 
+    Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
+    long count = verifyIteratorAndReturnIntervalCount(granularityIntervals);
+    Assert.assertEquals(14, count);
+  }
 
   @Test
   public void testWithGranularity()
@@ -190,13 +200,13 @@ public class IntervalsByGranularityTest
 
     IntervalsByGranularity intervals = new IntervalsByGranularity(
         inputIntervals,
-        Granularity.fromString("MONTH")
+        Granularities.MONTH
     );
 
     // get count:
     Iterator<Interval> granularityIntervals = intervals.granularityIntervalsIterator();
-    long count = getCount(granularityIntervals);
-    Assert.assertTrue(count == 2);
+    long count = verifyIteratorAndReturnIntervalCount(granularityIntervals);
+    Assert.assertEquals(2, count);
   }
 
   @Test(expected = UnsupportedOperationException.class)
@@ -223,7 +233,7 @@ public class IntervalsByGranularityTest
     Assert.assertFalse(intervals.granularityIntervalsIterator().hasNext());
   }
 
-  private long getCount(Iterator<Interval> granularityIntervalIterator)
+  private long verifyIteratorAndReturnIntervalCount(Iterator<Interval> granularityIntervalIterator)
   {
     long count = 0;
     Interval previous = null;
