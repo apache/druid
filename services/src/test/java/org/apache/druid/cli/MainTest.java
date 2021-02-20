@@ -27,6 +27,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 @RunWith(Parameterized.class)
 public class MainTest
 {
@@ -37,8 +42,8 @@ public class MainTest
         new Object[]{new CliOverlord()},
         new Object[]{new CliBroker()},
 
-        // Takes arguments. Cannot be used in this test
-        //new Object[]{new CliPeon()},
+        new Object[]{new FakeCliPeon(true)},
+        new Object[]{new FakeCliPeon(false)},
 
         new Object[]{new CliHistorical()},
         new Object[]{new CliCoordinator()},
@@ -69,5 +74,38 @@ public class MainTest
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
+  }
+
+
+  private static class FakeCliPeon extends CliPeon
+  {
+    List<String> forkTaskAndStatusFile = new ArrayList<String>();
+
+    FakeCliPeon(boolean runningOnK8s)
+    {
+      forkTaskAndStatusFile.add("src/test/resources/task.json");
+      forkTaskAndStatusFile.add("status.json");
+      forkTaskAndStatusFile.add("report.json");
+
+      try {
+        Field privateField = CliPeon.class
+                .getDeclaredField("taskAndStatusFile");
+        privateField.setAccessible(true);
+        privateField.set(this, forkTaskAndStatusFile);
+
+        if (runningOnK8s) {
+          HashMap<String, Object> k8sConfig = new HashMap<>();
+          k8sConfig.put(CliPeon.IS_RUNNING_ON_K8S, true);
+          Field privateMapField = CliPeon.class
+                  .getDeclaredField("k8sConfig");
+          privateMapField.setAccessible(true);
+          privateMapField.set(this, k8sConfig);
+        }
+      }
+      catch (Exception ex) {
+        // do nothing.
+      }
+
+    }
   }
 }

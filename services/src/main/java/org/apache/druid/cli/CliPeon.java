@@ -123,6 +123,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -169,6 +170,8 @@ public class CliPeon extends GuiceRunnable
   private static final Logger log = new Logger(CliPeon.class);
 
   private Properties properties;
+  private HashMap<String, Object> k8sConfig = new HashMap<>();
+  static final String IS_RUNNING_ON_K8S = "isRunningOnK8s";
 
   public CliPeon()
   {
@@ -180,6 +183,9 @@ public class CliPeon extends GuiceRunnable
   {
     this.properties = properties;
     isZkEnabled = ZkEnablementConfig.isEnabled(properties);
+    k8sConfig.putIfAbsent(
+            IS_RUNNING_ON_K8S,
+            properties.getProperty("druid.indexer.runner.mode", "native").equalsIgnoreCase("k8s"));
   }
 
   @Override
@@ -214,11 +220,19 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
-            binder.bind(ExecutorLifecycleConfig.class).toInstance(
-                new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskLogPath))
-                    .setStatusFile(new File(taskStatusPath))
-            );
+
+            if (Boolean.parseBoolean(String.valueOf(k8sConfig.getOrDefault(IS_RUNNING_ON_K8S, "false")))) {
+              binder.bind(ExecutorLifecycleConfig.class).toInstance(
+                      new ExecutorLifecycleConfig()
+                              .setTaskFile(new File(taskLogPath))
+                              .setStatusFile(new File(taskStatusPath))
+                              .setParentStreamDefined(false));
+            } else {
+              binder.bind(ExecutorLifecycleConfig.class).toInstance(
+                      new ExecutorLifecycleConfig()
+                              .setTaskFile(new File(taskLogPath))
+                              .setStatusFile(new File(taskStatusPath)));
+            }
 
             binder.bind(TaskReportFileWriter.class)
                   .toInstance(new SingleFileTaskReportFileWriter(new File(taskReportPath)));

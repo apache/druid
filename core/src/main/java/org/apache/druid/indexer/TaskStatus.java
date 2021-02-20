@@ -47,6 +47,11 @@ public class TaskStatus
     return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null);
   }
 
+  public static TaskStatus success(String taskId, TaskLocation location)
+  {
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, location);
+  }
+
   public static TaskStatus success(String taskId, String errorMsg)
   {
     return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg, null);

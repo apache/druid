@@ -53,6 +53,12 @@ public class ExecutorLifecycleConfig
     return parentStreamDefined;
   }
 
+  public ExecutorLifecycleConfig setParentStreamDefined(boolean parentStreamDefined)
+  {
+    this.parentStreamDefined = parentStreamDefined;
+    return this;
+  }
+
   public File getTaskFile()
   {
     return taskFile;
