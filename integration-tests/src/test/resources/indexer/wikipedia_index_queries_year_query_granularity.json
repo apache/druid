@@ -22,7 +22,7 @@
       "dataSource": "%%DATASOURCE%%",
       "granularity":"day",
       "intervals":[
-        "2013-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"
+        "2013-01-01T00:00/2014-01-01T00:00"
       ],
       "filter":null,
       "aggregations":[
@@ -55,7 +55,7 @@
       {
         "timestamp" : "2013-01-01T00:00:00.000Z",
         "result" : {
-          "quantilesSketch":5,
+          "quantilesSketch":10,
           "approxCountTheta":5.0,
           "approxCountHLL":5
         }
@@ -100,16 +100,16 @@
       ],
       "having":{"type":"greaterThan", "aggregation":"added_count_times_ten", "value":9000},
       "intervals":[
-        "2013-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"
+        "2013-01-01T00:00/2014-01-01T00:00"
       ]
     },
     "expectedResults":[ {
       "version" : "v1",
       "timestamp" : "2013-01-01T00:00:00.000Z",
       "event" : {
-        "added_count_times_ten" : 9050.0,
+        "added_count_times_ten" : 18100.0,
         "page" : "Crimson Typhoon",
-        "added_count" : 905,
+        "added_count" : 1810,
         "rows" : 1
       }
     } ]
@@ -121,7 +121,7 @@
       "dataSource": "%%DATASOURCE%%",
       "granularity":"day",
       "intervals":[
-        "2013-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"
+        "2013-01-01T00:00/2014-01-01T00:00"
       ],
       "filter":null,
       "aggregations":[
@@ -141,8 +141,8 @@
       {
         "timestamp" : "2013-01-01T00:00:00.000Z",
         "result" : {
-          "first_user":"nuclear",
-          "last_user":"stringer"
+          "first_user":"masterYi",
+          "last_user":"speed"
         }
       }
     ]
