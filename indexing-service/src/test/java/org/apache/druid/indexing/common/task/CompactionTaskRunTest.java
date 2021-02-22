@@ -681,8 +681,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Segments.ONLY_VISIBLE
         )
     );
-    segmentsAfterFullCompaction.sort((
-        s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
+    segmentsAfterFullCompaction.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
     );
 
     Assert.assertEquals(3, segmentsAfterFullCompaction.size());
