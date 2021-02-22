@@ -106,7 +106,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
   }
 
-  @VisibleForTesting  // Only for testing
+  @VisibleForTesting
   PartialDimensionDistributionTask(
       @Nullable String id,
       final String groupId,
@@ -334,7 +334,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
-    @VisibleForTesting  // to allow controlling false positive rate of bloom filter
+    @VisibleForTesting
+      // to allow controlling false positive rate of bloom filter
     DedupInputRowFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,

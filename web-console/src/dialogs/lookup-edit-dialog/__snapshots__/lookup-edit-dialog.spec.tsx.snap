@@ -225,25 +225,6 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           },
           Object {
             "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The namespace value in the SQL query:
-              </p>
-              <p>
-                SELECT keyColumn, valueColumn, tsColumn? FROM 
-                <strong>
-                  namespace
-                </strong>
-                .table WHERE filter
-              </p>
-            </React.Fragment>,
-            "name": "extractionNamespace.namespace",
-            "placeholder": "some_lookup",
-            "required": true,
-            "type": "string",
-          },
-          Object {
-            "defined": [Function],
             "info": "Defines the connectURI value on the The connector config to used",
             "label": "Connect URI",
             "name": "extractionNamespace.connectorConfig.connectURI",

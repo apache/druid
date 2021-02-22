@@ -38,6 +38,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
@@ -66,14 +67,14 @@ public class TimeseriesQueryRunnerBonusTest
   @Test
   public void testOneRowAtATime() throws Exception
   {
-    final IncrementalIndex oneRowIndex = new IncrementalIndex.Builder()
+    final IncrementalIndex oneRowIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DateTimes.of("2012-01-01T00:00:00Z").getMillis())
                 .build()
         )
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     List<Result<TimeseriesResultValue>> results;
 

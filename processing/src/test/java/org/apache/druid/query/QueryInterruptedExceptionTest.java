@@ -45,10 +45,6 @@ public class QueryInterruptedExceptionTest
     Assert.assertEquals("Unknown exception", new QueryInterruptedException(null).getErrorCode());
     Assert.assertEquals("Unknown exception", new QueryInterruptedException(new ISE("Something bad!")).getErrorCode());
     Assert.assertEquals(
-        "Resource limit exceeded",
-        new QueryInterruptedException(new ResourceLimitExceededException("too many!")).getErrorCode()
-    );
-    Assert.assertEquals(
         "Unknown exception",
         new QueryInterruptedException(new QueryInterruptedException(new ISE("Something bad!"))).getErrorCode()
     );
@@ -74,10 +70,6 @@ public class QueryInterruptedExceptionTest
         new QueryInterruptedException(null).getMessage()
     );
     Assert.assertEquals(
-        "too many!",
-        new QueryInterruptedException(new ResourceLimitExceededException("too many!")).getMessage()
-    );
-    Assert.assertEquals(
         "Something bad!",
         new QueryInterruptedException(new ISE("Something bad!")).getMessage()
     );
@@ -101,10 +93,6 @@ public class QueryInterruptedExceptionTest
     Assert.assertEquals(
         "java.lang.InterruptedException",
         new QueryInterruptedException(new InterruptedException()).getErrorClass()
-    );
-    Assert.assertEquals(
-        "org.apache.druid.query.ResourceLimitExceededException",
-        new QueryInterruptedException(new ResourceLimitExceededException("too many!")).getErrorClass()
     );
     Assert.assertEquals(
         null,

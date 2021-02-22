@@ -29,6 +29,7 @@ public class TaskLocation
 {
   private static final TaskLocation UNKNOWN = new TaskLocation(null, -1, -1);
 
+  @Nullable
   private final String host;
   private final int port;
   private final int tlsPort;
@@ -75,6 +76,16 @@ public class TaskLocation
   }
 
   @Override
+  public String toString()
+  {
+    return "TaskLocation{" +
+           "host='" + host + '\'' +
+           ", port=" + port +
+           ", tlsPort=" + tlsPort +
+           '}';
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -83,29 +94,13 @@ public class TaskLocation
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     TaskLocation that = (TaskLocation) o;
-
-    return port == that.port && tlsPort == that.tlsPort &&
-           Objects.equals(host, that.host);
+    return port == that.port && tlsPort == that.tlsPort && Objects.equals(host, that.host);
   }
 
   @Override
   public int hashCode()
   {
-    int result = host.hashCode();
-    result = 31 * result + port;
-    result = 31 * result + tlsPort;
-    return result;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "TaskLocation{" +
-           "host='" + host + '\'' +
-           ", port=" + port +
-           ", tlsPort=" + tlsPort +
-           '}';
+    return Objects.hash(host, port, tlsPort);
   }
 }

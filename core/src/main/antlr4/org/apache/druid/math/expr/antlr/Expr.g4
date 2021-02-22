@@ -51,9 +51,12 @@ numericElement : (LONG | DOUBLE | NULL);
 literalElement : (STRING | LONG | DOUBLE | NULL);
 
 NULL : 'null';
+LONG : [0-9]+;
+EXP: [eE] [-]? LONG;
+// DOUBLE provides partial support for java double format
+// see: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#valueOf-java.lang.String-
+DOUBLE : 'NaN' | 'Infinity' | (LONG '.' LONG?) | (LONG EXP) | (LONG '.' LONG? EXP);
 IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ [\"\\])* '"';
-LONG : [0-9]+ ;
-DOUBLE : [0-9]+ '.' [0-9]* ;
 WS : [ \t\r\n]+ -> skip ;
 
 STRING : '\'' (ESC | ~ [\'\\])* '\'';

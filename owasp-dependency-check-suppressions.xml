@@ -58,6 +58,17 @@
     <cve>CVE-2020-12691</cve>
   </suppress>
 
+
+  <suppress>
+    <!-- Not much for us to do as a user of the client lib, and no patch is available,
+     see https://github.com/kubernetes/kubernetes/issues/97076 -->
+    <notes><![CDATA[
+   file name: client-java-10.0.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.kubernetes/client\-java.*@10.0.1$</packageUrl>
+    <cve>CVE-2020-8554</cve>
+  </suppress>
+
   <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->
   <suppress>
     <!--
@@ -287,5 +298,6 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
+     <cve>CVE-2020-9492</cve>
   </suppress>
 </suppressions>

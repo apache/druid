@@ -161,9 +161,9 @@ public class DruidStatement implements Closeable
       try {
         ensure(State.NEW);
         sqlLifecycle.initialize(query, queryContext);
-
+        sqlLifecycle.validateAndAuthorize(authenticationResult);
         this.authenticationResult = authenticationResult;
-        PrepareResult prepareResult = sqlLifecycle.prepare(authenticationResult);
+        PrepareResult prepareResult = sqlLifecycle.prepare();
         this.maxRowCount = maxRowCount;
         this.query = query;
         List<AvaticaParameter> params = new ArrayList<>();
@@ -196,7 +196,8 @@ public class DruidStatement implements Closeable
       ensure(State.PREPARED);
       try {
         sqlLifecycle.setParameters(parameters);
-        sqlLifecycle.planAndAuthorize(authenticationResult);
+        sqlLifecycle.validateAndAuthorize(authenticationResult);
+        sqlLifecycle.plan();
         final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.

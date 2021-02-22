@@ -42,7 +42,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 import java.util.stream.Collectors;
 
 /**
@@ -194,7 +193,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       // We only care about the intervals in intervalToNumShardsOverride here.
       intervalToNumShardsOverride.forEach(partitionAnalysis::updateBucket);
     } else {
-      final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
+      final Iterable<Interval> intervals = granularitySpec.sortedBucketIntervals();
       final int numBucketsPerInterval = partitionsSpec.getNumShards() == null
                                         ? 1
                                         : partitionsSpec.getNumShards();

@@ -17,6 +17,7 @@
  */
 
 import { render } from '@testing-library/react';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { SnitchDialog } from './snitch-dialog';
@@ -35,8 +36,8 @@ describe('snitch dialog', () => {
         onSave={() => {}}
         onClose={() => {}}
         historyRecords={[
-          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
-          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+          { auditTime: 'test', auditInfo: 'test', payload: JSONBig.stringify({ name: 'test' }) },
+          { auditTime: 'test', auditInfo: 'test', payload: JSONBig.stringify({ name: 'test' }) },
         ]}
       />
     );

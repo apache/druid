@@ -77,6 +77,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
@@ -125,7 +126,7 @@ public class NestedQueryPushDownTest
 
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
+    return new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withDimensionsSpec(new DimensionsSpec(
@@ -142,7 +143,7 @@ public class NestedQueryPushDownTest
         )
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
   }
 
   @Before

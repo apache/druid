@@ -28,7 +28,6 @@ export interface ExtractionNamespaceSpec {
   uriPrefix?: string;
   fileRegex?: string;
   namespaceParseSpec?: NamespaceParseSpec;
-  namespace?: string;
   connectorConfig?: {
     createTables: boolean;
     connectURI: string;
@@ -268,22 +267,6 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   },
 
   // JDBC stuff
-  {
-    name: 'extractionNamespace.namespace',
-    type: 'string',
-    placeholder: 'some_lookup',
-    defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'jdbc',
-    required: true,
-    info: (
-      <>
-        <p>The namespace value in the SQL query:</p>
-        <p>
-          SELECT keyColumn, valueColumn, tsColumn? FROM <strong>namespace</strong>.table WHERE
-          filter
-        </p>
-      </>
-    ),
-  },
   {
     name: 'extractionNamespace.connectorConfig.connectURI',
     label: 'Connect URI',

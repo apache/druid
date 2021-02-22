@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
-import java.net.InetAddress;
 
 /**
  * This exception is thrown when a query does not finish before the configured query timeout.
@@ -65,18 +64,5 @@ public class QueryTimeoutException extends QueryException
   public QueryTimeoutException(String errorMessage, String host)
   {
     super(ERROR_CODE, errorMessage, ERROR_CLASS, host);
-  }
-
-
-  private static String resolveHostname()
-  {
-    String host;
-    try {
-      host = InetAddress.getLocalHost().getCanonicalHostName();
-    }
-    catch (Exception e) {
-      host = null;
-    }
-    return host;
   }
 }

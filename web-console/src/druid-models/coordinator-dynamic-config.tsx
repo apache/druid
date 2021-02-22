@@ -194,6 +194,23 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
+    name: 'percentOfSegmentsToConsiderPerMove',
+    type: 'number',
+    defaultValue: 100,
+    info: (
+      <>
+        The percentage of the total number of segments in the cluster that are considered every time
+        a segment needs to be selected for a move. Druid orders servers by available capacity
+        ascending (the least available capacity first) and then iterates over the servers. For each
+        server, Druid iterates over the segments on the server, considering them for moving. The
+        default config of 100% means that every segment on every server is a candidate to be moved.
+        This should make sense for most small to medium-sized clusters. However, an admin may find
+        it preferable to drop this value lower if they don't think that it is worthwhile to consider
+        every single segment in the cluster each time it is looking for a segment to move.
+      </>
+    ),
+  },
+  {
     name: 'pauseCoordination',
     type: 'boolean',
     defaultValue: false,

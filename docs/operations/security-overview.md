@@ -25,9 +25,9 @@ title: "Security overview"
 
 ## Overview
 
-By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features including TLS, authentication, and authorization.
+By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features include TLS, authentication, and authorization.
 
-To implement Druid security, you configure authenticators and authorizers. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves consideration of your datasource scheme, given they represent the granularity at which data access permissions are allocated. 
+To implement Druid security, you configure authenticators and authorizers. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves considering your datasource scheme, since that scheme represents the granularity at which data access permissions are allocated. 
 
 The following graphic depicts the course of request through the authentication process: 
 
@@ -40,8 +40,8 @@ This document gives you an overview of security features in Druid and how to con
 
 ## Best practices
 
-* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelist the specific APIs that your users need to access, and implements account lockout and throttling features.
-* Grant users the minimum permissions necessary to perform their functions. For instance, do not allow user who only need to query data to write to data sources or view state.  
+* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, allow list the specific APIs that your users need to access, and implements account lockout and throttling features.
+* Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.  
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 * Run Druid as an unprivileged Unix user on the installation machine (not root).
    > This is an important point! Administrator users on Druid have the same permission as the Unix user account it is running under. If the Druid process is running under the root user account in the OS, then Administrator users on Druid can read/write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
@@ -66,13 +66,13 @@ The configuration steps are:
   druid.enableTlsPort=true
   
   druid.server.https.keyStoreType=jks
-  druid.server.https.keyStorePath=imply-keystore.jks
+  druid.server.https.keyStorePath=sample-keystore.jks
   druid.server.https.keyStorePassword=secret123 # replace with your own password
   druid.server.https.certAlias=druid 
   
   druid.client.https.protocol=TLSv1.2
   druid.client.https.trustStoreType=jks
-  druid.client.https.trustStorePath=imply-truststore.jks
+  druid.client.https.trustStorePath=sample-truststore.jks
   druid.client.https.trustStorePassword=secret123  # replace with your own password
 
   ``` 
@@ -92,7 +92,7 @@ The following takes you through sample configuration steps for enabling basic au
 
 1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
-   druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service", "imply-utility-belt"]
+   druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service"]
    ```
 2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. For example:
    ```

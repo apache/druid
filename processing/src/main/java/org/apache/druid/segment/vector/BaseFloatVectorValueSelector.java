@@ -23,8 +23,8 @@ public abstract class BaseFloatVectorValueSelector implements VectorValueSelecto
 {
   protected final ReadableVectorOffset offset;
 
-  private int longId = ReadableVectorOffset.NULL_ID;
-  private int doubleId = ReadableVectorOffset.NULL_ID;
+  private int longId = ReadableVectorInspector.NULL_ID;
+  private int doubleId = ReadableVectorInspector.NULL_ID;
 
   private long[] longVector;
   private double[] doubleVector;

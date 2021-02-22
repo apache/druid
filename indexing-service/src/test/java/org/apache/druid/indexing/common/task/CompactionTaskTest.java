@@ -38,6 +38,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -312,6 +313,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -323,6 +325,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -351,6 +354,47 @@ public class CompactionTaskTest
         SEGMENT_MAP
     );
     segmentLoaderFactory = new SegmentLoaderFactory(testIndexIO, OBJECT_MAPPER);
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithGranularitySpec()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.segmentGranularity(Granularities.HOUR);
+    final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
+
+    final Builder builder2 = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder2.tuningConfig(createTuningConfig());
+    builder2.granularitySpec(new UniformGranularitySpec(Granularities.HOUR, Granularities.DAY, null));
+    final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
+    Assert.assertEquals(taskCreatedWithGranularitySpec.getSegmentGranularity(), taskCreatedWithSegmentGranularity.getSegmentGranularity());
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithGranularitySpecOverrideSegmentGranularity()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.segmentGranularity(Granularities.HOUR);
+    builder.granularitySpec(new UniformGranularitySpec(Granularities.MINUTE, Granularities.DAY, null));
+    final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
+    Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
 
   @Test
@@ -447,6 +491,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             new IndexSpec(
                 new RoaringBitmapSerdeFactory(true),
                 CompressionStrategy.LZ4,
@@ -458,6 +503,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,
@@ -547,6 +593,21 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testSegmentProviderFindSegmentsWithEmptySegmentsThrowException()
+  {
+    final SegmentProvider provider = new SegmentProvider(
+        "datasource",
+        new CompactionIntervalSpec(Intervals.of("2021-01-01/P1D"), null)
+    );
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage(
+        "No segments found for compaction. Please check that datasource name and interval are correct."
+    );
+    provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
+  }
+
+  @Test
   public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
@@ -592,6 +653,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -606,6 +668,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -656,6 +719,7 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
+        null,
         1000000L,
         null,
         null,
@@ -671,6 +735,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -727,6 +792,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new HashedPartitionsSpec(null, 3, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
@@ -742,6 +808,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1050,6 +1117,60 @@ public class CompactionTaskTest
     );
   }
 
+  @Test
+  public void testChooseFinestGranularityWithNulls()
+  {
+    List<Granularity> input = Arrays.asList(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.DAY,
+        null,
+        Granularities.ALL,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.SECOND.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityNone()
+  {
+    List<Granularity> input = ImmutableList.of(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.NONE,
+        Granularities.DAY,
+        Granularities.NONE,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.NONE.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityAllNulls()
+  {
+    List<Granularity> input = Arrays.asList(
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertNull(chooseFinestGranularityHelper(input));
+  }
+
+  private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
+  {
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    for (Granularity current : granularities) {
+      queryGranularity.set(CompactionTask.compareWithCurrent(queryGranularity.get(), current));
+    }
+    return queryGranularity.get();
+  }
+
+
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {
     return ImmutableList.of(
@@ -1113,6 +1234,7 @@ public class CompactionTaskTest
             null,
             500000,
             1000000L,
+            null,
             Long.MAX_VALUE,
             null,
             null,
@@ -1128,6 +1250,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,

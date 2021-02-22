@@ -1987,9 +1987,105 @@ public class ExpressionsTest extends ExpressionTestBase
   }
 
   @Test
+  public void testOperatorConversionsDruidUnaryLongFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"a\")"),
+        -11L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"x\")"),
+        -3L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidUnaryDoubleFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"a\")"),
+        4.9E-323
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"x\")"),
+        1.0E-323
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidBinaryLongFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a"),
+            testHelper.makeInputRef("b")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"a\",\"b\")"),
+        8L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x"),
+            testHelper.makeInputRef("y")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"x\",\"y\")"),
+        2L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"s\",\"s\")"),
+        null
+    );
+  }
+
+  @Test
   public void testBinaryByteFormat()
   {
-    /**
+    /*
      * Basic Test
      */
     testHelper.testExpression(
@@ -2017,12 +2113,12 @@ public class ExpressionsTest extends ExpressionTestBase
         "8.00 EiB"
     );
 
-    /**
+    /*
      * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
      * This cases has also been verified in the tests of underlying implementation
      */
 
-    /**
+    /*
      * test input with variable reference
      */
     testHelper.testExpression(
@@ -2035,7 +2131,7 @@ public class ExpressionsTest extends ExpressionTestBase
         "25 B"
     );
 
-    /**
+    /*
      * test different precision
      */
     testHelper.testExpression(
@@ -2083,7 +2179,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testDecimalByteFormat()
   {
-    /**
+    /*
      * Basic Test
      */
     testHelper.testExpression(
@@ -2111,11 +2207,11 @@ public class ExpressionsTest extends ExpressionTestBase
         "9.22 EB"
     );
 
-    /**
+    /*
      * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
      */
 
-    /**
+    /*
      * test input with variable reference
      */
     testHelper.testExpression(
@@ -2128,7 +2224,7 @@ public class ExpressionsTest extends ExpressionTestBase
         "25 B"
     );
 
-    /**
+    /*
      * test different precision
      */
     testHelper.testExpression(

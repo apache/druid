@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.FilterTestUtils;
+import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,20 +54,20 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOptimieShortCircuitWithTrueFilter()
+  public void testToFilterShortCircuitWithTrueFilter()
   {
     DimFilter filter = DimFilterTestUtils.or(
         DimFilterTestUtils.selector("col1", "1"),
         TrueDimFilter.instance()
     );
-    Assert.assertTrue(filter.optimize() instanceof TrueDimFilter);
+    Assert.assertTrue(filter.toFilter() instanceof TrueFilter);
   }
 
   @Test
-  public void testOptimizeOringFalseFilters()
+  public void testToFilterOringFalseFilters()
   {
     DimFilter filter = DimFilterTestUtils.or(FalseDimFilter.instance(), FalseDimFilter.instance());
-    Assert.assertSame(FalseDimFilter.instance(), filter.optimize());
+    Assert.assertSame(FalseFilter.instance(), filter.toFilter());
   }
 
   @Test
@@ -73,7 +75,7 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
   {
     DimFilter expected = DimFilterTestUtils.selector("col1", "1");
     DimFilter filter = DimFilterTestUtils.or(expected);
-    Assert.assertEquals(expected, filter.optimize());
+    Assert.assertEquals(expected.toFilter(), filter.toFilter());
   }
 
   @Test
@@ -83,6 +85,6 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
         DimFilterTestUtils.selector("col1", "1"),
         DimFilterTestUtils.selector("col1", "2")
     );
-    Assert.assertEquals(filter, filter.optimize());
+    Assert.assertEquals(filter.toFilter(), filter.toFilter());
   }
 }

@@ -63,16 +63,23 @@ import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -85,6 +92,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -92,6 +100,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -143,7 +152,7 @@ public class ServerManagerTest
           }
 
           @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy)
+          public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
             return new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
@@ -666,7 +675,8 @@ public class ServerManagerTest
               IndexIO.CURRENT_VERSION_ID,
               123L
           ),
-          false
+          false,
+          SegmentLazyLoadFailCallback.NOOP
       );
     }
     catch (SegmentLoadingException e) {
@@ -837,7 +847,7 @@ public class ServerManagerTest
     @Override
     public StorageAdapter asStorageAdapter()
     {
-      throw new UnsupportedOperationException();
+      return makeFakeStorageAdapter(interval, 0);
     }
 
     @Override
@@ -846,6 +856,112 @@ public class ServerManagerTest
       synchronized (lock) {
         closed = true;
       }
+    }
+
+    private StorageAdapter makeFakeStorageAdapter(Interval interval, int cardinality)
+    {
+      StorageAdapter adapter = new StorageAdapter()
+      {
+        @Override
+        public Interval getInterval()
+        {
+          return interval;
+        }
+
+        @Override
+        public int getDimensionCardinality(String column)
+        {
+          return cardinality;
+        }
+
+        @Override
+        public DateTime getMinTime()
+        {
+          return interval.getStart();
+        }
+
+
+        @Override
+        public DateTime getMaxTime()
+        {
+          return interval.getEnd();
+        }
+
+        // stubs below this line not important for tests
+
+        @Override
+        public Indexed<String> getAvailableDimensions()
+        {
+          return null;
+        }
+
+        @Override
+        public Iterable<String> getAvailableMetrics()
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public Comparable getMinValue(String column)
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public Comparable getMaxValue(String column)
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public ColumnCapabilities getColumnCapabilities(String column)
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public String getColumnTypeName(String column)
+        {
+          return null;
+        }
+
+        @Override
+        public int getNumRows()
+        {
+          return 0;
+        }
+
+        @Override
+        public DateTime getMaxIngestedEventTime()
+        {
+          return null;
+        }
+
+        @Override
+        public Metadata getMetadata()
+        {
+          return null;
+        }
+
+        @Override
+        public Sequence<Cursor> makeCursors(
+            @Nullable Filter filter,
+            Interval interval,
+            VirtualColumns virtualColumns,
+            Granularity gran,
+            boolean descending,
+            @Nullable QueryMetrics<?> queryMetrics
+        )
+        {
+          return null;
+        }
+      };
+
+      return adapter;
     }
   }
 

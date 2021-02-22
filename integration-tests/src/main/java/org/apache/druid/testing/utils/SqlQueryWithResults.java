@@ -22,6 +22,7 @@ package org.apache.druid.testing.utils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.sql.http.SqlQuery;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public class SqlQueryWithResults extends AbstractQueryWithResults<SqlQuery>
       List<Map<String, Object>> expectedResults
   )
   {
-    super(query, expectedResults);
+    super(query, expectedResults, Collections.emptyList());
   }
 
 }

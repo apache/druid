@@ -17,6 +17,7 @@
  */
 
 import { Button, Collapse, TextArea } from '@blueprintjs/core';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import './json-collapse.scss';
@@ -30,7 +31,7 @@ export const JsonCollapse = React.memo(function JsonCollapse(props: JsonCollapse
   const { stringValue, buttonText } = props;
   const [isOpen, setIsOpen] = useState(false);
 
-  const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
+  const prettyValue = JSONBig.stringify(JSON.parse(stringValue), undefined, 2);
   return (
     <div className="json-collapse">
       <div className="collapse-buttons">

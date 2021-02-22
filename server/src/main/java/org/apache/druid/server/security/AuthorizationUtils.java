@@ -373,4 +373,21 @@ public class AuthorizationUtils
       new Resource(input, ResourceType.DATASOURCE),
       Action.WRITE
   );
+
+  /**
+   * Function for the common pattern of generating a resource-action for reading from a view, using the
+   * view name.
+   */
+  public static final Function<String, ResourceAction> VIEW_READ_RA_GENERATOR = input -> new ResourceAction(
+      new Resource(input, ResourceType.VIEW),
+      Action.READ
+  );
+
+  /**
+   * Function for the pattern of generating a {@link ResourceAction} for reading from a given {@link Resource}
+   */
+  public static final Function<Resource, ResourceAction> RESOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
+      input,
+      Action.READ
+  );
 }

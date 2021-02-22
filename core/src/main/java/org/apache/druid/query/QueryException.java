@@ -21,8 +21,10 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nullable;
+import java.net.InetAddress;
 
 /**
  * Base serializable error response
@@ -35,7 +37,7 @@ public class QueryException extends RuntimeException
   private final String errorClass;
   private final String host;
 
-  public QueryException(Throwable cause, String errorCode, String errorClass, String host)
+  protected QueryException(Throwable cause, String errorCode, String errorClass, String host)
   {
     super(cause == null ? null : cause.getMessage(), cause);
     this.errorCode = errorCode;
@@ -43,6 +45,7 @@ public class QueryException extends RuntimeException
     this.host = host;
   }
 
+  @VisibleForTesting
   @JsonCreator
   public QueryException(
       @JsonProperty("error") @Nullable String errorCode,
@@ -81,5 +84,16 @@ public class QueryException extends RuntimeException
   public String getHost()
   {
     return host;
+  }
+
+  @Nullable
+  protected static String resolveHostname()
+  {
+    try {
+      return InetAddress.getLocalHost().getCanonicalHostName();
+    }
+    catch (Exception e) {
+      return null;
+    }
   }
 }

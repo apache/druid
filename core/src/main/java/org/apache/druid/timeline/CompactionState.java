@@ -43,15 +43,20 @@ public class CompactionState
   // org.apache.druid.segment.IndexSpec cannot be used here because it's in the 'processing' module which
   // has a dependency on the 'core' module where this class is.
   private final Map<String, Object> indexSpec;
+  // org.apache.druid.segment.indexing.granularity.GranularitySpec cannot be used here because it's in the
+  // 'server' module which has a dependency on the 'core' module where this class is.
+  private final Map<String, Object> granularitySpec;
 
   @JsonCreator
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
-      @JsonProperty("indexSpec") Map<String, Object> indexSpec
+      @JsonProperty("indexSpec") Map<String, Object> indexSpec,
+      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
   )
   {
     this.partitionsSpec = partitionsSpec;
     this.indexSpec = indexSpec;
+    this.granularitySpec = granularitySpec;
   }
 
   @JsonProperty
@@ -66,6 +71,12 @@ public class CompactionState
     return indexSpec;
   }
 
+  @JsonProperty
+  public Map<String, Object> getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -77,13 +88,14 @@ public class CompactionState
     }
     CompactionState that = (CompactionState) o;
     return Objects.equals(partitionsSpec, that.partitionsSpec) &&
-           Objects.equals(indexSpec, that.indexSpec);
+           Objects.equals(indexSpec, that.indexSpec) &&
+           Objects.equals(granularitySpec, that.granularitySpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionsSpec, indexSpec);
+    return Objects.hash(partitionsSpec, indexSpec, granularitySpec);
   }
 
   @Override
@@ -92,6 +104,7 @@ public class CompactionState
     return "CompactionState{" +
            "partitionsSpec=" + partitionsSpec +
            ", indexSpec=" + indexSpec +
+           ", granularitySpec=" + granularitySpec +
            '}';
   }
 }

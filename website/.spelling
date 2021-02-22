@@ -88,6 +88,7 @@ HLL
 HashSet
 Homebrew
 HyperLogLog
+IAM
 IANA
 IETF
 IP
@@ -152,6 +153,7 @@ ParseSpecs
 Protobuf
 RDBMS
 RDDs
+RDS
 Rackspace
 Redis
 S3
@@ -872,6 +874,7 @@ DistinctCount
 artifactId
 com.example
 common.runtime.properties
+druid-aws-rds-extensions
 druid-cassandra-storage
 druid-distinctcount
 druid-ec2-extensions
@@ -1032,6 +1035,7 @@ httpAuthenticationUsername
 ingestSegment
 InputSource
 DruidInputSource
+maxColumnsToMerge
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
@@ -1086,6 +1090,15 @@ array_to_string
 asin
 atan
 atan2
+bitwise
+bitwiseAnd
+bitwiseComplement
+bitwiseConvertDoubleToLongBits
+bitwiseConvertLongBitsToDouble
+bitwiseOr
+bitwiseShiftLeft
+bitwiseShiftRight
+bitwiseXor
 bloom_filter_test
 cartesian_fold
 cartesian_map
@@ -1668,7 +1681,6 @@ _default_tier
 addr
 affinityConfig
 allowAll
-allowList
 ANDed
 array_mod
 autoscale
@@ -1682,7 +1694,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-denyList
 doubleMax
 doubleMin
 doubleSum
@@ -1798,6 +1809,7 @@ expr
 jackson-jq
 missingValue
 schemaless
+skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
  - ../docs/tutorials/index.md
