@@ -36,20 +36,20 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-public class SizeFormatOperatorConversion implements SqlOperatorConversion
+public class HumanReadableFormatOperatorConversion implements SqlOperatorConversion
 {
-  public static final SqlOperatorConversion BINARY_BYTE_FORMAT = new SizeFormatOperatorConversion("binary_byte_format");
-  public static final SqlOperatorConversion DECIMAL_BYTE_FORMAT = new SizeFormatOperatorConversion("decimal_byte_format");
-  public static final SqlOperatorConversion DECIMAL_FORMAT = new SizeFormatOperatorConversion("decimal_format");
+  public static final SqlOperatorConversion BINARY_BYTE_FORMAT = new HumanReadableFormatOperatorConversion("human_readable_binary_byte_format");
+  public static final SqlOperatorConversion DECIMAL_BYTE_FORMAT = new HumanReadableFormatOperatorConversion("human_readable_decimal_byte_format");
+  public static final SqlOperatorConversion DECIMAL_FORMAT = new HumanReadableFormatOperatorConversion("human_readable_decimal_format");
 
   private final String name;
   private final SqlFunction sqlFunction;
 
-  private SizeFormatOperatorConversion(String name)
+  private HumanReadableFormatOperatorConversion(String name)
   {
     this.sqlFunction = OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(name))
-        .operandTypeChecker(new SizeFormatOperandTypeChecker())
+        .operandTypeChecker(new HumanReadableFormatOperandTypeChecker())
         .functionCategory(SqlFunctionCategory.STRING)
         .returnTypeNonNull(SqlTypeName.VARCHAR)
         .build();
@@ -73,7 +73,7 @@ public class SizeFormatOperatorConversion implements SqlOperatorConversion
     return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, name);
   }
 
-  private static class SizeFormatOperandTypeChecker implements SqlOperandTypeChecker
+  private static class HumanReadableFormatOperandTypeChecker implements SqlOperandTypeChecker
   {
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)

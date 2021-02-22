@@ -528,71 +528,71 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testSizeFormat()
   {
-    assertExpr("binary_byte_format(-1024)", "-1.00 KiB");
-    assertExpr("binary_byte_format(1024)", "1.00 KiB");
-    assertExpr("binary_byte_format(1024*1024)", "1.00 MiB");
-    assertExpr("binary_byte_format(1024*1024*1024)", "1.00 GiB");
-    assertExpr("binary_byte_format(1024*1024*1024*1024)", "1.00 TiB");
-    assertExpr("binary_byte_format(1024*1024*1024*1024*1024)", "1.00 PiB");
+    assertExpr("human_readable_binary_byte_format(-1024)", "-1.00 KiB");
+    assertExpr("human_readable_binary_byte_format(1024)", "1.00 KiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024)", "1.00 MiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024)", "1.00 GiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024)", "1.00 TiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024*1024)", "1.00 PiB");
 
-    assertExpr("decimal_byte_format(-1000)", "-1.00 KB");
-    assertExpr("decimal_byte_format(1000)", "1.00 KB");
-    assertExpr("decimal_byte_format(1000*1000)", "1.00 MB");
-    assertExpr("decimal_byte_format(1000*1000*1000)", "1.00 GB");
-    assertExpr("decimal_byte_format(1000*1000*1000*1000)", "1.00 TB");
+    assertExpr("human_readable_decimal_byte_format(-1000)", "-1.00 KB");
+    assertExpr("human_readable_decimal_byte_format(1000)", "1.00 KB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000)", "1.00 MB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000*1000)", "1.00 GB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000*1000*1000)", "1.00 TB");
 
-    assertExpr("decimal_format(-1000)", "-1.00 K");
-    assertExpr("decimal_format(1000)", "1.00 K");
-    assertExpr("decimal_format(1000*1000)", "1.00 M");
-    assertExpr("decimal_format(1000*1000*1000)", "1.00 G");
-    assertExpr("decimal_format(1000*1000*1000*1000)", "1.00 T");
+    assertExpr("human_readable_decimal_format(-1000)", "-1.00 K");
+    assertExpr("human_readable_decimal_format(1000)", "1.00 K");
+    assertExpr("human_readable_decimal_format(1000*1000)", "1.00 M");
+    assertExpr("human_readable_decimal_format(1000*1000*1000)", "1.00 G");
+    assertExpr("human_readable_decimal_format(1000*1000*1000*1000)", "1.00 T");
   }
 
   @Test
   public void testSizeFormatWithDifferentPrecision()
   {
-    assertExpr("binary_byte_format(1024, 0)", "1 KiB");
-    assertExpr("binary_byte_format(1024*1024, 1)", "1.0 MiB");
-    assertExpr("binary_byte_format(1024*1024*1024, 2)", "1.00 GiB");
-    assertExpr("binary_byte_format(1024*1024*1024*1024, 3)", "1.000 TiB");
+    assertExpr("human_readable_binary_byte_format(1024, 0)", "1 KiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024, 1)", "1.0 MiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024, 2)", "1.00 GiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024, 3)", "1.000 TiB");
 
-    assertExpr("decimal_byte_format(1234, 0)", "1 KB");
-    assertExpr("decimal_byte_format(1234*1000, 1)", "1.2 MB");
-    assertExpr("decimal_byte_format(1234*1000*1000, 2)", "1.23 GB");
-    assertExpr("decimal_byte_format(1234*1000*1000*1000, 3)", "1.234 TB");
+    assertExpr("human_readable_decimal_byte_format(1234, 0)", "1 KB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000, 1)", "1.2 MB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000*1000, 2)", "1.23 GB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000*1000*1000, 3)", "1.234 TB");
 
-    assertExpr("decimal_format(1234, 0)", "1 K");
-    assertExpr("decimal_format(1234*1000,1)", "1.2 M");
-    assertExpr("decimal_format(1234*1000*1000,2)", "1.23 G");
-    assertExpr("decimal_format(1234*1000*1000*1000,3)", "1.234 T");
+    assertExpr("human_readable_decimal_format(1234, 0)", "1 K");
+    assertExpr("human_readable_decimal_format(1234*1000,1)", "1.2 M");
+    assertExpr("human_readable_decimal_format(1234*1000*1000,2)", "1.23 G");
+    assertExpr("human_readable_decimal_format(1234*1000*1000*1000,3)", "1.234 T");
   }
 
   @Test
   public void testSizeFormatWithEdgeCases()
   {
     //a nonexist value is null which is treated as 0
-    assertExpr("binary_byte_format(nonexist)", "0 B");
+    assertExpr("human_readable_binary_byte_format(nonexist)", "0 B");
 
     //f = 12.34
-    assertExpr("binary_byte_format(f)", "12 B");
+    assertExpr("human_readable_binary_byte_format(f)", "12 B");
 
     //nan is Double.NaN
-    assertExpr("binary_byte_format(nan)", "0 B");
+    assertExpr("human_readable_binary_byte_format(nan)", "0 B");
 
     //inf = Double.POSITIVE_INFINITY
-    assertExpr("binary_byte_format(inf)", "8.00 EiB");
+    assertExpr("human_readable_binary_byte_format(inf)", "8.00 EiB");
 
     //inf = Double.NEGATIVE_INFINITY
-    assertExpr("binary_byte_format(-inf)", "-8.00 EiB");
+    assertExpr("human_readable_binary_byte_format(-inf)", "-8.00 EiB");
 
     // o = 0
-    assertExpr("binary_byte_format(o)", "0 B");
+    assertExpr("human_readable_binary_byte_format(o)", "0 B");
 
     // od = 0D
-    assertExpr("binary_byte_format(od)", "0 B");
+    assertExpr("human_readable_binary_byte_format(od)", "0 B");
 
     // of = 0F
-    assertExpr("binary_byte_format(of)", "0 B");
+    assertExpr("human_readable_binary_byte_format(of)", "0 B");
   }
 
   @Test
@@ -600,50 +600,50 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     try {
       //x = "foo"
-      Parser.parse("binary_byte_format(x)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
             .eval(bindings);
 
       //must not go to here
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Function[binary_byte_format] needs a number as its first argument", e.getMessage());
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs a number as its first argument", e.getMessage());
     }
 
     try {
       //x = "foo"
-      Parser.parse("binary_byte_format(1024, x)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, x)", ExprMacroTable.nil())
             .eval(bindings);
 
       //must not go to here
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Function[binary_byte_format] needs an integer as its second argument", e.getMessage());
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs an integer as its second argument", e.getMessage());
     }
 
     try {
       //of = 0F
-      Parser.parse("binary_byte_format(1024, of)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, of)", ExprMacroTable.nil())
             .eval(bindings);
 
       //must not go to here
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Function[binary_byte_format] needs an integer as its second argument", e.getMessage());
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs an integer as its second argument", e.getMessage());
     }
 
     try {
       //of = 0F
-      Parser.parse("binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
             .eval(bindings);
 
       //must not go to here
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Function[binary_byte_format] needs an integer as its second argument", e.getMessage());
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs an integer as its second argument", e.getMessage());
     }
   }
 
@@ -651,39 +651,39 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatInvalidPrecision()
   {
     try {
-      Parser.parse("binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
             .eval(bindings);
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Given precision[9223372036854775807] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+      Assert.assertEquals("Given precision[9223372036854775807] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
     }
 
     try {
-      Parser.parse("binary_byte_format(1024, minLong)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil())
             .eval(bindings);
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Given precision[-9223372036854775808] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+      Assert.assertEquals("Given precision[-9223372036854775808] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
     }
 
     try {
-      Parser.parse("binary_byte_format(1024, -1)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, -1)", ExprMacroTable.nil())
             .eval(bindings);
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Given precision[-1] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+      Assert.assertEquals("Given precision[-1] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
     }
 
     try {
-      Parser.parse("binary_byte_format(1024, 4)", ExprMacroTable.nil())
+      Parser.parse("human_readable_binary_byte_format(1024, 4)", ExprMacroTable.nil())
             .eval(bindings);
       Assert.assertTrue(false);
     }
     catch (IAE e) {
-      Assert.assertEquals("Given precision[4] of Function[binary_byte_format] must be in the range of [0,3]", e.getMessage());
+      Assert.assertEquals("Given precision[4] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
     }
   }
 
@@ -691,8 +691,8 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatInvalidArgumentSize()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[binary_byte_format] needs 1 or 2 arguments");
-    Parser.parse("binary_byte_format(1024, 2, 3)", ExprMacroTable.nil())
+    expectedException.expectMessage("Function[human_readable_binary_byte_format] needs 1 or 2 arguments");
+    Parser.parse("human_readable_binary_byte_format(1024, 2, 3)", ExprMacroTable.nil())
           .eval(bindings);
   }
 
@@ -705,17 +705,17 @@ public class FunctionTest extends InitializedNullHandlingTest
       // normal cases
       // y is not null, the function returns correctly
       //
-      assertExpr("binary_byte_format(y)", "2 B");
-      assertExpr("decimal_byte_format(y)", "2 B");
-      assertExpr("decimal_format(y)", "2");
+      assertExpr("human_readable_binary_byte_format(y)", "2 B");
+      assertExpr("human_readable_decimal_byte_format(y)", "2 B");
+      assertExpr("human_readable_decimal_format(y)", "2");
 
       //
       // since 'druid.generic.useDefaultValueForNull' has been disabled above,
       // the 'nonexist' below returns null, and the function calls also return null
       //
-      assertExpr("binary_byte_format(nonexist)", null);
-      assertExpr("decimal_byte_format(nonexist)", null);
-      assertExpr("decimal_format(nonexist)", null);
+      assertExpr("human_readable_binary_byte_format(nonexist)", null);
+      assertExpr("human_readable_decimal_byte_format(nonexist)", null);
+      assertExpr("human_readable_decimal_format(nonexist)", null);
 
     }
     NullHandling.updateForTests(true);

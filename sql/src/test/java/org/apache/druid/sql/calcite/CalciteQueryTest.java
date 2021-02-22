@@ -123,7 +123,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.validation.ValidationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16643,49 +16642,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSizeFormatFunction() throws Exception
-  {
-    testQuery(
-        "SELECT m1, "
-        + "BINARY_BYTE_FORMAT(45678),"
-        + "BINARY_BYTE_FORMAT(m1*12345),"
-        + "BINARY_BYTE_FORMAT(m1*12345, 0), "
-        + "DECIMAL_BYTE_FORMAT(m1*12345), "
-        + "DECIMAL_FORMAT(m1*12345) "
-        + "FROM numfoo WHERE f1 = 0.1 LIMIT 1",
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE3)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                //
-                // NOTE: the first expression BINARY_BYTE_FORMAT(45678) in SQL is calculated during SQL parse phase,
-                // so the converted Druid native query is its result intead of the raw function call
-                //
-                .virtualColumns(expressionVirtualColumn("v0", "'44.61 KiB'", ValueType.STRING),
-                                expressionVirtualColumn("v1", "binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
-                                expressionVirtualColumn("v2", "binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
-                                expressionVirtualColumn("v3", "decimal_byte_format((\"m1\" * 12345))", ValueType.STRING),
-                                expressionVirtualColumn("v4", "decimal_format((\"m1\" * 12345))", ValueType.STRING))
-                .columns("m1", "v0", "v1", "v2", "v3", "v4")
-                .filters(selector("f1", "0.1", null))
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .limit(1)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{(float) 2.0,
-                         "44.61 KiB", // 45678 / 1024
-                         "24.11 KiB", // = m1(2.0) * 12345 / 1024
-                         "24 KiB", // = m1(2.0) * 12345 / 1024, precision = 0
-                         "24.69 KB", // decimal byte format, m1(2.0) * 12345 / 1000,
-                         "24.69 K" // decimal format, m1(2.0) * 12345 / 1000,
-            }
-        )
-    );
-  }
-
   public void testGroupingSetsWithLimitOrderByGran() throws Exception
   {
     // Cannot vectorize due to virtual columns.
@@ -16761,46 +16717,89 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSizeFormatFunctionExceptionWithWrongNumberType() throws Exception
+  public void testHumanReadableFormatFunction() throws Exception
+  {
+    testQuery(
+        "SELECT m1, "
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(45678),"
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(m1*12345),"
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(m1*12345, 0), "
+        + "HUMAN_READABLE_DECIMAL_BYTE_FORMAT(m1*12345), "
+        + "HUMAN_READABLE_DECIMAL_FORMAT(m1*12345) "
+        + "FROM numfoo WHERE f1 = 0.1 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                //
+                // NOTE: the first expression HUMAN_READABLE_BINARY_BYTE_FORMAT(45678) in SQL is calculated during SQL parse phase,
+                // so the converted Druid native query is its result intead of the raw function call
+                //
+                .virtualColumns(expressionVirtualColumn("v0", "'44.61 KiB'", ValueType.STRING),
+                                expressionVirtualColumn("v1", "human_readable_binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v2", "human_readable_binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
+                                expressionVirtualColumn("v3", "human_readable_decimal_byte_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v4", "human_readable_decimal_format((\"m1\" * 12345))", ValueType.STRING))
+                .columns("m1", "v0", "v1", "v2", "v3", "v4")
+                .filters(selector("f1", "0.1", null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{(float) 2.0,
+                         "44.61 KiB", // 45678 / 1024
+                         "24.11 KiB", // = m1(2.0) * 12345 / 1024
+                         "24 KiB", // = m1(2.0) * 12345 / 1024, precision = 0
+                         "24.69 KB", // decimal byte format, m1(2.0) * 12345 / 1000,
+                         "24.69 K" // decimal format, m1(2.0) * 12345 / 1000,
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testHumanReadableFormatFunctionExceptionWithWrongNumberType() throws Exception
   {
     this.expectedException.expect(SqlPlanningException.class);
-    this.expectedException.expectMessage("Supported form(s): BINARY_BYTE_FORMAT(Number, [Precision])");
+    this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
-        "SELECT BINARY_BYTE_FORMAT('45678')",
+        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
         Collections.emptyList(),
         Collections.emptyList()
     );
   }
 
   @Test
-  public void testSizeFormatFunctionWithWrongPrecisionType() throws Exception
+  public void testHumanReadableFormatFunctionWithWrongPrecisionType() throws Exception
   {
     this.expectedException.expect(SqlPlanningException.class);
-    this.expectedException.expectMessage("Supported form(s): BINARY_BYTE_FORMAT(Number, [Precision])");
+    this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
-        "SELECT BINARY_BYTE_FORMAT(45678, '2')",
+        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
         Collections.emptyList(),
         Collections.emptyList()
     );
   }
 
   @Test
-  public void testSizeFormatFunctionWithInvalidNumberOfArguments() throws Exception
+  public void testHumanReadableFormatFunctionWithInvalidNumberOfArguments() throws Exception
   {
     this.expectedException.expect(SqlPlanningException.class);
 
     /*
      * frankly speaking, the exception message thrown here is a little bit confusion
-     * it says it's 'expecting 1 arguments' but acturally BINARY_BYTE_FORMAT supports 1 or 2 arguments
+     * it says it's 'expecting 1 arguments' but acturally HUMAN_READABLE_BINARY_BYTE_FORMAT supports 1 or 2 arguments
      *
      * The message is returned from {@link org.apache.calcite.sql.validate.SqlValidatorImpl#handleUnresolvedFunction},
      * and we can see from its implementation that it gets the min number arguments to format the exception message.
      *
      */
     this.expectedException.expectMessage(
-        "Invalid number of arguments to function 'BINARY_BYTE_FORMAT'. Was expecting 1 arguments");
+        "Invalid number of arguments to function 'HUMAN_READABLE_BINARY_BYTE_FORMAT'. Was expecting 1 arguments");
     testQuery(
-        "SELECT BINARY_BYTE_FORMAT(45678, 2, 1)",
+        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, 2, 1)",
         Collections.emptyList(),
         Collections.emptyList()
     );

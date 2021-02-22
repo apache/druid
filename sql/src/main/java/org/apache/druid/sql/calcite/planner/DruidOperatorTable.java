@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.HumanReadableFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
@@ -92,7 +93,6 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.SizeFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -241,9 +241,9 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private static final List<SqlOperatorConversion> FORMAT_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
-          .add(SizeFormatOperatorConversion.BINARY_BYTE_FORMAT)
-          .add(SizeFormatOperatorConversion.DECIMAL_BYTE_FORMAT)
-          .add(SizeFormatOperatorConversion.DECIMAL_FORMAT)
+          .add(HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT)
+          .add(HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT)
+          .add(HumanReadableFormatOperatorConversion.DECIMAL_FORMAT)
           .build();
 
   private static final List<SqlOperatorConversion> BITWISE_OPERATOR_CONVERSIONS =

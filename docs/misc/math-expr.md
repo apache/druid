@@ -241,7 +241,6 @@ supported features:
 
 | function | description |
 | --- | --- |
-| binary_byte_format(value[, precision]) | Returns the value in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, binary_byte_format(1048576) returns 1.00MiB. `precision` must be in the range of [0,3] (default: 2). |
-| decimal_byte_format(value[, precision]) | Returns the value in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. decimal_byte_format(1048576) returns 1.04MB. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
-| decimal_format(value[, precision]) | Returns the value in human-readable SI format. For example, DECIMAL_FORMAT(1048576) returns 1.04M. `precision` must be in the range of [0,3] (default: 2). |
-
+| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, human_readable_binary_byte_format(1048576) returns `1.00 MiB`. `precision` must be in the range of [0,3] (default: 2). |
+| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. human_readable_decimal_byte_format(1048576) returns `1.04 MB`. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
+| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of [0,3] (default: 2). |

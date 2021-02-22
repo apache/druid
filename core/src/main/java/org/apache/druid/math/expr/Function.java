@@ -3562,12 +3562,12 @@ public interface Function
     }
   }
 
-  class DecimalByteFormatFunc extends SizeFormatFunc
+  class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
     {
-      return "decimal_byte_format";
+      return "human_readable_decimal_byte_format";
     }
 
     @Override
@@ -3577,12 +3577,12 @@ public interface Function
     }
   }
 
-  class BinaryByteFormatFunc extends SizeFormatFunc
+  class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
     {
-      return "binary_byte_format";
+      return "human_readable_binary_byte_format";
     }
 
     @Override
@@ -3592,12 +3592,12 @@ public interface Function
     }
   }
 
-  class DecimalFormatFunc extends SizeFormatFunc
+  class HumanReadableDecimalFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
     {
-      return "decimal_format";
+      return "human_readable_decimal_format";
     }
 
     @Override
