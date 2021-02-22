@@ -211,6 +211,18 @@ public class OverlordResource
   )
   {
     log.info("Search unLocked intervals conditions: searchDataSource[%s],searchInterval[%s]", dataSource, intervalStr);
+    // check auth for dataSource
+    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        ImmutableList.of(
+            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ)
+        ),
+        authorizerMapper
+    );
+
+    if (!authResult.isAllowed()) {
+      throw new ForbiddenException(authResult.getMessage());
+    }
     return asLeaderWith(
         taskMaster.getTaskQueue(),
         new Function<TaskQueue, Response>()
