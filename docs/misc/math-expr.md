@@ -241,7 +241,7 @@ supported features:
 
 | function | description |
 | --- | --- |
-| binary_byte_format(value[, precision]) | Returns the value in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. Supported unit suffix: `B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`. `precision` must be in the range of [0,3] (default: 2). |
-| decimal_byte_format(value[, precision]) | Returns the value in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. Supported unit suffix: `B`, `KB`, `MB`, `GB`, `TB`, `PB`, `EB`. `precision` must be in the range of [0,3] (default: 2). |
-| decimal_format(value[, precision]) | Returns the value in human-readable SI format. Supported unit suffix: `K`, `M`, `G`, `T`, `P`, `E`. `precision` must be in the range of [0,3] (default: 2). |
+| binary_byte_format(value[, precision]) | Returns the value in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, binary_byte_format(1048576) returns 1.00MiB. `precision` must be in the range of [0,3] (default: 2). |
+| decimal_byte_format(value[, precision]) | Returns the value in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. decimal_byte_format(1048576) returns 1.04MB. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
+| decimal_format(value[, precision]) | Returns the value in human-readable SI format. For example, DECIMAL_FORMAT(1048576) returns 1.04M. `precision` must be in the range of [0,3] (default: 2). |
 
