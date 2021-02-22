@@ -560,16 +560,16 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   /**
    * Returns a list of intervals which are contained by totalInterval
    *
-   * @param totalInterval     total interval
+   * @param searchInterval     total interval
    * @param unlockedIntervals unlocked intervals
    */
-  private static List<Interval> filterLockedIntervals(Interval totalInterval, List<Interval> unlockedIntervals)
+  private static List<Interval> filterLockedIntervals(Interval searchInterval, List<Interval> unlockedIntervals)
   {
     final List<Interval> filteredIntervals = new ArrayList<>(unlockedIntervals.size() + 1);
 
-    for (Interval searchInterval : unlockedIntervals) {
-      if (totalInterval.contains(searchInterval)) {
-        filteredIntervals.add(searchInterval);
+    for (Interval unlockedInterval : unlockedIntervals) {
+      if (searchInterval.overlaps(unlockedInterval)) {
+        filteredIntervals.add(searchInterval.overlap(unlockedInterval));
       }
     }
 
