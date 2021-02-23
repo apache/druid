@@ -29,6 +29,8 @@ import java.util.Map;
  */
 public class NoopViewManager implements ViewManager
 {
+  public static final String TYPE = "noop";
+
   @Override
   public void createView(final PlannerFactory plannerFactory, final String viewName, final String viewSql)
   {

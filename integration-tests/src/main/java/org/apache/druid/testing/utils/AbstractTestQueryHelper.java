@@ -50,7 +50,6 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   protected final String router;
   protected final String routerTLS;
 
-
   @Inject
   AbstractTestQueryHelper(
       ObjectMapper jsonMapper,
@@ -119,7 +118,9 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults())) {
+      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
+                                              queryWithResult.getFieldsToTest()
+      )) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
             queryWithResult.getQuery(),

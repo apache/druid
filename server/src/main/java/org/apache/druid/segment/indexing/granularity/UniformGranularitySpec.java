@@ -21,7 +21,6 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
@@ -30,9 +29,6 @@ import java.util.List;
 
 public class UniformGranularitySpec extends BaseGranularitySpec
 {
-  private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
-  private static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
-
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
   private final IntervalsByGranularity intervalsByGranularity;
@@ -144,5 +140,4 @@ public class UniformGranularitySpec extends BaseGranularitySpec
   {
     return lookupTableBucketByDateTime;
   }
-
 }
