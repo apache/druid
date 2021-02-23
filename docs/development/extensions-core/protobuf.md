@@ -56,7 +56,7 @@ Here is a JSON example of the 'metrics' data schema used in the example.
 
 ### Proto file
 
-The corresponding proto file for our 'metrics' dataset looks like this. You can use protobuf parser with a proto file or Confluent schema registry.
+The corresponding proto file for our 'metrics' dataset looks like this. You can use Protobuf parser with a proto file or Confluent schema registry.
 
 ```
 syntax = "proto3";
@@ -95,7 +95,12 @@ Accept: application/vnd.schemaregistry.v1+json, application/vnd.schemaregistry+j
 }
 ```
 
-This feature uses Confluent's protobuf provider which is not included in the Druid distribution and must be installed separately. It can be fetched from Maven Central at: https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/6.0.1/kafka-protobuf-provider-6.0.1.jar. Copy or symlink this file to extensions/protobuf-extensions under the distribution root directory.
+This feature uses Confluent's Protobuf provider which is not included in the Druid distribution and must be installed separately. You can fetch it and its dependencies from Maven Central at: 
+- https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/6.0.1/kafka-protobuf-provider-6.0.1.jar
+- https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.4.0/kotlin-stdlib-1.4.0.jar
+- https://repo1.maven.org/maven2/com/squareup/wire/wire-schema/3.2.2/wire-schema-3.2.2.jar
+
+Copy or symlink those files to `extensions/protobuf-extensions` under the distribution root directory.
 
 ## Create Kafka Supervisor
 
@@ -107,7 +112,7 @@ Make sure these keys are properly configured for successful ingestion.
 Important supervisor properties
 - `protoBytesDecoder.descriptor` for the descriptor file URL
 - `protoBytesDecoder.protoMessageType` from the proto definition
-- `protoBytesDecoder.type` set to `file`, indicate use descriptor file to decode protobuf file
+- `protoBytesDecoder.type` set to `file`, indicate use descriptor file to decode Protobuf file
 - `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`
 
 ```json
@@ -204,7 +209,7 @@ To adopt to old version. You can use old parser style, which also works.
 Important supervisor properties
 - `protoBytesDecoder.url` for the schema registry URL
 - `protoBytesDecoder.capacity` capacity for schema registry cached schemas
-- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode protobuf file
+- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode Protobuf file
 - `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`
 
 ```json

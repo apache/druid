@@ -159,10 +159,6 @@
         <configuration>
           <createDependencyReducedPom>true</createDependencyReducedPom>
           <relocations>
-            <relocation>
-              <pattern>com.google.protobuf</pattern>
-              <shadedPattern>shaded.com.google.protobuf</shadedPattern>
-            </relocation>
           </relocations>
         </configuration>
         <executions>
