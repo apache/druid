@@ -373,7 +373,7 @@ public abstract class AbstractAuthConfigurationTest
 
   abstract void setupUsers() throws Exception;
 
-  void setupCommonHttpClients() throws JsonProcessingException
+  void setupCommonHttpClients()
   {
     adminClient = new CredentialedHttpClient(
         new BasicCredentials("admin", "priest"),
