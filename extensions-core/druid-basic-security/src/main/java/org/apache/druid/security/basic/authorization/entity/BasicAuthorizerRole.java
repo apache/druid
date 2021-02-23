@@ -114,7 +114,7 @@ public class BasicAuthorizerRole
         }
         catch (JsonProcessingException e) {
           // ignore unparseable, it might be resource types we don't know about
-          log.warn(e, "Failed to deserialize authorizer role, ignoring");
+          log.warn(e, "Failed to deserialize authorizer role, ignoring: %s", node.toPrettyString());
         }
       }
 
