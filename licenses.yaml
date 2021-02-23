@@ -3398,18 +3398,7 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - io.confluent: kafka-schema-registry-client
-  - io.confluent: kafka-protobuf-provider
   - io.confluent: common-utils
-
----
-
-name: Squareup Wire
-version: 3.2.2
-license_category: binary
-module: extensions/druid-protobuf-extensions
-license_name: Apache License version 2.0
-libraries:
-  - com.squareup.wire: wire-schema
 
 ---
 
@@ -3420,16 +3409,6 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
-
----
-
-name: Kotlin
-version: 1.4.0
-license_category: binary
-module: extensions/druid-protobuf-extensions
-license_name: Apache License version 2.0
-libraries:
-  - org.jetbrains.kotlin: kotlin-stdlib
 
 ---
 

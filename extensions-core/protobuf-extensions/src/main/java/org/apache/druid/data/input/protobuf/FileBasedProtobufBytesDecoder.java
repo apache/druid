@@ -21,11 +21,11 @@ package org.apache.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
-import io.confluent.kafka.schemaregistry.protobuf.dynamic.DynamicSchema;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 

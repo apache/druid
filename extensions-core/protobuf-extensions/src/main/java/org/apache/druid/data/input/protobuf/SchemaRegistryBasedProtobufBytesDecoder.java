@@ -26,11 +26,13 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 
@@ -76,9 +78,13 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       ProtobufSchema schema = (ProtobufSchema) registry.getSchemaById(id);
       descriptor = schema.toDescriptor();
     }
-    catch (Exception e) {
+    catch (RestClientException e) {
       LOGGER.error(e.getMessage());
-      throw new ParseException(e, "Fail to get protobuf schema!");
+      throw new ParseException(e, "Fail to get protobuf schema because of can not connect to registry or failed http request!");
+    }
+    catch (IOException e) {
+      LOGGER.error(e.getMessage());
+      throw new ParseException(e, "Fail to get protobuf schema because of invalid schema!");
     }
     try {
       byte[] rawMessage = new byte[length];
