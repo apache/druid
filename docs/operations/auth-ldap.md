@@ -52,7 +52,7 @@ After verifying basic connectivity, check your search criteria. For example, the
 ldapsearch -x -W -H ldap://<ldap_server>  -D"uuser1@example.com" -b "dc=example,dc=com" "(sAMAccountName=uuser1)"
 ```
 
-Note the `memberOf` attribute in the results; it shows the groups that the user belongs to. You will use this value to map the LDAP group to the Druid roles later. This attribute may be implemented differently on different types of LDAP servers. For instance, some LDAP servers may support nested groupings, and return a user as being part of a group, if they are part of a subgroup of the group. Some LDAP server implementations may not have any object classes that contain this attribute altogether. The sAMAccountName attribute used in this example contains the authenticated user identity. This is an attribute of an object class specific to Microsoft Active Directory. The object classes and attribute used in your LDAP server may be different.
+Note the `memberOf` attribute in the results; it shows the groups that the user belongs to. You will use this value to map the LDAP group to the Druid roles later. This attribute may be implemented differently on different types of LDAP servers. For instance, some LDAP servers may support recursive groupings, and some may not. Some LDAP server implementations may not have any object classes that contain this attribute altogether. The sAMAccountName attribute used in this example contains the authenticated user identity. This is an attribute of an object class specific to Microsoft Active Directory. The object classes and attribute used in your LDAP server may be different.
 
 ## Configure Druid user authentication with LDAP/Active Directory 
 
@@ -189,9 +189,8 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://loca
 
 In this step, you can configure Druid to apply specific roles to users. This step is only needed in the following cases: 
 
-- You don't want to rely on group associations configured in your LDAP server,
 - Your LDAP server does not support the `memberOf` attribute, or 
-- The LDAP server does not support recursive group membership. 
+- You want to configure a user with additional roles that are not mapped for the group(s) that the user is a member of
 
 If this is not the case for your scenario, you can skip this step. 
 
