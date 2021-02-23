@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.security;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -453,8 +452,7 @@ public abstract class AbstractAuthConfigurationTest
 
   static String fillSegementServersTemplate(IntegrationTestingConfig config, String template)
   {
-    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
-    return json;
+    return StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
   }
 
   static String fillServersTemplate(IntegrationTestingConfig config, String template)

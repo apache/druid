@@ -295,6 +295,12 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Test
+  public void test_admin_loadStatus() throws Exception
+  {
+    checkLoadStatus(adminClient);
+  }
+
+  @Test
   public void test_admin_hasNodeAccess()
   {
     checkNodeAccess(adminClient);

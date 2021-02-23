@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.security;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -43,7 +42,6 @@ import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Test(groups = TestNGGroup.SECURITY)
@@ -56,11 +54,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String BASIC_AUTHORIZER = "basic";
 
   private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed.";
-
-  private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<List<Map<String, Object>>>()
-      {
-      };
 
   private HttpClient druid99;
 
@@ -254,6 +247,12 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   public void test_admin_hasNodeAccess()
   {
     checkNodeAccess(adminClient);
+  }
+
+  @Test
+  public void test_admin_loadStatus() throws Exception
+  {
+    checkLoadStatus(adminClient);
   }
 
   @Test
