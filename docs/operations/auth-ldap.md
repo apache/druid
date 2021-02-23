@@ -187,7 +187,7 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://loca
 
 ### Step 5. Assign the role to the user 
 
-Note: This step is only needed if your ldap server does not support the `memberOf` attribute, or if for example the ldap server does not support recursive group membership. Druid will use any roles explicitly assigned to the user, which can be setup in this step.
+Note: This step is only needed if either you don't want to rely on the groups as configured in your ldap server, or if your ldap server does not support the `memberOf` attribute, or if for example the ldap server does not support recursive group membership. Druid will use any roles explicitly assigned to the user, which can be setup in this step.
 
 The following command shows how to assign a role to a user:
 
