@@ -64,6 +64,11 @@ public class TestNGGroup
   public static final String SECURITY = "security";
 
   /**
+   * This group can only be run individually using -Dgroups=ldap-security since it requires specific test data setup.
+   */
+  public static final String LDAP_SECURITY = "ldap-security";
+
+  /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
    * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
    * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.

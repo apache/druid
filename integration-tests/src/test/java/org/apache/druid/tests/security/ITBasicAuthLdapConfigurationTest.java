@@ -19,17 +19,22 @@
 
 package org.apache.druid.tests.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -42,20 +47,31 @@ import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-@Test(groups = TestNGGroup.SECURITY)
+@Test(groups = TestNGGroup.LDAP_SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
+public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationTest
 {
-  private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
+  private static final Logger LOG = new Logger(ITBasicAuthLdapConfigurationTest.class);
 
-  private static final String BASIC_AUTHENTICATOR = "basic";
-  private static final String BASIC_AUTHORIZER = "basic";
+  private static final String LDAP_AUTHENTICATOR = "ldap";
+  private static final String LDAP_AUTHORIZER = "ldapauth";
 
-  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed.";
+  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User LDAP authentication failed.";
 
-  private HttpClient druid99;
+  @Inject
+  IntegrationTestingConfig config;
+
+  @Inject
+  ObjectMapper jsonMapper;
+
+  @Inject
+  private CoordinatorResourceTestClient coordinatorClient;
+
+  private HttpClient druidUserClient;
+  private HttpClient stateOnlyNoLdapGroupUserClient;
 
   @BeforeClass
   public void before() throws Exception
@@ -237,16 +253,45 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Test
+  public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser() throws Exception
+  {
+    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+
+    // as user that can only read STATE
+    LOG.info("Checking sys.segments query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.servers query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaServerQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
+    );
+
+    LOG.info("Checking sys.server_segments query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.tasks query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        Collections.emptyList()
+    );
+  }
+
+  @Test
   public void test_unsecuredPathWithoutCredentials_allowed()
   {
     // check that we are allowed to access unsecured path without credentials.
     checkUnsecuredCoordinatorLoadQueuePath(httpClient);
-  }
-
-  @Test
-  public void test_admin_hasNodeAccess()
-  {
-    checkNodeAccess(adminClient);
   }
 
   @Test
@@ -256,16 +301,21 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Test
+  public void test_admin_hasNodeAccess()
+  {
+    checkNodeAccess(adminClient);
+  }
+
+  @Test
   public void test_internalSystemUser_hasNodeAccess()
   {
     checkNodeAccess(internalSystemClient);
   }
 
-
   @Test
-  public void test_druid99User_hasNodeAccess()
+  public void test_druidUser_hasNodeAccess()
   {
-    checkNodeAccess(druid99);
+    checkNodeAccess(druidUserClient);
   }
 
   @Test
@@ -325,22 +375,20 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   @Override
   void setupUsers() throws Exception
   {
-    // create a new user+role that can only read 'auth_test'
+    // create a role that can only read 'auth_test'
     List<ResourceAction> readDatasourceOnlyPermissions = Collections.singletonList(
         new ResourceAction(
             new Resource("auth_test", ResourceType.DATASOURCE),
             Action.READ
         )
     );
-    createUserAndRoleWithPermissions(
-        adminClient,
-        "datasourceOnlyUser",
-        "helloworld",
-        "datasourceOnlyRole",
-        readDatasourceOnlyPermissions
+
+    createRoleWithPermissionsAndGroupMapping(
+        "datasourceOnlyGroup",
+        ImmutableMap.of("datasourceOnlyRole", readDatasourceOnlyPermissions)
     );
 
-    // create a new user+role that can only read 'auth_test' + STATE read access
+    // create a new role that can only read 'auth_test' + STATE read access
     List<ResourceAction> readDatasourceWithStatePermissions = ImmutableList.of(
         new ResourceAction(
             new Resource("auth_test", ResourceType.DATASOURCE),
@@ -351,170 +399,138 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
             Action.READ
         )
     );
-    createUserAndRoleWithPermissions(
-        adminClient,
-        "datasourceWithStateUser",
-        "helloworld",
-        "datasourceWithStateRole",
-        readDatasourceWithStatePermissions
+
+    createRoleWithPermissionsAndGroupMapping(
+        "datasourceWithStateGroup",
+        ImmutableMap.of("datasourceWithStateRole", readDatasourceWithStatePermissions)
     );
 
-    // create a new user+role with only STATE read access
+    // create a new role with only STATE read access
     List<ResourceAction> stateOnlyPermissions = ImmutableList.of(
         new ResourceAction(
             new Resource(".*", ResourceType.STATE),
             Action.READ
         )
     );
-    createUserAndRoleWithPermissions(
-        adminClient,
-        "stateOnlyUser",
-        "helloworld",
-        "stateOnlyRole",
-        stateOnlyPermissions
+
+    createRoleWithPermissionsAndGroupMapping(
+        "stateOnlyGroup",
+        ImmutableMap.of("stateOnlyRole", stateOnlyPermissions)
     );
+
+    // create a role that can read /status
+    createRoleWithPermissionsAndGroupMapping(
+        "druidGroup",
+        ImmutableMap.of("druidrole", stateOnlyPermissions)
+    );
+
+    assignUserToRole("stateOnlyNoLdapGroup", "stateOnlyRole");
   }
 
   @Override
-  void setupTestSpecificHttpClients() throws Exception
+  void setupTestSpecificHttpClients()
   {
-    // create a new user+role that can read /status
-    List<ResourceAction> permissions = Collections.singletonList(
-        new ResourceAction(
-            new Resource(".*", ResourceType.STATE),
-            Action.READ
-        )
-    );
-    createUserAndRoleWithPermissions(
-        adminClient,
-        "druid",
-        "helloworld",
-        "druidrole",
-        permissions
+    druidUserClient = new CredentialedHttpClient(
+        new BasicCredentials("druid", "helloworld"),
+        httpClient
     );
 
-    // create 100 users
-    for (int i = 0; i < 100; i++) {
-      HttpUtil.makeRequest(
-          adminClient,
-          HttpMethod.POST,
-          config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid" + i,
-          null
-      );
-
-      HttpUtil.makeRequest(
-          adminClient,
-          HttpMethod.POST,
-          config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid" + i,
-          null
-      );
-
-      LOG.info("Finished creating user druid" + i);
-    }
-
-    // setup the last of 100 users and check that it works
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid99/credentials",
-        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
-    );
-
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid99/roles/druidrole",
-        null
-    );
-
-    druid99 = new CredentialedHttpClient(
-        new BasicCredentials("druid99", "helloworld"),
+    stateOnlyNoLdapGroupUserClient = new CredentialedHttpClient(
+        new BasicCredentials("stateOnlyNoLdapGroup", "helloworld"),
         httpClient
     );
   }
 
-  private void createUserAndRoleWithPermissions(
-      HttpClient adminClient,
-      String user,
-      String password,
-      String role,
-      List<ResourceAction> permissions
+  private void createRoleWithPermissionsAndGroupMapping(
+      String group,
+      Map<String, List<ResourceAction>> roleTopermissions
   ) throws Exception
+  {
+    roleTopermissions.keySet().forEach(role -> HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/ldapauth/roles/%s",
+            config.getCoordinatorUrl(),
+            role
+        ),
+        null
+    ));
+
+    for (Map.Entry<String, List<ResourceAction>> entry : roleTopermissions.entrySet()) {
+      String role = entry.getKey();
+      List<ResourceAction> permissions = entry.getValue();
+      byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
+      HttpUtil.makeRequest(
+          adminClient,
+          HttpMethod.POST,
+          StringUtils.format(
+              "%s/druid-ext/basic-security/authorization/db/ldapauth/roles/%s/permissions",
+              config.getCoordinatorUrl(),
+              role
+          ),
+          permissionsBytes
+      );
+    }
+
+    String groupMappingName = StringUtils.format("%sMapping", group);
+    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping(
+        groupMappingName,
+        StringUtils.format("cn=%s,ou=Groups,dc=example,dc=org", group),
+        roleTopermissions.keySet()
+    );
+    byte[] groupMappingBytes = jsonMapper.writeValueAsBytes(groupMapping);
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/%s",
+            config.getCoordinatorUrl(),
+            groupMappingName
+        ),
+        groupMappingBytes
+    );
+  }
+
+  private void assignUserToRole(
+      String user,
+      String role
+  )
   {
     HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
-            "%s/druid-ext/basic-security/authentication/db/basic/users/%s",
+            "%s/druid-ext/basic-security/authorization/db/ldapauth/users/%s",
             config.getCoordinatorUrl(),
             user
         ),
         null
     );
+
     HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
-            "%s/druid-ext/basic-security/authentication/db/basic/users/%s/credentials",
-            config.getCoordinatorUrl(),
-            user
-        ),
-        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate(password, 5000))
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/users/%s",
-            config.getCoordinatorUrl(),
-            user
-        ),
-        null
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/roles/%s",
-            config.getCoordinatorUrl(),
-            role
-        ),
-        null
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/users/%s/roles/%s",
+            "%s/druid-ext/basic-security/authorization/db/ldapauth/users/%s/roles/%s",
             config.getCoordinatorUrl(),
             user,
             role
         ),
         null
     );
-    byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/roles/%s/permissions",
-            config.getCoordinatorUrl(),
-            role
-        ),
-        permissionsBytes
-    );
   }
 
   @Override
   String getAuthenticatorName()
   {
-    return BASIC_AUTHENTICATOR;
+    return LDAP_AUTHENTICATOR;
   }
 
   @Override
   String getAuthorizerName()
   {
-    return BASIC_AUTHORIZER;
+    return LDAP_AUTHORIZER;
   }
 
   @Override
