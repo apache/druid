@@ -19,40 +19,32 @@
 
 package org.apache.druid.tests.security;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
-import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
-import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -69,33 +61,6 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
 
   private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User LDAP authentication failed.";
 
-
-  private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<List<Map<String, Object>>>()
-      {
-      };
-
-  private static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_segments.json";
-  private static final String SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_server_segments.json";
-  private static final String SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_servers.json";
-  private static final String SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_tasks.json";
-
-  private static final String SYS_SCHEMA_SEGMENTS_QUERY =
-      "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
-
-  private static final String SYS_SCHEMA_SERVERS_QUERY =
-      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
-
-  private static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
-      "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";
-
-  private static final String SYS_SCHEMA_TASKS_QUERY =
-      "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
-
   @Inject
   IntegrationTestingConfig config;
 
@@ -103,61 +68,27 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   ObjectMapper jsonMapper;
 
   @Inject
-  @Client
-  HttpClient httpClient;
-
-  @Inject
   private CoordinatorResourceTestClient coordinatorClient;
 
-  @BeforeMethod
-  public void before()
+  private HttpClient druidUserClient;
+  private HttpClient stateOnlyNoLdapGroupUserClient;
+
+  @BeforeClass
+  public void before() throws Exception
   {
     // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
     ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
     );
+
+    setupHttpClients();
+    setupUsers();
+    setExpectedSystemSchemaObjects();
   }
 
   @Test
-  public void testSystemSchemaAccess() throws Exception
+  public void test_systemSchemaAccess_admin() throws Exception
   {
-
-    // initial setup is done now, run the system schema response content tests
-    final List<Map<String, Object>> adminSegments = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
-    );
-
-    final List<Map<String, Object>> adminTasks = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
-    );
-
-    final List<Map<String, Object>> adminServers = getServersWithoutCurrentSize(
-        jsonMapper.readValue(
-            fillServersTemplate(
-                config,
-                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
-            ),
-            SYS_SCHEMA_RESULTS_TYPE_REFERENCE
-        )
-    );
-
-    final List<Map<String, Object>> adminServerSegments = jsonMapper.readValue(
-        fillSegementServersTemplate(
-            config,
-            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
-        ),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
-    );
-
-
-
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
-    );
-
     // check that admin access works on all nodes
     checkNodeAccess(adminClient);
 
@@ -189,28 +120,11 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks
     );
+  }
 
-
-    // create a role that can only read 'auth_test'
-    List<ResourceAction> readDatasourceOnlyPermissions = Collections.singletonList(
-        new ResourceAction(
-            new Resource("auth_test", ResourceType.DATASOURCE),
-            Action.READ
-        )
-    );
-
-    createRoleWithPermissionsAndGroupMapping(
-        adminClient,
-        "datasourceOnlyGroup",
-        ImmutableMap.of("datasourceOnlyRole", readDatasourceOnlyPermissions)
-    );
-
-    HttpClient datasourceOnlyUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceOnlyUser", "helloworld"),
-        httpClient
-    );
-
-
+  @Test
+  public void test_systemSchemaAccess_datasourceOnlyUser() throws Exception
+  {
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceOnlyUserClient,
@@ -253,30 +167,11 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
                   .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
                   .collect(Collectors.toList())
     );
+  }
 
-    // create a new role that can only read 'auth_test' + STATE read access
-    List<ResourceAction> readDatasourceWithStatePermissions = ImmutableList.of(
-        new ResourceAction(
-            new Resource("auth_test", ResourceType.DATASOURCE),
-            Action.READ
-        ),
-        new ResourceAction(
-            new Resource(".*", ResourceType.STATE),
-            Action.READ
-        )
-    );
-
-    createRoleWithPermissionsAndGroupMapping(
-        adminClient,
-        "datasourceWithStateGroup",
-        ImmutableMap.of("datasourceWithStateRole", readDatasourceWithStatePermissions)
-    );
-
-    HttpClient datasourceWithStateUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceWithStateUser", "helloworld"),
-        httpClient
-    );
-
+  @Test
+  public void test_systemSchemaAccess_datasourceWithStateUser() throws Exception
+  {
     // check that we can access a state-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceWithStateUserClient,
@@ -320,24 +215,11 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
                   .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
                   .collect(Collectors.toList())
     );
+  }
 
-    // create a new role with only STATE read access
-    List<ResourceAction> stateOnlyPermissions = ImmutableList.of(
-        new ResourceAction(
-            new Resource(".*", ResourceType.STATE),
-            Action.READ
-        )
-    );
-    createRoleWithPermissionsAndGroupMapping(
-        adminClient,
-        "stateOnlyGroup",
-        ImmutableMap.of("stateOnlyRole", stateOnlyPermissions)
-    );
-    HttpClient stateOnlyUserClient = new CredentialedHttpClient(
-        new BasicCredentials("stateOnlyUser", "helloworld"),
-        httpClient
-    );
-
+  @Test
+  public void test_systemSchemaAccess_stateOnlyUser() throws Exception
+  {
     HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
 
     // as user that can only read STATE
@@ -371,36 +253,141 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Test
-  public void testAuthConfiguration() throws Exception
+  public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser() throws Exception
   {
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
+    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+
+    // as user that can only read STATE
+    LOG.info("Checking sys.segments query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        Collections.emptyList()
     );
 
-    HttpClient internalSystemClient = new CredentialedHttpClient(
-        new BasicCredentials("druid_system", "warlock"),
-        httpClient
+    LOG.info("Checking sys.servers query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaServerQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
     );
 
-    HttpClient druidUserClient = new CredentialedHttpClient(
-        new BasicCredentials("druid", "helloworld"),
-        httpClient
+    LOG.info("Checking sys.server_segments query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        Collections.emptyList()
     );
 
-    final HttpClient unsecuredClient = httpClient;
+    LOG.info("Checking sys.tasks query as stateOnlyNoLdapGroupUser...");
+    verifySystemSchemaQuery(
+        stateOnlyNoLdapGroupUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        Collections.emptyList()
+    );
+  }
 
+  @Test
+  public void test_unsecuredPathWithoutCredentials_allowed()
+  {
     // check that we are allowed to access unsecured path without credentials.
-    checkUnsecuredCoordinatorLoadQueuePath(unsecuredClient);
+    checkUnsecuredCoordinatorLoadQueuePath(httpClient);
+  }
 
-    // check that admin works
+  @Test
+  public void test_admin_hasNodeAccess()
+  {
     checkNodeAccess(adminClient);
+  }
 
-    // check that internal user works
+  @Test
+  public void test_internalSystemUser_hasNodeAccess()
+  {
     checkNodeAccess(internalSystemClient);
+  }
 
-    // create a new role that can read /status
-    List<ResourceAction> permissions = Collections.singletonList(
+  @Test
+  public void test_druidUser_hasNodeAccess()
+  {
+    checkNodeAccess(druidUserClient);
+  }
+
+  @Test
+  public void test_avaticaQuery_broker()
+  {
+    testAvaticaQuery(getBrokerAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQuery_router()
+  {
+    testAvaticaQuery(getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQueryAuthFailure_broker() throws Exception
+  {
+    testAvaticaAuthFailure(getBrokerAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQueryAuthFailure_router() throws Exception
+  {
+    testAvaticaAuthFailure(getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_admin_optionsRequest()
+  {
+    verifyAdminOptionsRequest();
+  }
+
+  @Test
+  public void test_authentication_invalidAuthName_fails()
+  {
+    verifyAuthenticatioInvalidAuthNameFails();
+  }
+
+  @Test
+  public void test_authorization_invalidAuthName_fails()
+  {
+    verifyAuthorizationInvalidAuthNameFails();
+  }
+
+  @Test
+  public void test_groupMappings_invalidAuthName_fails()
+  {
+    verifyGroupMappingsInvalidAuthNameFails();
+  }
+
+  @Test
+  public void testMaliciousUser()
+  {
+    verifyMaliciousUser();
+  }
+
+  @Override
+  void setupUsers() throws Exception
+  {
+    // create a role that can only read 'auth_test'
+    List<ResourceAction> readDatasourceOnlyPermissions = Collections.singletonList(
+        new ResourceAction(
+            new Resource("auth_test", ResourceType.DATASOURCE),
+            Action.READ
+        )
+    );
+
+    createRoleWithPermissionsAndGroupMapping(
+        "datasourceOnlyGroup",
+        ImmutableMap.of("datasourceOnlyRole", readDatasourceOnlyPermissions)
+    );
+
+    // create a new role that can only read 'auth_test' + STATE read access
+    List<ResourceAction> readDatasourceWithStatePermissions = ImmutableList.of(
+        new ResourceAction(
+            new Resource("auth_test", ResourceType.DATASOURCE),
+            Action.READ
+        ),
         new ResourceAction(
             new Resource(".*", ResourceType.STATE),
             Action.READ
@@ -408,104 +395,47 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
     );
 
     createRoleWithPermissionsAndGroupMapping(
-        adminClient,
+        "datasourceWithStateGroup",
+        ImmutableMap.of("datasourceWithStateRole", readDatasourceWithStatePermissions)
+    );
+
+    // create a new role with only STATE read access
+    List<ResourceAction> stateOnlyPermissions = ImmutableList.of(
+        new ResourceAction(
+            new Resource(".*", ResourceType.STATE),
+            Action.READ
+        )
+    );
+
+    createRoleWithPermissionsAndGroupMapping(
+        "stateOnlyGroup",
+        ImmutableMap.of("stateOnlyRole", stateOnlyPermissions)
+    );
+
+    // create a role that can read /status
+    createRoleWithPermissionsAndGroupMapping(
         "druidGroup",
-        ImmutableMap.of("druidrole", permissions)
+        ImmutableMap.of("druidrole", stateOnlyPermissions)
     );
 
-    // check that the druid user works
-    checkNodeAccess(druidUserClient);
-
-    // check loadStatus
-    checkLoadStatus(adminClient, LDAP_AUTHENTICATOR, LDAP_AUTHORIZER);
-
-    String brokerUrl = "jdbc:avatica:remote:url=" + config.getBrokerUrl() + DruidAvaticaHandler.AVATICA_PATH;
-    String routerUrl = "jdbc:avatica:remote:url=" + config.getRouterUrl() + DruidAvaticaHandler.AVATICA_PATH;
-
-    LOG.info("Checking Avatica query on broker.");
-    testAvaticaQuery(brokerUrl);
-
-    LOG.info("Checking Avatica query on router.");
-    testAvaticaQuery(routerUrl);
-
-    LOG.info("Testing Avatica query on broker with incorrect credentials.");
-    testAvaticaAuthFailure(brokerUrl, EXPECTED_AVATICA_AUTH_ERROR);
-
-    LOG.info("Testing Avatica query on router with incorrect credentials.");
-    testAvaticaAuthFailure(routerUrl, EXPECTED_AVATICA_AUTH_ERROR);
-
-    LOG.info("Checking OPTIONS requests on services...");
-    testOptionsRequests(adminClient);
+    assignUserToRole("stateOnlyNoLdapGroup", "stateOnlyRole");
   }
 
-  @Test
-  public void testInvalidAuthNames()
+  @Override
+  void setupTestSpecificHttpClients()
   {
-    String invalidName = "invalid%2Fname";
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
+    druidUserClient = new CredentialedHttpClient(
+        new BasicCredentials("druid", "helloworld"),
         httpClient
     );
 
-    HttpUtil.makeRequestWithExpectedStatus(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authentication/listen/%s",
-            config.getCoordinatorUrl(),
-            invalidName
-        ),
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
-        HttpResponseStatus.INTERNAL_SERVER_ERROR
-    );
-
-    HttpUtil.makeRequestWithExpectedStatus(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/listen/users/%s",
-            config.getCoordinatorUrl(),
-            invalidName
-        ),
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
-        HttpResponseStatus.INTERNAL_SERVER_ERROR
-    );
-
-    HttpUtil.makeRequestWithExpectedStatus(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/listen/groupMappings/%s",
-            config.getCoordinatorUrl(),
-            invalidName
-        ),
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
-        HttpResponseStatus.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  @Test
-  public void testMaliciousUser()
-  {
-    String maliciousUsername = "<script>alert('hello')</script>";
-    HttpClient maliciousClient = new CredentialedHttpClient(
-        new BasicCredentials(maliciousUsername, "noPass"),
+    stateOnlyNoLdapGroupUserClient = new CredentialedHttpClient(
+        new BasicCredentials("stateOnlyNoLdapGroup", "helloworld"),
         httpClient
     );
-    StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
-        maliciousClient,
-        HttpMethod.GET,
-        config.getBrokerUrl() + "/status",
-        null,
-        HttpResponseStatus.UNAUTHORIZED
-    );
-    String responseContent = responseHolder.getContent();
-    Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
-    Assert.assertFalse(responseContent.contains(maliciousUsername));
   }
 
   private void createRoleWithPermissionsAndGroupMapping(
-      HttpClient adminClient,
       String group,
       Map<String, List<ResourceAction>> roleTopermissions
   ) throws Exception
@@ -554,5 +484,52 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         ),
         groupMappingBytes
     );
+  }
+
+  private void assignUserToRole(
+      String user,
+      String role
+  )
+  {
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/ldapauth/users/%s",
+            config.getCoordinatorUrl(),
+            user
+        ),
+        null
+    );
+
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/ldapauth/users/%s/roles/%s",
+            config.getCoordinatorUrl(),
+            user,
+            role
+        ),
+        null
+    );
+  }
+
+  @Override
+  String getAuthenticatorName()
+  {
+    return LDAP_AUTHENTICATOR;
+  }
+
+  @Override
+  String getAuthorizerName()
+  {
+    return LDAP_AUTHORIZER;
+  }
+
+  @Override
+  String getExpectedAvaticaAuthError()
+  {
+    return EXPECTED_AVATICA_AUTH_ERROR;
   }
 }
