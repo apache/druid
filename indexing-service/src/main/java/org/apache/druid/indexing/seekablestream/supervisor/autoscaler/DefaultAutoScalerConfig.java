@@ -34,8 +34,8 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
   private final long scaleInThreshold;
   private final double triggerScaleOutThresholdFrequency;
   private final double triggerScaleInThresholdFrequency;
-  private final int taskCountMax;
-  private final int taskCountMin;
+  private int taskCountMax;
+  private int taskCountMin;
   private final int scaleInStep;
   private final int scaleOutStep;
   private final boolean enableTaskAutoscaler;
@@ -52,14 +52,15 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleInThreshold") Long scaleInThreshold,
           @Nullable @JsonProperty("triggerScaleOutThresholdFrequency") Double triggerScaleOutThresholdFrequency,
           @Nullable @JsonProperty("triggerScaleInThresholdFrequency") Double triggerScaleInThresholdFrequency,
-          @Nullable @JsonProperty("taskCountMax") Integer taskCountMax,
-          @Nullable @JsonProperty("taskCountMin") Integer taskCountMin,
+          @JsonProperty("taskCountMax") Integer taskCountMax,
+          @JsonProperty("taskCountMin") Integer taskCountMin,
           @Nullable @JsonProperty("scaleInStep") Integer scaleInStep,
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoscaler") Boolean enableTaskAutoscaler,
           @Nullable @JsonProperty("autoScalerStrategy") String autoScalerStrategy,
           @Nullable @JsonProperty("minTriggerDynamicFrequencyMillis") Long minTriggerDynamicFrequencyMillis)
   {
+    this.enableTaskAutoscaler = enableTaskAutoscaler != null ? enableTaskAutoscaler : false;
     this.metricsCollectionIntervalMillis = metricsCollectionIntervalMillis != null ? metricsCollectionIntervalMillis : 30000;
     this.metricsCollectionRangeMillis = metricsCollectionRangeMillis != null ? metricsCollectionRangeMillis : 600000;
     this.dynamicCheckStartDelayMillis = dynamicCheckStartDelayMillis != null ? dynamicCheckStartDelayMillis : 300000;
@@ -68,11 +69,21 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
     this.scaleInThreshold = scaleInThreshold != null ? scaleInThreshold : 1000000;
     this.triggerScaleOutThresholdFrequency = triggerScaleOutThresholdFrequency != null ? triggerScaleOutThresholdFrequency : 0.3;
     this.triggerScaleInThresholdFrequency = triggerScaleInThresholdFrequency != null ? triggerScaleInThresholdFrequency : 0.9;
-    this.taskCountMax = taskCountMax != null ? taskCountMax : 4;
-    this.taskCountMin = taskCountMin != null ? taskCountMin : 1;
+
+    // Only do taskCountMax and taskCountMin check when autoscaler is enabled. So that users left autoConfig empty{} will not throw any exception and autoscaler is disabled.
+    // If autoscaler is disabled, no matter what configs are set, they are not used.
+    if (this.enableTaskAutoscaler) {
+      if (taskCountMax == null || taskCountMin == null) {
+        throw new RuntimeException("taskCountMax or taskCountMin can't be null!");
+      } else if (taskCountMax < taskCountMin) {
+        throw new RuntimeException("taskCountMax can't lower than taskCountMin!");
+      }
+      this.taskCountMax = taskCountMax;
+      this.taskCountMin = taskCountMin;
+    }
+
     this.scaleInStep = scaleInStep != null ? scaleInStep : 1;
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
-    this.enableTaskAutoscaler = enableTaskAutoscaler != null ? enableTaskAutoscaler : false;
     this.autoScalerStrategy = autoScalerStrategy != null ? autoScalerStrategy : "default";
     this.minTriggerDynamicFrequencyMillis = minTriggerDynamicFrequencyMillis != null ? minTriggerDynamicFrequencyMillis : 600000;
   }

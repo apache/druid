@@ -513,6 +513,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     AutoScalerConfig autoScalerConfigEmpty = mapper.convertValue(new HashMap<>(), AutoScalerConfig.class);
     Assert.assertTrue(autoScalerConfigEmpty instanceof DefaultAutoScalerConfig);
+    Assert.assertFalse(autoScalerConfigEmpty.getEnableTaskAutoscaler());
 
     AutoScalerConfig autoScalerConfigNull = mapper.convertValue(null, AutoScalerConfig.class);
     Assert.assertNull(autoScalerConfigNull);
@@ -524,6 +525,26 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertTrue(autoScalerConfigValue instanceof DefaultAutoScalerConfig);
     DefaultAutoScalerConfig defaultAutoScalerConfig = (DefaultAutoScalerConfig) autoScalerConfigValue;
     Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
+
+    Exception e = null;
+    try {
+      AutoScalerConfig autoScalerError = mapper.convertValue(ImmutableMap.of("enableTaskAutoscaler", "true", "taskCountMax", "1", "taskCountMin", "4"), AutoScalerConfig.class);
+    }
+    catch (RuntimeException ex) {
+      e = ex;
+    }
+    Assert.assertNotNull(e);
+
+    e = null;
+    try {
+      // taskCountMax and taskCountMin couldn't be ignored.
+      AutoScalerConfig autoScalerError2 = mapper.convertValue(ImmutableMap.of("enableTaskAutoscaler", "true"), AutoScalerConfig.class);
+    }
+    catch (RuntimeException ex) {
+      e = ex;
+    }
+    Assert.assertNotNull(e);
+
 
   }
 
@@ -606,7 +627,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1", "enableTaskAutoscaler", true), AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1", "enableTaskAutoscaler", true, "taskCountMax", "4", "taskCountMin", "1"), AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
@@ -709,6 +730,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
     DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), spec);
+
+    // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
+    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    supervisor.getIoConfig().setTaskCount(2);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();

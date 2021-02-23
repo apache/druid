@@ -68,7 +68,14 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
     this.inputFormat = inputFormat;
     this.replicas = replicas != null ? replicas : 1;
-    this.taskCount = taskCount != null ? taskCount : 1;
+    // Could be null
+    this.autoscalerConfig = autoscalerConfig;
+    // if autoscaler is enable then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
+    if (autoscalerConfig != null && autoscalerConfig.getEnableTaskAutoscaler()) {
+      this.taskCount = autoscalerConfig.getTaskCountMin();
+    } else {
+      this.taskCount = taskCount != null ? taskCount : 1;
+    }
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
@@ -90,8 +97,6 @@ public abstract class SeekableStreamSupervisorIOConfig
                 + "both properties lateMessageRejectionStartDateTime "
           + "and lateMessageRejectionPeriod.");
     }
-    // Could be null
-    this.autoscalerConfig = autoscalerConfig;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)

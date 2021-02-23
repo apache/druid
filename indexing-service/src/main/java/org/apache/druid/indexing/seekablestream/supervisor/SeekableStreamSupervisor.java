@@ -340,34 +340,45 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @Override
     public void handle()
     {
-      try {
-        long nowTime = System.currentTimeMillis();
-        // Only queue is full and over minTriggerDynamicFrequency can trigger scale out/in
-        if (spec.isSuspended()) {
-          log.info("[%s] supervisor is suspended, skip to check dynamic allocate task logic", dataSource);
-          return;
-        }
-        log.debug("PendingCompletionTaskGroups is [%s] for dataSource [%s].", pendingCompletionTaskGroups, dataSource);
-        for (CopyOnWriteArrayList list : pendingCompletionTaskGroups.values()) {
-          if (!list.isEmpty()) {
-            log.info("Still hand off tasks unfinished, skip to do scale action [%s] for dataSource [%s].", pendingCompletionTaskGroups, dataSource);
+      if (autoScalerConfig == null) {
+        log.warn("autoScalerConfig is null but dynamic allocation notice is submitted, how can it be ?");
+      } else {
+        try {
+          long nowTime = System.currentTimeMillis();
+          if (spec.isSuspended()) {
+            log.info("Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is suspended",
+                    dataSource
+            );
             return;
           }
+          log.debug("PendingCompletionTaskGroups is [%s] for dataSource [%s]", pendingCompletionTaskGroups,
+                  dataSource
+          );
+          for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
+            if (!list.isEmpty()) {
+              log.info(
+                      "Skipping DynamicAllocationTasksNotice execution for datasource [%s] because following tasks are pending [%s]",
+                      dataSource, pendingCompletionTaskGroups
+              );
+              return;
+            }
+          }
+          if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
+            log.info(
+                    "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
+                    nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource
+            );
+            return;
+          }
+          Integer desriedTaskCount = scaleAction.call();
+          boolean allocationSuccess = dynamicAllocate(desriedTaskCount);
+          if (allocationSuccess) {
+            dynamicTriggerLastRunTime = nowTime;
+          }
         }
-        if (autoScalerConfig != null && nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
-          log.info("NowTime - dynamicTriggerLastRunTime is [%s]. Defined minTriggerDynamicFrequency is [%s] for dataSource [%s], CALM DOWN NOW !", nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource);
-          return;
+        catch (Exception ex) {
+          log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
         }
-
-        Integer desriedTaskCount = scaleAction.call();
-        boolean allocationSuccess = dynamicAllocate(desriedTaskCount);
-
-        if (allocationSuccess) {
-          dynamicTriggerLastRunTime = nowTime;
-        }
-      }
-      catch (Exception ex) {
-        log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
       }
     }
   }
@@ -375,13 +386,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * This method determines how to do scale actions based on collected lag points.
    * If scale action is triggered :
-   *    First of all, call gracefulShutdownInternal() which will change the state of  current datasource ingest tasks from reading to publishing.
-   *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled next 'RunNotice'.
-   *    Finally, change taskCount in SeekableStreamSupervisorIOConfig and sync it to MetaStorage.
-   * After changed taskCount in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting supervisors.
+   *    First of all, call gracefulShutdownInternal() which will change the state of current datasource ingest tasks from reading to publishing.
+   *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuild in the next 'RunNotice'.
+   *    Finally, change the taskCount in SeekableStreamSupervisorIOConfig and sync it to MetadataStorage.
+   * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    * @param desiredActiveTaskCount desired taskCount compute from autoscaler
-   * @return Boolean flag, do scale action successfully or not. If true , it will take at least 'minTriggerDynamicFrequency' before next 'dynamicAllocate'.
-   *         If false, it will do 'dynamicAllocate' again after 'dynamicCheckPeriod'.
+   * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerDynamicFrequency' before next 'dynamicAllocate'.
+   *         If false, it will do 'dynamicAllocate' again after 'dynamicCheckPeriod' millis.
    * @throws InterruptedException
    * @throws ExecutionException
    * @throws TimeoutException
@@ -395,7 +406,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (desiredActiveTaskCount == -1 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
     } else {
-      log.debug("Start to scale action tasks, current active task number [%s] and desired task number is [%s] for dataSource [%s].", currentActiveTaskCount, desiredActiveTaskCount, dataSource);
+      log.debug(
+              "Starting scale action, current active task count is [%d] and desired task count is [%d] for dataSource [%s].",
+              currentActiveTaskCount, desiredActiveTaskCount, dataSource
+      );
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
       // clear everything
@@ -414,7 +428,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
         metadataSupervisorManager.insert(dataSource, spec);
       } else {
-        log.warn("supervisorManager is null in taskMaster, skip to do scale action for dataSource [%s].", dataSource);
+        log.warn("supervisorManager is null in taskMaster, skipping scale action for dataSource [%s].", dataSource);
       }
     }
     catch (Exception e) {
@@ -651,7 +665,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     int workerThreads;
     int chatThreads;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoscaler()) {
-      log.info("enableTaskAutoscaler for datasource [%s]", dataSource);
+      log.info("Running Task autoscaler for datasource [%s]", dataSource);
 
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
@@ -661,8 +675,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               ? this.tuningConfig.getChatThreads()
               : Math.min(10, autoScalerConfig.getTaskCountMax() * this.ioConfig.getReplicas()));
     } else {
-      log.info("Disable dynamic allocate tasks for [%s]", dataSource);
-
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
               : Math.min(10, this.ioConfig.getTaskCount()));
@@ -3684,7 +3696,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
 
   /**
-   * This method compute maxLag, totalLag and avgLag then fill in 'lags'
+   *  This method computes maxLag, totalLag and avgLag
    * @param partitionLags lags per partition
    */
   protected LagStats computeLags(Map<PartitionIdType, Long> partitionLags)
