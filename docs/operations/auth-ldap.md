@@ -52,7 +52,7 @@ After verifying basic connectivity, check your search criteria. For example, the
 ldapsearch -x -W -H ldap://<ldap_server>  -D"uuser1@example.com" -b "dc=example,dc=com" "(sAMAccountName=uuser1)"
 ```
 
-Note the `memberOf` attribute in the results; it shows the groups that the user belongs to. You will use this value to map the LDAP group to the Druid roles later. This attribute may be implemented differently on different ldap servers; some ldap servers may support nested groupings, and return a user as being part of a group, if they are part of a subgroup of the group, and some other server implementations may not support this. Some ldap server implemetations may not have any object classes that contain this attribute all-together. The sAMAccountName attribute used in this example contains the authenticated user identity. This is an attribute of an object class specific to Microsoft Active Directory, the object classes and attribute used in your ldap server could be different.
+Note the `memberOf` attribute in the results; it shows the groups that the user belongs to. You will use this value to map the LDAP group to the Druid roles later. This attribute may be implemented differently on different types of LDAP servers. For instance, some LDAP servers may support nested groupings, and return a user as being part of a group, if they are part of a subgroup of the group. Some LDAP server implementations may not have any object classes that contain this attribute altogether. The sAMAccountName attribute used in this example contains the authenticated user identity. This is an attribute of an object class specific to Microsoft Active Directory. The object classes and attribute used in your LDAP server may be different.
 
 ## Configure Druid user authentication with LDAP/Active Directory 
 
@@ -187,7 +187,13 @@ curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://loca
 
 ### Step 5. Assign the role to the user 
 
-Note: This step is only needed if either you don't want to rely on the groups as configured in your ldap server, or if your ldap server does not support the `memberOf` attribute, or if for example the ldap server does not support recursive group membership. Druid will use any roles explicitly assigned to the user, which can be setup in this step.
+In this step, you can configure Druid to apply specific roles to users. This step is only needed in the following cases: 
+
+- You don't want to rely on group associations configured in your LDAP server,
+- Your LDAP server does not support the `memberOf` attribute, or 
+- The LDAP server does not support recursive group membership. 
+
+If this is not the case for your scenario, you can skip this step. 
 
 The following command shows how to assign a role to a user:
 
