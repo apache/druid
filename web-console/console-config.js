@@ -21,6 +21,7 @@ window.consoleConfig = {
   /* future configs may go here */
   "defaultQueryContext": {
     "priority": -1,
-    "timeout": 30000
+    "timeout": 30000,
+    "lane": "console"
   }
 };
