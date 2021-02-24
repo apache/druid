@@ -112,10 +112,10 @@ public class BasicAuthUtilsTest
                     "resourceAction",
                     ImmutableMap.of(
                         "resource",
-                        ImmutableMap.of("name", "some-view", "type", "VIEW"),
+                        ImmutableMap.of("name", "some-table", "type", "DATASOURCE"),
                         "action", "READ"
                     ),
-                    "resourceNamePattern", "some-view"
+                    "resourceNamePattern", "some-table"
                 ),
                 ImmutableMap.of(
                     "resourceAction",
@@ -124,7 +124,7 @@ public class BasicAuthUtilsTest
                         ImmutableMap.of("name", "foo", "type", "DATASOURCE"),
                         "action", "UNKNOWN"
                     ),
-                    "resourceNamePattern", "some-view"
+                    "resourceNamePattern", "foo"
                 )
             )
         )
@@ -154,7 +154,7 @@ public class BasicAuthUtilsTest
     Assert.assertEquals(1, roleMap.get(thirdRoleName).getPermissions().size());
     Assert.assertEquals(
         BasicAuthorizerPermission.makePermissionList(
-            ImmutableList.of(new ResourceAction(new Resource("some-view", ResourceType.VIEW), Action.READ))
+            ImmutableList.of(new ResourceAction(new Resource("some-table", ResourceType.DATASOURCE), Action.READ))
         ),
         roleMap.get(thirdRoleName).getPermissions()
     );
