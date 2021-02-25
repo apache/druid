@@ -47,7 +47,6 @@ import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
-import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.IntersectToDistinctRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.MatchRule;
@@ -112,7 +111,6 @@ public class Rules
           AggregateStarTableRule.INSTANCE2,
           TableScanRule.INSTANCE,
           ProjectMergeRule.INSTANCE,
-          FilterTableScanRule.INSTANCE,
           ProjectFilterTransposeRule.INSTANCE,
           FilterProjectTransposeRule.INSTANCE,
           JoinPushExpressionsRule.INSTANCE,
