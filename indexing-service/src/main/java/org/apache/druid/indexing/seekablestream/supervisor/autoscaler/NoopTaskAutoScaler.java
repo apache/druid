@@ -19,12 +19,11 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 
-public class DummyAutoScaler implements SupervisorTaskAutoscaler
+public class NoopTaskAutoScaler implements SupervisorTaskAutoScaler
 {
-  public DummyAutoScaler(Supervisor supervisor, String dataSource)
+  public NoopTaskAutoScaler()
   {
   }
 

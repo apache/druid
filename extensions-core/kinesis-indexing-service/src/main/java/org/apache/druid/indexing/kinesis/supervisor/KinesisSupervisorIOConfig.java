@@ -30,6 +30,8 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScaler
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
+
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
   private final String endpoint;
@@ -71,7 +73,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
-      @JsonProperty("autoscalerConfig") AutoScalerConfig autoscalerConfig,
+      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
@@ -87,14 +89,14 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        null,
+        autoScalerConfig,
         lateMessageRejectionStartDateTime
     );
 
     // for now dynamic Allocation Tasks is not supported here
     // throw UnsupportedOperationException in case someone sets this on a kinesis supervisor spec.
-    if (autoscalerConfig != null) {
-      throw new UnsupportedOperationException("Tasks auto scaler for kinesis is not supported yet. Please remove autoscalerConfig or set it null!");
+    if (autoScalerConfig != null) {
+      throw new UnsupportedOperationException("Tasks auto scaler for kinesis is not supported yet. Please remove autoScalerConfig or set it to null!");
     }
 
     this.endpoint = endpoint != null

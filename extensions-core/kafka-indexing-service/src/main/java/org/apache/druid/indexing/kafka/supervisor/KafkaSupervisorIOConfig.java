@@ -53,7 +53,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
-      @Nullable @JsonProperty("autoscalerConfig") AutoScalerConfig autoscalerConfig,
+      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
@@ -76,7 +76,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        autoscalerConfig,
+        autoScalerConfig,
         lateMessageRejectionStartDateTime
     );
 

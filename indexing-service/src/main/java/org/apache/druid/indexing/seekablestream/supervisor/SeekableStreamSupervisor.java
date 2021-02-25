@@ -92,7 +92,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -335,7 +334,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     /**
-     * This method will do lags points collection and check dynamic scale action is necessary or not.
+     * This method will do lag points collection and check dynamic scale action is necessary or not.
      */
     @Override
     public void handle()
@@ -363,15 +362,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               return;
             }
           }
-          if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerDynamicFrequencyMillis()) {
+          if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
                     "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
-                    nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerDynamicFrequencyMillis(), dataSource
+                    nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(), dataSource
             );
             return;
           }
-          Integer desriedTaskCount = scaleAction.call();
-          boolean allocationSuccess = dynamicAllocate(desriedTaskCount);
+          final Integer desriedTaskCount = scaleAction.call();
+          boolean allocationSuccess = changeTaskCount(desriedTaskCount);
           if (allocationSuccess) {
             dynamicTriggerLastRunTime = nowTime;
           }
@@ -387,17 +386,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * This method determines how to do scale actions based on collected lag points.
    * If scale action is triggered :
    *    First of all, call gracefulShutdownInternal() which will change the state of current datasource ingest tasks from reading to publishing.
-   *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuild in the next 'RunNotice'.
+   *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled in the next 'RunNotice'.
    *    Finally, change the taskCount in SeekableStreamSupervisorIOConfig and sync it to MetadataStorage.
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
-   * @param desiredActiveTaskCount desired taskCount compute from autoscaler
-   * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerDynamicFrequency' before next 'dynamicAllocate'.
-   *         If false, it will do 'dynamicAllocate' again after 'dynamicCheckPeriod' millis.
+   * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
+   * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerScaleActionFrequencyMillis' before next 'changeTaskCount'.
+   *         If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
    * @throws InterruptedException
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private boolean dynamicAllocate(Integer desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
+  private boolean changeTaskCount(Integer desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
   {
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
@@ -406,14 +405,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (desiredActiveTaskCount == -1 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
     } else {
-      log.debug(
+      log.info(
               "Starting scale action, current active task count is [%d] and desired task count is [%d] for dataSource [%s].",
               currentActiveTaskCount, desiredActiveTaskCount, dataSource
       );
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
-      // clear everything
-      clearAllocationInfos();
+      clearAllocationInfo();
       log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }
@@ -428,15 +426,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
         metadataSupervisorManager.insert(dataSource, spec);
       } else {
-        log.warn("supervisorManager is null in taskMaster, skipping scale action for dataSource [%s].", dataSource);
+        log.error("supervisorManager is null in taskMaster, skipping scale action for dataSource [%s].", dataSource);
       }
     }
     catch (Exception e) {
-      log.warn("Failed to sync taskCount to MetaStorage for dataSource [%s].", dataSource);
+      log.error("supervisorManager is null in taskMaster, skipping scale action for dataSource [%s].", dataSource);
     }
   }
 
-  private void clearAllocationInfos()
+  private void clearAllocationInfo()
   {
     activelyReadingTaskGroups.clear();
     partitionGroups.clear();
@@ -664,7 +662,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     int workerThreads;
     int chatThreads;
-    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoscaler()) {
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for datasource [%s]", dataSource);
 
       workerThreads = (this.tuningConfig.getWorkerThreads() != null

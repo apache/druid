@@ -48,21 +48,21 @@
   "ioConfig": {
     "%%TOPIC_KEY%%": "%%TOPIC_VALUE%%",
     "%%STREAM_PROPERTIES_KEY%%": %%STREAM_PROPERTIES_VALUE%%,
-    "autoscalerConfig": {
-      "enableTaskAutoscaler": true,
-      "metricsCollectionIntervalMillis": 500,
-      "metricsCollectionRangeMillis": 500,
+    "autoScalerConfig": {
+      "enableTaskAutoScaler": true,
+      "lagCollectionIntervalMillis": 500,
+      "lagCollectionRangeMillis": 500,
       "scaleOutThreshold": 0,
       "triggerScaleOutThresholdFrequency": 0.0,
       "scaleInThreshold": 1000000,
       "triggerScaleInThresholdFrequency": 0.9,
-      "dynamicCheckStartDelayMillis": 0,
-      "dynamicCheckPeriod": 100,
+      "scaleActionStartDelayMillis": 0,
+      "scaleActionPeriodMillis": 100,
       "taskCountMax": 2,
       "taskCountMin": 1,
       "scaleInStep": 1,
       "scaleOutStep": 2,
-      "minTriggerDynamicFrequencyMillis": 600000
+      "minTriggerScaleActionFrequencyMillis": 600000
     },
     "taskCount": 1,
     "replicas": 1,

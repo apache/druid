@@ -22,7 +22,7 @@ package org.apache.druid.indexing;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +38,7 @@ public class NoopSupervisorSpecTest
     try {
       NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
       Supervisor supervisor = noopSupervisorSpec.createSupervisor();
-      SupervisorTaskAutoscaler autoscaler = noopSupervisorSpec.createAutoscaler(supervisor);
+      SupervisorTaskAutoScaler autoscaler = noopSupervisorSpec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
       Callable<Integer> noop = new Callable<Integer>() {
           @Override

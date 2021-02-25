@@ -31,7 +31,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
@@ -204,7 +204,7 @@ public class MaterializedViewSupervisorSpecTest
       Supervisor supervisor = spec.createSupervisor();
       Assert.assertTrue(supervisor instanceof MaterializedViewSupervisor);
 
-      SupervisorTaskAutoscaler autoscaler = spec.createAutoscaler(supervisor);
+      SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
 
       try {

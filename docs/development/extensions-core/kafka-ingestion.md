@@ -146,25 +146,26 @@ A sample supervisor spec is shown below:
 |`lateMessageRejectionStartDateTime`|ISO8601 DateTime|Configure tasks to reject messages with timestamps earlier than this date time; for example if this is set to `2016-01-01T11:00Z` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline). Please note that only one of `lateMessageRejectionPeriod` or `lateMessageRejectionStartDateTime` can be specified.|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
-|`autoscalerConfig`|Object|`autoscalerConfig` to specify how to auto scale the number of Kafka ingest tasks based on Lag metrics. ONLY supported for Kafka indexing as of now. See [Tasks Autoscaler Properties](#task-autoscaler-properties) for details.|no (default == null)|
+|`autoScalerConfig`|Object|`autoScalerConfig` to specify how to auto scale the number of Kafka ingest tasks based on Lag metrics. ONLY supported for Kafka indexing as of now. See [Tasks Autoscaler Properties](#Task Autoscaler Properties) for details.|no (default == null)|
 
 ### Task Autoscaler Properties
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
-| `enableTaskAutoscaler` | Whether enable this feature or not. Not setting or setting to false will disable `autoscaler` even though `autoscalerConfig` is not null| no (default == false) |
-| `metricsCollectionIntervalMillis` | Define the frequency of lag points collection.  | no (default == 30000) |
-| `metricsCollectionRangeMillis` | The total time window of lag collection, Use with `metricsCollectionIntervalMillis`，it means that in the recent `metricsCollectionRangeMillis`, collect lag metric points every `metricsCollectionIntervalMillis`. | no (default == 600000) |
+| `enableTaskAutoScaler` | Whether enable this feature or not. Set false or ignored here will disable `autoScaler` even though `autoScalerConfig` is not null| no (default == false) |
+| `lagCollectionIntervalMillis` | Define the frequency of lag points collection.  | no (default == 30000) |
+| `lagCollectionRangeMillis` | The total time window of lag collection, Use with `lagCollectionIntervalMillis`，it means that in the recent `lagCollectionRangeMillis`, collect lag metric points every `lagCollectionIntervalMillis`. | no (default == 600000) |
 | `scaleOutThreshold` | The Threshold of scale out action | no (default == 6000000) |
 | `triggerScaleOutThresholdFrequency` | If `triggerScaleOutThresholdFrequency` percent of lag points are higher than `scaleOutThreshold`, then do scale out action. | no (default == 0.3) |
 | `scaleInThreshold` | The Threshold of scale in action | no (default == 1000000) |
 | `triggerScaleInThresholdFrequency` | If `triggerScaleInThresholdFrequency` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | no (default == 0.9) |
-| `dynamicCheckStartDelayMillis` | Number of milliseconds after supervisor starts when first check scale logic. | no (default == 300000) |
-| `dynamicCheckPeriod` | The frequency of checking whether to do scale action in millis | no (default == 60000) |
+| `scaleActionStartDelayMillis` | Number of milliseconds after supervisor starts when first check scale logic. | no (default == 300000) |
+| `scaleActionPeriodMillis` | The frequency of checking whether to do scale action in millis | no (default == 60000) |
 | `taskCountMax` | Maximum value of task count. Make Sure `taskCountMax >= taskCountMin` | yes |
 | `taskCountMin` | Minimum value of task count. When enable autoscaler, the value of taskCount in `IOConfig` will be ignored, and `taskCountMin` will be the number of tasks that ingestion starts going up to `taskCountMax`| yes |
 | `scaleInStep` | How many tasks to reduce at a time | no (default == 1) |
 | `scaleOutStep` | How many tasks to add at a time | no (default == 2) |
-| `minTriggerDynamicFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
+| `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
+| `autoScalerStrategy` | The algorithm of `autoScaler`. ONLY `lagBased` is supported for now. | no (default == `lagBased`) |
 
 #### More on consumerProperties
 

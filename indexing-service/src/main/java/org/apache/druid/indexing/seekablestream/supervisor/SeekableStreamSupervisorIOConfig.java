@@ -47,7 +47,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
-  @Nullable private final AutoScalerConfig autoscalerConfig;
+  @Nullable private final AutoScalerConfig autoScalerConfig;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -61,7 +61,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
-      @Nullable AutoScalerConfig autoscalerConfig,
+      @Nullable AutoScalerConfig autoScalerConfig,
       DateTime lateMessageRejectionStartDateTime
   )
   {
@@ -69,10 +69,10 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.inputFormat = inputFormat;
     this.replicas = replicas != null ? replicas : 1;
     // Could be null
-    this.autoscalerConfig = autoscalerConfig;
+    this.autoScalerConfig = autoScalerConfig;
     // if autoscaler is enable then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
-    if (autoscalerConfig != null && autoscalerConfig.getEnableTaskAutoscaler()) {
-      this.taskCount = autoscalerConfig.getTaskCountMin();
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
+      this.taskCount = autoScalerConfig.getTaskCountMin();
     } else {
       this.taskCount = taskCount != null ? taskCount : 1;
     }
@@ -127,7 +127,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @JsonProperty
   public AutoScalerConfig getAutoscalerConfig()
   {
-    return autoscalerConfig;
+    return autoScalerConfig;
   }
 
   @JsonProperty

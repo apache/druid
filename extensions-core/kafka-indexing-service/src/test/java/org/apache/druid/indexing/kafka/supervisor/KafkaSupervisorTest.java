@@ -61,7 +61,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
@@ -70,7 +70,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -261,21 +261,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
       }
     };
 
-    HashMap<String, Object> autoscalerConfig = new HashMap<>();
-    autoscalerConfig.put("enableTaskAutoscaler", true);
-    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
-    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
-    autoscalerConfig.put("scaleOutThreshold", 0);
-    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.0);
-    autoscalerConfig.put("scaleInThreshold", 1000000);
-    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
-    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
-    autoscalerConfig.put("dynamicCheckPeriod", 100);
-    autoscalerConfig.put("taskCountMax", 2);
-    autoscalerConfig.put("taskCountMin", 1);
-    autoscalerConfig.put("scaleInStep", 1);
-    autoscalerConfig.put("scaleOutStep", 2);
-    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 0);
+    autoScalerConfig.put("triggerScaleOutThresholdFrequency", 0.0);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
 
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
@@ -288,7 +288,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             1,
             new Period("PT1H"),
             consumerProperties,
-            OBJECT_MAPPER.convertValue(autoscalerConfig, DefaultAutoScalerConfig.class),
+            OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             new Period("P1D"),
             new Period("PT30S"),
@@ -361,7 +361,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             rowIngestionMetersFactory
     );
 
-    SupervisorTaskAutoscaler autoscaler = testableSupervisorSpec.createAutoscaler(supervisor);
+    SupervisorTaskAutoScaler autoscaler = testableSupervisorSpec.createAutoscaler(supervisor);
 
 
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -33,12 +32,10 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScaler;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DummyAutoScaler;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -163,29 +160,13 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
    * @return autoScaler, disable autoscale will return dummyAutoScaler and enable autoscale wiil return defaultAutoScaler by default.
    */
   @Override
-  @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED", justification = "using siwtch(String)")
-  public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
+  public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
   {
-    String dataSource = getId();
-    SupervisorTaskAutoscaler autoScaler = new DummyAutoScaler(supervisor, dataSource);
     AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoscalerConfig();
-
-    // kinesis'autoscalerConfig is always null for now, So that kinesis will hold a DummyAutoScaler.
-    // only SeekableStreamSupervisor is supported here.
-    if (autoScalerConfig != null
-            && autoScalerConfig.getEnableTaskAutoscaler()
-            && supervisor instanceof SeekableStreamSupervisor) {
-
-      String autoScalerStrategy = autoScalerConfig.getAutoScalerStrategy();
-
-      // will thorw 'Return value of String.hashCode() ignored : RV_RETURN_VALUE_IGNORED' just Suppress it.
-      switch (StringUtils.toLowerCase(autoScalerStrategy)) {
-        default: {
-          autoScaler = new DefaultAutoScaler(supervisor, dataSource, autoScalerConfig, this);
-        }
-      }
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler() && supervisor instanceof SeekableStreamSupervisor) {
+      return autoScalerConfig.createAutoScaler(supervisor, this);
     }
-    return autoScaler;
+    return new NoopTaskAutoScaler();
   }
 
   @Override

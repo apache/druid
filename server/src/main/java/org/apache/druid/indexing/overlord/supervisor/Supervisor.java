@@ -67,8 +67,8 @@ public interface Supervisor
   void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata);
 
   /**
-   * Collect maxLag, totalLag, avgLag
-   * Only support Kafka ingestion so far.
+   * Computes maxLag, totalLag and avgLag
+   * Only supports Kafka ingestion so far.
    */
   LagStats computeLagStats();
 

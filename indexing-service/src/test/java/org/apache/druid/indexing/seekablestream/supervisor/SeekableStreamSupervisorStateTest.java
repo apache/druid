@@ -838,22 +838,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private static Map<String, Object> getProperties()
   {
-    HashMap<String, Object> autoscalerConfig = new HashMap<>();
-    autoscalerConfig.put("enableTaskAutoscaler", true);
-    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
-    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
-    autoscalerConfig.put("scaleOutThreshold", 5000000);
-    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
-    autoscalerConfig.put("scaleInThreshold", 1000000);
-    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
-    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
-    autoscalerConfig.put("dynamicCheckPeriod", 100);
-    autoscalerConfig.put("taskCountMax", 8);
-    autoscalerConfig.put("taskCountMin", 1);
-    autoscalerConfig.put("scaleInStep", 1);
-    autoscalerConfig.put("scaleOutStep", 2);
-    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
-    return autoscalerConfig;
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 5000000);
+    autoScalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 8);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    return autoScalerConfig;
   }
 
   private static SeekableStreamSupervisorTuningConfig getTuningConfig()

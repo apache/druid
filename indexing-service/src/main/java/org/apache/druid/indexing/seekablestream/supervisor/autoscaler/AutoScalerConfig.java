@@ -23,18 +23,21 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 
 @UnstableApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "autoScalerStrategy", defaultImpl = DefaultAutoScalerConfig.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "autoScalerStrategy", defaultImpl = LagBasedAutoScalerConfig.class)
 @JsonSubTypes(value = {
-        @Type(name = "default", value = DefaultAutoScalerConfig.class)
+        @Type(name = "lagBased", value = LagBasedAutoScalerConfig.class)
 })
 public interface AutoScalerConfig
 {
-  boolean getEnableTaskAutoscaler();
-  long getMinTriggerDynamicFrequencyMillis();
-  String getAutoScalerStrategy();
+  boolean getEnableTaskAutoScaler();
+  long getMinTriggerScaleActionFrequencyMillis();
   int getTaskCountMax();
   int getTaskCountMin();
+  SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec);
 }
 

@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.After;
@@ -187,7 +187,7 @@ public class SQLMetadataSupervisorManagerTest
     }
 
     @Override
-    public SupervisorTaskAutoscaler createAutoscaler(Supervisor supervisor)
+    public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
     {
       return null;
     }

@@ -37,7 +37,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoscaler;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -47,9 +47,9 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScaler;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DefaultAutoScalerConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.DummyAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -344,12 +344,12 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
 
-  private static class TesstSeekableStreamSupervisorSpec extends SeekableStreamSupervisorSpec
+  private static class TestSeekableStreamSupervisorSpec extends SeekableStreamSupervisorSpec
   {
     private SeekableStreamSupervisor supervisor;
     private String id;
 
-    public TesstSeekableStreamSupervisorSpec(SeekableStreamSupervisorIngestionSpec ingestionSchema,
+    public TestSeekableStreamSupervisorSpec(SeekableStreamSupervisorIngestionSpec ingestionSchema,
                                              @Nullable Map<String, Object> context,
                                              Boolean suspended,
                                              TaskStorage taskStorage,
@@ -512,23 +512,23 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   public void testAutoScalerConfig()
   {
     AutoScalerConfig autoScalerConfigEmpty = mapper.convertValue(new HashMap<>(), AutoScalerConfig.class);
-    Assert.assertTrue(autoScalerConfigEmpty instanceof DefaultAutoScalerConfig);
-    Assert.assertFalse(autoScalerConfigEmpty.getEnableTaskAutoscaler());
+    Assert.assertTrue(autoScalerConfigEmpty instanceof LagBasedAutoScalerConfig);
+    Assert.assertFalse(autoScalerConfigEmpty.getEnableTaskAutoScaler());
 
     AutoScalerConfig autoScalerConfigNull = mapper.convertValue(null, AutoScalerConfig.class);
     Assert.assertNull(autoScalerConfigNull);
 
-    AutoScalerConfig autoScalerConfigDefault = mapper.convertValue(ImmutableMap.of("autoScalerStrategy", "default"), AutoScalerConfig.class);
-    Assert.assertTrue(autoScalerConfigDefault instanceof DefaultAutoScalerConfig);
+    AutoScalerConfig autoScalerConfigDefault = mapper.convertValue(ImmutableMap.of("autoScalerStrategy", "lagBased"), AutoScalerConfig.class);
+    Assert.assertTrue(autoScalerConfigDefault instanceof LagBasedAutoScalerConfig);
 
-    AutoScalerConfig autoScalerConfigValue = mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1"), AutoScalerConfig.class);
-    Assert.assertTrue(autoScalerConfigValue instanceof DefaultAutoScalerConfig);
-    DefaultAutoScalerConfig defaultAutoScalerConfig = (DefaultAutoScalerConfig) autoScalerConfigValue;
-    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
+    AutoScalerConfig autoScalerConfigValue = mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis", "1"), AutoScalerConfig.class);
+    Assert.assertTrue(autoScalerConfigValue instanceof LagBasedAutoScalerConfig);
+    LagBasedAutoScalerConfig lagBasedAutoScalerConfig = (LagBasedAutoScalerConfig) autoScalerConfigValue;
+    Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
 
     Exception e = null;
     try {
-      AutoScalerConfig autoScalerError = mapper.convertValue(ImmutableMap.of("enableTaskAutoscaler", "true", "taskCountMax", "1", "taskCountMin", "4"), AutoScalerConfig.class);
+      AutoScalerConfig autoScalerError = mapper.convertValue(ImmutableMap.of("enableTaskAutoScaler", "true", "taskCountMax", "1", "taskCountMin", "4"), AutoScalerConfig.class);
     }
     catch (RuntimeException ex) {
       e = ex;
@@ -538,7 +538,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     e = null;
     try {
       // taskCountMax and taskCountMin couldn't be ignored.
-      AutoScalerConfig autoScalerError2 = mapper.convertValue(ImmutableMap.of("enableTaskAutoscaler", "true"), AutoScalerConfig.class);
+      AutoScalerConfig autoScalerError2 = mapper.convertValue(ImmutableMap.of("enableTaskAutoScaler", "true"), AutoScalerConfig.class);
     }
     catch (RuntimeException ex) {
       e = ex;
@@ -551,34 +551,34 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testAutoScalerCreated()
   {
-    HashMap<String, Object> autoscalerConfig = new HashMap<>();
-    autoscalerConfig.put("enableTaskAutoscaler", true);
-    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
-    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
-    autoscalerConfig.put("scaleOutThreshold", 5000000);
-    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
-    autoscalerConfig.put("scaleInThreshold", 1000000);
-    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
-    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
-    autoscalerConfig.put("dynamicCheckPeriod", 100);
-    autoscalerConfig.put("taskCountMax", 8);
-    autoscalerConfig.put("taskCountMin", 1);
-    autoscalerConfig.put("scaleInStep", 1);
-    autoscalerConfig.put("scaleOutStep", 2);
-    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 5000000);
+    autoScalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 8);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
-    TesstSeekableStreamSupervisorSpec spec = new TesstSeekableStreamSupervisorSpec(ingestionSchema,
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(ingestionSchema,
             null,
             false,
             taskStorage,
@@ -592,30 +592,30 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             supervisorStateManagerConfig,
             supervisor4,
             "id1");
-    SupervisorTaskAutoscaler autoscaler = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler instanceof DefaultAutoScaler);
+    SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
+    Assert.assertTrue(autoscaler instanceof LagBasedAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
-    autoscalerConfig.put("enableTaskAutoscaler", false);
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, AutoScalerConfig.class)).anyTimes();
+    autoScalerConfig.put("enableTaskAutoScaler", false);
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
-    SupervisorTaskAutoscaler autoscaler2 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler2 instanceof DummyAutoScaler);
+    SupervisorTaskAutoScaler autoscaler2 = spec.createAutoscaler(supervisor4);
+    Assert.assertTrue(autoscaler2 instanceof NoopTaskAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
-    autoscalerConfig.remove("enableTaskAutoscaler");
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, AutoScalerConfig.class)).anyTimes();
+    autoScalerConfig.remove("enableTaskAutoScaler");
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
-    SupervisorTaskAutoscaler autoscaler3 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler3 instanceof DummyAutoScaler);
+    SupervisorTaskAutoScaler autoscaler3 = spec.createAutoscaler(supervisor4);
+    Assert.assertTrue(autoscaler3 instanceof NoopTaskAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
-    autoscalerConfig.clear();
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoscalerConfig, AutoScalerConfig.class)).anyTimes();
+    autoScalerConfig.clear();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
-    Assert.assertTrue(autoscalerConfig.isEmpty());
-    SupervisorTaskAutoscaler autoscaler4 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler4 instanceof DummyAutoScaler);
+    Assert.assertTrue(autoScalerConfig.isEmpty());
+    SupervisorTaskAutoScaler autoscaler4 = spec.createAutoscaler(supervisor4);
+    Assert.assertTrue(autoscaler4 instanceof NoopTaskAutoScaler);
 
   }
 
@@ -627,13 +627,13 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("metricsCollectionIntervalMillis", "1", "enableTaskAutoscaler", true, "taskCountMax", "4", "taskCountMin", "1"), AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis", "1", "enableTaskAutoScaler", true, "taskCountMax", "4", "taskCountMin", "1"), AutoScalerConfig.class)).anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
-    TesstSeekableStreamSupervisorSpec spec = new TesstSeekableStreamSupervisorSpec(ingestionSchema,
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(ingestionSchema,
             null,
             false,
             taskStorage,
@@ -647,22 +647,21 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             supervisorStateManagerConfig,
             supervisor4,
             "id1");
-    SupervisorTaskAutoscaler autoscaler = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler instanceof DefaultAutoScaler);
-    DefaultAutoScaler defaultAutoScaler = (DefaultAutoScaler) autoscaler;
-    DefaultAutoScalerConfig defaultAutoScalerConfig = defaultAutoScaler.getAutoScalerConfig();
-    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionIntervalMillis(), 1);
-    Assert.assertEquals(defaultAutoScalerConfig.getMetricsCollectionRangeMillis(), 600000);
-    Assert.assertEquals(defaultAutoScalerConfig.getDynamicCheckStartDelayMillis(), 300000);
-    Assert.assertEquals(defaultAutoScalerConfig.getDynamicCheckPeriod(), 60000);
-    Assert.assertEquals(defaultAutoScalerConfig.getScaleOutThreshold(), 6000000);
-    Assert.assertEquals(defaultAutoScalerConfig.getScaleInThreshold(), 1000000);
-    Assert.assertEquals(defaultAutoScalerConfig.getTaskCountMax(), 4);
-    Assert.assertEquals(defaultAutoScalerConfig.getTaskCountMin(), 1);
-    Assert.assertEquals(defaultAutoScalerConfig.getScaleInStep(), 1);
-    Assert.assertEquals(defaultAutoScalerConfig.getScaleOutStep(), 2);
-    Assert.assertEquals(defaultAutoScalerConfig.getAutoScalerStrategy(), "default");
-    Assert.assertEquals(defaultAutoScalerConfig.getMinTriggerDynamicFrequencyMillis(), 600000);
+    SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
+    Assert.assertTrue(autoscaler instanceof LagBasedAutoScaler);
+    LagBasedAutoScaler lagBasedAutoScaler = (LagBasedAutoScaler) autoscaler;
+    LagBasedAutoScalerConfig lagBasedAutoScalerConfig = lagBasedAutoScaler.getAutoScalerConfig();
+    Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), 600000);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleActionStartDelayMillis(), 300000);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleActionPeriodMillis(), 60000);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleOutThreshold(), 6000000);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleInThreshold(), 1000000);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getTaskCountMax(), 4);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getTaskCountMin(), 1);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleInStep(), 1);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleOutStep(), 2);
+    Assert.assertEquals(lagBasedAutoScalerConfig.getMinTriggerScaleActionFrequencyMillis(), 600000);
   }
 
   @Test
@@ -691,7 +690,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     LagStats lagStats = supervisor.computeLagStats();
 
-    DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleOutProperties(), AutoScalerConfig.class), spec);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleOutProperties(), LagBasedAutoScalerConfig.class), spec);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
@@ -729,7 +728,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-    DefaultAutoScaler autoScaler = new DefaultAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), spec);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleInProperties(), LagBasedAutoScalerConfig.class), spec);
 
     // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
     Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
@@ -783,7 +782,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-    DummyAutoScaler autoScaler = new DummyAutoScaler(supervisor, DATASOURCE);
+    NoopTaskAutoScaler autoScaler = new NoopTaskAutoScaler();
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
@@ -856,42 +855,42 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
   private static Map<String, Object> getScaleOutProperties()
   {
-    HashMap<String, Object> autoscalerConfig = new HashMap<>();
-    autoscalerConfig.put("enableTaskAutoscaler", true);
-    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
-    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
-    autoscalerConfig.put("scaleOutThreshold", 0);
-    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.0);
-    autoscalerConfig.put("scaleInThreshold", 1000000);
-    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
-    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
-    autoscalerConfig.put("dynamicCheckPeriod", 100);
-    autoscalerConfig.put("taskCountMax", 2);
-    autoscalerConfig.put("taskCountMin", 1);
-    autoscalerConfig.put("scaleInStep", 1);
-    autoscalerConfig.put("scaleOutStep", 2);
-    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
-    return autoscalerConfig;
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 0);
+    autoScalerConfig.put("triggerScaleOutThresholdFrequency", 0.0);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    return autoScalerConfig;
   }
 
   private static Map<String, Object> getScaleInProperties()
   {
-    HashMap<String, Object> autoscalerConfig = new HashMap<>();
-    autoscalerConfig.put("enableTaskAutoscaler", true);
-    autoscalerConfig.put("metricsCollectionIntervalMillis", 500);
-    autoscalerConfig.put("metricsCollectionRangeMillis", 500);
-    autoscalerConfig.put("scaleOutThreshold", 8000000);
-    autoscalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
-    autoscalerConfig.put("scaleInThreshold", 0);
-    autoscalerConfig.put("triggerScaleInThresholdFrequency", 0.0);
-    autoscalerConfig.put("dynamicCheckStartDelayMillis", 0);
-    autoscalerConfig.put("dynamicCheckPeriod", 100);
-    autoscalerConfig.put("taskCountMax", 2);
-    autoscalerConfig.put("taskCountMin", 1);
-    autoscalerConfig.put("scaleInStep", 1);
-    autoscalerConfig.put("scaleOutStep", 2);
-    autoscalerConfig.put("minTriggerDynamicFrequencyMillis", 1200000);
-    return autoscalerConfig;
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 8000000);
+    autoScalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoScalerConfig.put("scaleInThreshold", 0);
+    autoScalerConfig.put("triggerScaleInThresholdFrequency", 0.0);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    return autoScalerConfig;
   }
 
 }

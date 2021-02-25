@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-public interface SupervisorTaskAutoscaler
+public interface SupervisorTaskAutoScaler
 {
   void start();
   void stop();

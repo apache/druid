@@ -21,15 +21,19 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 
 import javax.annotation.Nullable;
 
-public class DefaultAutoScalerConfig implements AutoScalerConfig
+public class LagBasedAutoScalerConfig implements AutoScalerConfig
 {
-  private final long metricsCollectionIntervalMillis;
-  private final long metricsCollectionRangeMillis;
-  private final long dynamicCheckStartDelayMillis;
-  private final long dynamicCheckPeriod;
+  private final long lagCollectionIntervalMillis;
+  private final long lagCollectionRangeMillis;
+  private final long scaleActionStartDelayMillis;
+  private final long scaleActionPeriodMillis;
   private final long scaleOutThreshold;
   private final long scaleInThreshold;
   private final double triggerScaleOutThresholdFrequency;
@@ -38,16 +42,15 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
   private int taskCountMin;
   private final int scaleInStep;
   private final int scaleOutStep;
-  private final boolean enableTaskAutoscaler;
-  private final String autoScalerStrategy;
-  private final long minTriggerDynamicFrequencyMillis;
+  private final boolean enableTaskAutoScaler;
+  private final long minTriggerScaleActionFrequencyMillis;
 
   @JsonCreator
-  public DefaultAutoScalerConfig(
-          @Nullable @JsonProperty("metricsCollectionIntervalMillis") Long metricsCollectionIntervalMillis,
-          @Nullable @JsonProperty("metricsCollectionRangeMillis") Long metricsCollectionRangeMillis,
-          @Nullable @JsonProperty("dynamicCheckStartDelayMillis") Long dynamicCheckStartDelayMillis,
-          @Nullable @JsonProperty("dynamicCheckPeriod") Long dynamicCheckPeriod,
+  public LagBasedAutoScalerConfig(
+          @Nullable @JsonProperty("lagCollectionIntervalMillis") Long lagCollectionIntervalMillis,
+          @Nullable @JsonProperty("lagCollectionRangeMillis") Long lagCollectionRangeMillis,
+          @Nullable @JsonProperty("scaleActionStartDelayMillis") Long scaleActionStartDelayMillis,
+          @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
           @Nullable @JsonProperty("scaleOutThreshold") Long scaleOutThreshold,
           @Nullable @JsonProperty("scaleInThreshold") Long scaleInThreshold,
           @Nullable @JsonProperty("triggerScaleOutThresholdFrequency") Double triggerScaleOutThresholdFrequency,
@@ -56,15 +59,15 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
           @JsonProperty("taskCountMin") Integer taskCountMin,
           @Nullable @JsonProperty("scaleInStep") Integer scaleInStep,
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
-          @Nullable @JsonProperty("enableTaskAutoscaler") Boolean enableTaskAutoscaler,
-          @Nullable @JsonProperty("autoScalerStrategy") String autoScalerStrategy,
-          @Nullable @JsonProperty("minTriggerDynamicFrequencyMillis") Long minTriggerDynamicFrequencyMillis)
+          @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
+          @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis
+  )
   {
-    this.enableTaskAutoscaler = enableTaskAutoscaler != null ? enableTaskAutoscaler : false;
-    this.metricsCollectionIntervalMillis = metricsCollectionIntervalMillis != null ? metricsCollectionIntervalMillis : 30000;
-    this.metricsCollectionRangeMillis = metricsCollectionRangeMillis != null ? metricsCollectionRangeMillis : 600000;
-    this.dynamicCheckStartDelayMillis = dynamicCheckStartDelayMillis != null ? dynamicCheckStartDelayMillis : 300000;
-    this.dynamicCheckPeriod = dynamicCheckPeriod != null ? dynamicCheckPeriod : 60000;
+    this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
+    this.lagCollectionIntervalMillis = lagCollectionIntervalMillis != null ? lagCollectionIntervalMillis : 30000;
+    this.lagCollectionRangeMillis = lagCollectionRangeMillis != null ? lagCollectionRangeMillis : 600000;
+    this.scaleActionStartDelayMillis = scaleActionStartDelayMillis != null ? scaleActionStartDelayMillis : 300000;
+    this.scaleActionPeriodMillis = scaleActionPeriodMillis != null ? scaleActionPeriodMillis : 60000;
     this.scaleOutThreshold = scaleOutThreshold != null ? scaleOutThreshold : 6000000;
     this.scaleInThreshold = scaleInThreshold != null ? scaleInThreshold : 1000000;
     this.triggerScaleOutThresholdFrequency = triggerScaleOutThresholdFrequency != null ? triggerScaleOutThresholdFrequency : 0.3;
@@ -72,7 +75,7 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
 
     // Only do taskCountMax and taskCountMin check when autoscaler is enabled. So that users left autoConfig empty{} will not throw any exception and autoscaler is disabled.
     // If autoscaler is disabled, no matter what configs are set, they are not used.
-    if (this.enableTaskAutoscaler) {
+    if (this.enableTaskAutoScaler) {
       if (taskCountMax == null || taskCountMin == null) {
         throw new RuntimeException("taskCountMax or taskCountMin can't be null!");
       } else if (taskCountMax < taskCountMin) {
@@ -84,32 +87,32 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
 
     this.scaleInStep = scaleInStep != null ? scaleInStep : 1;
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
-    this.autoScalerStrategy = autoScalerStrategy != null ? autoScalerStrategy : "default";
-    this.minTriggerDynamicFrequencyMillis = minTriggerDynamicFrequencyMillis != null ? minTriggerDynamicFrequencyMillis : 600000;
+    this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
+        != null ? minTriggerScaleActionFrequencyMillis : 600000;
   }
 
   @JsonProperty
-  public long getMetricsCollectionIntervalMillis()
+  public long getLagCollectionIntervalMillis()
   {
-    return metricsCollectionIntervalMillis;
+    return lagCollectionIntervalMillis;
   }
 
   @JsonProperty
-  public long getMetricsCollectionRangeMillis()
+  public long getLagCollectionRangeMillis()
   {
-    return metricsCollectionRangeMillis;
+    return lagCollectionRangeMillis;
   }
 
   @JsonProperty
-  public long getDynamicCheckStartDelayMillis()
+  public long getScaleActionStartDelayMillis()
   {
-    return dynamicCheckStartDelayMillis;
+    return scaleActionStartDelayMillis;
   }
 
   @JsonProperty
-  public long getDynamicCheckPeriod()
+  public long getScaleActionPeriodMillis()
   {
-    return dynamicCheckPeriod;
+    return scaleActionPeriodMillis;
   }
 
   @JsonProperty
@@ -150,6 +153,12 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
     return taskCountMin;
   }
 
+  @Override
+  public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec)
+  {
+    return new LagBasedAutoScaler((SeekableStreamSupervisor) supervisor, spec.getId(), this, spec);
+  }
+
   @JsonProperty
   public int getScaleInStep()
   {
@@ -164,22 +173,15 @@ public class DefaultAutoScalerConfig implements AutoScalerConfig
 
   @Override
   @JsonProperty
-  public boolean getEnableTaskAutoscaler()
+  public boolean getEnableTaskAutoScaler()
   {
-    return enableTaskAutoscaler;
+    return enableTaskAutoScaler;
   }
 
   @Override
   @JsonProperty
-  public String getAutoScalerStrategy()
+  public long getMinTriggerScaleActionFrequencyMillis()
   {
-    return autoScalerStrategy;
-  }
-
-  @Override
-  @JsonProperty
-  public long getMinTriggerDynamicFrequencyMillis()
-  {
-    return minTriggerDynamicFrequencyMillis;
+    return minTriggerScaleActionFrequencyMillis;
   }
 }

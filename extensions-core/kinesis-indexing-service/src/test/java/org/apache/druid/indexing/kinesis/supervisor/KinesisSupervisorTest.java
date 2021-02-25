@@ -374,8 +374,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
               null,
               false
       );
-      AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfig.getAutoscalerConfig();
-      Assert.assertNull(autoscalerConfig);
+      AutoScalerConfig autoScalerConfig = kinesisSupervisorIOConfig.getAutoscalerConfig();
+      Assert.assertNull(autoScalerConfig);
     }
     catch (Exception ex) {
       e = ex;
@@ -411,10 +411,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
     Assert.assertNotNull(e);
     Assert.assertTrue(e instanceof UnsupportedOperationException);
-
-
-
-
   }
 
   @Test
