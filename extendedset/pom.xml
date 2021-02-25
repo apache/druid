@@ -45,7 +45,6 @@
     <dependency>
       <groupId>org.apache.druid.com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>16.0.1</version>
     </dependency>
 
     <dependency>

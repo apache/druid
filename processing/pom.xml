@@ -225,7 +225,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid.com.google.guava</groupId>
+            <groupId>com.google.guava</groupId>
             <artifactId>guava-testlib</artifactId>
             <scope>test</scope>
         </dependency>
