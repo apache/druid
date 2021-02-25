@@ -155,9 +155,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public abstract Supervisor createSupervisor();
 
   /**
-   * need to notice that autoScaler would be null which means autoscale is dissable.
+   * An autoScaler instance will be returned depending on the autoScalerConfig. In case autoScalerConfig is null or autoScaler is disabled then NoopTaskAutoScaler will be returned.
    * @param supervisor
-   * @return autoScaler, disable autoscale will return dummyAutoScaler and enable autoscale wiil return defaultAutoScaler by default.
+   * @return autoScaler
    */
   @Override
   public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)

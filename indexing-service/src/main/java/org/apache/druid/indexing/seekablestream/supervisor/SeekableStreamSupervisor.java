@@ -430,7 +430,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
     catch (Exception e) {
-      log.error("supervisorManager is null in taskMaster, skipping scale action for dataSource [%s].", dataSource);
+      log.error(e, "Failed to sync taskCount to MetaStorage for dataSource [%s].", dataSource);
     }
   }
 
