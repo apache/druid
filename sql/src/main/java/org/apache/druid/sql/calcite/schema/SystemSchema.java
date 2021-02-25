@@ -299,6 +299,17 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root, List<RexNode> filters, int[] projects)
     {
+      final int[] projectsToUse;
+
+      if (projects == null) {
+        projectsToUse = new int[SEGMENTS_SIGNATURE.size()];
+        for (int i = 0; i < projectsToUse.length; i++) {
+          projectsToUse[i] = i;
+        }
+      } else {
+        projectsToUse = projects;
+      }
+
       //get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
           druidSchema.getSegmentMetadataSnapshot();
@@ -334,10 +345,10 @@ public class SystemSchema extends AbstractSchema
               isRealtime = partialSegmentData.isRealtime();
             }
             try {
-              final Object[] row = new Object[projects.length];
+              final Object[] row = new Object[projectsToUse.length];
 
-              for (int i = 0; i < projects.length; i++) {
-                switch (projects[i]) {
+              for (int i = 0; i < projectsToUse.length; i++) {
+                switch (projectsToUse[i]) {
                   case SEGMENT_COLUMN_ID:
                     row[i] = segment.getId();
                     break;
@@ -422,10 +433,10 @@ public class SystemSchema extends AbstractSchema
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
             final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
             try {
-              final Object[] row = new Object[projects.length];
+              final Object[] row = new Object[projectsToUse.length];
 
-              for (int i = 0; i < projects.length; i++) {
-                switch (projects[i]) {
+              for (int i = 0; i < projectsToUse.length; i++) {
+                switch (projectsToUse[i]) {
                   case SEGMENT_COLUMN_ID:
                     row[i] = val.getKey();
                     break;

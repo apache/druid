@@ -579,11 +579,7 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
 
-    final int[] projects = new int[segmentsTable.getRowType(new JavaTypeFactoryImpl()).getFieldCount()];
-    for (int i = 0; i < projects.length; i++) {
-      projects[i] = i;
-    }
-    final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), projects).toList();
+    final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), null).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
     // total segments = 8
