@@ -58,8 +58,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     final int slots = (int) (lagBasedAutoScalerConfig.getLagCollectionRangeMillis() / lagBasedAutoScalerConfig
         .getLagCollectionIntervalMillis()) + 1;
     this.lagMetricsQueue = new CircularFifoQueue<>(slots);
-    this.allocationExec = Execs.scheduledSingleThreaded(supervisorId + "-Allocation-%d");
-    this.lagComputationExec = Execs.scheduledSingleThreaded(supervisorId + "-Computation-%d");
+    this.allocationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Allocation-%d");
+    this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Computation-%d");
     this.spec = spec;
     this.supervisor = supervisor;
   }
