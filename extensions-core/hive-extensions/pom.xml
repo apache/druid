@@ -23,9 +23,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.druid.extensions</groupId>
-  <artifactId>druid-aws-rds-extensions</artifactId>
-  <name>druid-aws-rds-extensions</name>
-  <description>druid-aws-rds-extensions</description>
+  <artifactId>druid-hive-extensions</artifactId>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -34,6 +32,12 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
+  <properties>
+    <hadoop.version>3.1.3</hadoop.version>
+    <hive.version>4.0.0-SNAPSHOT</hive.version>
+    <guava.version>27.0-jre</guava.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -41,36 +45,63 @@
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-rds</artifactId>
-      <version>${aws.sdk.version}</version>
-    </dependency>
+
     <dependency>
       <groupId>org.apache.druid.com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <scope>provided</scope>
+      <version>${guava.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
-      <scope>provided</scope>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-core</artifactId>
-      <scope>provided</scope>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>commons-beanutils</groupId>
+          <artifactId>commons-beanutils</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <scope>provided</scope>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-llap-server</artifactId>
+      <version>${hive.version}</version>
     </dependency>
+
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-      <scope>provided</scope>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-exec</artifactId>
+      <version>${hive.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

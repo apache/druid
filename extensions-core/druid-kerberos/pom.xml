@@ -183,7 +183,7 @@
           <artifactId>commons-math3</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.google.guava</groupId>
+          <groupId>org.apache.druid.com.google.guava</groupId>
           <artifactId>guava</artifactId>
         </exclusion>
         <exclusion>
@@ -269,7 +269,7 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
+      <groupId>org.apache.druid.com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <scope>provided</scope>
     </dependency>

@@ -153,7 +153,7 @@
             <artifactId>javax.inject</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
+            <groupId>org.apache.druid.com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
@@ -225,7 +225,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
+            <groupId>org.apache.druid.com.google.guava</groupId>
             <artifactId>guava-testlib</artifactId>
             <scope>test</scope>
         </dependency>

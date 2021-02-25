@@ -150,7 +150,7 @@
             <artifactId>jersey-server</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
+            <groupId>org.apache.druid.com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
