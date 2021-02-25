@@ -220,6 +220,11 @@
     <dependencyManagement>
         <dependencies>
             <!-- Compile Scope -->
+          <dependency>
+            <groupId>org.apache.druid.com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${project.version}</version>
+          </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
