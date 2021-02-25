@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,15 +18,18 @@
   ~ under the License.
   -->
 
-## Base Docker Image for Integration Tests
-
-### Building Docker Image for Integration Tests
-
-Run the following commands from <DRUIDS_REPO_DIR>/integration-tests/docker-base
-
-To build docker image for Java JDK8:
-- docker build -t druidbase:<NEW_TAG> -f jdk8/Dockerfile .
-
-To build docker image for Java JDK11:
-- docker build -t druidbase:<NEW_TAG> -f jdk11/Dockerfile .
-
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+    </Root>
+    <Logger level="debug" name="org.apache.druid" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  </Loggers>
+</Configuration>

@@ -192,7 +192,7 @@ that range if there's some stray data with unexpected timestamps.
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. The current limitation is that you can append to any datasources regardless of their original partitioning scheme, but the appended segments should be partitioned using the `dynamic` partitionsSpec.|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
 
 ### `tuningConfig`
 
@@ -718,7 +718,7 @@ that range if there's some stray data with unexpected timestamps.
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. The current limitation is that you can append to any datasources regardless of their original partitioning scheme, but the appended segments should be partitioned using the `dynamic` partitionsSpec.|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
 
 ### `tuningConfig`
 

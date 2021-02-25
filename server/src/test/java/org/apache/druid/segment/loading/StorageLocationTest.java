@@ -20,12 +20,19 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.util.Collections;
@@ -51,6 +58,18 @@ public class StorageLocationTest
     StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
     Assert.assertTrue(locationFull.canHandle(newSegmentId("2012/2013").toString(), 4_000));
     Assert.assertFalse(locationFull.canHandle(newSegmentId("2012/2013").toString(), 6_000));
+  }
+
+  @Test
+  public void testStorageLocationRealFileSystem()
+  {
+    File file = FileUtils.createTempDir();
+    file.deleteOnExit();
+    StorageLocation location = new StorageLocation(file, 10_000, 100.0d);
+    Assert.assertFalse(location.canHandle(newSegmentId("2012/2013").toString(), 5_000));
+
+    location = new StorageLocation(file, 10_000, 0.0001d);
+    Assert.assertTrue(location.canHandle(newSegmentId("2012/2013").toString(), 1));
   }
 
   private StorageLocation fakeLocation(long total, long free, long max, Double percent)
@@ -93,6 +112,45 @@ public class StorageLocationTest
     loc.removeSegmentDir(new File("/tmp/test2"), secondSegment);
     expectedAvail += 23;
     verifyLoc(expectedAvail, loc);
+  }
+
+  @Test
+  public void testMaybeReserve()
+  {
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    ArgumentCaptor<ServiceEventBuilder> argumentCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
+    EmittingLogger.registerEmitter(emitter);
+    long expectedAvail = 1000L;
+    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);
+
+    verifyLoc(expectedAvail, loc);
+
+    final DataSegment secondSegment = makeSegment("2012-01-02/2012-01-03", 23);
+
+    loc.maybeReserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
+    expectedAvail -= 10;
+    verifyLoc(expectedAvail, loc);
+
+    loc.maybeReserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
+    verifyLoc(expectedAvail, loc);
+
+    loc.maybeReserve("test2", secondSegment);
+    expectedAvail -= 23;
+    verifyLoc(expectedAvail, loc);
+
+    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    expectedAvail += 10;
+    verifyLoc(expectedAvail, loc);
+
+    loc.maybeReserve("test3", makeSegment("2012-01-01/2012-01-02", 999));
+    expectedAvail -= 999;
+    verifyLoc(expectedAvail, loc);
+
+    Mockito.verify(emitter).emit(argumentCaptor.capture());
+    AlertBuilder alertBuilder = (AlertBuilder) argumentCaptor.getValue();
+    String description = alertBuilder.build(ImmutableMap.of()).getDescription();
+    Assert.assertNotNull(description);
+    Assert.assertTrue(description, description.contains("Please increase druid.segmentCache.locations maxSize param"));
   }
 
   private void verifyLoc(long maxSize, StorageLocation loc)

@@ -55,6 +55,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -89,7 +90,6 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -131,9 +131,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
-
-  // Expecte compaction state to exist after compaction as we store compaction state by default
-  private static CompactionState DEFAULT_COMPACTION_STATE;
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
       "2014-01-01T00:00:10Z,a,1\n",
@@ -187,14 +184,26 @@ public class CompactionTaskRunTest extends IngestionTestBase
     this.lockGranularity = lockGranularity;
   }
 
-  @BeforeClass
-  public static void setupClass() throws JsonProcessingException
+  public static CompactionState getDefaultCompactionState(Granularity segmentGranularity,
+                                                          Granularity queryGranularity,
+                                                          List<Interval> intervals) throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-
-    DEFAULT_COMPACTION_STATE = new CompactionState(
+    // Expected compaction state to exist after compaction as we store compaction state by default
+    return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class)
+      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+      mapper.readValue(
+          mapper.writeValueAsString(
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  queryGranularity,
+                  true,
+                  intervals
+              )
+          ),
+          Map.class
+      )
     );
   }
 
@@ -239,7 +248,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
@@ -312,10 +324,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final List<DataSegment> segments = resultPair.rhs;
     Assert.assertEquals(6, segments.size());
-    final CompactionState expectedState = new CompactionState(
-        new HashedPartitionsSpec(null, 3, null),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
-    );
 
     for (int i = 0; i < 3; i++) {
       final Interval interval = Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1);
@@ -324,6 +332,21 @@ public class CompactionTaskRunTest extends IngestionTestBase
         Assert.assertEquals(
             interval,
             segments.get(segmentIdx).getInterval()
+        );
+        CompactionState expectedState = new CompactionState(
+            new HashedPartitionsSpec(null, 3, null),
+            compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+            getObjectMapper().readValue(
+                getObjectMapper().writeValueAsString(
+                    new UniformGranularitySpec(
+                        Granularities.HOUR,
+                        Granularities.MINUTE,
+                        true,
+                        ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
+                    )
+                ),
+                Map.class
+            )
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
         Assert.assertSame(HashBasedNumberedShardSpec.class, segments.get(segmentIdx).getShardSpec().getClass());
@@ -362,7 +385,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -389,7 +415,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(
@@ -488,7 +517,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -527,7 +559,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
-    Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(0).getLastCompactionState());
+    Assert.assertEquals(
+        getDefaultCompactionState(Granularities.DAY, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        segments.get(0).getLastCompactionState()
+    );
 
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
@@ -545,7 +580,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
+          segments.get(i).getLastCompactionState()
+      );
     }
   }
 
@@ -782,7 +820,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of()),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
