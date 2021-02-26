@@ -675,8 +675,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
       if (granular) {
         return (lhs, rhs) -> Longs.compare(
-            getGranularity().bucketStart(DateTimes.utc(lhs.getLong(0))).getMillis(),
-            getGranularity().bucketStart(DateTimes.utc(rhs.getLong(0))).getMillis()
+            getGranularity().bucketStart(lhs.getLong(0)),
+            getGranularity().bucketStart(rhs.getLong(0))
         );
       } else {
         return NON_GRANULAR_TIME_COMP;

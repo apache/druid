@@ -257,7 +257,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxBytesInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 10000, true)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 15000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -297,7 +297,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       );
 
       // We do multiple more adds to the same sink to cause persist.
-      for (int i = 0; i < 26; i++) {
+      for (int i = 0; i < 53; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
       sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
@@ -333,7 +333,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       );
 
       // We do multiple more adds to the same sink to cause persist.
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 31; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
       // currHydrant size is 0 since we just persist all indexes to disk.
@@ -363,7 +363,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test(expected = RuntimeException.class)
   public void testTaskFailAsPersistCannotFreeAnyMoreMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 10, true)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 5180, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {

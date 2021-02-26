@@ -157,7 +157,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
                       Granularities.HOUR,
-                      Granularities.NONE,
+                      Granularities.MINUTE,
                       true,
                       ImmutableList.of(segment.getInterval())
                   )
@@ -197,7 +197,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
                       Granularities.HOUR,
-                      Granularities.NONE,
+                      Granularities.MINUTE,
                       true,
                       ImmutableList.of(segment.getInterval())
                   )
@@ -237,7 +237,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
                       Granularities.HOUR,
-                      Granularities.NONE,
+                      Granularities.MINUTE,
                       true,
                       ImmutableList.of(segment.getInterval())
                   )
@@ -277,7 +277,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
                       Granularities.HOUR,
-                      Granularities.NONE,
+                      Granularities.MINUTE,
                       true,
                       ImmutableList.of(segment.getInterval())
                   )
