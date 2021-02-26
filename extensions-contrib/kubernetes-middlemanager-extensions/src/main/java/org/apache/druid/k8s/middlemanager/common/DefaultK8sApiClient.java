@@ -152,6 +152,20 @@ public class DefaultK8sApiClient implements K8sApiClient
               .endValueFrom()
               .build();
 
+      V1EnvVar podNameEnv = new V1EnvVarBuilder()
+              .withName("POD_NAME")
+              .withNewValueFrom()
+              .withFieldRef(new V1ObjectFieldSelector().fieldPath("metadata.name"))
+              .endValueFrom()
+              .build();
+
+      V1EnvVar podNameSpaceEnv = new V1EnvVarBuilder()
+              .withName("POD_NAMESPACE")
+              .withNewValueFrom()
+              .withFieldRef(new V1ObjectFieldSelector().fieldPath("metadata.namespace"))
+              .endValueFrom()
+              .build();
+
       V1EnvVar task_id = new V1EnvVarBuilder()
               .withName("TASK_ID")
               .withNewValue(taskID)
@@ -219,7 +233,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                 .withImage(image)
                 .withImagePullPolicy("IfNotPresent")
                 .withVolumeMounts(v1VolumeMounts)
-                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location, mmPodName, mmNamespace))
+                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location, mmPodName, mmNamespace, podNameEnv, podNameSpaceEnv))
                 .withNewResources()
                 .withRequests(resourceLimit)
                 .withLimits(resourceLimit)
@@ -257,7 +271,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                 .withImage(image)
                 .withImagePullPolicy("IfNotPresent")
                 .withVolumeMounts(v1VolumeMounts)
-                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location, mmPodName, mmNamespace))
+                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location, mmPodName, mmNamespace, podNameEnv, podNameSpaceEnv))
                 .withNewResources()
                 .withRequests(resourceLimit)
                 .withLimits(resourceLimit)
