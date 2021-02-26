@@ -22,6 +22,8 @@ package org.apache.druid.data.input.avro;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import io.confluent.kafka.schemaregistry.ParsedSchema;
+import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import org.apache.avro.Schema;
@@ -74,7 +76,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       int length = bytes.limit() - 1 - 4;
       int offset = bytes.position() + bytes.arrayOffset();
       ParsedSchema parsedSchema = registry.getSchemaById(id);
-      Schema schema = parsedSchema instanceof AvroSchema ? ((AvroSchema)parsedSchema).rawSchema() : null;
+      Schema schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
       DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
     }
