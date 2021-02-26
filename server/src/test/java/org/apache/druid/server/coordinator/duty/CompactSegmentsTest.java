@@ -30,8 +30,8 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
@@ -597,7 +597,8 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ArgumentCaptor<List<DataSegment>> segmentsCaptor = ArgumentCaptor.forClass(List.class);
-    ArgumentCaptor<ClientCompactionTaskQueryGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(ClientCompactionTaskQueryGranularitySpec.class);
+    ArgumentCaptor<ClientCompactionTaskGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskGranularitySpec.class);
     Mockito.verify(mockIndexingServiceClient).compactSegments(
         ArgumentMatchers.anyString(),
         segmentsCaptor.capture(),
@@ -650,7 +651,8 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ArgumentCaptor<List<DataSegment>> segmentsCaptor = ArgumentCaptor.forClass(List.class);
-    ArgumentCaptor<ClientCompactionTaskQueryGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(ClientCompactionTaskQueryGranularitySpec.class);
+    ArgumentCaptor<ClientCompactionTaskGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskGranularitySpec.class);
     Mockito.verify(mockIndexingServiceClient).compactSegments(
         ArgumentMatchers.anyString(),
         segmentsCaptor.capture(),
@@ -696,7 +698,7 @@ public class CompactSegmentsTest
                 )
             ),
             null,
-            new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, null),
+            new ClientCompactionTaskGranularitySpec(Granularities.DAY, null),
             null
         )
     );
@@ -742,7 +744,8 @@ public class CompactSegmentsTest
     // Make sure that we do not skip interval of conflict task.
     // Since we cancel the task and will have to compact those intervals with the new segmentGranulartity
     ArgumentCaptor<List<DataSegment>> segmentsCaptor = ArgumentCaptor.forClass(List.class);
-    ArgumentCaptor<ClientCompactionTaskQueryGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(ClientCompactionTaskQueryGranularitySpec.class);
+    ArgumentCaptor<ClientCompactionTaskGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskGranularitySpec.class);
     Mockito.verify(mockIndexingServiceClient).compactSegments(
         ArgumentMatchers.anyString(),
         segmentsCaptor.capture(),

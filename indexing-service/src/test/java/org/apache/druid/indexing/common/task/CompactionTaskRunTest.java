@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -601,7 +601,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day segmentGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -622,7 +622,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.HOUR, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null))
         .build();
 
     resultPair = runTask(compactionTask2);
@@ -656,7 +656,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day queryGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(null, Granularities.SECOND))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -701,7 +701,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day segmentGranularity and day queryGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.DAY))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -733,7 +733,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(null, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);

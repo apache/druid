@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -115,7 +115,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
         ImmutableMap.of("key", "value")
     );
 
@@ -254,7 +254,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
-        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -296,7 +296,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
         new HashMap<>()
     );
 

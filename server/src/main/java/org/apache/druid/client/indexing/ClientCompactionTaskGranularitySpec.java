@@ -25,13 +25,13 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 
 import java.util.Objects;
 
-public class ClientCompactionTaskQueryGranularitySpec
+public class ClientCompactionTaskGranularitySpec
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
 
   @JsonCreator
-  public ClientCompactionTaskQueryGranularitySpec(
+  public ClientCompactionTaskGranularitySpec(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("queryGranularity") Granularity queryGranularity
   )
@@ -52,9 +52,9 @@ public class ClientCompactionTaskQueryGranularitySpec
     return queryGranularity;
   }
 
-  public ClientCompactionTaskQueryGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
+  public ClientCompactionTaskGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
   {
-    return new ClientCompactionTaskQueryGranularitySpec(segmentGranularity, queryGranularity);
+    return new ClientCompactionTaskGranularitySpec(segmentGranularity, queryGranularity);
   }
 
   @Override
@@ -66,7 +66,7 @@ public class ClientCompactionTaskQueryGranularitySpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ClientCompactionTaskQueryGranularitySpec that = (ClientCompactionTaskQueryGranularitySpec) o;
+    ClientCompactionTaskGranularitySpec that = (ClientCompactionTaskGranularitySpec) o;
     return Objects.equals(segmentGranularity, that.segmentGranularity) &&
            Objects.equals(queryGranularity, that.queryGranularity);
   }
@@ -80,7 +80,7 @@ public class ClientCompactionTaskQueryGranularitySpec
   @Override
   public String toString()
   {
-    return "ClientCompactionTaskQueryGranularitySpec{" +
+    return "ClientCompactionTaskGranularitySpec{" +
            "segmentGranularity=" + segmentGranularity +
            ", queryGranularity=" + queryGranularity +
            '}';

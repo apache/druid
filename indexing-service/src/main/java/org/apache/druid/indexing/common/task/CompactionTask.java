@@ -31,8 +31,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -143,7 +143,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final Granularity segmentGranularity;
   @Nullable
-  private final ClientCompactionTaskQueryGranularitySpec granularitySpec;
+  private final ClientCompactionTaskGranularitySpec granularitySpec;
   @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
   @JsonIgnore
@@ -177,7 +177,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
-      @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskQueryGranularitySpec granularitySpec,
+      @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
@@ -208,7 +208,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
     if (granularitySpec == null && segmentGranularity != null) {
-      this.granularitySpec = new ClientCompactionTaskQueryGranularitySpec(segmentGranularity, null);
+      this.granularitySpec = new ClientCompactionTaskGranularitySpec(segmentGranularity, null);
     } else {
       this.granularitySpec = granularitySpec;
     }
@@ -303,7 +303,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonProperty
   @Nullable
-  public ClientCompactionTaskQueryGranularitySpec getGranularitySpec()
+  public ClientCompactionTaskGranularitySpec getGranularitySpec()
   {
     return granularitySpec;
   }
@@ -473,7 +473,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
-      @Nullable final ClientCompactionTaskQueryGranularitySpec granularitySpec,
+      @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
       final RetryPolicyFactory retryPolicyFactory
@@ -544,7 +544,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
-            granularitySpec == null ? new ClientCompactionTaskQueryGranularitySpec(segmentGranularityToUse, null) : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
+            granularitySpec == null ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null) : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
 
         specs.add(
@@ -639,7 +639,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      @Nonnull ClientCompactionTaskQueryGranularitySpec granularitySpec
+      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec
   )
   {
     // check index metadata &
@@ -970,7 +970,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private Granularity segmentGranularity;
     @Nullable
-    private ClientCompactionTaskQueryGranularitySpec granularitySpec;
+    private ClientCompactionTaskGranularitySpec granularitySpec;
     @Nullable
     private TuningConfig tuningConfig;
     @Nullable
@@ -1021,7 +1021,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
-    public Builder granularitySpec(ClientCompactionTaskQueryGranularitySpec granularitySpec)
+    public Builder granularitySpec(ClientCompactionTaskGranularitySpec granularitySpec)
     {
       this.granularitySpec = granularitySpec;
       return this;

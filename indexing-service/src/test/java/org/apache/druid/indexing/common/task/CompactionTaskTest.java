@@ -36,7 +36,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -377,7 +377,7 @@ public class CompactionTaskTest
     );
     builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder2.tuningConfig(createTuningConfig());
-    builder2.granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.HOUR, Granularities.DAY));
+    builder2.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY));
     final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
     Assert.assertEquals(taskCreatedWithGranularitySpec.getSegmentGranularity(), taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
@@ -393,7 +393,7 @@ public class CompactionTaskTest
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
-    builder.granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.MINUTE, Granularities.DAY));
+    builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, Granularities.DAY));
     final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
     Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
@@ -1067,7 +1067,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
-        new ClientCompactionTaskQueryGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
+        new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -1103,7 +1103,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
-        new ClientCompactionTaskQueryGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null)),
+        new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null)),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -1137,7 +1137,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
-        new ClientCompactionTaskQueryGranularitySpec(
+        new ClientCompactionTaskGranularitySpec(
             new PeriodGranularity(Period.months(3), null, null),
             new PeriodGranularity(Period.months(3), null, null)
         ),
@@ -1210,7 +1210,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
-        new ClientCompactionTaskQueryGranularitySpec(null, null),
+        new ClientCompactionTaskGranularitySpec(null, null),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
