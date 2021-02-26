@@ -48,3 +48,7 @@ Yes! However, you will almost certainly start off with a number of segments who 
 ### Can I disable this on a cluster with existing data?
 
 Yes! When upgrading to a version of Druid with this functionality for the first time, it will be OFF by default. This means you do not need to worry about setting Guilds for your servers. If you have turned it on, but now wish to turn it off, you can certainly do that too. Once off, the Coordinator will go back to loading, dropping, and balancing segments without any concern for what Guild a Historical server belongs to.
+
+## Known Shortfalls
+
+* Segments whose applicable `LoadRule` only calls for one replicant can still be selected by the cluster balancing process when prioritizing segments who are only located on one Guild. This is not the most ideal situation because in this prioritized balancing the goal is to increase the number of segments that are replicated across Guilds. This situation does not help work towards that goal.

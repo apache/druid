@@ -72,14 +72,16 @@ public interface BalancerStrategy
    *         there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
   @Nullable
-  BalancerSegmentHolder pickSegmentToMove(
+  BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       double percentOfSegmentsToConsider
   );
 
   /**
-   * Pick the best segment to move from one of the supplied set of servers according to the balancing strategy.
+   * Pick a segment to move from one of the supplied set of servers according to the balancing strategy. The segment
+   * picked will be a "guild violator", meaning a segment that is located on a single guild.
+   *
    * @param serverHolders set of historicals to consider for moving segments
    * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
    *                             Balancing strategies should avoid rebalancing segments for such datasources, since
@@ -93,7 +95,7 @@ public interface BalancerStrategy
    *         there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
   @Nullable
-  BalancerSegmentHolder pickSegmentToMove(
+  BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       DruidCoordinatorRuntimeParams params

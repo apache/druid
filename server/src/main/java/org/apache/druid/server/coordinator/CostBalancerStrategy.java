@@ -212,7 +212,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
 
   @Override
-  public BalancerSegmentHolder pickSegmentToMove(
+  public BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       double percentOfSegmentsToConsider
@@ -225,8 +225,22 @@ public class CostBalancerStrategy implements BalancerStrategy
     );
   }
 
+  /**
+   * Pick segment to move who is only located on a single Guild.
+   *
+   * @param serverHolders set of historicals to consider for moving segments
+   * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
+   *                             Balancing strategies should avoid rebalancing segments for such datasources, since
+   *                             they should be loaded on all servers anyway.
+   *                             NOTE: this should really be handled on a per-segment basis, to properly support
+   *                                   the interval or period-based broadcast rules. For simplicity of the initial
+   *                                   implementation, only forever broadcast rules are supported.
+   * @param params {@link DruidCoordinatorRuntimeParams} object with Coordinator params.
+   *
+   * @return
+   */
   @Override
-  public BalancerSegmentHolder pickSegmentToMove(
+  public BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       DruidCoordinatorRuntimeParams params
