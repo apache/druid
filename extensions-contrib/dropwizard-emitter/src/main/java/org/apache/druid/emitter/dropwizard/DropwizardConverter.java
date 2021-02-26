@@ -21,7 +21,7 @@ package org.apache.druid.emitter.dropwizard;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.curator.shaded.org.apache.druid.com.google.common.io.Closeables;
+import org.apache.curator.shaded.com.google.common.io.Closeables;
 import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;

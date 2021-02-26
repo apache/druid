@@ -19,12 +19,12 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.collect.ImmutableMultimap;
-import org.apache.druid.com.google.common.collect.Multimap;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
 import org.apache.druid.sql.calcite.view.ViewManager;
 
