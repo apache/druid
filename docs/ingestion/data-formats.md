@@ -1036,19 +1036,23 @@ Multiple Instances:
 ```json
 ...
 "avroBytesDecoder" : {
-   "type"   : "schema_registry",
-   "urls"   : [<schema-registry-url-1>, <schema-registry-url-2>, ...],
+   "type" : "schema_registry",
+   "urls" : [<schema-registry-url-1>, <schema-registry-url-2>, ...],
    "config" : {
-               "schema.registry.basic.auth.credentials.source" : "USER_INFO",
-               "schema.registry.basic.auth.user.info"          : "fred:letmein",
-               ... 
-              },
+        "basic.auth.credentials.source": "USER_INFO",
+        "basic.auth.user.info": "fred:letmein",
+        "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
+        "schema.registry.ssl.truststore.password": "<password>",
+        "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
+        "schema.registry.ssl.keystore.password": "<password>",
+        "schema.registry.ssl.key.password": "<password>"
+       ... 
+   },
    "headers": {
-               "traceID"   : "b29c5de2-0db4-490b-b421",
-               "timeStamp" : "1577191871865",
-               ...
-               
-             }
+       "traceID" : "b29c5de2-0db4-490b-b421",
+       "timeStamp" : "1577191871865",
+       ...
+    }
 }
 ...
 ```
