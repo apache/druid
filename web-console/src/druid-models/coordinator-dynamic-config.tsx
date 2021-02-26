@@ -37,6 +37,8 @@ export interface CoordinatorDynamicConfig {
   decommissioningNodes?: string[];
   decommissioningMaxPercentOfMaxSegmentsToMove?: number;
   pauseCoordination?: boolean;
+  guildReplicationMaxPercentOfMaxSegmentsToMove?: number;
+  emitGuildReplicationMetrics?: boolean;
 }
 
 export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[] = [
