@@ -333,7 +333,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       cursorIterable = index.getFacts().timeRangeIterable(
           descending,
           timeStart,
-          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
+          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStartMillis()))
       );
       emptyRange = !cursorIterable.iterator().hasNext();
       time = gran.toDateTime(interval.getStartMillis());

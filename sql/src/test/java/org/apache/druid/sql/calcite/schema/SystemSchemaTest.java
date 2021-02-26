@@ -277,7 +277,8 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
-      Collections.singletonMap("test", "map")
+      Collections.singletonMap("test", "map"),
+      Collections.singletonMap("test2", "map2")
   );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(

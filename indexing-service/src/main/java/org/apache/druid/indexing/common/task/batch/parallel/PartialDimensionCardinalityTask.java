@@ -198,9 +198,9 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       DateTime timestamp = inputRow.getTimestamp();
       final Interval interval;
       if (granularitySpec.inputIntervals().isEmpty()) {
-        interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+        interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
       } else {
-        final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+        final Optional<Interval> optInterval = granularitySpec.bucketInterval(timestamp);
         // this interval must exist since it passed the rowFilter
         assert optInterval.isPresent();
         interval = optInterval.get();
