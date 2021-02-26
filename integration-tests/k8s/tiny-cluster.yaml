@@ -113,6 +113,10 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: metadata.namespace
+    - name: POD_UID
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.uid
 
   nodes:
     brokers:
@@ -202,6 +206,7 @@ spec:
         druid.coordinator.asOverlord.enabled=true
         druid.coordinator.asOverlord.overlordService=druid/overlord
         druid.indexer.queue.startDelay=PT30S
+        druid.indexer.runner.type=httpRemote
       extra.jvm.options: |-
         -Xmx800m
         -Xms800m
@@ -330,6 +335,10 @@ spec:
         druid.indexer.fork.property.druid.processing.buffer.sizeBytes=268435456
         druid.indexer.fork.property.druid.processing.numMergeBuffers=1
         druid.indexer.fork.property.druid.processing.numThreads=1
+        druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-middlemanager-extensions"]
+        druid.indexer.runner.mode=k8s
+        druid.indexer.runner.hostPath=REPLACE_VOLUMES/tmp
+        druid.indexer.runner.mountPath=/druid/data
       extra.jvm.options: |-
         -Xmx256m
         -Xms256m

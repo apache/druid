@@ -101,6 +101,7 @@ public class K8sForkingTaskRunner
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
   private static final String DRUID_INDEXER_NAMESPACE = "druid.indexer.namespace";
   private static final String DRUID_INDEXER_IMAGE = "druid.indexer.image";
+  private static final String DRUID_INDEXER_SERVICE_ACCOUNT_NAME = "druid.indexer.serviceAccountName";
   private static final String DRUID_INDEXER_DEFAULT_POD_CPU = "druid.indexer.default.pod.cpu";
   private static final String DRUID_INDEXER_DEFAULT_POD_MEMORY = "druid.indexer.default.pod.memory";
   private static final String DRUID_INDEXER_RUNNER_HOST_PATH = "druid.indexer.runner.hostPath";
@@ -123,6 +124,7 @@ public class K8sForkingTaskRunner
   private final String image;
   private final String defaultPodCPU;
   private final String defaultPodMemory;
+  private final String serviceAccountName;
 
   @Inject
   public K8sForkingTaskRunner(
@@ -150,6 +152,7 @@ public class K8sForkingTaskRunner
     this.k8sApiClient = k8sApiClient;
     this.nameSpace = props.getProperty(DRUID_INDEXER_NAMESPACE, "default");
     this.image = props.getProperty(DRUID_INDEXER_IMAGE, "druid/cluster:v1");
+    this.serviceAccountName = props.getProperty(DRUID_INDEXER_SERVICE_ACCOUNT_NAME, "default");
     this.defaultPodCPU = props.getProperty(DRUID_INDEXER_DEFAULT_POD_CPU, "1");
     this.defaultPodMemory = props.getProperty(DRUID_INDEXER_DEFAULT_POD_MEMORY, "2G");
 
@@ -207,16 +210,9 @@ public class K8sForkingTaskRunner
                           logFile.createNewFile();
                         }
                       }
+                      attemptDir.mkdirs();
 
                       final File reportsFile = new File(attemptDir, "report.json");
-                      if (!reportsFile.exists()) {
-                        if (attemptDir.exists()) {
-                          reportsFile.createNewFile();
-                        } else {
-                          attemptDir.mkdirs();
-                          reportsFile.createNewFile();
-                        }
-                      }
                       // time to adjust process holders
                       synchronized (tasks) {
                         // replace all the ": - . _" to "", try to reduce the length of pod name and meet pod naming specifications 63 charts.
@@ -474,7 +470,8 @@ public class K8sForkingTaskRunner
                                 tmpFileLoc,
                                 "Never",
                                 hostPath,
-                                mountPath);
+                                mountPath,
+                                serviceAccountName);
                         LOGGER.info("PeonPod created %s/%s", peonPod.getMetadata().getNamespace(), peonPod.getMetadata().getName());
 
                         k8sApiClient.waitForPodRunning(peonPod, labels);
@@ -513,10 +510,17 @@ public class K8sForkingTaskRunner
                         ByteStreams.copy(processHolder.getInputStream(), toLogfile);
 
                         // wait for pod finished(Succeeded or Failed)
-                        final String status = processHolder.waitForFinished();
-                        LOGGER.info("Process exited with status[%s] for task: %s", status, task.getId());
-                        if (status.equalsIgnoreCase("Succeeded")) {
-                          runFailed = false;
+                        String statusCodeFromPod = processHolder.waitForFinished();
+
+                        if (statusFile.exists()) {
+                          TaskStatus status = jsonMapper.readValue(statusFile, TaskStatus.class);
+                          if (status.isSuccess()) {
+                            runFailed = false;
+                          }
+                        } else {
+                          if (statusCodeFromPod.equalsIgnoreCase("Succeeded")) {
+                            runFailed = false;
+                          }
                         }
                       }
                       finally {
@@ -531,7 +535,11 @@ public class K8sForkingTaskRunner
                       TaskStatus status;
                       if (!runFailed) {
                         // Process exited successfully
-                        status = TaskStatus.success(task.getId(), taskLocation);
+                        if (statusFile.exists()) {
+                          status = jsonMapper.readValue(statusFile, TaskStatus.class);
+                        } else {
+                          status = TaskStatus.success(task.getId(), taskLocation);
+                        }
                       } else {
                         // Process exited unsuccessfully
                         status = TaskStatus.failure(task.getId());

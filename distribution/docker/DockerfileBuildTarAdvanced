@@ -57,7 +57,8 @@ COPY distribution/docker/druid.sh /druid.sh
 
 RUN mkdir -p /opt/druid/var \
  && chown -R druid:druid /opt \
- && chmod 775 /opt/druid/var
+ && chmod 775 /opt/druid/var \
+ && curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
 USER druid
 VOLUME /opt/druid/var

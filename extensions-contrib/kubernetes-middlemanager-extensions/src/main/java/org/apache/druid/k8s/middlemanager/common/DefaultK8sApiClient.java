@@ -111,7 +111,7 @@ public class DefaultK8sApiClient implements K8sApiClient
    * @return peon pod created. could be null is pod creation failed.
    */
   @Override
-  public V1Pod createPod(String taskID, String image, String namespace, Map<String, String> labels, Map<String, Quantity> resourceLimit, File taskDir, List<String> args, int childPort, int tlsChildPort, String tempLoc, String peonPodRestartPolicy, String hostPath, String mountPath)
+  public V1Pod createPod(String taskID, String image, String namespace, Map<String, String> labels, Map<String, Quantity> resourceLimit, File taskDir, List<String> args, int childPort, int tlsChildPort, String tempLoc, String peonPodRestartPolicy, String hostPath, String mountPath, String serviceAccountName)
   {
     try {
       final String configMapVolumeName = "task-json-vol-tmp";
@@ -141,6 +141,16 @@ public class DefaultK8sApiClient implements K8sApiClient
       V1EnvVar task_id = new V1EnvVarBuilder()
               .withName("TASK_ID")
               .withNewValue(taskID)
+              .build();
+
+      V1EnvVar mmPodName = new V1EnvVarBuilder()
+              .withName("MM_POD_NAME")
+              .withNewValue(System.getenv("POD_NAME"))
+              .build();
+
+      V1EnvVar mmNamespace = new V1EnvVarBuilder()
+              .withName("MM_NAMESPACE")
+              .withNewValue(namespace)
               .build();
 
       V1EnvVar task_dir = new V1EnvVarBuilder()
@@ -195,7 +205,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                 .withImage(image)
                 .withImagePullPolicy("IfNotPresent")
                 .withVolumeMounts(v1VolumeMounts)
-                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location))
+                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location, mmPodName, mmNamespace))
                 .withNewResources()
                 .withRequests(resourceLimit)
                 .withLimits(resourceLimit)
@@ -233,7 +243,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                 .withImage(image)
                 .withImagePullPolicy("IfNotPresent")
                 .withVolumeMounts(v1VolumeMounts)
-                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location))
+                .withEnv(ImmutableList.of(podIpEnv, task_id, task_dir, task_json_tmp_location, mmPodName, mmNamespace))
                 .withNewResources()
                 .withRequests(resourceLimit)
                 .withLimits(resourceLimit)
@@ -285,9 +295,14 @@ public class DefaultK8sApiClient implements K8sApiClient
     }
 
     String javaCommands = builder.toString().substring(0, builder.toString().length() - 1);
+    String reportFile = args.get(args.size() - 1);
+    String statusFile = args.get(args.size() - 2);
+    final String postAction = ";cd `dirname " + reportFile
+            + "`;kubectl cp report.json $MM_NAMESPACE/$MM_POD_NAME:" + reportFile
+            + ";kubectl cp status.json $MM_NAMESPACE/$MM_POD_NAME:" + statusFile + ";";
 
     final String prepareTaskFiles = "mkdir -p /tmp/conf/;test -d /tmp/conf/druid && rm -r /tmp/conf/druid;cp -r /opt/druid/conf/druid /tmp/conf/druid;mkdir -p $TASK_DIR; cp $TASK_JSON_TMP_LOCATION $TASK_DIR;";
-    return prepareTaskFiles + javaCommands;
+    return prepareTaskFiles + javaCommands + postAction;
   }
 
   /**

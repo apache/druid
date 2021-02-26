@@ -45,7 +45,8 @@ public interface K8sApiClient
                   String tmpLoc,
                   String peonPodRestartPolicy,
                   String hostPath,
-                  String mountPath);
+                  String mountPath,
+                  String serviceAccountName);
   V1ConfigMap createConfigMap(String namespace, String configmapName, Map<String, String> labels, Map<String, String> data);
   Boolean configMapIsExist(String namespace, String labels);
   void waitForPodRunning(V1Pod peonPod, String labelSelector);

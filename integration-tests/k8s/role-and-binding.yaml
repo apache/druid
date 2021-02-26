@@ -19,10 +19,9 @@ metadata:
   name: druid-cluster
 rules:
 - apiGroups:
-  - ""
+  - '*'
   resources:
-  - pods
-  - configmaps
+  - '*'
   verbs:
   - '*'
 ---
