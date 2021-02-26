@@ -52,7 +52,6 @@ import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -255,7 +254,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
-        .granularitySpec(new CompactionGranularitySpec(Granularities.DAY, Granularities.HOUR))
+        .granularitySpec(new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(

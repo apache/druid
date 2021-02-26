@@ -52,6 +52,11 @@ public class ClientCompactionTaskQueryGranularitySpec
     return queryGranularity;
   }
 
+  public ClientCompactionTaskQueryGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
+  {
+    return new ClientCompactionTaskQueryGranularitySpec(segmentGranularity, queryGranularity);
+  }
+
   @Override
   public boolean equals(Object o)
   {

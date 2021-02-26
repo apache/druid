@@ -30,7 +30,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -235,7 +234,7 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new CompactionGranularitySpec(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -261,7 +260,7 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new CompactionGranularitySpec(Granularities.HOUR, Granularities.MONTH),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, Granularities.MONTH),
         ImmutableMap.of("key", "val")
     );
   }
@@ -302,7 +301,7 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new CompactionGranularitySpec(null, null),
+        new UserCompactionTaskGranularityConfig(null, null),
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);

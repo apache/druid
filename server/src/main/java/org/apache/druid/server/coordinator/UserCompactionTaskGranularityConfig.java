@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.indexing.granularity;
+package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,13 +25,13 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 
 import java.util.Objects;
 
-public class CompactionGranularitySpec
+public class UserCompactionTaskGranularityConfig
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
 
   @JsonCreator
-  public CompactionGranularitySpec(
+  public UserCompactionTaskGranularityConfig(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("queryGranularity") Granularity queryGranularity
   )
@@ -52,11 +52,6 @@ public class CompactionGranularitySpec
     return queryGranularity;
   }
 
-  public CompactionGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
-  {
-    return new CompactionGranularitySpec(segmentGranularity, queryGranularity);
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -66,7 +61,7 @@ public class CompactionGranularitySpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompactionGranularitySpec that = (CompactionGranularitySpec) o;
+    UserCompactionTaskGranularityConfig that = (UserCompactionTaskGranularityConfig) o;
     return Objects.equals(segmentGranularity, that.segmentGranularity) &&
            Objects.equals(queryGranularity, that.queryGranularity);
   }
@@ -80,7 +75,7 @@ public class CompactionGranularitySpec
   @Override
   public String toString()
   {
-    return "CompactionGranularitySpec{" +
+    return "UserCompactionTaskGranularityConfig{" +
            "segmentGranularity=" + segmentGranularity +
            ", queryGranularity=" + queryGranularity +
            '}';

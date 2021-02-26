@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -47,7 +46,7 @@ public class DataSourceCompactionConfig
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
-  private final CompactionGranularitySpec granularitySpec;
+  private final UserCompactionTaskGranularityConfig granularitySpec;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -58,7 +57,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
-      @JsonProperty("granularitySpec") @Nullable CompactionGranularitySpec granularitySpec,
+      @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -122,7 +121,7 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public CompactionGranularitySpec getGranularitySpec()
+  public UserCompactionTaskGranularityConfig getGranularitySpec()
   {
     return granularitySpec;
   }
