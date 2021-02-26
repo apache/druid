@@ -337,6 +337,10 @@ spec:
         druid.indexer.fork.property.druid.processing.numThreads=1
         druid.extensions.loadList=["druid-avro-extensions","druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-middlemanager-extensions", "druid-kubernetes-extensions"]
         druid.indexer.runner.mode=k8s
+        druid.indexer.image=druid/cluster:v1
+        druid.indexer.serviceAccountName=default
+        druid.indexer.default.pod.memory=1G
+        druid.indexer.default.pod.cpu=1
         druid.indexer.runner.hostPath=REPLACE_VOLUMES/tmp
         druid.indexer.runner.mountPath=/druid/data
       extra.jvm.options: |-
@@ -351,6 +355,6 @@ spec:
             path: REPLACE_VOLUMES/tmp
       resources:
         requests:
-          memory: "3G"
+          memory: "512Mi"
         limits:
-          memory: "3G"
+          memory: "512Mi"
