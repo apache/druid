@@ -67,6 +67,8 @@ public class DefaultK8sApiClient implements K8sApiClient
   private final ObjectMapper jsonMapper;
   private GenericKubernetesApi<V1Pod, V1PodList> podClient;
   private PodLogs logs;
+  private String podName;
+  private String podUID;
 
   @Inject
   public DefaultK8sApiClient(ApiClient realK8sClient, @Json ObjectMapper jsonMapper)
@@ -76,6 +78,8 @@ public class DefaultK8sApiClient implements K8sApiClient
     this.jsonMapper = jsonMapper;
     this.podClient = new GenericKubernetesApi<>(V1Pod.class, V1PodList.class, "", "v1", "pods", realK8sClient);
     this.logs = new PodLogs(realK8sClient);
+    this.podName = System.getenv("POD_NAME");
+    this.podUID = System.getenv("POD_UID");
   }
 
   public void setCoreV1Api(CoreV1Api coreV1Api)
@@ -91,6 +95,16 @@ public class DefaultK8sApiClient implements K8sApiClient
   public void setPodLogsClient(PodLogs logs)
   {
     this.logs = logs;
+  }
+
+  public void setPodName(String name)
+  {
+    this.podName = name;
+  }
+
+  public void setPodUID(String uid)
+  {
+    this.podUID = uid;
   }
 
   /**
@@ -124,9 +138,9 @@ public class DefaultK8sApiClient implements K8sApiClient
       String commands = buildCommands(args);
 
       V1OwnerReference owner = new V1OwnerReferenceBuilder()
-              .withName(System.getenv("POD_NAME"))
+              .withName(podName)
               .withApiVersion("v1")
-              .withUid(System.getenv("POD_UID"))
+              .withUid(podUID)
               .withKind("Pod")
               .withController(true)
               .build();
@@ -145,7 +159,7 @@ public class DefaultK8sApiClient implements K8sApiClient
 
       V1EnvVar mmPodName = new V1EnvVarBuilder()
               .withName("MM_POD_NAME")
-              .withNewValue(System.getenv("POD_NAME"))
+              .withNewValue(podName)
               .build();
 
       V1EnvVar mmNamespace = new V1EnvVarBuilder()
@@ -301,6 +315,7 @@ public class DefaultK8sApiClient implements K8sApiClient
             + "`;kubectl cp report.json $MM_NAMESPACE/$MM_POD_NAME:" + reportFile
             + ";kubectl cp status.json $MM_NAMESPACE/$MM_POD_NAME:" + statusFile + ";";
 
+    // prepare necessary files based on /druid.sh in dockerImage
     final String prepareTaskFiles = "mkdir -p /tmp/conf/;test -d /tmp/conf/druid && rm -r /tmp/conf/druid;cp -r /opt/druid/conf/druid /tmp/conf/druid;mkdir -p $TASK_DIR; cp $TASK_JSON_TMP_LOCATION $TASK_DIR;";
     return prepareTaskFiles + javaCommands + postAction;
   }
@@ -312,9 +327,9 @@ public class DefaultK8sApiClient implements K8sApiClient
   public V1ConfigMap createConfigMap(String namespace, String configMapName, Map<String, String> labels, Map<String, String> data)
   {
     V1OwnerReference owner = new V1OwnerReferenceBuilder()
-            .withName(System.getenv("POD_NAME"))
+            .withName(podName)
             .withApiVersion("v1")
-            .withUid(System.getenv("POD_UID"))
+            .withUid(podUID)
             .withKind("Pod")
             .withController(true)
             .build();

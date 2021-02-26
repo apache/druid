@@ -89,6 +89,8 @@ public class K8sForkingTaskRunnerTest extends EasyMockSupport
     k8sApiClient.setCoreV1Api(coreV1Api);
     k8sApiClient.setPodClient(podClient);
     k8sApiClient.setPodLogsClient(podLogs);
+    k8sApiClient.setPodName("mm");
+    k8sApiClient.setPodUID("abc");
     ForkingTaskRunnerConfig forkingTaskRunnerConfig = jsonMapper.convertValue(ImmutableMap.of(
             "javaOpts", "a \"\"b",
             "classpath", "/aaa"), ForkingTaskRunnerConfig.class);
