@@ -45,9 +45,21 @@ public class AllGranularity extends Granularity
   }
 
   @Override
+  public long increment(long time)
+  {
+    return DateTimes.MAX.getMillis();
+  }
+
+  @Override
   public DateTime increment(DateTime time)
   {
     return DateTimes.MAX;
+  }
+
+  @Override
+  public long bucketStart(long time)
+  {
+    return DateTimes.MIN.getMillis();
   }
 
   @Override

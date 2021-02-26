@@ -38,6 +38,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -1115,6 +1116,60 @@ public class CompactionTaskTest
         Granularities.MONTH
     );
   }
+
+  @Test
+  public void testChooseFinestGranularityWithNulls()
+  {
+    List<Granularity> input = Arrays.asList(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.DAY,
+        null,
+        Granularities.ALL,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.SECOND.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityNone()
+  {
+    List<Granularity> input = ImmutableList.of(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.NONE,
+        Granularities.DAY,
+        Granularities.NONE,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.NONE.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityAllNulls()
+  {
+    List<Granularity> input = Arrays.asList(
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertNull(chooseFinestGranularityHelper(input));
+  }
+
+  private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
+  {
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    for (Granularity current : granularities) {
+      queryGranularity.set(CompactionTask.compareWithCurrent(queryGranularity.get(), current));
+    }
+    return queryGranularity.get();
+  }
+
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {

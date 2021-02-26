@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.google.common.util.concurrent.Striped;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketches;
-import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -41,7 +41,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 /**
  * This aggregator builds sketches from raw data.
  * The input is in the form of a key and array of double values.
- * The output is {@link org.apache.datasketches.tuple.ArrayOfDoublesSketch}.
+ * The output is {@link org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {
