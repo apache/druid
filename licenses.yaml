@@ -3393,16 +3393,6 @@ libraries:
 
 ---
 
-name: com.101tec zkclient
-license_category: binary
-version: '0.10'
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - com.101tec: zkclient
-
----
-
 name: Kafka Client
 version: 5.5.1-ccs
 license_category: binary
