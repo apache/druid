@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -115,6 +116,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     selectors = new HashMap<>();
     aggOffsetInBuffer = new int[metrics.length];
 
+    int aggsCurOffsetInBuffer = 0;
+
     for (int i = 0; i < metrics.length; i++) {
       AggregatorFactory agg = metrics[i];
 
@@ -129,15 +132,11 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           new OnheapIncrementalIndex.CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
 
-      if (i == 0) {
-        aggOffsetInBuffer[i] = 0;
-      } else {
-        aggOffsetInBuffer[i] = aggOffsetInBuffer[i - 1] + metrics[i - 1].getMaxIntermediateSizeWithNulls();
-      }
+      aggOffsetInBuffer[i] = aggsCurOffsetInBuffer;
+      aggsCurOffsetInBuffer += agg.getMaxIntermediateSizeWithNulls();
     }
 
-    aggsTotalSize = aggOffsetInBuffer[metrics.length - 1] + metrics[metrics.length
-                                                                    - 1].getMaxIntermediateSizeWithNulls();
+    aggsTotalSize = aggsCurOffsetInBuffer;
 
     return new BufferAggregator[metrics.length];
   }
@@ -151,18 +150,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       boolean skipMaxRowsInMemoryCheck // ignored, we always want to check this for offheap
   ) throws IndexSizeExceededException
   {
-    ByteBuffer aggBuffer;
-    int bufferIndex;
-    int bufferOffset;
-
     synchronized (this) {
       final AggregatorFactory[] metrics = getMetrics();
       final int priorIndex = facts.getPriorIndex(key);
       if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
         final int[] indexAndOffset = indexAndOffsets.get(priorIndex);
-        bufferIndex = indexAndOffset[0];
-        bufferOffset = indexAndOffset[1];
-        aggBuffer = aggBuffers.get(bufferIndex).get();
+        ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
+        return aggregate(row, rowContainer, aggBuffer, indexAndOffset[1]);
       } else {
         if (metrics.length > 0 && getAggs()[0] == null) {
           // note: creation of Aggregators is done lazily when at least one row from input is available
@@ -175,7 +169,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           rowContainer.set(null);
         }
 
-        bufferIndex = aggBuffers.size() - 1;
+        int bufferIndex = aggBuffers.size() - 1;
         ByteBuffer lastBuffer = aggBuffers.isEmpty() ? null : aggBuffers.get(aggBuffers.size() - 1).get();
         int[] lastAggregatorsIndexAndOffset = indexAndOffsets.isEmpty()
                                               ? null
@@ -185,7 +179,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           throw new ISE("last row's aggregate's buffer and last buffer index must be same");
         }
 
-        bufferOffset = aggsTotalSize + (lastAggregatorsIndexAndOffset != null ? lastAggregatorsIndexAndOffset[1] : 0);
+        int bufferOffset = aggsTotalSize + (lastAggregatorsIndexAndOffset != null ? lastAggregatorsIndexAndOffset[1] : 0);
+        ByteBuffer aggBuffer;
         if (lastBuffer != null &&
             lastBuffer.capacity() - bufferOffset >= aggsTotalSize) {
           aggBuffer = lastBuffer;
@@ -208,8 +203,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
         final int rowIndex = indexIncrement.getAndIncrement();
 
-        // note that indexAndOffsets must be updated before facts, because as soon as we update facts
-        // concurrent readers get hold of it and might ask for newly added row
+        // note that we must update indexAndOffsets and the aggregator's buffers before facts, because as soon as we
+        // update facts concurrent readers get hold of it and might ask for newly added row
+        AddToFactsResult res = aggregate(row, rowContainer, aggBuffer, bufferOffset);
         indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         final int prev = facts.putIfAbsent(key, rowIndex);
         if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
@@ -217,12 +213,22 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         } else {
           throw new ISE("Unexpected state: Concurrent fact addition.");
         }
+
+        return res;
       }
     }
+  }
+
+  public AddToFactsResult aggregate(
+      InputRow row,
+      ThreadLocal<InputRow> rowContainer,
+      ByteBuffer aggBuffer,
+      int bufferOffset
+  )
+  {
+    final List<String> parseExceptionMessages = new ArrayList<>();
 
     rowContainer.set(row);
-
-    final List<String> parseExceptionMessages = new ArrayList<>();
     for (int i = 0; i < getMetrics().length; i++) {
       final BufferAggregator agg = getAggs()[i];
 
@@ -238,8 +244,10 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
+
     return new AddToFactsResult(getNumEntries().get(), 0, parseExceptionMessages);
   }
+
 
   @Override
   public int getLastRowIndex()
@@ -345,5 +353,39 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       throw new RuntimeException(e);
     }
     aggBuffers.clear();
+  }
+
+  public static class Builder extends AppendableIndexBuilder
+  {
+    @Nullable
+    NonBlockingPool<ByteBuffer> bufferPool = null;
+
+    public Builder setBufferPool(final NonBlockingPool<ByteBuffer> bufferPool)
+    {
+      this.bufferPool = bufferPool;
+      return this;
+    }
+
+    @Override
+    public void validate()
+    {
+      super.validate();
+      if (bufferPool == null) {
+        throw new IllegalArgumentException("bufferPool cannot be null");
+      }
+    }
+
+    @Override
+    protected OffheapIncrementalIndex buildInner()
+    {
+      return new OffheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+          deserializeComplexMetrics,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          Objects.requireNonNull(bufferPool, "bufferPool is null")
+      );
+    }
   }
 }

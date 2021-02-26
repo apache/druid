@@ -166,7 +166,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingTypes inputTypes)
+      public ExprType getOutputType(InputBindingInspector inspector)
       {
         switch (unit) {
           case CENTURY:

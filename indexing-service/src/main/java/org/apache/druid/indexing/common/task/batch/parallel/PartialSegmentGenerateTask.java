@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -30,7 +31,7 @@ import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
-import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
+import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -81,6 +82,10 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         context
     );
 
+    Preconditions.checkArgument(
+        !ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty(),
+        "Missing intervals in granularitySpec"
+    );
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
     this.inputRowIteratorBuilder = inputRowIteratorBuilder;

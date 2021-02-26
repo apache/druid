@@ -78,7 +78,8 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
-      ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryGranularitySpec granularitySpec,
       @Nullable Map<String, Object> context
   )
   {
@@ -99,6 +100,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         dataSource,
         new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
         tuningConfig,
+        granularitySpec,
         context
     );
     return runTask(taskId, taskQuery);
@@ -328,6 +330,34 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public SamplerResponse sample(SamplerSpec samplerSpec)
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/sampler")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(samplerSpec))
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        if (!Strings.isNullOrEmpty(response.getContent())) {
+          throw new ISE(
+              "Failed to sample with sampler spec[%s], response[%s].",
+              samplerSpec,
+              response.getContent()
+          );
+        } else {
+          throw new ISE("Failed to sample with sampler spec[%s]. Please check overlord log", samplerSpec);
+        }
+      }
+
+      return jsonMapper.readValue(response.getContent(), SamplerResponse.class);
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }

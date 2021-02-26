@@ -58,9 +58,9 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties consumerProperties = new Properties();
-    KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
     consumerProperties.putAll(consumerConfigs);
     consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
+    KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
     return spec -> {
       try {
         spec = StringUtils.replace(

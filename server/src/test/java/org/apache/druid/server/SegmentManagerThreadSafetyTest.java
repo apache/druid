@@ -34,6 +34,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -129,7 +130,7 @@ public class SegmentManagerThreadSafetyTest
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false)))
+        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
@@ -154,7 +155,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment, false);
+              segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP);
             }
             catch (SegmentLoadingException e) {
               throw new RuntimeException(e);
@@ -222,7 +223,7 @@ public class SegmentManagerThreadSafetyTest
   private static class TestSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir, boolean lazy)
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
     {
       return new Segment()
       {

@@ -120,6 +120,7 @@ public class DataSegmentTest
         new NumberedShardSpec(3, 0),
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            ImmutableMap.of(),
             ImmutableMap.of()
         ),
         TEST_VERSION,
@@ -231,7 +232,8 @@ public class DataSegmentTest
   {
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
-        Collections.singletonMap("test", "map")
+        Collections.singletonMap("test", "map"),
+        Collections.singletonMap("test2", "map2")
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")

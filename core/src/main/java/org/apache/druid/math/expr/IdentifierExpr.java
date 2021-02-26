@@ -113,9 +113,9 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inspector)
   {
-    return inputTypes.getType(binding);
+    return inspector.getType(binding);
   }
 
   @Override
@@ -132,30 +132,32 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inputTypes.getType(binding) != null;
+    return true;
   }
 
   @Override
-  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingTypes inputTypes)
+  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
   {
-    ExprType inputType = inputTypes.getType(binding);
+    ExprType inputType = inspector.getType(binding);
 
     if (inputType == null) {
-      throw Exprs.cannotVectorize(this);
+      // nil column, we can be anything, why not be a double
+      return new IdentifierVectorProcessor<double[]>(ExprType.DOUBLE)
+      {
+        @Override
+        public ExprEvalVector<double[]> evalVector(VectorInputBinding bindings)
+        {
+          return new ExprEvalDoubleVector(bindings.getDoubleVector(binding), bindings.getNullVector(binding));
+        }
+      };
     }
     switch (inputType) {
       case LONG:

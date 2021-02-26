@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.runtime.CalciteContextException;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -55,6 +53,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
+import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -74,6 +73,7 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -105,13 +105,15 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.sql.SqlPlanningException;
+import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -119,14 +121,15 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RunWith(JUnitParamsRunner.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
@@ -770,6 +773,64 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testBitwiseExpressions() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{0L, 7L, 7L, -8L, 28L, 1L, 4607182418800017408L, 3.5E-323},
+          new Object[]{325323L, 325323L, 0L, -325324L, 1301292L, 81330L, 4610334938539176755L, 1.60731E-318},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, null, null, -8L, 28L, 1L, 4607182418800017408L, 3.5E-323},
+          new Object[]{325323L, 325323L, 0L, -325324L, 1301292L, 81330L, 4610334938539176755L, 1.60731E-318},
+          new Object[]{0L, 0L, 0L, -1L, 0L, 0L, 0L, 0.0},
+          new Object[]{null, null, null, null, null, null, null, null},
+          new Object[]{null, null, null, null, null, null, null, null},
+          new Object[]{null, null, null, null, null, null, null, null}
+      );
+    }
+    testQuery(
+        "SELECT\n"
+        + "BITWISE_AND(l1, l2),\n"
+        + "BITWISE_OR(l1, l2),\n"
+        + "BITWISE_XOR(l1, l2),\n"
+        + "BITWISE_COMPLEMENT(l1),\n"
+        + "BITWISE_SHIFT_LEFT(l1, 2),\n"
+        + "BITWISE_SHIFT_RIGHT(l1, 2),\n"
+        + "BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(d1),\n"
+        + "BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(l1)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "bitwiseAnd(\"l1\",\"l2\")", ValueType.LONG),
+                      expressionVirtualColumn("v1", "bitwiseOr(\"l1\",\"l2\")", ValueType.LONG),
+                      expressionVirtualColumn("v2", "bitwiseXor(\"l1\",\"l2\")", ValueType.LONG),
+                      expressionVirtualColumn("v3", "bitwiseComplement(\"l1\")", ValueType.LONG),
+                      expressionVirtualColumn("v4", "bitwiseShiftLeft(\"l1\",2)", ValueType.LONG),
+                      expressionVirtualColumn("v5", "bitwiseShiftRight(\"l1\",2)", ValueType.LONG),
+                      expressionVirtualColumn("v6", "bitwiseConvertDoubleToLongBits(\"d1\")", ValueType.LONG),
+                      expressionVirtualColumn("v7", "bitwiseConvertLongBitsToDouble(\"l1\")", ValueType.DOUBLE)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        expected
+    );
+  }
+
 
   @Test
   public void testExplainSelectConstantExpression() throws Exception
@@ -791,6 +852,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"lookup"},
+            new Object[]{"view"},
             new Object[]{"druid"},
             new Object[]{"sys"},
             new Object[]{"INFORMATION_SCHEMA"}
@@ -815,8 +877,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
-            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
-            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
@@ -826,6 +886,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"view", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
 
@@ -846,8 +911,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
             .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
-            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
-            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
@@ -857,6 +920,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
             .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"view", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "forbiddenView", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
   }
@@ -918,10 +987,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
-        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'aview'",
+        + "WHERE TABLE_SCHEMA = 'view' AND TABLE_NAME = 'aview'",
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"dim1_firstchar", "VARCHAR", "YES"}
+        )
+    );
+  }
+
+  @Test
+  public void testInformationSchemaColumnsOnAnotherView() throws Exception
+  {
+    testQuery(
+        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
+        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
+        + "WHERE TABLE_SCHEMA = 'view' AND TABLE_NAME = 'cview'",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"dim1_firstchar", "VARCHAR", "YES"},
+            new Object[]{"dim2", "VARCHAR", "YES"},
+            new Object[]{"l2", "BIGINT", useDefault ? "NO" : "YES"}
         )
     );
   }
@@ -1024,6 +1109,108 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 9999.0f,
                 NullHandling.defaultDoubleValue(),
                 "\"AQAAAQAAAALFBA==\""
+            },
+            new Object[]{
+                timestamp("2000-01-02"),
+                1L,
+                "forbidden",
+                "a",
+                1234.0f,
+                NullHandling.defaultDoubleValue(),
+                "\"AQAAAQAAAALFBA==\""
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenView() throws Exception
+  {
+    assertQueryIsForbidden(
+        "SELECT * FROM view.forbiddenView",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM view.forbiddenView",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ValueType.STRING),
+                    expressionVirtualColumn("v1", "'a'", ValueType.STRING)
+                )
+                .filters(selector("dim2", "a", null))
+                .columns("__time", "v0", "v1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-01"),
+                NullHandling.defaultStringValue(),
+                "a"
+            },
+            new Object[]{
+                timestamp("2001-01-01"),
+                "1",
+                "a"
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testSelectStarOnRestrictedView() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM view.restrictedView",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                .filters(selector("dim2", "a", null))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "dim2", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-02"),
+                "forbidden",
+                "a",
+                1234.0f
+            }
+        )
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM view.restrictedView",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(selector("dim2", "a", null))
+                .columns("__time", "dim1", "dim2", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-02"),
+                "forbidden",
+                "a",
+                1234.0f
             }
         )
     );
@@ -1060,7 +1247,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
-                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
             }
         )
     );
@@ -3717,18 +3904,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnionAllTablesColumnCountMismatch() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM numfoo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM numfoo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
@@ -3964,52 +4158,73 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnionAllThreeTablesColumnCountMismatch1() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
   public void testUnionAllThreeTablesColumnCountMismatch2() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
   public void testUnionAllThreeTablesColumnCountMismatch3() throws Exception
   {
-    expectedException.expect(ValidationException.class);
-    expectedException.expectMessage("Column count mismatch in UNION ALL");
-
-    testQuery(
-        "SELECT\n"
-        + "dim1, dim2, SUM(m1), COUNT(*)\n"
-        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo UNION ALL SELECT * from numfoo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT\n"
+          + "dim1, dim2, SUM(m1), COUNT(*)\n"
+          + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo UNION ALL SELECT * from numfoo)\n"
+          + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+          + "GROUP BY 1, 2",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
@@ -5095,7 +5310,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCountStarOnView() throws Exception
   {
     testQuery(
-        "SELECT COUNT(*) FROM druid.aview WHERE dim1_firstchar <> 'z'",
+        "SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5111,6 +5326,85 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{2L}
+        )
+    );
+  }
+
+  @Test
+  public void testConfusedView() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(and(
+                      selector("dim2", "a", null),
+                      not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                  ))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        )
+    );
+  }
+
+  @Test
+  public void testViewAndJoin() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COUNT(*) FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                        join(
+                            new QueryDataSource(
+                                newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
+                                                     .intervals(querySegmentSpec(Filtration.eternity()))
+                                                     .columns("dim1", "dim2")
+                                                     .filters(selector("dim2", "a", null))
+                                                     .context(QUERY_CONTEXT_DEFAULT)
+                                                     .build()
+                            ),
+                            new QueryDataSource(
+                                newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE3)
+                                                     .intervals(querySegmentSpec(Filtration.eternity()))
+                                                     .columns("dim2")
+                                                     .context(QUERY_CONTEXT_DEFAULT)
+                                                     .build()
+                            ),
+                            "j0.",
+                            "(\"dim2\" == \"j0.dim2\")",
+                            JoinType.INNER
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
+                                                 .intervals(querySegmentSpec(Filtration.eternity()))
+                                                 .columns("dim2")
+                                                 .context(QUERY_CONTEXT_DEFAULT)
+                                                 .build()
+                        ),
+                        "_j0.",
+                        "('a' == \"_j0.dim2\")",
+                        JoinType.INNER
+                    )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1))))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{8L}
         )
     );
   }
@@ -5133,11 +5427,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],"
         + "\"postAggregations\":[],"
         + "\"limit\":2147483647,"
-        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"}}]"
+        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}]"
         + ", signature=[{a0:LONG}])\n";
 
     testQuery(
-        "EXPLAIN PLAN FOR SELECT COUNT(*) FROM aview WHERE dim1_firstchar <> 'z'",
+        "EXPLAIN PLAN FOR SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'",
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
@@ -5843,10 +6137,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGrouping() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT\n"
         + "  FLOOR(m1 / 2) * 2,\n"
@@ -5893,10 +6183,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingUsingCastToLong() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT\n"
         + "  CAST(m1 AS BIGINT) / 2 * 2,\n"
@@ -5945,10 +6231,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingOnStringCastToNumber() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT\n"
         + "  FLOOR(CAST(dim1 AS FLOAT) / 2) * 2,\n"
@@ -6693,10 +6975,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT\n"
         + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR),\n"
@@ -7984,10 +8262,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     skipVectorize();
 
     final String explanation =
-        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"}}], signature=[{a0:LONG}])\n"
-        + "  DruidJoinQueryRel(condition=[=(SUBSTRING($3, 1, 1), $8)], joinType=[inner], query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__join__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n"
-        + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
-        + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n";
+        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}], signature=[{a0:LONG}])\n"
+        + "  DruidJoinQueryRel(condition=[=(SUBSTRING($3, 1, 1), $8)], joinType=[inner], query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__join__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n"
+        + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
+        + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n";
 
     testQuery(
         "EXPLAIN PLAN FOR SELECT COUNT(*)\n"
@@ -8815,7 +9093,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testFilterOnCurrentTimestampOnView() throws Exception
   {
     testQuery(
-        "SELECT * FROM bview",
+        "SELECT * FROM view.bview",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -8840,7 +9118,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
-        "SELECT * FROM bview",
+        "SELECT * FROM view.bview",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -9088,10 +9366,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloor() throws Exception
   {
-    // grouping on numeric columns with null values is not yet supported
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
         ImmutableList.of(
@@ -9119,10 +9393,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorWithOrderBy() throws Exception
   {
-    // grouping on numeric columns with null values is not yet supported
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT floor(CAST(dim1 AS float)) AS fl, COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float)) ORDER BY fl DESC",
         ImmutableList.of(
@@ -9174,10 +9444,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT floor(__time TO year), dim2, COUNT(*)"
         + " FROM druid.foo"
@@ -11416,10 +11682,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesUsingTimeFloorWithTimestampAdd() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
@@ -11930,10 +12192,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testTimeseriesWithLimitAndOffset() throws Exception
   {
     // Timeseries cannot handle offsets, so the query morphs into a groupBy.
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT gran, SUM(cnt)\n"
         + "FROM (\n"
@@ -11998,10 +12256,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByTimeAndOtherDimension() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
@@ -12068,7 +12322,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT dim2, gran, SUM(cnt)\n"
+        "SELECT dim2, gran, SUM(cnt), GROUPING(dim2, gran)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
         + "GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () )",
         ImmutableList.of(
@@ -12094,7 +12348,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d1", ValueType.LONG)
                             )
                         )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setAggregatorSpecs(aggregators(
+                            new LongSumAggregatorFactory("a0", "cnt"),
+                            new GroupingAggregatorFactory("a1", Arrays.asList("v0", "v1"))
+                        ))
                         .setSubtotalsSpec(
                             ImmutableList.of(
                                 ImmutableList.of("d0", "d1"),
@@ -12107,18 +12364,140 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", timestamp("2000-01-01"), 2L},
-            new Object[]{"", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L},
-            new Object[]{"", null, 3L},
-            new Object[]{"a", null, 2L},
-            new Object[]{"abc", null, 1L},
-            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L},
-            new Object[]{NULL_STRING, null, 6L}
+            new Object[]{"", timestamp("2000-01-01"), 2L, 0L},
+            new Object[]{"", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"", null, 3L, 1L},
+            new Object[]{"a", null, 2L, 1L},
+            new Object[]{"abc", null, 1L, 1L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L, 2L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L, 2L},
+            new Object[]{NULL_STRING, null, 6L, 3L}
         )
+    );
+  }
+
+  @Test
+  public void testGroupingAggregatorDifferentOrder() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt), GROUPING(gran, dim2)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0"),
+                                new DefaultDimensionSpec("v1", "d1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(
+                            new LongSumAggregatorFactory("a0", "cnt"),
+                            new GroupingAggregatorFactory("a1", Arrays.asList("v1", "v0"))
+                        ))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0", "d1"),
+                                ImmutableList.of("d0"),
+                                ImmutableList.of("d1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", timestamp("2000-01-01"), 2L, 0L},
+            new Object[]{"", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L, 0L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L, 0L},
+            new Object[]{"", null, 3L, 2L},
+            new Object[]{"a", null, 2L, 2L},
+            new Object[]{"abc", null, 1L, 2L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L, 1L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L, 1L},
+            new Object[]{NULL_STRING, null, 6L, 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingAggregatorWithPostAggregator() throws Exception
+  {
+    List<Object[]> resultList;
+    if (NullHandling.sqlCompatible()) {
+      resultList = ImmutableList.of(
+          new Object[]{NULL_STRING, 2L, 0L, NULL_STRING},
+          new Object[]{"", 1L, 0L, ""},
+          new Object[]{"a", 2L, 0L, "a"},
+          new Object[]{"abc", 1L, 0L, "abc"},
+          new Object[]{NULL_STRING, 6L, 1L, "ALL"}
+      );
+    } else {
+      resultList = ImmutableList.of(
+          new Object[]{"", 3L, 0L, ""},
+          new Object[]{"a", 2L, 0L, "a"},
+          new Object[]{"abc", 1L, 0L, "abc"},
+          new Object[]{NULL_STRING, 6L, 1L, "ALL"}
+      );
+    }
+    testQuery(
+        "SELECT dim2, SUM(cnt), GROUPING(dim2), \n"
+        + "CASE WHEN GROUPING(dim2) = 1 THEN 'ALL' ELSE dim2 END\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY GROUPING SETS ( (dim2), () )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim2", "d0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(
+                            new LongSumAggregatorFactory("a0", "cnt"),
+                            new GroupingAggregatorFactory("a1", Collections.singletonList("dim2"))
+                        ))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setPostAggregatorSpecs(Collections.singletonList(new ExpressionPostAggregator(
+                            "p0",
+                            "case_searched((\"a1\" == 1),'ALL',\"d0\")",
+                            null,
+                            ExprMacroTable.nil()
+                        )))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        resultList
     );
   }
 
@@ -12806,16 +13185,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testTimeExtractWithTooFewArguments() throws Exception
   {
     // Regression test for https://github.com/apache/druid/pull/7710.
-    expectedException.expect(ValidationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(CalciteContextException.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments"
-            )
-        )
-    );
-    testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+    try {
+      testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
+      );
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+    }
   }
 
   @Test
@@ -12958,11 +13338,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     QueryLifecycleFactory qlf = CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate);
     QueryLifecycle ql = qlf.factorize();
-    Sequence seq = ql.runSimple(
-        query,
-        CalciteTests.SUPER_USER_AUTH_RESULT,
-        null
-    );
+    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK);
     List<Object> results = seq.toList();
     Assert.assertEquals(
         ImmutableList.of(ResultRow.of("def")),
@@ -14684,7 +15060,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.LONG_ARRAY))
+                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.STRING))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -14698,6 +15074,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByArrayFromCase() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT CASE WHEN dim4 = 'a' THEN ARRAY['foo','bar','baz'] END as mv_value, count(1) from numfoo GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0"))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 3L},
+            new Object[]{"bar", 3L},
+            new Object[]{"baz", 3L},
+            new Object[]{"foo", 3L}
+        )
+    );
+  }
+
+  @Test
   public void testSelectNonConstantArrayExpressionFromTable() throws Exception
   {
     testQuery(
@@ -14706,7 +15108,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING_ARRAY))
+                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -15925,10 +16327,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRepeatedIdenticalVirtualExpressionGrouping() throws Exception
   {
-    // cannot vectorize due to unknown nulls in numeric column
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     final String query = "SELECT \n"
                          + "\tCASE dim1 WHEN NULL THEN FALSE ELSE TRUE END AS col_a,\n"
                          + "\tCASE dim2 WHEN NULL THEN FALSE ELSE TRUE END AS col_b\n"
@@ -16031,6 +16429,284 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", 9L},
             new Object[]{"b", 9L}
         )
+    );
+  }
+
+  @Test
+  public void testTimeStampAddZeroDayPeriod() throws Exception
+  {
+    testQuery(
+        "SELECT TIMESTAMPADD(DAY, 0, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "(\"__time\" + 0)", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testTimeStampAddZeroMonthPeriod() throws Exception
+  {
+    testQuery(
+        "SELECT TIMESTAMPADD(MONTH, 0, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P0M',1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testTimeStampAddZeroYearPeriod() throws Exception
+  {
+    skipVectorize();
+
+    testQuery(
+        "SELECT TIMESTAMPADD(YEAR, 0, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P0M',1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  /**
+   * TIMESTAMPADD is converted to timestamp_shift function call and its parameters will be converted to a Period string or an expression
+   * see https://github.com/apache/druid/issues/10530 for more information
+   */
+  @Test
+  public void testTimeStampAddConversion() throws Exception
+  {
+    final PeriodGranularity periodGranularity = new PeriodGranularity(new Period("P1M"), null, null);
+
+    //
+    // 2nd parameter for TIMESTAMPADD is literal, it will be translated to 'P1M' string
+    //
+    testQuery(
+        "SELECT TIMESTAMPADD(MONTH, 1, \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P1M',1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        // verify if query results match the given
+        CalciteTests.ROWS1.stream()
+                          .map(r -> new Object[]{periodGranularity.increment(r.getTimestamp()).getMillis()})
+                          .collect(Collectors.toList())
+    );
+
+    //
+    // 2nd parameter for TIMESTAMPADD is an expression, it will be explained as a function call: concat('P', (1 * \"cnt\"), 'M')
+    //
+    testQuery(
+        "SELECT TIMESTAMPADD(MONTH, \"cnt\", \"__time\") FROM druid.foo",
+
+        // verify if SQL matches given native query
+        ImmutableList.of(newScanQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .virtualColumns(
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",concat('P', (1 * \"cnt\"), 'M'),1,'UTC')", ValueType.LONG)
+                             )
+                             .columns("v0")
+                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .build()),
+
+        // verify if query results match the given
+        // "cnt" for each row is 1
+        CalciteTests.ROWS1.stream()
+                          .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
+                          .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithLimit() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () ) LIMIT 100",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0"),
+                                new DefaultDimensionSpec("v1", "d1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0", "d1"),
+                                ImmutableList.of("d0"),
+                                ImmutableList.of("d1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(),
+                                100
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", timestamp("2000-01-01"), 2L},
+            new Object[]{"", timestamp("2001-01-01"), 1L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L},
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_STRING, null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithLimitOrderByGran() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () ) ORDER BY x.gran LIMIT 100",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0"),
+                                new DefaultDimensionSpec("v1", "d1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0", "d1"),
+                                ImmutableList.of("d0"),
+                                ImmutableList.of("d1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d1",
+                                        Direction.ASCENDING,
+                                        new StringComparators.NumericComparator()
+                                    )
+                                ),
+                                100
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.<Object[]>builder().add(
+            new Object[]{"", null, 2L},
+            new Object[]{"a", null, 1L},
+            new Object[]{"", null, 1L},
+            new Object[]{"a", null, 1L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_STRING, null, 6L},
+            new Object[]{"", timestamp("2000-01-01"), 2L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{"", timestamp("2001-01-01"), 1L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L}
+        ).build()
     );
   }
 

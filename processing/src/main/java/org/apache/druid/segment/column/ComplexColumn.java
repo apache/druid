@@ -24,6 +24,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
@@ -106,7 +107,7 @@ public interface ComplexColumn extends BaseColumn
     {
       final Object[] vector = new Object[offset.getMaxVectorSize()];
 
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
 
       @Override
       public Object[] getObjectVector()

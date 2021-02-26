@@ -64,8 +64,8 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -157,7 +157,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           null,
           null,
+          null,
+          null,
           2,
+          null,
           null,
           null,
           null,
@@ -227,6 +230,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
+        null,
         new MaxSizeSplitHintSpec(null, 1),
         partitionsSpec,
         null,
@@ -238,6 +243,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         maxNumConcurrentSubTasks,
+        null,
         null,
         null,
         null,
@@ -482,6 +488,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       final String taskType = task.isPresent() ? task.get().getType() : null;
       final TaskStatus taskStatus = taskRunner.getStatus(taskId);
+
       if (taskStatus != null) {
         return new TaskStatusResponse(
             taskId,

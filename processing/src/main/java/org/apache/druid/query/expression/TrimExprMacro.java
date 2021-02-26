@@ -172,7 +172,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.STRING;
     }
@@ -283,14 +283,6 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      stringExpr.visit(visitor);
-      charsExpr.visit(visitor);
-      visitor.visit(this);
-    }
-
-    @Override
     public Expr visit(Shuttle shuttle)
     {
       Expr newStringExpr = stringExpr.visit(shuttle);
@@ -308,7 +300,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.STRING;
     }

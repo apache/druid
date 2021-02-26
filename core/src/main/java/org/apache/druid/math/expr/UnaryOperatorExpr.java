@@ -46,13 +46,6 @@ abstract class UnaryExpr implements Expr
   abstract UnaryExpr copy(Expr expr);
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    expr.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     Expr newExpr = expr.visit(shuttle);
@@ -72,9 +65,9 @@ abstract class UnaryExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inspector)
   {
-    return expr.getOutputType(inputTypes);
+    return expr.getOutputType(inspector);
   }
 
   @Override
@@ -139,15 +132,15 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
-  public boolean canVectorize(InputBindingTypes inputTypes)
+  public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inputTypes.areNumeric(expr) && expr.canVectorize(inputTypes);
+    return inspector.areNumeric(expr) && expr.canVectorize(inspector);
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.negate(inputTypes, expr);
+    return VectorMathProcessors.negate(inspector, expr);
   }
 }
 
@@ -178,9 +171,9 @@ class UnaryNotExpr extends UnaryExpr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingTypes inputTypes)
+  public ExprType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inputTypes);
+    ExprType implicitCast = super.getOutputType(inspector);
     if (ExprType.STRING.equals(implicitCast)) {
       return ExprType.LONG;
     }

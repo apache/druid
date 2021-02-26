@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`lookup edit dialog matches snapshot 1`] = `
+exports[`LookupEditDialog matches snapshot 1`] = `
 <Blueprint3.Dialog
   canOutsideClickClose={true}
   className="lookup-edit-dialog"
@@ -8,405 +8,368 @@ exports[`lookup edit dialog matches snapshot 1`] = `
   onClose={[Function]}
   title="Add lookup"
 >
-  <Blueprint3.FormGroup
-    className="lookup-label"
-    label="Name"
+  <div
+    className="content"
   >
-    <Blueprint3.InputGroup
-      disabled={false}
-      onChange={[Function]}
-      placeholder="Enter the lookup name"
-      value="test"
-    />
-  </Blueprint3.FormGroup>
-  <Blueprint3.FormGroup
-    className="lookup-label"
-    label="Tier"
-  >
-    <HTMLSelect
-      disabled={false}
-      onChange={[Function]}
-      value="test"
+    <Blueprint3.FormGroup
+      label="Name"
     >
-      <option
-        key="a"
-        value="a"
+      <Blueprint3.InputGroup
+        disabled={false}
+        intent="none"
+        onChange={[Function]}
+        placeholder="Enter the lookup name"
+        value="test"
+      />
+    </Blueprint3.FormGroup>
+    <Blueprint3.FormGroup
+      label="Tier"
+    >
+      <HTMLSelect
+        onChange={[Function]}
+        value="test"
       >
-        a
-      </option>
-      <option
-        key="b"
-        value="b"
-      >
-        b
-      </option>
-      <option
-        key="c"
-        value="c"
-      >
-        c
-      </option>
-      <option
-        key="d"
-        value="d"
-      >
-        d
-      </option>
-      <option
-        key="e"
-        value="e"
-      >
-        e
-      </option>
-      <option
-        key="f"
-        value="f"
-      >
-        f
-      </option>
-      <option
-        key="g"
-        value="g"
-      >
-        g
-      </option>
-      <option
-        key="h"
-        value="h"
-      >
-        h
-      </option>
-      <option
-        key="i"
-        value="i"
-      >
-        i
-      </option>
-      <option
-        key="j"
-        value="j"
-      >
-        j
-      </option>
-    </HTMLSelect>
-  </Blueprint3.FormGroup>
-  <Blueprint3.FormGroup
-    className="lookup-label"
-    label="Version"
-  >
-    <Blueprint3.InputGroup
+        <option
+          key="__default"
+          value="__default"
+        >
+          __default
+        </option>
+        <option
+          key="alt-tier"
+          value="alt-tier"
+        >
+          alt-tier
+        </option>
+      </HTMLSelect>
+    </Blueprint3.FormGroup>
+    <Blueprint3.FormGroup
+      label="Version"
+    >
+      <Blueprint3.InputGroup
+        onChange={[Function]}
+        placeholder="Enter the lookup version"
+        rightElement={
+          <Blueprint3.Button
+            minimal={true}
+            onClick={[Function]}
+            text="Use ISO as version"
+          />
+        }
+        value="test"
+      />
+    </Blueprint3.FormGroup>
+    <Memo(FormJsonSelector)
       onChange={[Function]}
-      placeholder="Enter the lookup version"
-      rightElement={
-        <Blueprint3.Button
-          minimal={true}
-          onClick={[Function]}
-          text="Use ISO as version"
-        />
-      }
-      value="test"
+      tab="form"
     />
-  </Blueprint3.FormGroup>
-  <AutoForm
-    fields={
-      Array [
-        Object {
-          "adjustment": [Function],
-          "name": "type",
-          "suggestions": Array [
-            "map",
-            "cachedNamespace",
-          ],
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "name": "map",
-          "type": "json",
-        },
-        Object {
-          "defined": [Function],
-          "label": "Globally cached lookup type",
-          "name": "extractionNamespace.type",
-          "placeholder": "uri",
-          "suggestions": Array [
-            "uri",
-            "jdbc",
-          ],
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "A URI which specifies a directory (or other searchable resource) in which to search for files",
-          "label": "URI prefix",
-          "name": "extractionNamespace.uriPrefix",
-          "placeholder": "s3://bucket/some/key/prefix/",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Optional regex for matching the file name under uriPrefix. Only used if uriPrefix is used",
-          "label": "File regex",
-          "name": "extractionNamespace.fileRegex",
-          "placeholder": "(optional)",
-          "type": "string",
-        },
-        Object {
-          "defaultValue": "csv",
-          "defined": [Function],
-          "label": "Format",
-          "name": "extractionNamespace.namespaceParseSpec.format",
-          "suggestions": Array [
-            "csv",
-            "tsv",
-            "customJson",
-            "simpleJson",
-          ],
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "The list of columns in the csv file",
-          "label": "Columns",
-          "name": "extractionNamespace.namespaceParseSpec.columns",
-          "placeholder": "[\\"key\\", \\"value\\"]",
-          "type": "string-array",
-        },
-        Object {
-          "defined": [Function],
-          "info": "The name of the column containing the key",
-          "label": "Key column",
-          "name": "extractionNamespace.namespaceParseSpec.keyColumn",
-          "placeholder": "Key",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "The name of the column containing the value",
-          "label": "Value column",
-          "name": "extractionNamespace.namespaceParseSpec.valueColumn",
-          "placeholder": "Value",
-          "type": "string",
-        },
-        Object {
-          "defaultValue": false,
-          "defined": [Function],
-          "info": "A flag to indicate that column information can be extracted from the input files' header row",
-          "label": "Has header row",
-          "name": "extractionNamespace.namespaceParseSpec.hasHeaderRow",
-          "type": "boolean",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Number of header rows to be skipped. The default number of header rows to be skipped is 0.",
-          "label": "Skip header rows",
-          "name": "extractionNamespace.namespaceParseSpec.skipHeaderRows",
-          "placeholder": "(optional)",
-          "type": "number",
-        },
-        Object {
-          "defined": [Function],
-          "label": "Delimiter",
-          "name": "extractionNamespace.namespaceParseSpec.delimiter",
-          "placeholder": "(optional)",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "label": "List delimiter",
-          "name": "extractionNamespace.namespaceParseSpec.listDelimiter",
-          "placeholder": "(optional)",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "label": "Key field name",
-          "name": "extractionNamespace.namespaceParseSpec.keyFieldName",
-          "placeholder": "key",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "label": "Value field name",
-          "name": "extractionNamespace.namespaceParseSpec.valueFieldName",
-          "placeholder": "value",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": <React.Fragment>
-            <p>
-              The namespace value in the SQL query:
-            </p>
-            <p>
-              SELECT keyColumn, valueColumn, tsColumn? FROM 
-              <strong>
-                namespace
-              </strong>
-              .table WHERE filter
-            </p>
-          </React.Fragment>,
-          "label": "Namespace",
-          "name": "extractionNamespace.namespace",
-          "placeholder": "some_lookup",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Defines the connectURI value on the The connector config to used",
-          "label": "CreateTables",
-          "name": "extractionNamespace.connectorConfig.createTables",
-          "type": "boolean",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Defines the connectURI value on the The connector config to used",
-          "label": "Connect URI",
-          "name": "extractionNamespace.connectorConfig.connectURI",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Defines the user to be used by the connector config",
-          "label": "User",
-          "name": "extractionNamespace.connectorConfig.user",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Defines the password to be used by the connector config",
-          "label": "Password",
-          "name": "extractionNamespace.connectorConfig.password",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": <React.Fragment>
-            <p>
-              The table which contains the key value pairs. This will become the table value in the SQL query:
-            </p>
-            <p>
-              SELECT keyColumn, valueColumn, tsColumn? FROM namespace.
-              <strong>
-                table
-              </strong>
-               WHERE filter
-            </p>
-          </React.Fragment>,
-          "label": "Table",
-          "name": "extractionNamespace.table",
-          "placeholder": "some_lookup_table",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": <React.Fragment>
-            <p>
-              The column in the table which contains the keys. This will become the keyColumn value in the SQL query:
-            </p>
-            <p>
-              SELECT 
-              <strong>
-                keyColumn
-              </strong>
-              , valueColumn, tsColumn? FROM namespace.table WHERE filter
-            </p>
-          </React.Fragment>,
-          "label": "Key column",
-          "name": "extractionNamespace.keyColumn",
-          "placeholder": "my_key_value",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": <React.Fragment>
-            <p>
-              The column in table which contains the values. This will become the valueColumn value in the SQL query:
-            </p>
-            <p>
-              SELECT keyColumn, 
-              <strong>
-                valueColumn
-              </strong>
-              , tsColumn? FROM namespace.table WHERE filter
-            </p>
-          </React.Fragment>,
-          "label": "Value column",
-          "name": "extractionNamespace.valueColumn",
-          "placeholder": "my_column_value",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": <React.Fragment>
-            <p>
-              The filter to be used when selecting lookups, this is used to create a where clause on lookup population. This will become the expression filter in the SQL query:
-            </p>
-            <p>
-              SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE
-               
-              <strong>
-                filter
-              </strong>
-            </p>
-          </React.Fragment>,
-          "label": "Filter",
-          "name": "extractionNamespace.filter",
-          "placeholder": "(optional)",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": <React.Fragment>
-            <p>
-              The column in table which contains when the key was updated. This will become the Value in the SQL query:
-            </p>
-            <p>
-              SELECT keyColumn, valueColumn, 
-              <strong>
-                tsColumn
-              </strong>
-              ? FROM namespace.table WHERE filter
-            </p>
-          </React.Fragment>,
-          "label": "TsColumn",
-          "name": "extractionNamespace.tsColumn",
-          "placeholder": "(optional)",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "Period between polling for updates",
-          "label": "Poll period",
-          "name": "extractionNamespace.pollPeriod",
-          "placeholder": "(optional)",
-          "type": "string",
-        },
-        Object {
-          "defined": [Function],
-          "info": "How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait",
-          "label": "First cache timeout",
-          "name": "firstCacheTimeout",
-          "placeholder": "(optional)",
-          "type": "number",
-        },
-        Object {
-          "defaultValue": false,
-          "defined": [Function],
-          "info": "If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true",
-          "name": "injective",
-          "type": "boolean",
-        },
-      ]
-    }
-    model={
-      Object {
-        "map": Object {},
-        "type": "map",
+    <AutoForm
+      fields={
+        Array [
+          Object {
+            "adjustment": [Function],
+            "name": "type",
+            "required": true,
+            "suggestions": Array [
+              "map",
+              "cachedNamespace",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "height": "60vh",
+            "issueWithValue": [Function],
+            "name": "map",
+            "required": true,
+            "type": "json",
+          },
+          Object {
+            "defined": [Function],
+            "label": "Globally cached lookup type",
+            "name": "extractionNamespace.type",
+            "placeholder": "uri",
+            "required": true,
+            "suggestions": Array [
+              "uri",
+              "jdbc",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "A URI which specifies a directory (or other searchable resource) in which to search for files",
+            "label": "URI prefix",
+            "name": "extractionNamespace.uriPrefix",
+            "placeholder": "s3://bucket/some/key/prefix/",
+            "required": [Function],
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                URI for the file of interest, specified as a file, hdfs, or s3 path
+              </p>
+              <p>
+                The URI prefix option is strictly better than URI and should be used instead
+              </p>
+            </React.Fragment>,
+            "label": "URI (deprecated)",
+            "name": "extractionNamespace.uri",
+            "placeholder": "s3://bucket/some/key/prefix/lookups-01.gz",
+            "required": [Function],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": ".*",
+            "defined": [Function],
+            "info": "Optional regex for matching the file name under uriPrefix.",
+            "label": "File regex",
+            "name": "extractionNamespace.fileRegex",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                The format of the data in the lookup files.
+              </p>
+              <p>
+                The 
+                <Unknown>
+                  simpleJson
+                </Unknown>
+                 lookupParseSpec does not take any parameters. It is simply a line delimited JSON file where the field is the key, and the field's value is the value.
+              </p>
+            </React.Fragment>,
+            "label": "Parse format",
+            "name": "extractionNamespace.namespaceParseSpec.format",
+            "required": true,
+            "suggestions": Array [
+              "csv",
+              "tsv",
+              "simpleJson",
+              "customJson",
+            ],
+            "type": "string",
+          },
+          Object {
+            "defaultValue": 0,
+            "defined": [Function],
+            "info": "Number of header rows to be skipped. The default number of header rows to be skipped is 0.",
+            "name": "extractionNamespace.namespaceParseSpec.skipHeaderRows",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": "A flag to indicate that column information can be extracted from the input files' header row",
+            "name": "extractionNamespace.namespaceParseSpec.hasHeaderRow",
+            "type": "boolean",
+          },
+          Object {
+            "defined": [Function],
+            "info": "The list of columns in the csv file",
+            "name": "extractionNamespace.namespaceParseSpec.columns",
+            "placeholder": "[\\"key\\", \\"value\\"]",
+            "required": [Function],
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": "The name of the column containing the key",
+            "name": "extractionNamespace.namespaceParseSpec.keyColumn",
+            "placeholder": "(optional - defaults to the first column)",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "The name of the column containing the value",
+            "name": "extractionNamespace.namespaceParseSpec.valueColumn",
+            "placeholder": "(optional - defaults to the second column)",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "name": "extractionNamespace.namespaceParseSpec.delimiter",
+            "placeholder": "(optional)",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "name": "extractionNamespace.namespaceParseSpec.listDelimiter",
+            "placeholder": "(optional)",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "name": "extractionNamespace.namespaceParseSpec.keyFieldName",
+            "placeholder": "key",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "name": "extractionNamespace.namespaceParseSpec.valueFieldName",
+            "placeholder": "value",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defaultValue": "0",
+            "defined": [Function],
+            "info": "Period between polling for updates",
+            "name": "extractionNamespace.pollPeriod",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "Defines the connectURI value on the The connector config to used",
+            "label": "Connect URI",
+            "name": "extractionNamespace.connectorConfig.connectURI",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "Defines the user to be used by the connector config",
+            "name": "extractionNamespace.connectorConfig.user",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "Defines the password to be used by the connector config",
+            "name": "extractionNamespace.connectorConfig.password",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": "Should tables be created",
+            "name": "extractionNamespace.connectorConfig.createTables",
+            "type": "boolean",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                The table which contains the key value pairs. This will become the table value in the SQL query:
+              </p>
+              <p>
+                SELECT keyColumn, valueColumn, tsColumn? FROM namespace.
+                <strong>
+                  table
+                </strong>
+                 WHERE filter
+              </p>
+            </React.Fragment>,
+            "name": "extractionNamespace.table",
+            "placeholder": "some_lookup_table",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                The column in the table which contains the keys. This will become the keyColumn value in the SQL query:
+              </p>
+              <p>
+                SELECT 
+                <strong>
+                  keyColumn
+                </strong>
+                , valueColumn, tsColumn? FROM namespace.table WHERE filter
+              </p>
+            </React.Fragment>,
+            "name": "extractionNamespace.keyColumn",
+            "placeholder": "my_key_value",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                The column in table which contains the values. This will become the valueColumn value in the SQL query:
+              </p>
+              <p>
+                SELECT keyColumn, 
+                <strong>
+                  valueColumn
+                </strong>
+                , tsColumn? FROM namespace.table WHERE filter
+              </p>
+            </React.Fragment>,
+            "name": "extractionNamespace.valueColumn",
+            "placeholder": "my_column_value",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                The filter to be used when selecting lookups, this is used to create a where clause on lookup population. This will become the expression filter in the SQL query:
+              </p>
+              <p>
+                SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE
+                 
+                <strong>
+                  filter
+                </strong>
+              </p>
+            </React.Fragment>,
+            "name": "extractionNamespace.filter",
+            "placeholder": "(optional)",
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                The column in table which contains when the key was updated. This will become the Value in the SQL query:
+              </p>
+              <p>
+                SELECT keyColumn, valueColumn, 
+                <strong>
+                  tsColumn
+                </strong>
+                ? FROM namespace.table WHERE filter
+              </p>
+            </React.Fragment>,
+            "label": "Timestamp column",
+            "name": "extractionNamespace.tsColumn",
+            "placeholder": "(optional)",
+            "type": "string",
+          },
+          Object {
+            "defaultValue": 0,
+            "defined": [Function],
+            "info": "How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait",
+            "name": "firstCacheTimeout",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": "If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true",
+            "name": "injective",
+            "type": "boolean",
+          },
+        ]
       }
-    }
-    onChange={[Function]}
-  />
+      model={
+        Object {
+          "map": Object {
+            "a": 1,
+          },
+          "type": "map",
+        }
+      }
+      onChange={[Function]}
+    />
+  </div>
   <div
     className="bp3-dialog-footer"
   >

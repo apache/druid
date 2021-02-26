@@ -27,13 +27,16 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
+import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
 {
@@ -46,7 +49,6 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   protected final String brokerTLS;
   protected final String router;
   protected final String routerTLS;
-
 
   @Inject
   AbstractTestQueryHelper(
@@ -65,23 +67,23 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public abstract String getQueryURL(String schemeAndHost);
 
-  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
+  public void testQueriesFromFile(String filePath) throws Exception
   {
-    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(broker), filePath);
+    testQueriesFromFile(getQueryURL(brokerTLS), filePath);
+    testQueriesFromFile(getQueryURL(router), filePath);
+    testQueriesFromFile(getQueryURL(routerTLS), filePath);
   }
 
-  public void testQueriesFromString(String str, int timesToRun) throws Exception
+  public void testQueriesFromString(String str) throws Exception
   {
-    testQueriesFromString(getQueryURL(broker), str, timesToRun);
-    testQueriesFromString(getQueryURL(brokerTLS), str, timesToRun);
-    testQueriesFromString(getQueryURL(router), str, timesToRun);
-    testQueriesFromString(getQueryURL(routerTLS), str, timesToRun);
+    testQueriesFromString(getQueryURL(broker), str);
+    testQueriesFromString(getQueryURL(brokerTLS), str);
+    testQueriesFromString(getQueryURL(router), str);
+    testQueriesFromString(getQueryURL(routerTLS), str);
   }
 
-  public void testQueriesFromFile(String url, String filePath, int timesToRun) throws Exception
+  public void testQueriesFromFile(String url, String filePath) throws Exception
   {
     LOG.info("Starting query tests for [%s]", filePath);
     List<QueryResultType> queries =
@@ -92,10 +94,10 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             }
         );
 
-    testQueries(url, queries, timesToRun);
+    testQueries(url, queries);
   }
 
-  public void testQueriesFromString(String url, String str, int timesToRun) throws Exception
+  public void testQueriesFromString(String url, String str) throws Exception
   {
     LOG.info("Starting query tests using\n%s", str);
     List<QueryResultType> queries =
@@ -105,50 +107,45 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             {
             }
         );
-    testQueries(url, queries, timesToRun);
+    testQueries(url, queries);
   }
 
-  private void testQueries(String url, List<QueryResultType> queries, int timesToRun) throws Exception
+  private void testQueries(String url, List<QueryResultType> queries) throws Exception
   {
     LOG.info("Running queries, url [%s]", url);
-    for (int i = 0; i < timesToRun; i++) {
-      LOG.info("Starting Iteration %d", i);
 
-      boolean failed = false;
-      for (QueryResultType queryWithResult : queries) {
-        LOG.info("Running Query %s", queryWithResult.getQuery());
-        List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-        if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults())) {
-          LOG.error(
-              "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
-              queryWithResult.getQuery(),
-              jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
-              jsonMapper.writeValueAsString(result)
-          );
-          failed = true;
-        } else {
-          LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
-        }
+    boolean failed = false;
+    for (QueryResultType queryWithResult : queries) {
+      LOG.info("Running Query %s", queryWithResult.getQuery());
+      List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
+      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
+                                              queryWithResult.getFieldsToTest()
+      )) {
+        LOG.error(
+            "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
+            queryWithResult.getQuery(),
+            jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
+            jsonMapper.writeValueAsString(result)
+        );
+        failed = true;
+      } else {
+        LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
       }
+    }
 
-      if (failed) {
-        throw new ISE("one or more queries failed");
-      }
+    if (failed) {
+      throw new ISE("one or more queries failed");
     }
   }
 
   @SuppressWarnings("unchecked")
-  public int countRows(String dataSource, String interval)
+  public int countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .aggregators(
-                                      ImmutableList.of(
-                                          new LongSumAggregatorFactory("rows", "count")
-                                      )
-                                  )
+                                  .aggregators(ImmutableList.of(countAggregator.apply("rows")))
                                   .granularity(Granularities.ALL)
-                                  .intervals(interval)
+                                  .intervals(Collections.singletonList(interval))
                                   .build();
 
     List<Map<String, Object>> results = queryClient.query(getQueryURL(broker), query);

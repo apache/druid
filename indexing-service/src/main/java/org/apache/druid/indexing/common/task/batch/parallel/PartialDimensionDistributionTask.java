@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.hash.BloomFilter;
@@ -34,6 +35,7 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
@@ -48,13 +50,13 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -103,7 +105,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
   }
 
-  @VisibleForTesting  // Only for testing
+  @VisibleForTesting
   PartialDimensionDistributionTask(
       @Nullable String id,
       final String groupId,
@@ -163,10 +165,14 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return tryTimeChunkLock(
-        taskActionClient,
-        getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
-    );
+    if (!getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+      return tryTimeChunkLock(
+          new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+          getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
+      );
+    } else {
+      return true;
+    }
   }
 
   @Override
@@ -195,6 +201,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
     );
+    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     try (
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
@@ -202,7 +209,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
             dataSchema,
             inputSource,
             inputFormat,
-            AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
+            determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
             parseExceptionHandler
         );
@@ -243,10 +250,15 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         continue;
       }
 
-      DateTime timestamp = inputRow.getTimestamp();
-
-      //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
-      Interval interval = granularitySpec.bucketInterval(timestamp).get();
+      final Interval interval;
+      if (granularitySpec.inputIntervals().isEmpty()) {
+        interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+      } else {
+        final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+        // this interval must exist since it passed the rowFilter
+        assert optInterval.isPresent();
+        interval = optInterval.get();
+      }
       String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
 
       if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
@@ -321,7 +333,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
-    @VisibleForTesting  // to allow controlling false positive rate of bloom filter
+    @VisibleForTesting
+      // to allow controlling false positive rate of bloom filter
     DedupInputRowFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,
@@ -355,8 +368,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     private long getBucketTimestamp(InputRow inputRow)
     {
-      DateTime timestamp = inputRow.getTimestamp();
-      return queryGranularity.bucketStart(timestamp).getMillis();
+      final long timestamp = inputRow.getTimestampFromEpoch();
+      return queryGranularity.bucketStart(timestamp);
     }
 
     @Override

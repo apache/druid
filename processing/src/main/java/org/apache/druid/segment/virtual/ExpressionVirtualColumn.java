@@ -42,6 +42,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -147,6 +148,15 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, parsedExpression.get());
+  }
+
+  @Override
   public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get());
@@ -165,6 +175,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // are unable to compute the output type of the expression, either due to incomplete type information of the
     // inputs or because of unimplemented methods on expression implementations themselves, or, because a
     // ColumnInspector is not available
+
+    // array types must not currently escape from the expression system
+    if (outputType != null && outputType.isArray()) {
+      return new ColumnCapabilitiesImpl().setType(ValueType.STRING).setHasMultipleValues(true);
+    }
+
     return new ColumnCapabilitiesImpl().setType(outputType == null ? ValueType.FLOAT : outputType);
   }
 
@@ -175,7 +191,8 @@ public class ExpressionVirtualColumn implements VirtualColumn
 
     if (plan.getOutputType() != null) {
 
-      if (outputType != null && ExprType.fromValueType(outputType) != plan.getOutputType()) {
+      final ExprType inferredOutputType = plan.getOutputType();
+      if (outputType != null && ExprType.fromValueType(outputType) != inferredOutputType) {
         log.warn(
             "Projected output type %s of expression %s does not match provided type %s",
             plan.getOutputType(),
@@ -183,7 +200,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
             outputType
         );
       }
-      final ExprType inferredOutputType = plan.getOutputType();
       final ValueType valueType = ExprType.toValueType(inferredOutputType);
 
       if (valueType.isNumeric()) {
@@ -200,6 +216,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(outputType);
       }
 
+      // array types shouldn't escape the expression system currently, so coerce anything past this point into some
+      // style of string
+
       // we don't have to check for unknown input here because output type is unable to be inferred if we don't know
       // the complete set of input types
       if (plan.any(ExpressionPlan.Trait.NON_SCALAR_OUTPUT, ExpressionPlan.Trait.NEEDS_APPLIED)) {
@@ -207,7 +226,16 @@ public class ExpressionVirtualColumn implements VirtualColumn
         return new ColumnCapabilitiesImpl().setType(ValueType.STRING).setHasMultipleValues(true);
       }
 
-      // if we got here, lets call it single value string output
+      // constant strings are supported as dimension selectors, set them as dictionary encoded and unique
+      if (plan.isConstant()) {
+        return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                           .setDictionaryEncoded(true)
+                                           .setDictionaryValuesUnique(true)
+                                           .setDictionaryValuesSorted(true)
+                                           .setHasMultipleValues(false);
+      }
+
+      // if we got here, lets call it single value string output, non-dictionary encoded
       return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                          .setHasMultipleValues(false)
                                          .setDictionaryEncoded(false);

@@ -11,7 +11,20 @@ exports[`data source view matches snapshot 1`] = `
       localStorageKey="datasources-refresh-rate"
       onRefresh={[Function]}
     />
-    <Memo(MoreButton)>
+    <Memo(MoreButton)
+      altExtra={
+        <Blueprint3.MenuItem
+          disabled={false}
+          icon="compressed"
+          intent="danger"
+          multiline={false}
+          onClick={[Function]}
+          popoverProps={Object {}}
+          shouldDismissPopover={true}
+          text="Force compaction run (debug)"
+        />
+      }
+    >
       <Blueprint3.MenuItem
         disabled={false}
         icon="application"
@@ -51,10 +64,13 @@ exports[`data source view matches snapshot 1`] = `
           "Segment load/drop queues",
           "Total data size",
           "Segment size",
+          "Segment granularity",
           "Total rows",
           "Avg. row size",
           "Replicated size",
           "Compaction",
+          "% Compacted",
+          "Left to be compacted",
           "Retention",
           "Actions",
         ]
@@ -137,6 +153,7 @@ exports[`data source view matches snapshot 1`] = `
           "accessor": [Function],
           "filterable": false,
           "id": "availability",
+          "minWidth": 200,
           "show": true,
           "sortMethod": [Function],
         },
@@ -150,6 +167,7 @@ exports[`data source view matches snapshot 1`] = `
           "accessor": "num_segments_to_load",
           "filterable": false,
           "id": "load-drop",
+          "minWidth": 100,
           "show": true,
         },
         Object {
@@ -167,14 +185,27 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Segment size (MB)
+            Segment size (rows)
             <br />
-            min / avg / max
+            minimum / average / maximum
           </React.Fragment>,
-          "accessor": "avg_segment_size",
+          "accessor": "avg_segment_rows",
           "filterable": false,
           "show": true,
-          "width": 200,
+          "width": 220,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": <React.Fragment>
+            Segment
+            <br />
+            granularity
+          </React.Fragment>,
+          "accessor": [Function],
+          "filterable": false,
+          "id": "segment_granularity",
+          "show": true,
+          "width": 100,
         },
         Object {
           "Cell": [Function],
@@ -217,8 +248,35 @@ exports[`data source view matches snapshot 1`] = `
           "Header": "Compaction",
           "accessor": [Function],
           "filterable": false,
-          "id": "compaction",
+          "id": "compactionStatus",
           "show": true,
+          "width": 150,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": <React.Fragment>
+            % Compacted
+            <br />
+            bytes / segments / intervals
+          </React.Fragment>,
+          "accessor": [Function],
+          "filterable": false,
+          "id": "percentCompacted",
+          "show": true,
+          "width": 200,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": <React.Fragment>
+            Left to be
+            <br />
+            compacted
+          </React.Fragment>,
+          "accessor": [Function],
+          "filterable": false,
+          "id": "leftToBeCompacted",
+          "show": true,
+          "width": 100,
         },
         Object {
           "Cell": [Function],
@@ -226,6 +284,7 @@ exports[`data source view matches snapshot 1`] = `
           "accessor": [Function],
           "filterable": false,
           "id": "retention",
+          "minWidth": 100,
           "show": true,
         },
         Object {

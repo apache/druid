@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.data.input.InputFormat;
@@ -32,31 +33,31 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitioner;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 {
   public static final String TYPE = "partial_dimension_cardinality";
-  private static final Logger LOG = new Logger(PartialDimensionCardinalityTask.class);
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
@@ -125,10 +126,14 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return tryTimeChunkLock(
-        taskActionClient,
-        getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
-    );
+    if (!getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+      return tryTimeChunkLock(
+          new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+          getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
+      );
+    } else {
+      return true;
+    }
   }
 
   @Override
@@ -140,11 +145,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
-
-    List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
-    if (partitionDimensions == null) {
-      partitionDimensions = HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS;
-    }
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
@@ -159,6 +159,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
     );
+    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
     try (
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
@@ -166,15 +167,14 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
             dataSchema,
             inputSource,
             inputFormat,
-            AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
+            determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
             parseExceptionHandler
         );
     ) {
       Map<Interval, byte[]> cardinalities = determineCardinalities(
           inputRowIterator,
-          granularitySpec,
-          partitionDimensions
+          granularitySpec
       );
 
       sendReport(
@@ -188,8 +188,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
   private Map<Interval, byte[]> determineCardinalities(
       CloseableIterator<InputRow> inputRowIterator,
-      GranularitySpec granularitySpec,
-      List<String> partitionDimensions
+      GranularitySpec granularitySpec
   )
   {
     Map<Interval, HllSketch> intervalToCardinalities = new HashMap<>();
@@ -197,16 +196,25 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       InputRow inputRow = inputRowIterator.next();
       // null rows are filtered out by FilteringCloseableInputRowIterator
       DateTime timestamp = inputRow.getTimestamp();
-      //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
-      Interval interval = granularitySpec.bucketInterval(timestamp).get();
+      final Interval interval;
+      if (granularitySpec.inputIntervals().isEmpty()) {
+        interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
+      } else {
+        final Optional<Interval> optInterval = granularitySpec.bucketInterval(timestamp);
+        // this interval must exist since it passed the rowFilter
+        assert optInterval.isPresent();
+        interval = optInterval.get();
+      }
       Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
       HllSketch hllSketch = intervalToCardinalities.computeIfAbsent(
           interval,
           (intervalKey) -> DimensionCardinalityReport.createHllSketchForReport()
       );
+      // For cardinality estimation, we want to consider unique rows instead of unique hash buckets and therefore
+      // we do not use partition dimensions in computing the group key
       List<Object> groupKey = HashPartitioner.extractKeys(
-          partitionDimensions,
+          Collections.emptyList(),
           queryGranularity.bucketStart(timestamp).getMillis(),
           inputRow
       );

@@ -22,7 +22,6 @@ package org.apache.druid.segment.virtual;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -31,6 +30,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -60,7 +60,31 @@ public class VectorizedVirtualColumnTest
 {
   private static final String ALWAYS_TWO = "two";
   private static final String COUNT = "count";
-  private static final Map<String, Object> CONTEXT = ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "force");
+  private static final Map<String, Object> CONTEXT_USE_DEFAULTS = ImmutableMap.of();
+  private static final Map<String, Object> CONTEXT_VECTORIZE_FORCE = ImmutableMap.of(
+      QueryContexts.VECTORIZE_KEY,
+      "force",
+      QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
+      "force"
+  );
+  private static final Map<String, Object> CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE = ImmutableMap.of(
+      QueryContexts.VECTORIZE_KEY,
+      "true",
+      QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
+      "force"
+  );
+  private static final Map<String, Object> CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE = ImmutableMap.of(
+      QueryContexts.VECTORIZE_KEY,
+      "false",
+      QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
+      "force"
+  );
+  private static final Map<String, Object> CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE = ImmutableMap.of(
+      QueryContexts.VECTORIZE_KEY,
+      "force",
+      QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
+      "false"
+  );
 
   @Rule
   public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -157,30 +181,18 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testGroupByLong()
   {
-    // vectorized group by does not work for null numeric columns
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG));
   }
 
   @Test
   public void testGroupByDouble()
   {
-    // vectorized group by does not work for null numeric columns
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE));
   }
 
   @Test
   public void testGroupByFloat()
   {
-    // vectorized group by does not work for null numeric columns
-    if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
-    }
     testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT));
   }
 
@@ -256,15 +268,195 @@ public class VectorizedVirtualColumnTest
     testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT));
   }
 
+  @Test
+  public void testTimeseriesForceContextCannotVectorize()
+  {
+    cannotVectorize();
+    testTimeseries(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_VECTORIZE_FORCE,
+        false
+    );
+  }
+
+  @Test
+  public void testTimeseriesForceVirtualContextCannotVectorize()
+  {
+    cannotVectorize();
+    testTimeseries(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
+        false
+    );
+  }
+
+  @Test
+  public void testTimeseriesTrueVirtualContextCannotVectorize()
+  {
+    expectNonvectorized();
+    testTimeseries(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_USE_DEFAULTS,
+        true
+    );
+  }
+
+  @Test
+  public void testTimeseriesContradictionVectorizeFalseVirtualForce()
+  {
+    expectNonvectorized();
+    testTimeseries(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
+        true
+    );
+  }
+
+  @Test
+  public void testTimeseriesContradictionVectorizeForceVirtualFalse()
+  {
+    cannotVectorize();
+    testTimeseries(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
+        true
+    );
+  }
+
+  @Test
+  public void testTimeseriesContradictionVectorizeFalseVirtualForceNoVirtualColumns()
+  {
+    testTimeseriesNoVirtual(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE
+    );
+  }
+  @Test
+  public void testTimeseriesContradictionVectorizeForceVirtualFalseNoVirtual()
+  {
+    testTimeseriesNoVirtual(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE
+    );
+  }
+
+  @Test
+  public void testTimeseriesForceDoestAffectWhenNoVirtualColumns()
+  {
+    testTimeseriesNoVirtual(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE
+    );
+  }
+
+  @Test
+  public void testGroupByForceContextCannotVectorize()
+  {
+    cannotVectorize();
+    testGroupBy(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_VECTORIZE_FORCE,
+        false
+    );
+  }
+
+  @Test
+  public void testGroupByForceVirtualContextCannotVectorize()
+  {
+    cannotVectorize();
+    testGroupBy(
+        new ColumnCapabilitiesImpl()
+            .setType(ValueType.STRING)
+            .setDictionaryEncoded(true)
+            .setDictionaryValuesUnique(true)
+            .setHasMultipleValues(false),
+        CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
+        false
+    );
+  }
+
+  @Test
+  public void testGroupByTrueVirtualContextCannotVectorize()
+  {
+    expectNonvectorized();
+    testGroupBy(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_USE_DEFAULTS,
+        false
+    );
+  }
+
+  @Test
+  public void testGroupByContradictionVectorizeFalseVirtualForce()
+  {
+    expectNonvectorized();
+    testGroupBy(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupByContradictionVectorizeForceVirtualFalse()
+  {
+    cannotVectorize();
+    testGroupBy(
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupByContradictionVectorizeFalseVirtualForceNoVirtual()
+  {
+    testGroupByNoVirtual(
+        new ColumnCapabilitiesImpl()
+            .setType(ValueType.STRING)
+            .setDictionaryEncoded(true)
+            .setDictionaryValuesUnique(true)
+            .setHasMultipleValues(false),
+        CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE
+    );
+  }
+
+  @Test
+  public void testGroupByContradictionVectorizeForceVirtualFalseNoVirtual()
+  {
+    testGroupByNoVirtual(
+        new ColumnCapabilitiesImpl()
+            .setType(ValueType.STRING)
+            .setDictionaryEncoded(true)
+            .setDictionaryValuesUnique(true)
+            .setHasMultipleValues(false),
+        CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE
+    );
+  }
+
+  @Test
+  public void testGroupByForceDoestAffectWhenNoVirtualColumns()
+  {
+    testGroupByNoVirtual(
+        new ColumnCapabilitiesImpl()
+            .setType(ValueType.STRING)
+            .setDictionaryEncoded(true)
+            .setDictionaryValuesUnique(true)
+            .setHasMultipleValues(false),
+        CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE
+    );
+  }
+
   private void testTimeseries(ColumnCapabilities capabilities)
   {
+    testTimeseries(capabilities, CONTEXT_VECTORIZE_FORCE, true);
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .intervals("2000/2030")
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.ALL)
                                   .virtualColumns(new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities))
                                   .aggregators(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
-                                  .context(CONTEXT)
+                                  .context(CONTEXT_VECTORIZE_FORCE)
                                   .build();
 
     Sequence seq = timeseriesTestHelper.runQueryOnSegmentsObjs(segments, query);
@@ -281,18 +473,73 @@ public class VectorizedVirtualColumnTest
     TestHelper.assertExpectedObjects(expectedResults, seq.toList(), "failed");
   }
 
+  private void testTimeseries(ColumnCapabilities capabilities, Map<String, Object> context, boolean canVectorize)
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .intervals("2000/2030")
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(Granularities.ALL)
+                                  .virtualColumns(new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities, canVectorize))
+                                  .aggregators(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
+                                  .context(context)
+                                  .build();
+
+    Sequence seq = timeseriesTestHelper.runQueryOnSegmentsObjs(segments, query);
+
+    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(COUNT, getCount(capabilities))
+            )
+        )
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, seq.toList(), "failed");
+  }
+
+  private void testTimeseriesNoVirtual(ColumnCapabilities capabilities, Map<String, Object> context)
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .intervals("2000/2030")
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(Granularities.ALL)
+                                  .virtualColumns()
+                                  .aggregators(new CountAggregatorFactory(COUNT))
+                                  .context(context)
+                                  .build();
+
+    Sequence seq = timeseriesTestHelper.runQueryOnSegmentsObjs(segments, query);
+
+    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(COUNT, 2418L)
+            )
+        )
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, seq.toList(), "failed");
+  }
+
   private void testGroupBy(ColumnCapabilities capabilities)
+  {
+    testGroupBy(capabilities, CONTEXT_VECTORIZE_FORCE, true);
+  }
+
+  private void testGroupBy(ColumnCapabilities capabilities, Map<String, Object> context, boolean canVectorize)
   {
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
-            new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities)
+            new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities, canVectorize)
         )
         .addDimension(new DefaultDimensionSpec(ALWAYS_TWO, ALWAYS_TWO, capabilities.getType()))
         .setAggregatorSpecs(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
         .setInterval("2000/2030")
-        .setContext(CONTEXT)
+        .setContext(context)
         .addOrderByColumn(ALWAYS_TWO)
         .build();
 
@@ -306,6 +553,34 @@ public class VectorizedVirtualColumnTest
             getCount(capabilities),
             ALWAYS_TWO,
             getTwo(capabilities)
+        )
+    );
+
+    TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
+  }
+
+  private void testGroupByNoVirtual(ColumnCapabilities capabilities, Map<String, Object> context)
+  {
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.ALL)
+        .setVirtualColumns()
+        .addDimension(new DefaultDimensionSpec("placement", "placement", capabilities.getType()))
+        .setAggregatorSpecs(new CountAggregatorFactory(COUNT))
+        .setInterval("2000/2030")
+        .setContext(context)
+        .build();
+
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+
+    List<ResultRow> expectedRows = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
+            "2000",
+            COUNT,
+            2418L,
+            "placement",
+            "preferred"
         )
     );
 
@@ -337,6 +612,12 @@ public class VectorizedVirtualColumnTest
         }
         return "2";
     }
+  }
+
+  private void expectNonvectorized()
+  {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage(AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS);
   }
 
   private void cannotVectorize()

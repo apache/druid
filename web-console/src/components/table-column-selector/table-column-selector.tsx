@@ -41,7 +41,7 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
     <Menu className="table-column-selector-menu">
       {columns.map(column => (
         <MenuCheckbox
-          label={column}
+          text={column}
           key={column}
           checked={isColumnShown(column)}
           onChange={() => onChange(column)}

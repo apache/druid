@@ -22,7 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -43,9 +43,11 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -61,14 +63,12 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +82,7 @@ import java.util.stream.Collectors;
 /**
  * Abstract class for batch tasks like {@link IndexTask}.
  * Provides some methods such as {@link #determineSegmentGranularity}, {@link #findInputSegments},
- * and {@link #determineLockGranularityandTryLock} for easily acquiring task locks.
+ * and {@link #determineLockGranularityAndTryLock} for easily acquiring task locks.
  */
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
@@ -122,6 +122,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    if (taskLockHelper == null) {
+      // Subclasses generally use "isReady" to initialize the taskLockHelper. It's not guaranteed to be called before
+      // "run", and so we call it here to ensure it happens.
+      //
+      // We're only really calling it for its side effects, and we expect it to return "true". If it doesn't, something
+      // strange is going on, so bail out.
+      if (!isReady(toolbox.getTaskActionClient())) {
+        throw new ISE("Cannot start; not ready!");
+      }
+    }
+
     synchronized (this) {
       if (stopped) {
         return TaskStatus.failure(getId());
@@ -251,22 +262,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * Determine lockGranularity to use and try to acquire necessary locks.
-   * This method respects the value of 'forceTimeChunkLock' in task context.
-   * If it's set to false or missing, this method checks if this task can use segmentLock.
+   * Attempts to acquire a lock that covers certain intervals.
+   * <p>
+   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
+   * <p>
+   * If {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} is set, or if {@param intervals} is nonempty, then this method
+   * will initialize {@link #taskLockHelper} as a side effect.
+   *
+   * @return whether the lock was acquired
    */
-  protected boolean determineLockGranularityAndTryLock(
-      TaskActionClient client,
-      GranularitySpec granularitySpec
-  ) throws IOException
-  {
-    final List<Interval> intervals = granularitySpec.bucketIntervals().isPresent()
-                                     ? new ArrayList<>(granularitySpec.bucketIntervals().get())
-                                     : Collections.emptyList();
-    return determineLockGranularityandTryLock(client, intervals);
-  }
-
-  boolean determineLockGranularityandTryLock(TaskActionClient client, List<Interval> intervals) throws IOException
+  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals)
+      throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
@@ -287,12 +293,22 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
         return tryLockWithDetermineResult(client, result);
       } else {
+        // This branch is the only one that will not initialize taskLockHelper.
         return true;
       }
     }
   }
 
-  boolean determineLockGranularityandTryLockWithSegments(
+  /**
+   * Attempts to acquire a lock that covers certain segments.
+   * <p>
+   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
+   * <p>
+   * This method will initialize {@link #taskLockHelper} as a side effect.
+   *
+   * @return whether the lock was acquired
+   */
+  boolean determineLockGranularityAndTryLockWithSegments(
       TaskActionClient client,
       List<DataSegment> segments,
       BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
@@ -356,21 +372,33 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
+
   protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {
-    // In this case, the intervals to lock must be aligned with segmentGranularity if it's defined
-    final Set<Interval> uniqueIntervals = new HashSet<>();
-    for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
-      final Granularity segmentGranularity = getSegmentGranularity();
-      if (segmentGranularity == null) {
-        uniqueIntervals.add(interval);
-      } else {
-        Iterables.addAll(uniqueIntervals, segmentGranularity.getIterable(interval));
-      }
+    // The given intervals are first converted to align with segment granularity. This is because,
+    // when an overwriting task finds a version for a given input row, it expects the interval
+    // associated to each version to be equal or larger than the time bucket where the input row falls in.
+    // See ParallelIndexSupervisorTask.findVersion().
+    final Iterator<Interval> intervalIterator;
+    final Granularity segmentGranularity = getSegmentGranularity();
+    if (segmentGranularity == null) {
+      intervalIterator = JodaUtils.condenseIntervals(intervals).iterator();
+    } else {
+      IntervalsByGranularity intervalsByGranularity = new IntervalsByGranularity(intervals, segmentGranularity);
+      // the following is calling a condense that does not materialize the intervals:
+      intervalIterator = JodaUtils.condensedIntervalsIterator(intervalsByGranularity.granularityIntervalsIterator());
     }
 
-    for (Interval interval : uniqueIntervals) {
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
+    // Intervals are already condensed to avoid creating too many locks.
+    // Intervals are also sorted and thus it's safe to compare only the previous interval and current one for dedup.
+    Interval prev = null;
+    while (intervalIterator.hasNext()) {
+      final Interval cur = intervalIterator.next();
+      if (prev != null && cur.equals(prev)) {
+        continue;
+      }
+      prev = cur;
+      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
       if (lock == null) {
         return false;
       }
@@ -396,7 +424,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (granularityFromSegments == null
           || segmentGranularityFromSpec != null
              && (!granularityFromSegments.equals(segmentGranularityFromSpec)
-                 || segments.stream().anyMatch(segment -> !segmentGranularityFromSpec.isAligned(segment.getInterval())))) {
+                 || segments.stream()
+                            .anyMatch(segment -> !segmentGranularityFromSpec.isAligned(segment.getInterval())))) {
         // This case is one of the followings:
         // 1) Segments have different granularities.
         // 2) Segment granularity in ingestion spec is different from the one of existig segments.
@@ -444,12 +473,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
       boolean storeCompactionState,
       TaskToolbox toolbox,
-      IndexTuningConfig tuningConfig
+      IndexTuningConfig tuningConfig,
+      GranularitySpec granularitySpec
   )
   {
     if (storeCompactionState) {
       final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
-      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap);
+      final Map<String, Object> granularitySpecMap = granularitySpec.asMap(toolbox.getJsonMapper());
+      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap, granularitySpecMap);
       return segments -> segments
           .stream()
           .map(s -> s.withLastCompactionState(compactionState))
@@ -480,11 +511,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * If the given firehoseFactory is {@link IngestSegmentFirehoseFactory}, then it finds the segments to lock
    * from the firehoseFactory. This is because those segments will be read by this task no matter what segments would be
    * filtered by intervalsToRead, so they need to be locked.
-   *
+   * <p>
    * However, firehoseFactory is not IngestSegmentFirehoseFactory, it means this task will overwrite some segments
    * with data read from some input source outside of Druid. As a result, only the segments falling in intervalsToRead
    * should be locked.
-   *
+   * <p>
    * The order of segments within the returned list is unspecified, but each segment is guaranteed to appear in the list
    * only once.
    */

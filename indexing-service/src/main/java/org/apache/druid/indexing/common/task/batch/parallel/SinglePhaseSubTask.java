@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
@@ -97,7 +98,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
    * the segment granularity of existing segments until the task reads all data because we don't know what segments
    * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
    * are missing and force to use timeChunk lock.
-   *
+   * <p>
    * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
    * in the task logs.
    */
@@ -131,10 +132,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
-                                           && !ingestionSchema.getDataSchema()
-                                                              .getGranularitySpec()
-                                                              .bucketIntervals()
-                                                              .isPresent();
+                                           && ingestionSchema.getDataSchema()
+                                                             .getGranularitySpec()
+                                                             .inputIntervals()
+                                                             .isEmpty();
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
@@ -149,7 +150,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
+    return determineLockGranularityAndTryLock(
+        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+    );
   }
 
   @JsonProperty
@@ -259,7 +263,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
    * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
-   *
+   * <p>
    * At the end of this method, all the remaining segments are published.
    *
    * @return true if generated segments are successfully published, otherwise false
@@ -287,7 +291,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
-    final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
+    final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
     final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
         toolbox,
         getId(),

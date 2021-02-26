@@ -17,10 +17,11 @@
  */
 
 import { Tab, Tabs } from '@blueprintjs/core';
-import axios from 'axios';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
+import { Api } from '../../singletons';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
@@ -41,7 +42,7 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
 
   const [historyState] = useQueryManager<string, VersionSpec[]>({
     processQuery: async (endpoint: string) => {
-      const resp = await axios.get(endpoint);
+      const resp = await Api.instance.get(endpoint);
       return resp.data;
     },
     initQuery: endpoint,
@@ -59,7 +60,7 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
         <ShowValue
           jsonValue={
             pastSupervisor.spec
-              ? JSON.stringify(pastSupervisor.spec, undefined, 2)
+              ? JSONBig.stringify(pastSupervisor.spec, undefined, 2)
               : historyState.getErrorMessage()
           }
           downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}

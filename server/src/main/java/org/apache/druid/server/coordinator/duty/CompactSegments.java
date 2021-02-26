@@ -20,14 +20,18 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
@@ -121,10 +125,30 @@ public class CompactSegments implements CoordinatorDuty
           }
           if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
+            DataSourceCompactionConfig dataSourceCompactionConfig = compactionConfigs.get(status.getDataSource());
+            if (dataSourceCompactionConfig != null && dataSourceCompactionConfig.getGranularitySpec() != null) {
+              Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec().getSegmentGranularity();
+              if (configuredSegmentGranularity != null
+                  && compactionTaskQuery.getGranularitySpec() != null
+                  && !configuredSegmentGranularity.equals(compactionTaskQuery.getGranularitySpec().getSegmentGranularity())) {
+                // We will cancel active compaction task if segmentGranularity changes and we will need to
+                // re-compact the interval
+                LOG.info("Canceled task[%s] as task segmentGranularity is [%s] but compaction config "
+                         + "segmentGranularity is [%s]",
+                         status.getId(),
+                         compactionTaskQuery.getGranularitySpec().getSegmentGranularity(),
+                         configuredSegmentGranularity);
+                indexingServiceClient.cancelTask(status.getId());
+                continue;
+              }
+            }
+            // Skip interval as the current active compaction task is good
             final Interval interval = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
             compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
-            final int numSubTasks = findNumMaxConcurrentSubTasks(compactionTaskQuery.getTuningConfig());
-            numEstimatedNonCompleteCompactionTasks += numSubTasks + 1; // count the compaction task itself
+            // Since we keep the current active compaction task running, we count the active task slots
+            numEstimatedNonCompleteCompactionTasks += findMaxNumTaskSlotsUsedByOneCompactionTask(
+                compactionTaskQuery.getTuningConfig()
+            );
           } else {
             throw new ISE("task[%s] is not a compactionTask", status.getId());
           }
@@ -160,7 +184,12 @@ public class CompactSegments implements CoordinatorDuty
 
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(
-              doRun(compactionConfigs, currentRunAutoCompactionSnapshotBuilders, numAvailableCompactionTaskSlots, iterator)
+              doRun(
+                  compactionConfigs,
+                  currentRunAutoCompactionSnapshotBuilders,
+                  numAvailableCompactionTaskSlots,
+                  iterator
+              )
           );
         } else {
           stats.accumulate(makeStats(currentRunAutoCompactionSnapshotBuilders, 0, iterator));
@@ -180,22 +209,41 @@ public class CompactSegments implements CoordinatorDuty
   }
 
   /**
-   * Each compaction task can run a parallel indexing task. When we count the number of current running
-   * compaction tasks, we should count the sub tasks of the parallel indexing task as well. However, we currently
-   * don't have a good way to get the number of current running sub tasks except poking each supervisor task,
-   * which is complex to handle all kinds of failures. Here, we simply return {@code maxNumConcurrentSubTasks} instead
-   * to estimate the number of sub tasks conservatively. This should be ok since it won't affect to the performance of
-   * other ingestion types.
+   * Returns the maximum number of task slots used by one compaction task at any time when the task is issued with
+   * the given tuningConfig.
    */
-  private int findNumMaxConcurrentSubTasks(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
+  @VisibleForTesting
+  static int findMaxNumTaskSlotsUsedByOneCompactionTask(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
-    if (tuningConfig != null && tuningConfig.getMaxNumConcurrentSubTasks() != null) {
-      // The actual number of subtasks might be smaller than the configured max.
-      // However, we use the max to simplify the estimation here.
-      return tuningConfig.getMaxNumConcurrentSubTasks();
+    if (isParallelMode(tuningConfig)) {
+      @Nullable Integer maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
+      // Max number of task slots used in parallel mode = maxNumConcurrentSubTasks + 1 (supervisor task)
+      return (maxNumConcurrentSubTasks == null ? 1 : maxNumConcurrentSubTasks) + 1;
     } else {
-      return 0;
+      return 1;
     }
+  }
+
+  /**
+   * Returns true if the compaction task can run in the parallel mode with the given tuningConfig.
+   * This method should be synchronized with ParallelIndexSupervisorTask.isParallelMode(InputSource, ParallelIndexTuningConfig).
+   */
+  @VisibleForTesting
+  static boolean isParallelMode(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
+  {
+    if (null == tuningConfig) {
+      return false;
+    }
+    boolean useRangePartitions = useRangePartitions(tuningConfig);
+    int minRequiredNumConcurrentSubTasks = useRangePartitions ? 1 : 2;
+    return tuningConfig.getMaxNumConcurrentSubTasks() != null
+           && tuningConfig.getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+  }
+
+  private static boolean useRangePartitions(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  {
+    // dynamic partitionsSpec will be used if getPartitionsSpec() returns null
+    return tuningConfig.getPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
   }
 
   private void updateAutoCompactionSnapshot(
@@ -248,8 +296,9 @@ public class CompactSegments implements CoordinatorDuty
   )
   {
     int numSubmittedTasks = 0;
+    int numCompactionTasksAndSubtasks = 0;
 
-    for (; iterator.hasNext() && numSubmittedTasks < numAvailableCompactionTaskSlots;) {
+    while (iterator.hasNext() && numCompactionTasksAndSubtasks < numAvailableCompactionTaskSlots) {
       final List<DataSegment> segmentsToCompact = iterator.next();
 
       if (!segmentsToCompact.isEmpty()) {
@@ -261,12 +310,24 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+        ClientCompactionTaskQueryGranularitySpec queryGranularitySpec;
+        if (config.getGranularitySpec() != null) {
+          queryGranularitySpec = new ClientCompactionTaskQueryGranularitySpec(
+              config.getGranularitySpec().getSegmentGranularity(),
+              config.getGranularitySpec().getQueryGranularity(),
+              config.getGranularitySpec().isRollup()
+          );
+        } else {
+          queryGranularitySpec = null;
+        }
+
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            queryGranularitySpec,
             newAutoCompactionContext(config.getTaskContext())
         );
 
@@ -277,7 +338,8 @@ public class CompactSegments implements CoordinatorDuty
         );
         LOG.infoSegments(segmentsToCompact, "Compacting segments");
         // Count the compaction task itself + its sub tasks
-        numSubmittedTasks += findNumMaxConcurrentSubTasks(config.getTuningConfig()) + 1;
+        numSubmittedTasks++;
+        numCompactionTasksAndSubtasks += findMaxNumTaskSlotsUsedByOneCompactionTask(config.getTuningConfig());
       } else {
         throw new ISE("segmentsToCompact is empty?");
       }

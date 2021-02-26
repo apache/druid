@@ -122,16 +122,25 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Nullable
   default Object defaultGetObject()
   {
-    IndexedInts row = getRow();
+    return rowToObject(getRow(), this);
+  }
+
+  /**
+   * Converts a particular {@link IndexedInts} to an Object in a standard way, assuming each element in the IndexedInts
+   * is a dictionary ID that can be resolved with the provided selector.
+   */
+  @Nullable
+  static Object rowToObject(IndexedInts row, DimensionDictionarySelector selector)
+  {
     int rowSize = row.size();
     if (rowSize == 0) {
       return null;
     } else if (rowSize == 1) {
-      return lookupName(row.get(0));
+      return selector.lookupName(row.get(0));
     } else {
       final String[] strings = new String[rowSize];
       for (int i = 0; i < rowSize; i++) {
-        strings[i] = lookupName(row.get(i));
+        strings[i] = selector.lookupName(row.get(i));
       }
       return Arrays.asList(strings);
     }

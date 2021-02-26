@@ -101,6 +101,10 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         context
     );
 
+    Preconditions.checkArgument(
+        !dataSchema.getGranularitySpec().inputIntervals().isEmpty(),
+        "Missing intervals in granularitySpec"
+    );
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.supervisorTaskId = supervisorTaskId;
@@ -335,7 +339,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
               dataSchema.getAggregators(),
               outDir,
               tuningConfig.getIndexSpec(),
-              tuningConfig.getSegmentWriteOutMediumFactory()
+              tuningConfig.getSegmentWriteOutMediumFactory(),
+              tuningConfig.getMaxColumnsToMerge()
           )
       );
 

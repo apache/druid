@@ -18,7 +18,6 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
 import ReactTable from 'react-table';
@@ -35,20 +34,23 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { Api } from '../../singletons';
 import {
   addFilter,
+  Capabilities,
+  CapabilitiesMode,
+  deepGet,
   formatBytes,
   formatBytesCompact,
   LocalStorageKeys,
   lookupBy,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './services-view.scss';
 
@@ -92,7 +94,6 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
-  middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   capabilities: Capabilities;
@@ -181,7 +182,7 @@ FROM sys.servers
 ORDER BY "rank" DESC, "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
-    const allServiceResp = await axios.get('/druid/coordinator/v1/servers?simple');
+    const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
     const allServices = allServiceResp.data;
     return allServices.map((s: any) => {
       return {
@@ -220,7 +221,9 @@ ORDER BY "rank" DESC, "service" DESC`;
         }
 
         if (capabilities.hasCoordinatorAccess()) {
-          const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
+          const loadQueueResponse = await Api.instance.get(
+            '/druid/coordinator/v1/loadqueue?simple',
+          );
           const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
@@ -234,7 +237,7 @@ ORDER BY "rank" DESC, "service" DESC`;
         if (capabilities.hasOverlordAccess()) {
           let middleManagers: MiddleManagerQueryResultRow[];
           try {
-            const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
+            const middleManagerResponse = await Api.instance.get('/druid/indexer/v1/workers');
             middleManagers = middleManagerResponse.data;
           } catch (e) {
             if (
@@ -326,8 +329,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             show: hiddenColumns.exists('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -348,8 +350,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
             },
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -428,7 +429,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 100,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 return row.worker ? (row.currCapacityUsed || 0) / row.worker.capacity : null;
               } else {
                 return row.max_size ? row.curr_size / row.max_size : null;
@@ -488,7 +489,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 400,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
 
                 const details: string[] = [];
@@ -551,10 +552,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: row => {
-              if (!row.value) return null;
-              const disabled = row.value.version === '';
-              const workerActions = this.getWorkerActions(row.value.host, disabled);
+            Cell: ({ value }) => {
+              if (!value) return null;
+              const disabled = value.version === '';
+              const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
           },
@@ -590,8 +591,8 @@ ORDER BY "rank" DESC, "service" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/worker/${Api.encodePath(middleManagerDisableWorkerHost)}/disable`,
             {},
           );
           return resp.data;
@@ -619,8 +620,8 @@ ORDER BY "rank" DESC, "service" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/worker/${Api.encodePath(middleManagerEnableWorkerHost)}/enable`,
             {},
           );
           return resp.data;

@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { AppToaster } from '../../singletons/toaster';
+import { AppToaster } from '../../singletons';
 
 import './show-value-dialog.scss';
 

@@ -29,7 +29,7 @@ Apache Druid can summarize raw data at ingestion time using a process we refer t
 This tutorial will demonstrate the effects of roll-up on an example dataset.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine.
+the [single-machine quickstart](index.md) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 

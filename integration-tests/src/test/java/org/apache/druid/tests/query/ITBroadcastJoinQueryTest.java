@@ -45,6 +45,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(ITBroadcastJoinQueryTest.class);
   private static final String BROADCAST_JOIN_TASK = "/indexer/broadcast_join_index_task.json";
   private static final String BROADCAST_JOIN_METADATA_QUERIES_RESOURCE = "/queries/broadcast_join_metadata_queries.json";
+  private static final String BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE = "/queries/broadcast_join_after_drop_metadata_queries.json";
   private static final String BROADCAST_JOIN_QUERIES_RESOURCE = "/queries/broadcast_join_queries.json";
   private static final String BROADCAST_JOIN_DATASOURCE = "broadcast_join_wikipedia_test";
 
@@ -71,8 +72,19 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
     final Closer closer = Closer.create();
     try {
       closer.register(unloader(BROADCAST_JOIN_DATASOURCE));
+      closer.register(() -> {
+        // remove broadcast rule
+        try {
+          coordinatorClient.postLoadRules(
+              BROADCAST_JOIN_DATASOURCE,
+              ImmutableList.of()
+          );
+        }
+        catch (Exception ignored) {
+        }
+      });
 
-      // prepare for broadcast
+      // prepare for broadcast by adding forever broadcast load rule
       coordinatorClient.postLoadRules(
           BROADCAST_JOIN_DATASOURCE,
           ImmutableList.of(new ForeverBroadcastDistributionRule())
@@ -80,7 +92,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
 
       // load the data
       String taskJson = replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_TASK), BROADCAST_JOIN_DATASOURCE);
-      String taskId = indexer.submitTask(taskJson);
+      indexer.submitTask(taskJson);
 
       ITRetryUtil.retryUntilTrue(
           () -> coordinatorClient.areSegmentsLoaded(BROADCAST_JOIN_DATASOURCE), "broadcast segment load"
@@ -95,12 +107,12 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
                   replaceJoinTemplate(
                       getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_RESOURCE),
                       BROADCAST_JOIN_DATASOURCE
-                  ),
-                  1
+                  )
               );
               return true;
             }
             catch (Exception ex) {
+              LOG.error(ex, "SQL metadata not yet in expected state");
               return false;
             }
           },
@@ -110,12 +122,32 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       // now do some queries
       queryHelper.testQueriesFromString(
           queryHelper.getQueryURL(config.getRouterUrl()),
-          replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE),
-          1
+          replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE)
       );
     }
     finally {
       closer.close();
+
+      // query metadata until druid schema is refreshed and datasource is no longer available
+      ITRetryUtil.retryUntilTrue(
+          () -> {
+            try {
+              queryHelper.testQueriesFromString(
+                  queryHelper.getQueryURL(config.getRouterUrl()),
+                  replaceJoinTemplate(
+                      getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE),
+                      BROADCAST_JOIN_DATASOURCE
+                  )
+              );
+              return true;
+            }
+            catch (Exception ex) {
+              LOG.error(ex, "SQL metadata not yet in expected state");
+              return false;
+            }
+          },
+          "waiting for SQL metadata refresh"
+      );
     }
   }
 

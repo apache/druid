@@ -8,24 +8,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -38,6 +24,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -71,7 +63,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "info": <React.Fragment>
               Determines how many rows are in each segment.
             </React.Fragment>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
           },
@@ -81,27 +72,44 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "info": <React.Fragment>
               Total number of rows in segments waiting for being pushed.
             </React.Fragment>,
-            "label": "Max total rows",
             "name": "tuningConfig.partitionsSpec.maxTotalRows",
             "type": "number",
           },
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
             </React.Fragment>,
-            "label": "Num shards",
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
             "info": <p>
               The dimensions to partition on. Leave blank to select all dimensions.
             </p>,
-            "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -109,7 +117,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "info": <p>
               The dimension to partition on.
             </p>,
-            "label": "Partition dimension",
             "name": "tuningConfig.partitionsSpec.partitionDimension",
             "required": true,
             "type": "string",
@@ -119,7 +126,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "info": <p>
               Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
             </p>,
-            "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -130,7 +136,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "info": <p>
               Maximum number of rows to include in a partition.
             </p>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -142,19 +147,8 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "info": <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
             </p>,
-            "label": "Assume grouped",
             "name": "tuningConfig.partitionsSpec.assumeGrouped",
             "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "label": "Max num concurrent sub tasks",
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
           },
           Object {
             "defaultValue": 419430400,
@@ -166,24 +160,52 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
           },
           Object {
             "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
             "adjustment": [Function],
-            "defaultValue": 500000000,
+            "defaultValue": 1073741824,
+            "hideInMore": true,
             "info": <React.Fragment>
               Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
             </React.Fragment>,
-            "label": "Max input segment bytes per task",
             "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "name": "tuningConfig.splitHintSpec.maxSplitSize",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 1000,
+            "hideInMore": true,
+            "info": <React.Fragment>
+              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+              <Unknown>
+                jute.maxbuffer
+              </Unknown>
+              ) and the max packet size in MySQL (
+              <Unknown>
+                max_allowed_packet
+              </Unknown>
+              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+            </React.Fragment>,
+            "label": "Max num files (segments)",
+            "min": 1,
+            "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
           },
         ]
@@ -235,24 +257,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -265,6 +273,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -298,7 +312,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "info": <React.Fragment>
               Determines how many rows are in each segment.
             </React.Fragment>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
           },
@@ -308,27 +321,44 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "info": <React.Fragment>
               Total number of rows in segments waiting for being pushed.
             </React.Fragment>,
-            "label": "Max total rows",
             "name": "tuningConfig.partitionsSpec.maxTotalRows",
             "type": "number",
           },
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
             </React.Fragment>,
-            "label": "Num shards",
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
             "info": <p>
               The dimensions to partition on. Leave blank to select all dimensions.
             </p>,
-            "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -336,7 +366,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "info": <p>
               The dimension to partition on.
             </p>,
-            "label": "Partition dimension",
             "name": "tuningConfig.partitionsSpec.partitionDimension",
             "required": true,
             "type": "string",
@@ -346,7 +375,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "info": <p>
               Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
             </p>,
-            "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -357,7 +385,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "info": <p>
               Maximum number of rows to include in a partition.
             </p>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -369,19 +396,8 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "info": <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
             </p>,
-            "label": "Assume grouped",
             "name": "tuningConfig.partitionsSpec.assumeGrouped",
             "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "label": "Max num concurrent sub tasks",
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
           },
           Object {
             "defaultValue": 419430400,
@@ -393,24 +409,52 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
           },
           Object {
             "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
             "adjustment": [Function],
-            "defaultValue": 500000000,
+            "defaultValue": 1073741824,
+            "hideInMore": true,
             "info": <React.Fragment>
               Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
             </React.Fragment>,
-            "label": "Max input segment bytes per task",
             "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "name": "tuningConfig.splitHintSpec.maxSplitSize",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 1000,
+            "hideInMore": true,
+            "info": <React.Fragment>
+              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+              <Unknown>
+                jute.maxbuffer
+              </Unknown>
+              ) and the max packet size in MySQL (
+              <Unknown>
+                max_allowed_packet
+              </Unknown>
+              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+            </React.Fragment>,
+            "label": "Max num files (segments)",
+            "min": 1,
+            "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
           },
         ]
@@ -444,7 +488,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
         text="Close"
       />
       <Blueprint3.Button
-        disabled={true}
+        disabled={false}
         intent="primary"
         onClick={[Function]}
         text="Submit"
@@ -462,24 +506,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -492,6 +522,12 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -525,7 +561,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "info": <React.Fragment>
               Determines how many rows are in each segment.
             </React.Fragment>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
           },
@@ -535,27 +570,44 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "info": <React.Fragment>
               Total number of rows in segments waiting for being pushed.
             </React.Fragment>,
-            "label": "Max total rows",
             "name": "tuningConfig.partitionsSpec.maxTotalRows",
             "type": "number",
           },
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
             </React.Fragment>,
-            "label": "Num shards",
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
             "info": <p>
               The dimensions to partition on. Leave blank to select all dimensions.
             </p>,
-            "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -563,7 +615,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "info": <p>
               The dimension to partition on.
             </p>,
-            "label": "Partition dimension",
             "name": "tuningConfig.partitionsSpec.partitionDimension",
             "required": true,
             "type": "string",
@@ -573,7 +624,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "info": <p>
               Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
             </p>,
-            "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -584,7 +634,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "info": <p>
               Maximum number of rows to include in a partition.
             </p>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -596,19 +645,8 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "info": <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
             </p>,
-            "label": "Assume grouped",
             "name": "tuningConfig.partitionsSpec.assumeGrouped",
             "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "label": "Max num concurrent sub tasks",
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
           },
           Object {
             "defaultValue": 419430400,
@@ -620,24 +658,52 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           },
           Object {
             "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
             "adjustment": [Function],
-            "defaultValue": 500000000,
+            "defaultValue": 1073741824,
+            "hideInMore": true,
             "info": <React.Fragment>
               Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
             </React.Fragment>,
-            "label": "Max input segment bytes per task",
             "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "name": "tuningConfig.splitHintSpec.maxSplitSize",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 1000,
+            "hideInMore": true,
+            "info": <React.Fragment>
+              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+              <Unknown>
+                jute.maxbuffer
+              </Unknown>
+              ) and the max packet size in MySQL (
+              <Unknown>
+                max_allowed_packet
+              </Unknown>
+              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+            </React.Fragment>,
+            "label": "Max num files (segments)",
+            "min": 1,
+            "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
           },
         ]
@@ -689,24 +755,10 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
   onClose={[Function]}
   title="Compaction config: test1"
 >
-  <Blueprint3.FormGroup
-    className="tabs"
-  >
-    <Blueprint3.ButtonGroup
-      fill={true}
-    >
-      <Blueprint3.Button
-        active={true}
-        onClick={[Function]}
-        text="Form"
-      />
-      <Blueprint3.Button
-        active={false}
-        onClick={[Function]}
-        text="JSON"
-      />
-    </Blueprint3.ButtonGroup>
-  </Blueprint3.FormGroup>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
   <div
     className="content"
   >
@@ -719,6 +771,12 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
             </p>,
             "name": "skipOffsetFromLatest",
+            "suggestions": Array [
+              "PT0H",
+              "PT1H",
+              "P1D",
+              "P3D",
+            ],
             "type": "string",
           },
           Object {
@@ -752,7 +810,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "info": <React.Fragment>
               Determines how many rows are in each segment.
             </React.Fragment>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
           },
@@ -762,27 +819,44 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "info": <React.Fragment>
               Total number of rows in segments waiting for being pushed.
             </React.Fragment>,
-            "label": "Max total rows",
             "name": "tuningConfig.partitionsSpec.maxTotalRows",
             "type": "number",
           },
           Object {
             "defined": [Function],
             "info": <React.Fragment>
-              Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              <p>
+                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+              </p>
+              <p>
+                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+              </p>
             </React.Fragment>,
-            "label": "Num shards",
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "required": true,
+            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+              </p>
+              <p>
+                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.numShards",
+            "type": "number",
+            "zeroMeansUndefined": true,
           },
           Object {
             "defined": [Function],
             "info": <p>
               The dimensions to partition on. Leave blank to select all dimensions.
             </p>,
-            "label": "Partition dimensions",
             "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "placeholder": "(all dimensions)",
             "type": "string-array",
           },
           Object {
@@ -790,7 +864,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "info": <p>
               The dimension to partition on.
             </p>,
-            "label": "Partition dimension",
             "name": "tuningConfig.partitionsSpec.partitionDimension",
             "required": true,
             "type": "string",
@@ -800,7 +873,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "info": <p>
               Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
             </p>,
-            "label": "Target rows per segment",
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -811,7 +883,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "info": <p>
               Maximum number of rows to include in a partition.
             </p>,
-            "label": "Max rows per segment",
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -823,19 +894,8 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "info": <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
             </p>,
-            "label": "Assume grouped",
             "name": "tuningConfig.partitionsSpec.assumeGrouped",
             "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "label": "Max num concurrent sub tasks",
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
           },
           Object {
             "defaultValue": 419430400,
@@ -847,24 +907,52 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
           },
           Object {
             "defaultValue": 1,
+            "info": <React.Fragment>
+              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+            </React.Fragment>,
+            "min": 1,
+            "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": 10,
             "defined": [Function],
             "info": <React.Fragment>
               Maximum number of merge tasks which can be run at the same time.
             </React.Fragment>,
-            "label": "Max num merge tasks",
             "min": 1,
-            "name": "tuningConfig.maxNumMergeTasks",
+            "name": "tuningConfig.totalNumMergeTasks",
             "type": "number",
           },
           Object {
             "adjustment": [Function],
-            "defaultValue": 500000000,
+            "defaultValue": 1073741824,
+            "hideInMore": true,
             "info": <React.Fragment>
               Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
             </React.Fragment>,
-            "label": "Max input segment bytes per task",
             "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxInputSegmentBytesPerTask",
+            "name": "tuningConfig.splitHintSpec.maxSplitSize",
+            "type": "number",
+          },
+          Object {
+            "adjustment": [Function],
+            "defaultValue": 1000,
+            "hideInMore": true,
+            "info": <React.Fragment>
+              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+              <Unknown>
+                jute.maxbuffer
+              </Unknown>
+              ) and the max packet size in MySQL (
+              <Unknown>
+                max_allowed_packet
+              </Unknown>
+              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+            </React.Fragment>,
+            "label": "Max num files (segments)",
+            "min": 1,
+            "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
           },
         ]

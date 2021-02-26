@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
+ *
  */
 public class HadoopDruidDetermineConfigurationJob implements Jobby
 {
@@ -75,7 +76,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
-      for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+      for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
         DateTime bucket = segmentGranularity.getStart();
         // negative shardsPerInterval means a single shard
         List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);

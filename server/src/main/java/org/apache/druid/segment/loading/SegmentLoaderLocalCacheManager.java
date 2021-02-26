@@ -28,11 +28,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +43,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
+  @VisibleForTesting
+  static final String DOWNLOAD_START_MARKER_FILE_NAME = "downloadStartMarker";
+
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
 
   private final IndexIO indexIO;
@@ -82,6 +87,38 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   @Inject
   public SegmentLoaderLocalCacheManager(
       IndexIO indexIO,
+      List<StorageLocation> locations,
+      SegmentLoaderConfig config,
+      @Nonnull StorageLocationSelectorStrategy strategy,
+      @Json ObjectMapper mapper
+  )
+  {
+    this.indexIO = indexIO;
+    this.config = config;
+    this.jsonMapper = mapper;
+    this.locations = locations;
+    this.strategy = strategy;
+    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
+  }
+
+  @VisibleForTesting
+  SegmentLoaderLocalCacheManager(
+      IndexIO indexIO,
+      SegmentLoaderConfig config,
+      @Nonnull StorageLocationSelectorStrategy strategy,
+      @Json ObjectMapper mapper
+  )
+  {
+    this(indexIO, config.toStorageLocations(), config, strategy, mapper);
+  }
+
+  /**
+   * creates instance with default storage location selector strategy
+   *
+   * This ctor is mainly for test cases, including test cases in other modules
+   */
+  public SegmentLoaderLocalCacheManager(
+      IndexIO indexIO,
       SegmentLoaderConfig config,
       @Json ObjectMapper mapper
   )
@@ -89,17 +126,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     this.indexIO = indexIO;
     this.config = config;
     this.jsonMapper = mapper;
-    this.locations = new ArrayList<>();
-    for (StorageLocationConfig locationConfig : config.getLocations()) {
-      locations.add(
-          new StorageLocation(
-              locationConfig.getPath(),
-              locationConfig.getMaxSize(),
-              locationConfig.getFreeSpacePercent()
-          )
-      );
-    }
-    this.strategy = config.getStorageLocationSelectorStrategy(locations);
+    this.locations = config.toStorageLocations();
+    this.strategy = new LeastBytesUsedStorageLocationSelectorStrategy(locations);
+    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
   }
 
   @Override
@@ -108,19 +137,48 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return findStorageLocationIfLoaded(segment) != null;
   }
 
+  @Nullable
   private StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
   {
     for (StorageLocation location : locations) {
       File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
       if (localStorageDir.exists()) {
-        return location;
+        if (checkSegmentFilesIntact(localStorageDir)) {
+          log.warn("[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.", localStorageDir.getAbsolutePath());
+          cleanupCacheFiles(location.getPath(), localStorageDir);
+          location.removeSegmentDir(localStorageDir, segment);
+          break;
+        } else {
+          return location;
+        }
       }
     }
     return null;
   }
 
+  /**
+   * check data intact.
+   * @param dir segments cache dir
+   * @return true means segment files may be damaged.
+   */
+  private boolean checkSegmentFilesIntact(File dir)
+  {
+    return checkSegmentFilesIntactWithStartMarker(dir);
+  }
+
+  /**
+   * If there is 'downloadStartMarker' existed in localStorageDir, the segments files might be damaged.
+   * Because each time, Druid will delete the 'downloadStartMarker' file after pulling and unzip the segments from DeepStorage.
+   * downloadStartMarker existed here may mean something error during download segments and the segment files may be damaged.
+   */
+  private boolean checkSegmentFilesIntactWithStartMarker(File localStorageDir)
+  {
+    final File downloadStartMarker = new File(localStorageDir.getPath(), DOWNLOAD_START_MARKER_FILE_NAME);
+    return downloadStartMarker.exists();
+  }
+
   @Override
-  public Segment getSegment(DataSegment segment, boolean lazy) throws SegmentLoadingException
+  public Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final ReferenceCountingLock lock = createOrGetLock(segment);
     final File segmentFiles;
@@ -146,9 +204,15 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
 
-    return factory.factorize(segment, segmentFiles, lazy);
+    return factory.factorize(segment, segmentFiles, lazy, loadFailed);
   }
 
+  /**
+   * Make sure segments files in loc is intact, otherwise function like loadSegments will failed because of segment files is damaged.
+   * @param segment
+   * @return
+   * @throws SegmentLoadingException
+   */
   @Override
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
@@ -160,6 +224,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
+        } else {
+          // If the segment is already downloaded on disk, we just update the current usage
+          loc.maybeReserve(storageDir, segment);
         }
         return new File(loc.getPath(), storageDir);
       }
@@ -212,7 +279,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   {
     // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
     // the parent directories of the segment are removed
-    final File downloadStartMarker = new File(storageDir, "downloadStartMarker");
+    final File downloadStartMarker = new File(storageDir, DOWNLOAD_START_MARKER_FILE_NAME);
     synchronized (directoryWriteRemoveLock) {
       if (!storageDir.mkdirs()) {
         log.debug("Unable to make parent file[%s]", storageDir);

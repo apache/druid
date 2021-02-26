@@ -43,6 +43,7 @@ public class CliHistoricalForQueryRetryTest extends CliHistorical
   }
 
   @Inject
+  @Override
   public void configure(Properties properties)
   {
     log.info("Historical is configured for testing query retry on missing segments");

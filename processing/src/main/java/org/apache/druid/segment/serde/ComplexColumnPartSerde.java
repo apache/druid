@@ -84,7 +84,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         // longer term this needs to be captured by making the serde provide this information, and then this should
         // no longer be set to true but rather the actual values
         builder.setHasNulls(ColumnCapabilities.Capable.TRUE);
-        serde.deserializeColumn(buffer, builder);
+        serde.deserializeColumn(buffer, builder, columnConfig);
       }
     };
   }

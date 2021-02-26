@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -35,8 +36,6 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -285,11 +284,13 @@ public class SqlExpressionBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void querySql(Blackhole blackhole) throws Exception
   {
-    final Map<String, Object> context = ImmutableMap.of("vectorize", vectorize);
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {
-      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+    final Map<String, Object> context = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    );
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+      final PlannerResult plannerResult = planner.plan(sql);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);

@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.utils.CollectionUtils;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.junit.Assert;
@@ -359,6 +360,14 @@ public class HumanReadableBytesTest
     Assert.assertEquals(bytes, deserialized);
   }
 
+  @Test
+  public void testGetInt()
+  {
+    expectedException.expectMessage("Number [2147483648] exceeds range of Integer.MAX_VALUE");
+    HumanReadableBytes bytes = new HumanReadableBytes("2GiB");
+    bytes.getBytesInInt();
+  }
+
   static class TestBytesRange
   {
     @HumanReadableBytesRange(min = 0, max = 5)
@@ -373,26 +382,26 @@ public class HumanReadableBytesTest
   @Test
   public void testBytesRange()
   {
-    long errorCount = validate(new TestBytesRange(HumanReadableBytes.valueOf(-1)));
-    Assert.assertEquals(1, errorCount);
+    String message = validate(new TestBytesRange(HumanReadableBytes.valueOf(-1)));
+    Assert.assertEquals("value must be in the range of [0, 5]", message);
 
-    errorCount = validate(new TestBytesRange(HumanReadableBytes.valueOf(0)));
-    Assert.assertEquals(0, errorCount);
+    message = validate(new TestBytesRange(HumanReadableBytes.valueOf(0)));
+    Assert.assertEquals(null, message);
 
-    errorCount = validate(new TestBytesRange(HumanReadableBytes.valueOf(5)));
-    Assert.assertEquals(0, errorCount);
+    message = validate(new TestBytesRange(HumanReadableBytes.valueOf(5)));
+    Assert.assertEquals(null, message);
 
-    errorCount = validate(new TestBytesRange(HumanReadableBytes.valueOf(6)));
-    Assert.assertEquals(1, errorCount);
+    message = validate(new TestBytesRange(HumanReadableBytes.valueOf(6)));
+    Assert.assertEquals("value must be in the range of [0, 5]", message);
   }
 
-  private static <T> long validate(T obj)
+  private static <T> String validate(T obj)
   {
     Validator validator = Validation.buildDefaultValidatorFactory()
                                     .getValidator();
 
     Map<String, StringBuilder> errorMap = new HashMap<>();
     Set<ConstraintViolation<T>> set = validator.validate(obj, Default.class);
-    return set == null ? 0 : set.size();
+    return CollectionUtils.isNullOrEmpty(set) ? null : set.stream().findFirst().get().getMessage();
   }
 }

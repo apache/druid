@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
 import { SqlQuery } from 'druid-query-toolkit';
+import { shallow } from 'enzyme';
 import React from 'react';
 
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnMetadata } from '../../../utils';
 
 import { ColumnTree } from './column-tree';
 
-describe('column tree', () => {
+describe('ColumnTree', () => {
   it('matches snapshot', () => {
-    const columnTree = (
+    const columnTree = shallow(
       <ColumnTree
         getParsedQuery={() => {
           return SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
@@ -63,10 +63,9 @@ describe('column tree', () => {
           ] as ColumnMetadata[]
         }
         onQueryChange={() => {}}
-      />
+      />,
     );
 
-    const { container } = render(columnTree);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(columnTree).toMatchSnapshot();
   });
 });

@@ -28,6 +28,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -54,9 +55,6 @@ public class SegmentLoaderConfig
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
-
-  @JsonProperty("locationSelectorStrategy")
-  private StorageLocationSelectorStrategy locationSelectorStrategy;
 
   @JsonProperty
   private File infoDir = null;
@@ -101,15 +99,6 @@ public class SegmentLoaderConfig
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
-  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
-  {
-    if (locationSelectorStrategy == null) {
-      // default strategy if no strategy is specified in the config
-      locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations);
-    }
-    return locationSelectorStrategy;
-  }
-
   public File getInfoDir()
   {
     if (infoDir == null) {
@@ -141,10 +130,28 @@ public class SegmentLoaderConfig
   }
 
   @VisibleForTesting
-  SegmentLoaderConfig withStorageLocationSelectorStrategy(StorageLocationSelectorStrategy strategy)
+  public SegmentLoaderConfig withInfoDir(File infoDir)
   {
-    this.locationSelectorStrategy = strategy;
-    return this;
+    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
+    retVal.locations = this.locations;
+    retVal.deleteOnRemove = this.deleteOnRemove;
+    retVal.infoDir = infoDir;
+    return retVal;
+  }
+
+  /**
+   * Convert StorageLocationConfig objects to StorageLocation objects
+   * <p>
+   * Note: {@link #getLocations} is called instead of variable access because some testcases overrides this method
+   */
+  public List<StorageLocation> toStorageLocations()
+  {
+    return this.getLocations()
+               .stream()
+               .map(locationConfig -> new StorageLocation(locationConfig.getPath(),
+                                                          locationConfig.getMaxSize(),
+                                                          locationConfig.getFreeSpacePercent()))
+               .collect(Collectors.toList());
   }
 
   @Override
@@ -154,7 +161,6 @@ public class SegmentLoaderConfig
            "locations=" + locations +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
-           ", locationSelectorStrategy=" + locationSelectorStrategy +
            ", infoDir=" + infoDir +
            '}';
   }

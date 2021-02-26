@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
@@ -105,7 +104,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
         // Return null if the argument if null.
         return ExprEval.of(null);
       }
-      return ExprEval.of(granularity.bucketStart(DateTimes.utc(eval.asLong())).getMillis());
+      return ExprEval.of(granularity.bucketStart(eval.asLong()));
     }
 
     @Override
@@ -118,30 +117,30 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.LONG;
     }
 
     @Override
-    public boolean canVectorize(InputBindingTypes inputTypes)
+    public boolean canVectorize(InputBindingInspector inspector)
     {
-      return args.get(0).canVectorize(inputTypes);
+      return args.get(0).canVectorize(inspector);
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingTypes inputTypes)
+    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorProcessor(
-          CastToTypeVectorProcessor.castToType(args.get(0).buildVectorized(inputTypes), ExprType.LONG),
-          inputTypes.getMaxVectorSize()
+          CastToTypeVectorProcessor.cast(args.get(0).buildVectorized(inspector), ExprType.LONG),
+          inspector.getMaxVectorSize()
       )
       {
         @Override
         public long apply(long input)
         {
-          return granularity.bucketStart(DateTimes.utc(input)).getMillis();
+          return granularity.bucketStart(input);
         }
       };
 
@@ -183,7 +182,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     public ExprEval eval(final ObjectBinding bindings)
     {
       final PeriodGranularity granularity = computeGranularity(args, bindings);
-      return ExprEval.of(granularity.bucketStart(DateTimes.utc(args.get(0).eval(bindings).asLong())).getMillis());
+      return ExprEval.of(granularity.bucketStart(args.get(0).eval(bindings).asLong()));
     }
 
     @Override
@@ -195,7 +194,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingTypes inputTypes)
+    public ExprType getOutputType(InputBindingInspector inspector)
     {
       return ExprType.LONG;
     }

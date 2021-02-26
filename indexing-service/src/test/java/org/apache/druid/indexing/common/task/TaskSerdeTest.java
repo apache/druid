@@ -249,7 +249,9 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
+                null,
                 null,
                 null,
                 9999,
@@ -260,6 +262,7 @@ public class TaskSerdeTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -329,7 +332,9 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -340,6 +345,7 @@ public class TaskSerdeTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -396,8 +402,10 @@ public class TaskSerdeTest
             ),
 
             new RealtimeTuningConfig(
+                null,
                 1,
                 10L,
+                null,
                 new Period("PT10M"),
                 null,
                 null,

@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 
 import javax.annotation.Nonnull;
@@ -53,6 +54,7 @@ public class CoordinatorDynamicConfig
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
+  private final double percentOfSegmentsToConsiderPerMove;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
@@ -86,6 +88,8 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsInNodeLoadingQueue;
   private final boolean pauseCoordination;
 
+  private static final Logger log = new Logger(CoordinatorDynamicConfig.class);
+
   @JsonCreator
   public CoordinatorDynamicConfig(
       // Keeping the legacy 'millisToWaitBeforeDeleting' property name for backward compatibility. When the project is
@@ -95,6 +99,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
+      @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -123,6 +128,22 @@ public class CoordinatorDynamicConfig
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
+
+    if (percentOfSegmentsToConsiderPerMove == null) {
+      log.debug("percentOfSegmentsToConsiderPerMove was null! This is likely because your metastore does not "
+               + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
+               + "to the Druid default of %f. It is recommended that you re-submit your dynamic config with your "
+               + "desired value for percentOfSegmentsToConsideredPerMove",
+               Builder.DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
+      );
+      percentOfSegmentsToConsiderPerMove = Builder.DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE;
+    }
+    Preconditions.checkArgument(
+        percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100,
+        "percentOfSegmentsToConsiderPerMove should be between 1 and 100!"
+    );
+    this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
+
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
@@ -209,6 +230,12 @@ public class CoordinatorDynamicConfig
   public int getMaxSegmentsToMove()
   {
     return maxSegmentsToMove;
+  }
+
+  @JsonProperty
+  public double getPercentOfSegmentsToConsiderPerMove()
+  {
+    return percentOfSegmentsToConsiderPerMove;
   }
 
   @JsonProperty
@@ -302,6 +329,7 @@ public class CoordinatorDynamicConfig
            ", mergeBytesLimit=" + mergeBytesLimit +
            ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
+           ", percentOfSegmentsToConsiderPerMove=" + percentOfSegmentsToConsiderPerMove +
            ", replicantLifetime=" + replicantLifetime +
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
@@ -339,6 +367,9 @@ public class CoordinatorDynamicConfig
       return false;
     }
     if (maxSegmentsToMove != that.maxSegmentsToMove) {
+      return false;
+    }
+    if (percentOfSegmentsToConsiderPerMove != that.percentOfSegmentsToConsiderPerMove) {
       return false;
     }
     if (replicantLifetime != that.replicantLifetime) {
@@ -382,6 +413,7 @@ public class CoordinatorDynamicConfig
         mergeBytesLimit,
         mergeSegmentsLimit,
         maxSegmentsToMove,
+        percentOfSegmentsToConsiderPerMove,
         replicantLifetime,
         replicationThrottleLimit,
         balancerComputeThreads,
@@ -408,6 +440,7 @@ public class CoordinatorDynamicConfig
     private static final long DEFAULT_MERGE_BYTES_LIMIT = 524_288_000L;
     private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
     private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
+    private static final double DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE = 100;
     private static final int DEFAULT_REPLICANT_LIFETIME = 15;
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
@@ -421,6 +454,7 @@ public class CoordinatorDynamicConfig
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
+    private Double percentOfSegmentsToConsiderPerMove;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
     private Boolean emitBalancingStats;
@@ -444,6 +478,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
+        @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -463,6 +498,7 @@ public class CoordinatorDynamicConfig
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
+      this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.balancerComputeThreads = balancerComputeThreads;
@@ -497,6 +533,12 @@ public class CoordinatorDynamicConfig
     public Builder withMaxSegmentsToMove(int maxSegmentsToMove)
     {
       this.maxSegmentsToMove = maxSegmentsToMove;
+      return this;
+    }
+
+    public Builder withPercentOfSegmentsToConsiderPerMove(double percentOfSegmentsToConsiderPerMove)
+    {
+      this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       return this;
     }
 
@@ -569,6 +611,8 @@ public class CoordinatorDynamicConfig
           mergeBytesLimit == null ? DEFAULT_MERGE_BYTES_LIMIT : mergeBytesLimit,
           mergeSegmentsLimit == null ? DEFAULT_MERGE_SEGMENTS_LIMIT : mergeSegmentsLimit,
           maxSegmentsToMove == null ? DEFAULT_MAX_SEGMENTS_TO_MOVE : maxSegmentsToMove,
+          percentOfSegmentsToConsiderPerMove == null ? DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
+                                                     : percentOfSegmentsToConsiderPerMove,
           replicantLifetime == null ? DEFAULT_REPLICANT_LIFETIME : replicantLifetime,
           replicationThrottleLimit == null ? DEFAULT_REPLICATION_THROTTLE_LIMIT : replicationThrottleLimit,
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
@@ -598,6 +642,7 @@ public class CoordinatorDynamicConfig
           mergeBytesLimit == null ? defaults.getMergeBytesLimit() : mergeBytesLimit,
           mergeSegmentsLimit == null ? defaults.getMergeSegmentsLimit() : mergeSegmentsLimit,
           maxSegmentsToMove == null ? defaults.getMaxSegmentsToMove() : maxSegmentsToMove,
+          percentOfSegmentsToConsiderPerMove == null ? defaults.getPercentOfSegmentsToConsiderPerMove() : percentOfSegmentsToConsiderPerMove,
           replicantLifetime == null ? defaults.getReplicantLifetime() : replicantLifetime,
           replicationThrottleLimit == null ? defaults.getReplicationThrottleLimit() : replicationThrottleLimit,
           balancerComputeThreads == null ? defaults.getBalancerComputeThreads() : balancerComputeThreads,
