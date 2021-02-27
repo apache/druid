@@ -100,7 +100,7 @@ the author of the PR) or in a comment (if you have added labels to a PR submitte
    - [`Area - Cache`](https://github.com/apache/druid/labels/Area%20-%20Cache) - for PRs and issues related to
    Druid's query results cache (local or remote). Don't use for PRs that anyhow relate to caching in different contexts.
    - [`Area - Dev`](https://github.com/apache/druid/labels/Area%20-%20Dev) - for PRs and issues related to the
-   project itself, such as adding developer's docs and checklists, Github issue and PR templates, Github-related issues.
+   project itself, such as adding developer's docs and checklists, GitHub issue and PR templates, GitHub-related issues.
    Don't use for PRs and issues related to CI problems: use either `Area - Testing` for problems with Travis or
    `Area - Automation/Static Analysis` for problems with TeamCity. PRs with `Area - Dev` label should usually change
    files in `dev/` or `.github/` directories.
@@ -158,11 +158,11 @@ free to pick up and is relatively easily doable even for those who are not very 
 number (such as 0.10.1, while the previous release is 0.10 or 0.10.0), rename the next milestone so that it bumps the
 "minor" number (e. g. 0.10 -> 0.11).
 
-3. Check that the issue addessed in the PR is closed automatically by Github. If it's not, close the issue manually.
+3. Check that the issue addessed in the PR is closed automatically by GitHub. If it's not, close the issue manually.
 
 4. Consider thanking the author for contribution, especially a new contributor.
 
-## Creating a new label on Github
+## Creating a new label on GitHub
 
 After creating a new label for your PR or issue, don't forget to take the following steps:
 
