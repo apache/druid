@@ -929,7 +929,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
         storeCompactionState,
         toolbox,
-        ingestionSchema.getTuningConfig()
+        ingestionSchema.getTuningConfig(),
+        ingestionSchema.getDataSchema().getGranularitySpec()
     );
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(

@@ -129,7 +129,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithDynamicPartitioningMatchCompactionState()
+  public void testRunParallelWithDynamicPartitioningMatchCompactionState() throws Exception
   {
     runIndexTask(null, true);
 
@@ -144,22 +144,33 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
-    final CompactionState expectedState = new CompactionState(
-        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
-    );
     for (DataSegment segment : compactedSegments) {
       Assert.assertSame(
           lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
           segment.getShardSpec().getClass()
       );
       // Expect compaction state to exist as store compaction state by default
+      CompactionState expectedState = new CompactionState(
+          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          getObjectMapper().readValue(
+              getObjectMapper().writeValueAsString(
+                  new UniformGranularitySpec(
+                      Granularities.HOUR,
+                      Granularities.MINUTE,
+                      true,
+                      ImmutableList.of(segment.getInterval())
+                  )
+              ),
+              Map.class
+          )
+      );
       Assert.assertEquals(expectedState, segment.getLastCompactionState());
     }
   }
 
   @Test
-  public void testRunParallelWithHashPartitioningMatchCompactionState()
+  public void testRunParallelWithHashPartitioningMatchCompactionState() throws Exception
   {
     // Hash partitioning is not supported with segment lock yet
     Assume.assumeFalse(lockGranularity == LockGranularity.SEGMENT);
@@ -176,19 +187,30 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
-    final CompactionState expectedState = new CompactionState(
-        new HashedPartitionsSpec(null, 3, null),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
-    );
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+      CompactionState expectedState = new CompactionState(
+          new HashedPartitionsSpec(null, 3, null),
+          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          getObjectMapper().readValue(
+              getObjectMapper().writeValueAsString(
+                  new UniformGranularitySpec(
+                      Granularities.HOUR,
+                      Granularities.MINUTE,
+                      true,
+                      ImmutableList.of(segment.getInterval())
+                  )
+              ),
+              Map.class
+          )
+      );
       Assert.assertEquals(expectedState, segment.getLastCompactionState());
     }
   }
 
   @Test
-  public void testRunParallelWithRangePartitioning()
+  public void testRunParallelWithRangePartitioning() throws Exception
   {
     // Range partitioning is not supported with segment lock yet
     Assume.assumeFalse(lockGranularity == LockGranularity.SEGMENT);
@@ -205,19 +227,30 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
-    final CompactionState expectedState = new CompactionState(
-        new SingleDimensionPartitionsSpec(7, null, "dim", false),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
-    );
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+      CompactionState expectedState = new CompactionState(
+          new SingleDimensionPartitionsSpec(7, null, "dim", false),
+          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          getObjectMapper().readValue(
+              getObjectMapper().writeValueAsString(
+                  new UniformGranularitySpec(
+                      Granularities.HOUR,
+                      Granularities.MINUTE,
+                      true,
+                      ImmutableList.of(segment.getInterval())
+                  )
+              ),
+              Map.class
+          )
+      );
       Assert.assertEquals(expectedState, segment.getLastCompactionState());
     }
   }
 
   @Test
-  public void testRunParallelWithRangePartitioningWithSingleTask()
+  public void testRunParallelWithRangePartitioningWithSingleTask() throws Exception
   {
     // Range partitioning is not supported with segment lock yet
     Assume.assumeFalse(lockGranularity == LockGranularity.SEGMENT);
@@ -234,13 +267,24 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
-    final CompactionState expectedState = new CompactionState(
-        new SingleDimensionPartitionsSpec(7, null, "dim", false),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
-    );
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+      CompactionState expectedState = new CompactionState(
+          new SingleDimensionPartitionsSpec(7, null, "dim", false),
+          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          getObjectMapper().readValue(
+              getObjectMapper().writeValueAsString(
+                  new UniformGranularitySpec(
+                      Granularities.HOUR,
+                      Granularities.MINUTE,
+                      true,
+                      ImmutableList.of(segment.getInterval())
+                  )
+              ),
+              Map.class
+          )
+      );
       Assert.assertEquals(expectedState, segment.getLastCompactionState());
     }
   }

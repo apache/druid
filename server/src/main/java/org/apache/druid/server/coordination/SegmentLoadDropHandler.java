@@ -298,7 +298,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     Status result = null;
     try {
@@ -339,7 +339,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 
@@ -417,14 +419,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     removeSegment(segment, callback, true);
   }
 
-  private void removeSegment(
+  @VisibleForTesting
+  void removeSegment(
       final DataSegment segment,
-      final DataSegmentChangeCallback callback,
+      @Nullable final DataSegmentChangeCallback callback,
       final boolean scheduleDrop
   )
   {
@@ -478,7 +481,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 

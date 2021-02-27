@@ -1133,8 +1133,14 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 
 ### HTTP Input Source
 
-The HTTP input source is to support reading files directly
-from remote sites via HTTP.
+The HTTP input source is to support reading files directly from remote sites via HTTP.
+
+> **NOTE:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an `HTTPInputSource` at any location where the Druid process has permissions. For example, using `HTTPInputSource`, a console user has access to internal network locations where the they would be denied access otherwise.
+
+> **WARNING:** `HTTPInputSource` is not limited to the HTTP or HTTPS protocols. It uses the Java `URI` class that supports HTTP, HTTPS, FTP, file, and jar protocols by default. This means you should never run Druid under the `root` account, because a user can use the file protocol to access any files on the local disk.
+
+For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
+
 The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
 where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 

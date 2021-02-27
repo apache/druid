@@ -754,7 +754,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
           List<Object> groupKey = Rows.toGroupKey(
-              queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+              queryGranularity.bucketStart(inputRow.getTimestampFromEpoch()),
               inputRow
           );
           hllCollectors.get(interval).get()
@@ -904,7 +904,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           compactionStateAnnotateFunction(
               storeCompactionState,
               toolbox,
-              ingestionSchema.getTuningConfig()
+              ingestionSchema.getTuningConfig(),
+              ingestionSchema.getDataSchema().getGranularitySpec()
           );
 
       // Probably we can publish atomicUpdateGroup along with segments.
