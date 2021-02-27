@@ -417,6 +417,7 @@ untrusted
 useFilterCNF
 uptime
 uris
+urls
 useFieldDiscovery
 v1
 v2
@@ -938,6 +939,7 @@ ctrl
 jsonLowercase
 listDelimiter
 timestampSpec
+urls
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
