@@ -318,6 +318,17 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getSchemaRegistryHost()
+      {
+        return dockerIp + ":8085";
+      }
+
+      @Override
+      public String getSchemaRegistryInternalHost()
+      {
+        return "schema-registry:8085";
+      }
+      @Override
       public String getProperty(String prop)
       {
         return properties.get(prop);

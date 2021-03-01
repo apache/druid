@@ -57,6 +57,10 @@ getComposeArgs()
     then
       # the 'high availability' test cluster with multiple coordinators and overlords
       echo "-f ${DOCKERDIR}/docker-compose.high-availability.yml"
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
+    then
+      # default + schema registry container
+      echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
     else
       # default
       echo "-f ${DOCKERDIR}/docker-compose.yml"
