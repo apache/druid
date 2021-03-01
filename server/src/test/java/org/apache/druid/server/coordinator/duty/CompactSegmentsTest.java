@@ -58,7 +58,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.apache.druid.segment.indexing.granularity.CompactionGranularitySpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
