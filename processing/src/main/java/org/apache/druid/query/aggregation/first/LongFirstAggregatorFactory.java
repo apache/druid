@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.first;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,6 +48,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+@JsonTypeName("longFirst")
 public class LongFirstAggregatorFactory extends AggregatorFactory
 {
   private static final Aggregator NIL_AGGREGATOR = new LongFirstAggregator(

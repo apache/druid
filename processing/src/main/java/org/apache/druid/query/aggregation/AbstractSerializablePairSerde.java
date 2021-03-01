@@ -63,7 +63,7 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
       @Override
       public T extractValue(InputRow inputRow, String metricName)
       {
-        return (T)inputRow.getRaw(metricName);
+        return (T) inputRow.getRaw(metricName);
       }
     };
   }
@@ -112,7 +112,7 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 
-  abstract protected T toPairObject(ByteBuffer buffer, int numBytes);
+  protected abstract T toPairObject(ByteBuffer buffer, int numBytes);
 
-  abstract protected byte[] pairToBytes(T val);
+  protected abstract byte[] pairToBytes(T val);
 }

@@ -26,16 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-/**
- * This class is used for FIRST aggregator
- * <p>
- * It's marked as abstract to prevent instantiation of this type directly.
- * it must be used it as follow:
- * <p>
- * AggregateCombiner combiner = new GenericFirstAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){
- * };
- */
-final public class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>>
+public class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>>
     extends ObjectAggregateCombiner<T>
 {
   private final Class<T> pairClass;
@@ -47,13 +38,13 @@ final public class GenericFirstAggregateCombiner<T extends SerializablePair<Long
   }
 
   @Override
-  public final void reset(ColumnValueSelector selector)
+  public void reset(ColumnValueSelector selector)
   {
     firstValue = (T) selector.getObject();
   }
 
   @Override
-  public final void fold(ColumnValueSelector selector)
+  public void fold(ColumnValueSelector selector)
   {
     T newValue = (T) selector.getObject();
 
@@ -64,13 +55,13 @@ final public class GenericFirstAggregateCombiner<T extends SerializablePair<Long
 
   @Nullable
   @Override
-  public final T getObject()
+  public T getObject()
   {
     return firstValue;
   }
 
   @Override
-  public final Class<T> classOfObject()
+  public Class<T> classOfObject()
   {
     return this.pairClass;
   }

@@ -26,14 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-/**
- * This class is marked as abstract to prevent instantiation of this type directly,
- * because it relyes on type reflection to get the right class object of generic type
- * <p>
- * use it as follow:
- * AggregateCombiner combiner = new GenericLastAggregateCombiner<SerializablePair<Long, YOUR_DATA_TYPE>>(){};
- */
-final public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>>
+public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>>
     extends ObjectAggregateCombiner<T>
 {
   private T lastValue;
@@ -46,13 +39,13 @@ final public class GenericLastAggregateCombiner<T extends SerializablePair<Long,
   }
 
   @Override
-  public final void reset(ColumnValueSelector selector)
+  public void reset(ColumnValueSelector selector)
   {
     lastValue = (T) selector.getObject();
   }
 
   @Override
-  public final void fold(ColumnValueSelector selector)
+  public void fold(ColumnValueSelector selector)
   {
     T newValue = (T) selector.getObject();
 
@@ -63,13 +56,13 @@ final public class GenericLastAggregateCombiner<T extends SerializablePair<Long,
 
   @Nullable
   @Override
-  public final T getObject()
+  public T getObject()
   {
     return lastValue;
   }
 
   @Override
-  public final Class<T> classOfObject()
+  public Class<T> classOfObject()
   {
     return this.pairClass;
   }
