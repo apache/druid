@@ -65,6 +65,7 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -644,7 +645,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
-            new CompactionGranularitySpec(Granularities.YEAR, null),
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null),
             null
         )
     );
@@ -732,7 +733,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
-            new CompactionGranularitySpec(Granularities.YEAR, null),
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null),
             null
         )
     );
@@ -812,7 +813,6 @@ public class CompactSegmentsTest
           1,
           stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
       );
-      Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
       // Note: Subsequent compaction run after the dataSource was compacted will show different numbers than
       // on the run it was compacted. For example, in a compaction run, if a dataSource had 4 segments compacted,
       // on the same compaction run the segment compressed count will be 4 but on subsequent run it might be 2
