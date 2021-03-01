@@ -98,7 +98,8 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParse() throws Exception
   {
     // Given
-    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
+           .thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
@@ -111,7 +112,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   }
 
   @Test(expected = ParseException.class)
-  public void testParseCorruptedNotEnoughBytesToEvenGetSchemaInfo() throws Exception
+  public void testParseCorruptedNotEnoughBytesToEvenGetSchemaInfo()
   {
     // Given
     ByteBuffer bb = ByteBuffer.allocate(2).put((byte) 0).put(1, (byte) 1);
@@ -125,7 +126,8 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParseCorruptedPartial() throws Exception
   {
     // Given
-    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
+           .thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
