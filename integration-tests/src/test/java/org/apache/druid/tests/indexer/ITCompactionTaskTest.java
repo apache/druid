@@ -41,8 +41,10 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
@@ -52,10 +54,13 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(ITCompactionTaskTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
+
+  private static final String INDEX_QUERIES_YEAR_RESOURCE = "/indexer/wikipedia_index_queries_year_query_granularity.json";
+  private static final String INDEX_QUERIES_HOUR_RESOURCE = "/indexer/wikipedia_index_queries_hour_query_granularity.json";
+
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
-  private static final String SEGMENT_METADATA_QUERY_RESOURCE_QR4 = "/indexer/segment_metadata_qr4.json";
-  private static final String SEGMENT_METADATA_QUERY_RESOURCE_QR2 = "/indexer/segment_metadata_qr2.json";
+  private static final String SEGMENT_METADATA_QUERY_RESOURCE = "/indexer/segment_metadata_query.json";
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
   private static final String COMPACTION_TASK_WITH_SEGMENT_GRANULARITY = "/indexer/wikipedia_compaction_task_with_segment_granularity.json";
@@ -87,9 +92,66 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testCompactionWithGranularitySpec() throws Exception
+  public void testCompactionWithSegmentGranularityInGranularitySpec() throws Exception
   {
     loadDataAndCompact(INDEX_TASK, INDEX_QUERIES_RESOURCE, COMPACTION_TASK_WITH_GRANULARITY_SPEC, GranularityType.MONTH);
+  }
+
+  @Test
+  public void testCompactionWithQueryGranularityInGranularitySpec() throws Exception
+  {
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      loadData(INDEX_TASK);
+      // 4 segments across 2 days
+      checkNumberOfSegments(4);
+      List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      expectedIntervalAfterCompaction.sort(null);
+
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
+      String queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_RESOURCE);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      // QueryGranularity was SECOND, now we will change it to HOUR
+      compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, null, GranularityType.HOUR);
+
+      // The original 4 segments should be compacted into 2 new segments
+      checkNumberOfSegments(2);
+      queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_HOUR_RESOURCE);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.HOUR.name(), 2);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+    }
+  }
+
+  @Test
+  public void testCompactionWithSegmentGranularityAndQueryGranularityInGranularitySpec() throws Exception
+  {
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      loadData(INDEX_TASK);
+      // 4 segments across 2 days
+      checkNumberOfSegments(4);
+      List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      expectedIntervalAfterCompaction.sort(null);
+
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
+      String queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_RESOURCE);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, GranularityType.YEAR, GranularityType.YEAR);
+
+      // The original 4 segments should be compacted into 1 new segment
+      checkNumberOfSegments(1);
+      queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_YEAR_RESOURCE);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.YEAR.name(), 1);
+
+      List<String> newIntervals = new ArrayList<>();
+      for (String interval : expectedIntervalAfterCompaction) {
+        for (Interval newinterval : GranularityType.YEAR.getDefaultGranularity().getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          newIntervals.add(newinterval.toString());
+        }
+      }
+      expectedIntervalAfterCompaction = newIntervals;
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+    }
   }
 
   @Test
@@ -105,37 +167,22 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       GranularityType newSegmentGranularity
   ) throws Exception
   {
-    loadData(indexTask);
-
-    // 4 segments across 2 days
-    checkNumberOfSegments(4);
-
-    List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-    expectedIntervalAfterCompaction.sort(null);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      String queryResponseTemplate;
-      try {
-        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queriesResource);
-        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-      }
-      catch (IOException e) {
-        throw new ISE(e, "could not read query file: %s", queriesResource);
-      }
+      loadData(indexTask);
+      // 4 segments across 2 days
+      checkNumberOfSegments(4);
+      List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      expectedIntervalAfterCompaction.sort(null);
 
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          fullDatasourceName
-      );
-
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE_QR4);
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
+      String queryResponseTemplate = getQueryResponseTemplate(queriesResource);
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      compactData(compactionResource, newSegmentGranularity);
+      compactData(compactionResource, newSegmentGranularity, null);
 
       // The original 4 segments should be compacted into 2 new segments
       checkNumberOfSegments(2);
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE_QR2);
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 2);
 
       if (newSegmentGranularity != null) {
         List<String> newIntervals = new ArrayList<>();
@@ -164,18 +211,31 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void compactData(String compactionResource, GranularityType newSegmentGranularity) throws Exception
+  private void compactData(String compactionResource, GranularityType newSegmentGranularity, GranularityType newQueryGranularity) throws Exception
   {
     String template = getResourceAsString(compactionResource);
     template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
+    // For the new granularitySpec map
+    Map<String, String> granularityMap = new HashMap<>();
+    if (newSegmentGranularity != null) {
+      granularityMap.put("segmentGranularity", newSegmentGranularity.name());
+    }
+    if (newQueryGranularity != null) {
+      granularityMap.put("queryGranularity", newQueryGranularity.name());
+    }
+    template = StringUtils.replace(
+        template,
+        "%%GRANULARITY_SPEC%%",
+        jsonMapper.writeValueAsString(granularityMap)
+    );
+    // For the deprecated segment granularity field
     if (newSegmentGranularity != null) {
       template = StringUtils.replace(
           template,
-          "%%SEGMENTGRANULARITY%%",
+          "%%SEGMENT_GRANULARITY%%",
           newSegmentGranularity.name()
       );
     }
-
     final String taskID = indexer.submitTask(template);
     LOG.info("TaskID for compaction task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
@@ -186,7 +246,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void checkQueryGranularity(String queryResource) throws Exception
+  private void checkQueryGranularity(String queryResource, String expectedQueryGranularity, int segmentCount) throws Exception
   {
     String queryResponseTemplate;
     try {
@@ -211,6 +271,17 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         queryResponseTemplate,
         "%%INTERVALS%%",
         "2013-08-31/2013-09-02"
+    );
+    List<Map<String, String>> expectedResults = new ArrayList<>();
+    for (int i = 0; i < segmentCount; i++) {
+      Map<String, String> result = new HashMap<>();
+      result.put("queryGranularity", expectedQueryGranularity);
+      expectedResults.add(result);
+    }
+    queryResponseTemplate = StringUtils.replace(
+        queryResponseTemplate,
+        "%%EXPECTED_QUERY_GRANULARITY%%",
+        jsonMapper.writeValueAsString(expectedResults)
     );
     queryHelper.testQueriesFromString(queryResponseTemplate);
   }
@@ -239,5 +310,23 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         },
         "Compaction interval check"
     );
+  }
+
+  private String getQueryResponseTemplate(String queryResourcePath)
+  {
+    String queryResponseTemplate;
+    try {
+      InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryResourcePath);
+      queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%DATASOURCE%%",
+          fullDatasourceName
+      );
+    }
+    catch (IOException e) {
+      throw new ISE(e, "could not read query file: %s", queryResourcePath);
+    }
+    return queryResponseTemplate;
   }
 }
