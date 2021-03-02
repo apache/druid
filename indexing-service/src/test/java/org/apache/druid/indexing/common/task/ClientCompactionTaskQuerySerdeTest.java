@@ -190,6 +190,10 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getTuningConfig().getTotalNumMergeTasks()
     );
     Assert.assertEquals(
+        query.getGranularitySpec(),
+        task.getGranularitySpec()
+    );
+    Assert.assertEquals(
         query.getGranularitySpec().getQueryGranularity(),
         task.getGranularitySpec().getQueryGranularity()
     );
