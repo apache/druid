@@ -167,13 +167,13 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
    * This method determines whether to do scale actions based on collected lag points.
    * Current algorithm of scale is simple:
    * First of all, compute the proportion of lag points higher/lower than scaleOutThreshold/scaleInThreshold, getting scaleOutThreshold/scaleInThreshold.
-   * Secondly, compare scaleOutThreshold/scaleInThreshold with triggerScaleOutThresholdFrequency/triggerScaleInThresholdFrequency. P.S. Scale out action has higher priority than scale in action.
-   * Finaly, if scaleOutThreshold/scaleInThreshold is higher than triggerScaleOutThresholdFrequency/triggerScaleInThresholdFrequency, scale out/in action would be triggered.
+   * Secondly, compare scaleOutThreshold/scaleInThreshold with triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold. P.S. Scale out action has higher priority than scale in action.
+   * Finaly, if scaleOutThreshold/scaleInThreshold is higher than triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold, scale out/in action would be triggered.
    *
    * @param lags the lag metrics of Stream(Kafka/Kinesis)
    * @return Integer. target number of tasksCount, -1 means skip scale action.
    */
-  private Integer computeDesiredTaskCount(List<Long> lags)
+  private int computeDesiredTaskCount(List<Long> lags)
   {
     // if supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
@@ -197,29 +197,31 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     );
 
     int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
-    if (currentActiveTaskCount < 0) {
-      log.warn("CurrentActiveTaskCount is lower than 0 ? skipping computation of desired task count for [%s].",
-          dataSource
-      );
-      return -1;
-    }
     int desiredActiveTaskCount;
 
-    if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutThresholdFrequency()) {
+    if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
       // Do Scale out
       int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
-      if (currentActiveTaskCount == lagBasedAutoScalerConfig.getTaskCountMax()) {
+
+      int partitionNumbers = supervisor.getPartitionNumbers();
+      if (partitionNumbers <= 0) {
+        log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
+        return -1;
+      }
+
+      int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionNumbers);
+      if (currentActiveTaskCount == actualTaskCountMax) {
         log.warn("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
             dataSource
         );
         return -1;
       } else {
-        desiredActiveTaskCount = Math.min(taskCount, lagBasedAutoScalerConfig.getTaskCountMax());
+        desiredActiveTaskCount = Math.min(taskCount, actualTaskCountMax);
       }
       return desiredActiveTaskCount;
     }
 
-    if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInThresholdFrequency()) {
+    if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
       // Do Scale in
       int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
       if (currentActiveTaskCount == lagBasedAutoScalerConfig.getTaskCountMin()) {

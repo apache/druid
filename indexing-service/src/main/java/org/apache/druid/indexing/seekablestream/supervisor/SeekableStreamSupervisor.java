@@ -396,13 +396,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private boolean changeTaskCount(Integer desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
+  private boolean changeTaskCount(int desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
   {
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
     currentActiveTaskCount = activeTaskGroups.size();
 
-    if (desiredActiveTaskCount == -1 || desiredActiveTaskCount == currentActiveTaskCount) {
+    if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
     } else {
       log.info(
@@ -2056,6 +2056,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected boolean supportsPartitionExpiration()
   {
     return false;
+  }
+
+  public int getPartitionNumbers()
+  {
+    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
   }
 
   private boolean updatePartitionDataFromStream()

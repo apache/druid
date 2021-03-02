@@ -36,8 +36,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final long scaleActionPeriodMillis;
   private final long scaleOutThreshold;
   private final long scaleInThreshold;
-  private final double triggerScaleOutThresholdFrequency;
-  private final double triggerScaleInThresholdFrequency;
+  private final double triggerScaleOutFractionThreshold;
+  private final double triggerScaleInFractionThreshold;
   private int taskCountMax;
   private int taskCountMin;
   private final int scaleInStep;
@@ -53,8 +53,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
           @Nullable @JsonProperty("scaleOutThreshold") Long scaleOutThreshold,
           @Nullable @JsonProperty("scaleInThreshold") Long scaleInThreshold,
-          @Nullable @JsonProperty("triggerScaleOutThresholdFrequency") Double triggerScaleOutThresholdFrequency,
-          @Nullable @JsonProperty("triggerScaleInThresholdFrequency") Double triggerScaleInThresholdFrequency,
+          @Nullable @JsonProperty("triggerScaleOutFractionThreshold") Double triggerScaleOutFractionThreshold,
+          @Nullable @JsonProperty("triggerScaleInFractionThreshold") Double triggerScaleInFractionThreshold,
           @JsonProperty("taskCountMax") Integer taskCountMax,
           @JsonProperty("taskCountMin") Integer taskCountMin,
           @Nullable @JsonProperty("scaleInStep") Integer scaleInStep,
@@ -70,8 +70,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleActionPeriodMillis = scaleActionPeriodMillis != null ? scaleActionPeriodMillis : 60000;
     this.scaleOutThreshold = scaleOutThreshold != null ? scaleOutThreshold : 6000000;
     this.scaleInThreshold = scaleInThreshold != null ? scaleInThreshold : 1000000;
-    this.triggerScaleOutThresholdFrequency = triggerScaleOutThresholdFrequency != null ? triggerScaleOutThresholdFrequency : 0.3;
-    this.triggerScaleInThresholdFrequency = triggerScaleInThresholdFrequency != null ? triggerScaleInThresholdFrequency : 0.9;
+    this.triggerScaleOutFractionThreshold = triggerScaleOutFractionThreshold != null ? triggerScaleOutFractionThreshold : 0.3;
+    this.triggerScaleInFractionThreshold = triggerScaleInFractionThreshold != null ? triggerScaleInFractionThreshold : 0.9;
 
     // Only do taskCountMax and taskCountMin check when autoscaler is enabled. So that users left autoConfig empty{} will not throw any exception and autoscaler is disabled.
     // If autoscaler is disabled, no matter what configs are set, they are not used.
@@ -128,15 +128,15 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @JsonProperty
-  public double getTriggerScaleOutThresholdFrequency()
+  public double getTriggerScaleOutFractionThreshold()
   {
-    return triggerScaleOutThresholdFrequency;
+    return triggerScaleOutFractionThreshold;
   }
 
   @JsonProperty
-  public double getTriggerScaleInThresholdFrequency()
+  public double getTriggerScaleInFractionThreshold()
   {
-    return triggerScaleInThresholdFrequency;
+    return triggerScaleInFractionThreshold;
   }
 
   @Override

@@ -843,9 +843,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     autoScalerConfig.put("lagCollectionIntervalMillis", 500);
     autoScalerConfig.put("lagCollectionRangeMillis", 500);
     autoScalerConfig.put("scaleOutThreshold", 5000000);
-    autoScalerConfig.put("triggerScaleOutThresholdFrequency", 0.3);
+    autoScalerConfig.put("triggerScaleOutFractionThreshold", 0.3);
     autoScalerConfig.put("scaleInThreshold", 1000000);
-    autoScalerConfig.put("triggerScaleInThresholdFrequency", 0.8);
+    autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfig.put("scaleActionStartDelayMillis", 0);
     autoScalerConfig.put("scaleActionPeriodMillis", 100);
     autoScalerConfig.put("taskCountMax", 8);
