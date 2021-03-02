@@ -1228,7 +1228,7 @@ SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
 bufferCapacity
-bufferPoolName
+bufferpoolName
 cms
 cpuName
 cpuTime
