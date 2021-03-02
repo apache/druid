@@ -23,12 +23,12 @@ title: "Prometheus Emitter"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `prometheus-emitter` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `prometheus-emitter` extension.
 
 ## Introduction
 
-This extension exposes Druid metrics for collection by a Prometheus server
-(https://prometheus.io/)
+This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/operations/metrics.html) for collection by a Prometheus server (https://prometheus.io/).
+Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#emitting-metrics) or include `prometheus` in the composing emitter list. 
 
 ## Configuration
 
