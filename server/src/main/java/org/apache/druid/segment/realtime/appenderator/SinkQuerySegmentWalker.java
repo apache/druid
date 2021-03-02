@@ -173,7 +173,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseFilter().map(Filters::toFilter).orElse(null),
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)

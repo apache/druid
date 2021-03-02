@@ -121,19 +121,6 @@ public class Filtration
   }
 
   /**
-   * Only pulls the intervals out of any filters on time column. The intervals can be used as {@link QuerySegmentSpec}.
-   */
-  public Filtration pullIntervals()
-  {
-    return transform(
-        this,
-        ImmutableList.of(
-            MoveTimeFiltersToIntervals.instance()
-        )
-    );
-  }
-
-  /**
    * Optimize a Filtration containing only a DimFilter, avoiding pulling out intervals.
    *
    * @return equivalent Filtration

@@ -5364,14 +5364,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       join(
                         join(
-                            new QueryDataSource(
-                                newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
-                                                     .intervals(querySegmentSpec(Filtration.eternity()))
-                                                     .columns("dim1", "dim2")
-                                                     .filters(selector("dim2", "a", null))
-                                                     .context(QUERY_CONTEXT_DEFAULT)
-                                                     .build()
-                            ),
+                            new TableDataSource(CalciteTests.DATASOURCE1),
                             new QueryDataSource(
                                 newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE3)
                                                      .intervals(querySegmentSpec(Filtration.eternity()))
@@ -5381,7 +5374,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             "j0.",
                             "(\"dim2\" == \"j0.dim2\")",
-                            JoinType.INNER
+                            JoinType.INNER,
+                            bound("dim2", "a", "a", false, false, null, null)
                         ),
                         new QueryDataSource(
                             newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
@@ -16050,7 +16044,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.v0")),
                         JoinType.LEFT,
-                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
+                        selector("dim1", "10.1", null)
                     )
                 )
                 .intervals(querySegmentSpec(
@@ -16099,7 +16093,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
                         JoinType.LEFT,
-                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
+                        selector("dim1", "10.1", null)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -16143,7 +16137,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
                         JoinType.LEFT,
-                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
+                        selector("dim1", "10.1", null)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -16187,7 +16181,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
                         JoinType.INNER,
-                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
+                        selector("dim1", "10.1", null)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -16231,7 +16225,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.dim1")),
                         JoinType.INNER,
-                        bound("dim1", "10.1", "10.1", false, false, null, StringComparators.LEXICOGRAPHIC)
+                        selector("dim1", "10.1", null)
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -16650,31 +16644,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ).build()
     );
   }
-
-  @Test
-  public void testExplainCorrelatedQuery()
-  {
-
-  }
-
-  @Test
-  public void testExplainJoinWithLeftScan()
-  {
-
-  }
-
-  @Test
-  public void testCorrelatedQuery()
-  {
-
-  }
-
-  @Test
-  public void testJoinTableLookupWithFilter()
-  {
-
-  }
-
 
   /**
    * This is a provider of query contexts that should be used by join tests.

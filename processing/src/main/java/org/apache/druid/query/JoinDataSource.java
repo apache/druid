@@ -78,6 +78,7 @@ public class JoinDataSource implements DataSource
     this.rightPrefix = JoinPrefixUtils.validatePrefix(rightPrefix);
     this.conditionAnalysis = Preconditions.checkNotNull(conditionAnalysis, "conditionAnalysis");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
+    //TODO: Add support for union data sources
     Preconditions.checkArgument(
         leftFilter == null || left instanceof TableDataSource,
         "left filter is only supported if left data source is direct table access"
