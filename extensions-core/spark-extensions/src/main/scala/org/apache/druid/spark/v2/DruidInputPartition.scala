@@ -51,6 +51,6 @@ class DruidInputPartition(
   private val serializedSegment: String = MAPPER.writeValueAsString(segment)
 
   override def createPartitionReader(): InputPartitionReader[InternalRow] = {
-    new DruidInputPartitionReader(serializedSegment, schema, filters, columnTypes, broadcastConf)
+    new DruidInputPartitionReader(serializedSegment, schema, filters, columnTypes, broadcastConf, useCompactSketches)
   }
 }

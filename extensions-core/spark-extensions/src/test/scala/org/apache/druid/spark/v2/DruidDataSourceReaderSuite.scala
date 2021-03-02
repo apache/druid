@@ -21,6 +21,7 @@ package org.apache.druid.spark.v2
 
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.SparkFunSuite
+import org.apache.druid.spark.utils.DruidConfigurationKeys
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.DataSourceOptions
@@ -46,7 +47,7 @@ class DruidDataSourceReaderSuite extends SparkFunSuite with Matchers
     val segmentsString = MAPPER.writeValueAsString(
       List[DataSegment](firstSegment, secondSegment, thirdSegment).asJava
     )
-    val dsoMap = Map("segments" -> segmentsString)
+    val dsoMap = Map(s"${DruidConfigurationKeys.readerPrefix}.${DruidConfigurationKeys.segmentsKey}" -> segmentsString)
     val dso = new DataSourceOptions(dsoMap.asJava)
     val reader = DruidDataSourceReader(schema, dso)
     val actual =

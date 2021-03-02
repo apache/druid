@@ -30,7 +30,7 @@ import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorag
   SQLMetadataConnector}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.registries.SQLConnectorRegistry
-import org.apache.druid.spark.utils.DruidDataSourceOptionKeys
+import org.apache.druid.spark.utils.DruidConfigurationKeys
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.timeline.partition.NumberedShardSpec
 import org.apache.spark.sql.catalyst.InternalRow
@@ -146,18 +146,21 @@ trait DruidDataSourceV2TestUtils {
   def generateUniqueTestUri(): String = testDbUri + dbSafeUUID
 
   val metadataClientProps: String => Map[String, String] = (uri: String) => Map[String, String](
-    DruidDataSourceOptionKeys.metadataDbTypeKey -> "embedded_derby",
-    DruidDataSourceOptionKeys.metadataConnectUriKey -> uri
+    s"${DruidConfigurationKeys.metadataPrefix}.${DruidConfigurationKeys.metadataDbTypeKey}" -> "embedded_derby",
+    s"${DruidConfigurationKeys.metadataPrefix}.${DruidConfigurationKeys.metadataConnectUriKey}" -> uri
   )
 
   lazy val writerProps: Map[String, String] = Map[String, String](
     DataSourceOptions.TABLE_KEY -> dataSource,
-    DruidDataSourceOptionKeys.versionKey -> version,
-    DruidDataSourceOptionKeys.storageDirectoryKey -> testWorkingStorageDirectory,
-    DruidDataSourceOptionKeys.dimensionsKey -> dimensions.asScala.mkString(","),
-    DruidDataSourceOptionKeys.metricsKey -> metricsSpec,
-    DruidDataSourceOptionKeys.timestampColumnKey -> "__time",
-    DruidDataSourceOptionKeys.segmentGranularity -> GranularityType.DAY.name
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.versionKey}" -> version,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.localStorageDirectoryKey}" ->
+      testWorkingStorageDirectory,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.dimensionsKey}" ->
+      dimensions.asScala.mkString(","),
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.metricsKey}" -> metricsSpec,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.timestampColumnKey}" -> "__time",
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.segmentGranularityKey}" ->
+      GranularityType.DAY.name
   )
 
   def createTestDb(uri: String): Unit = new DBI(s"$uri;create=true").open().close()

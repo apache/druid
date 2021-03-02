@@ -19,15 +19,15 @@
 
 package org.apache.druid.spark.utils
 
-import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.databind.InjectableValues
+import com.fasterxml.jackson.databind.introspect.AnnotatedClass
+import com.fasterxml.jackson.databind.MapperFeature
 import com.microsoft.azure.storage.blob.{CloudBlobClient, ListBlobItem}
 import com.microsoft.azure.storage.{StorageCredentials, StorageUri}
 import org.apache.druid.common.aws.{AWSClientConfig, AWSCredentialsConfig, AWSEndpointConfig,
   AWSModule, AWSProxyConfig}
 import org.apache.druid.common.gcp.GcpModule
 import org.apache.druid.java.util.common.{IAE, StringUtils}
-import org.apache.druid.metadata.{DefaultPasswordProvider, PasswordProvider}
+import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.storage.azure.blob.{ListBlobItemHolder, ListBlobItemHolderFactory}
 import org.apache.druid.storage.azure.{AzureAccountConfig, AzureCloudBlobIterable,
@@ -35,83 +35,76 @@ import org.apache.druid.storage.azure.{AzureAccountConfig, AzureCloudBlobIterabl
   AzureDataSegmentConfig, AzureInputDataConfig, AzureStorage}
 import org.apache.druid.storage.google.{GoogleAccountConfig, GoogleInputDataConfig, GoogleStorage,
   GoogleStorageDruidModule}
+import org.apache.druid.storage.hdfs.HdfsDataSegmentPusherConfig
 import org.apache.druid.storage.s3.{NoopServerSideEncryption, S3DataSegmentPusherConfig,
   S3InputDataConfig, S3SSECustomConfig, S3SSEKmsConfig, S3StorageConfig, S3StorageDruidModule,
   ServerSideEncryptingAmazonS3, ServerSideEncryption}
-import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.conf.{Configuration => HConf}
 
 import java.io.{ByteArrayInputStream, DataInputStream}
 import java.lang.{Iterable => JIterable}
 import java.net.URI
-import scala.collection.JavaConverters.asJavaIterableConverter
 
-/**
-  * This is a nested cesspit of miserableness hacked together in the odd hours of the night. Hopefully as these helpers
-  * see actual use they can be refactored into a more decent approach.
-  */
+import scala.collection.JavaConverters.{asJavaIterableConverter, collectionAsScalaIterableConverter}
+
 object DeepStorageConstructorHelpers extends TryWithResources {
+  // Spark DataSourceOption property maps are case insensitive, by which they mean they lower-case all keys. Since all
+  // our user-provided property keys will come to us via a DataSourceOption, we need to use a case-insensisitive jackson
+  // mapper to deserialize property maps into objects. We want to be case-aware in the rest of our code, so we create a
+  // private, case-insensitive copy of our mapper here.
+  private val caseInsensitiveMapper = MAPPER.copy().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+
+  // Local Storage Helpers
+
+  def createLocalDataSegmentPusherConfig(conf: Configuration): LocalDataSegmentPusherConfig = {
+    convertConfToInstance(conf, classOf[LocalDataSegmentPusherConfig])
+  }
 
   // HDFS Storage Helpers
 
-  def createHadoopConfiguration(properties: Map[String, String]): Configuration = {
-    val conf = new Configuration()
+  def createHdfsDataSegmentPusherConfig(conf: Configuration): HdfsDataSegmentPusherConfig = {
+    convertConfToInstance(conf, classOf[HdfsDataSegmentPusherConfig])
+  }
+
+  def createHadoopConfiguration(conf: Configuration): HConf = {
+    val hadoopConf = new HConf()
     val confByteStream = new ByteArrayInputStream(
-      StringUtils.decodeBase64String(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.hdfsHadoopConfKey)))
+      StringUtils.decodeBase64String(conf.getString(DruidConfigurationKeys.hdfsHadoopConfKey))
     )
     tryWithResources(confByteStream, new DataInputStream(confByteStream)){
-      case (_, inputStream: DataInputStream) => conf.readFields(inputStream)
+      case (_, inputStream: DataInputStream) => hadoopConf.readFields(inputStream)
     }
-    conf
+    hadoopConf
   }
 
   // S3 Storage Helpers
 
-  def createS3DataSegmentPusherConfig(properties: Map[String, String]): S3DataSegmentPusherConfig = {
-    val conf = new S3DataSegmentPusherConfig
-    conf.setBaseKey(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3BaseKeyKey)))
-    conf.setBucket(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.bucketKey)))
-    conf.setDisableAcl(
-      properties.get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3DisableACLKey)).fold(false)(_.toBoolean)
-    )
-    val maxListingLength =
-      properties.get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.maxListingLengthKey)).fold(1000)(_.toInt)
-    // Although S3DataSegmentPusherConfig defaults to 1024, S3DataInputConfig requires maxListing length to be < 1000
-    // This is another reason to move to name-spaced config keys.
-    if (maxListingLength < 1 || maxListingLength > 1000) {
-      throw new IAE("maxListingLength must be between 1 and 1000!")
-    }
-    conf.setMaxListingLength(maxListingLength)
-    conf.setUseS3aSchema(properties
-      .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3UseS3ASchemaKey)).fold(true)(_.toBoolean))
-    conf
-  }
-
-  def createS3InputDataConfig(properties: Map[String, String]): S3InputDataConfig = {
-    val inputDataConf = new S3InputDataConfig
-    val maxListingLength =
-      properties
-        .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.maxListingLengthKey))
-        .fold(1000)(_.toInt)
-    inputDataConf.setMaxListingLength(maxListingLength)
-    inputDataConf
-  }
-
   /**
-    * No real clue if any of this or the sub-methods work ¯\_(ツ)_/¯
+    * Create an S3DataSegmentPusherConfig from the relevant properties in CONF.
+    *
+    * *** Note that we explicitly override the default for `useS3aSchema`! ***
+    * Almost all users will want to use s3a, not s3n, and we have no backwards-compatibility to maintain.
+    *
+    * @param conf The Configuration object specifying the S3DataSegmentPusherConfig to create.
+    * @return An S3DataSegmentPusherConfig derived from the properties specified in CONF.
     */
-  def createServerSideEncryptingAmazonS3(properties: Map[String, String]): ServerSideEncryptingAmazonS3 = {
-    // TODO: Build a small Configuration utils class to support diving into sub-configurations and then standardize
-    //  these property keys on the druid extensions props so that we can just pass the resulting sub-config into
-    //  MAPPER.convertValue()
-    val credentialsConfig = createAwsCredentialConfig(properties)
+  def createS3DataSegmentPusherConfig(conf: Configuration): S3DataSegmentPusherConfig = {
+    if (!conf.isPresent(DruidConfigurationKeys.s3UseS3ASchemaKey)) {
+      convertConfToInstance(conf.merge(
+        Configuration.fromKeyValue(DruidConfigurationKeys.s3UseS3ASchemaKey, "true")
+      ), classOf[S3DataSegmentPusherConfig])
+    } else {
+      convertConfToInstance(conf, classOf[S3DataSegmentPusherConfig])
+    }
+  }
 
-    val proxyConfig = createAwsProxyConfig(properties)
+  def createS3InputDataConfig(conf: Configuration): S3InputDataConfig = {
+    convertConfToInstance(conf, classOf[S3InputDataConfig])
+  }
 
-    val endpointConfig = createAwsEndpointConfig(properties)
-
-    val clientConfig = createAwsClientConfig(properties)
-
-    val s3StorageConfig = createS3StorageConfig(properties)
+  def createServerSideEncryptingAmazonS3(conf: Configuration): ServerSideEncryptingAmazonS3 = {
+    val (credentialsConfig, proxyConfig, endpointConfig, clientConfig, s3StorageConfig) =
+      createConfigsForServerSideEncryptingAmazonS3(conf)
 
     val awsModule = new AWSModule
     val s3Module = new S3StorageDruidModule
@@ -127,160 +120,93 @@ object DeepStorageConstructorHelpers extends TryWithResources {
     )
   }
 
-  def createAwsCredentialConfig(properties: Map[String, String]): AWSCredentialsConfig = {
-    if (
-      properties.isDefinedAt(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsCredentialsConfigKey))
-    ) {
-      MAPPER.readValue[AWSCredentialsConfig](
-        properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsCredentialsConfigKey)),
-        new TypeReference[AWSCredentialsConfig] {}
-      )
-    } else {
-      val credentialsProps = Map[String, AnyRef](
-        "accessKey" ->
-          MAPPER.readValue[PasswordProvider](
-            properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AccessKeyKey), ""),
-            new TypeReference[PasswordProvider] {}
-          ),
-        "secretKey" ->
-          MAPPER.readValue[PasswordProvider](
-            properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3SecretKeyKey), ""),
-            new TypeReference[PasswordProvider] {}
-          ),
-        "fileSessionCredentials" ->
-          properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3FileSessionCredentialsKey), "")
-      )
-      MAPPER.convertValue(credentialsProps, classOf[AWSCredentialsConfig])
-    }
+  /**
+    * Separating the preparation and the creation of ServerSideEncryptingAmazonS3 until I figure out the best place
+    * to inject mocks.
+    */
+  def createConfigsForServerSideEncryptingAmazonS3(conf: Configuration):
+  (AWSCredentialsConfig, AWSProxyConfig, AWSEndpointConfig, AWSClientConfig, S3StorageConfig) = {
+    val credentialsConfig = convertConfToInstance(conf, classOf[AWSCredentialsConfig])
+
+    val proxyConfig = convertConfToInstance(conf.dive("proxy"), classOf[AWSProxyConfig])
+
+    val endpointConfig = convertConfToInstance(conf.dive("endpoint"), classOf[AWSEndpointConfig])
+
+    val clientConfig = convertConfToInstance(conf.dive("client"), classOf[AWSClientConfig])
+
+    val s3StorageConfig = createS3StorageConfig(conf.dive(DruidConfigurationKeys.s3ServerSideEncryptionPrefix))
+    (credentialsConfig, proxyConfig, endpointConfig, clientConfig, s3StorageConfig)
   }
 
-  def createAwsProxyConfig(properties: Map[String, String]): AWSProxyConfig = {
-    if (
-      properties.isDefinedAt(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsProxyConfigKey))
-    ) {
-      MAPPER.readValue[AWSProxyConfig](
-        properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsProxyConfigKey)),
-        new TypeReference[AWSProxyConfig] {}
-      )
-    } else {
-      val proxyProps = Map[String, AnyRef](
-        "host" -> properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ProxyHostKey), ""),
-        "port" -> properties
-          .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ProxyPortKey))
-          .fold(-1)(_.toInt)
-          .asInstanceOf[Integer],
-        "username" -> properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ProxyUserKey), ""),
-        "password" -> properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ProxyPasswordKey), "")
-      )
-      MAPPER.convertValue(proxyProps, classOf[AWSProxyConfig])
-    }
-  }
+  /**
+    * A helper method for creating instances of S3StorageConfigs from a Configuration. While I'm sure there's a simple
+    * solution I'm missing, I would have thought that something like the following would have worked:
+    *
+    * ```
+    * val kmsConfig = convertConfToInstance(conf.dive("kms"), classOf[S3SSEKmsConfig])
+    * caseInsensitiveMapper.setInjectableValues(new InjectableValues.Std().addValue(classOf[S3SSEKmsConfig], kmsConfig))
+    * val ser = caseInsensitiveMapper.writeValueAsString(Map[String, String]("type" -> "kms"))
+    * caseInsensitiveMapper.readValue[ServerSideEncryption](ser, new TypeReference[ServerSideEncryption] {})
+    * ```
+    *
+    * However, the code above throws an com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Invalid
+    * definition for property `config` (of type `org.apache.druid.storage.s3.KmsServerSideEncryption`): Could not find
+    * creator property with name 'config' (known Creator properties: [])
+    *
+    * I _think_ that the root cause is that ServerSideEncryption is abstract, but the error message above isn't
+    * what I would expect. Nevertheless, the simple solution would be to serialize to a KmsServerSideEncryption
+    * instance and then cast to the base ServerSideEncryption to assign. Unfortunately, KmsServerSideEncryption
+    * is package-private, so we can't access the class here. Since we already have the config object and we
+    * need to muck about with field visibility, we take the shortcut and just make the constructor accessible. This
+    * solution generalizes to the CustomServerSideEncyption case as well.
+    *
+    * @param conf
+    * @return
+    */
+  def createS3StorageConfig(conf: Configuration): S3StorageConfig = {
+    // There's probably a more elegant way to do this that would allow us to transparently support new sse types, but
+    // this will work for now.
+    val sseType = conf.get(DruidConfigurationKeys.s3ServerSideEncryptionTypeKey)
 
-  def createAwsEndpointConfig(properties: Map[String, String]): AWSEndpointConfig = {
-    if (
-      properties.isDefinedAt(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsEndpointConfigKey))
-    ) {
-      MAPPER.readValue[AWSEndpointConfig](
-        properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsEndpointConfigKey)),
-        new TypeReference[AWSEndpointConfig] {}
-      )
-    } else {
-      val proxyProps = Map[String, AnyRef](
-        "url" -> properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3EndpointConfigUrlKey)),
-        "signingRegion" ->
-          properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3EndpointConfigSigningRegionKey))
-      )
-      MAPPER.convertValue(proxyProps, classOf[AWSEndpointConfig])
-    }
-  }
+    // Getting the list of subtypes since we'll need to use it to grab references to the package-private implementations
+    val config = caseInsensitiveMapper.getDeserializationConfig
+    val ac = AnnotatedClass.constructWithoutSuperTypes(classOf[ServerSideEncryption], config)
+    val subtypes = caseInsensitiveMapper.getSubtypeResolver.collectAndResolveSubtypesByClass(config, ac)
 
-  def createAwsClientConfig(properties: Map[String, String]): AWSClientConfig = {
-    if (
-      properties.isDefinedAt(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsClientConfigKey))
-    ) {
-      MAPPER.readValue[AWSClientConfig](
-        properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3AwsClientConfigKey)),
-        new TypeReference[AWSClientConfig] {}
-      )
-    } else {
-      val proxyProps = Map[String, AnyRef](
-        "protocol" ->
-          properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ClientConfigProtocolKey), "https"),
-        "disableChunkedEncoding" ->
-          properties.get(
-            StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ClientConfigDisableChunkedEncodingKey)
-          ).fold(false)(_.toBoolean).asInstanceOf[java.lang.Boolean],
-        "enablePathStyleAccess" ->
-          properties.get(
-            StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ClientConfigEnablePathStyleAccessKey)
-          ).fold(false)(_.toBoolean).asInstanceOf[java.lang.Boolean],
-        "forceGlobalBucketAccessEnabled" ->
-          properties.get(
-            StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ClientConfigForceGlobalBucketAccessEnabledKey)
-          ).fold(false)(_.toBoolean).asInstanceOf[java.lang.Boolean]
-      )
-      MAPPER.convertValue(proxyProps, classOf[AWSClientConfig])
+    val serverSideEncryption: ServerSideEncryption = sseType match {
+      case Some("s3") =>
+        val clazz = subtypes.asScala.filter(_.getName == "s3").head.getType
+        val constructor = clazz.getDeclaredConstructor()
+        constructor.setAccessible(true)
+        constructor.newInstance().asInstanceOf[ServerSideEncryption]
+      case Some("kms") =>
+        val kmsConfig = convertConfToInstance(conf.dive("kms"), classOf[S3SSEKmsConfig])
+        val clazz = subtypes.asScala.filter(_.getName == "kms").head.getType
+        val constructor = clazz.getDeclaredConstructor(classOf[S3SSEKmsConfig])
+        constructor.setAccessible(true)
+        constructor.newInstance(kmsConfig).asInstanceOf[ServerSideEncryption]
+      case Some("custom") =>
+        val customConfig = convertConfToInstance(conf.dive("custom"), classOf[S3SSECustomConfig])
+        val clazz = subtypes.asScala.filter(_.getName == "custom").head.getType
+        val constructor = clazz.getDeclaredConstructor(classOf[S3SSECustomConfig])
+        constructor.setAccessible(true)
+        constructor.newInstance(customConfig).asInstanceOf[ServerSideEncryption]
+      case _ => new NoopServerSideEncryption
     }
-  }
-
-  def createS3StorageConfig(properties: Map[String, String]): S3StorageConfig = {
-    if (
-      properties.isDefinedAt(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3StorageConfigKey))
-    ) {
-      MAPPER.readValue[S3StorageConfig](
-        properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3StorageConfigKey)),
-        new TypeReference[S3StorageConfig] {}
-      )
-    } else {
-      val storageConfigType = properties
-        .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ServerSideEncryptionTypeKey))
-      MAPPER.readValue[ServerSideEncryption]("s3", new TypeReference[ServerSideEncryption] {})
-      val serverSideEncryption = storageConfigType match {
-        case Some("s3") => MAPPER.readValue[ServerSideEncryption]("s3", new TypeReference[ServerSideEncryption] {})
-        case Some("kms") =>
-          val s3SseKmsConfig = MAPPER.convertValue(
-            Map[String, AnyRef](
-              "keyId" -> properties
-                .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ServerSideEncryptionKmsKeyIdKey))),
-            classOf[S3SSEKmsConfig]
-          )
-          MAPPER.setInjectableValues(new InjectableValues.Std().addValue(classOf[S3SSEKmsConfig], s3SseKmsConfig))
-          MAPPER.readValue[ServerSideEncryption]("kms", new TypeReference[ServerSideEncryption] {})
-        case Some("custom") =>
-          val s3SseCustomConfig = MAPPER.convertValue(
-            Map[String, AnyRef](
-              "base64EncodedKey" -> properties
-                .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.s3ServerSideEncryptionCustomKeyKey))),
-            classOf[S3SSECustomConfig]
-          )
-          MAPPER.setInjectableValues(new InjectableValues.Std().addValue(classOf[S3SSECustomConfig], s3SseCustomConfig))
-          MAPPER.readValue[ServerSideEncryption]("custom", new TypeReference[ServerSideEncryption] {})
-        case _ => new NoopServerSideEncryption
-      }
-      new S3StorageConfig(serverSideEncryption)
-    }
+    new S3StorageConfig(serverSideEncryption)
   }
 
   // GCS Storage Helpers
 
-  def createGoogleAcountConfig(properties: Map[String, String]): GoogleAccountConfig = {
-    val accountConfig = new GoogleAccountConfig
-    accountConfig.setBucket(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.bucketKey)))
-    accountConfig.setPrefix(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.prefixKey)))
-    accountConfig
+  def createGoogleAcountConfig(conf: Configuration): GoogleAccountConfig = {
+    convertConfToInstance(conf, classOf[GoogleAccountConfig])
   }
 
-  def createGoogleInputDataConfig(properties: Map[String, String]): GoogleInputDataConfig = {
-    val maxListingLength =
-      properties
-        .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.maxListingLengthKey))
-        .fold(1024)(_.toInt)
-    val inputConfig = new GoogleInputDataConfig
-    inputConfig.setMaxListingLength(maxListingLength)
-    inputConfig
+  def createGoogleInputDataConfig(conf: Configuration): GoogleInputDataConfig = {
+    convertConfToInstance(conf, classOf[GoogleInputDataConfig])
   }
 
-  def createGoogleStorage(properties: Map[String, String]): GoogleStorage = {
+  def createGoogleStorage(): GoogleStorage = {
     val gcpModule = new GcpModule
     val gcpStorageModule = new GoogleStorageDruidModule
 
@@ -292,44 +218,26 @@ object DeepStorageConstructorHelpers extends TryWithResources {
 
   // Azure Storage Helpers
 
-  def createAzureDataSegmentConfig(properties: Map[String, String]): AzureDataSegmentConfig = {
-    val dataSegmentConfig = new AzureDataSegmentConfig
-    dataSegmentConfig.setContainer(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azureContainerKey)))
-    dataSegmentConfig.setPrefix(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.prefixKey)))
-    dataSegmentConfig
+  def createAzureDataSegmentConfig(conf: Configuration): AzureDataSegmentConfig = {
+    convertConfToInstance(conf, classOf[AzureDataSegmentConfig])
   }
 
-  def createAzureInputDataConfig(properties: Map[String, String]): AzureInputDataConfig = {
-    val maxListingLength =
-      properties
-        .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.maxListingLengthKey))
-        .fold(1024)(_.toInt)
-    val inputDataConfig = new AzureInputDataConfig
-    inputDataConfig.setMaxListingLength(maxListingLength)
-    inputDataConfig
+  def createAzureInputDataConfig(conf: Configuration): AzureInputDataConfig = {
+    convertConfToInstance(conf, classOf[AzureInputDataConfig])
   }
 
-  def createAzureAccountConfig(properties: Map[String, String]): AzureAccountConfig = {
-    val accountConfig = new AzureAccountConfig
-    val maxTries = properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azureMaxTriesKey), "3").toInt
-    accountConfig.setProtocol(
-      properties.getOrElse(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azureProtocolKey), "https"))
-    accountConfig.setMaxTries(maxTries)
-    accountConfig.setAccount(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azureAccountKey)))
-    accountConfig.setKey(properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azureKeyKey)))
-    accountConfig
+  def createAzureAccountConfig(conf: Configuration): AzureAccountConfig = {
+    convertConfToInstance(conf, classOf[AzureAccountConfig])
   }
 
-  def createAzureStorage(properties: Map[String, String]): AzureStorage = {
+  def createAzureStorage(conf: Configuration): AzureStorage = {
     val storageCredentials = StorageCredentials.tryParseCredentials(
-      properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.connectionStringKey))
+      conf.getString(DruidConfigurationKeys.azureConnectionStringKey)
     )
-    val primaryUri = properties
-      .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azurePrimaryStorageUriKey))
+    val primaryUri = conf.get(DruidConfigurationKeys.azurePrimaryStorageUriKey)
       .map(new URI(_))
       .orNull
-    val secondaryUri = properties
-      .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azureSecondaryStorageUriKey))
+    val secondaryUri = conf.get(DruidConfigurationKeys.azureSecondaryStorageUriKey)
       .map(new URI(_))
       .orNull
     val storageUri = new StorageUri(primaryUri, secondaryUri)
@@ -344,19 +252,16 @@ object DeepStorageConstructorHelpers extends TryWithResources {
     * @param properties
     * @return
     */
-  /*def createAzureCloudBlobIterableFactory(properties: Map[String, String]): AzureCloudBlobIterableFactory = {
+  /* def createAzureCloudBlobIterableFactory(conf: Configuration): AzureCloudBlobIterableFactory = {
     // Taking advantage of the fact that java.net.URIs deviates from spec and dissallow spaces to use it as a separator.
-    val prefixes = properties(StringUtils.toLowerCase(DruidDataSourceOptionKeys.azurePrefixesKey))
+    val prefixes = conf.getString(DruidConfigurationKeys.azurePrefixesKey)
       .split(" ")
       .map(new URI(_))
       .toIterable
       .asJava
-    val maxListingLength =
-      properties
-        .get(StringUtils.toLowerCase(DruidDataSourceOptionKeys.maxListingLengthKey))
-        .fold(1024)(_.toInt)
-    val azureStorage = DeepStorageConstructorHelpers.createAzureStorage(properties)
-    val accountConfig = DeepStorageConstructorHelpers.createAzureAccountConfig(properties)
+    val maxListingLength = conf.getInt(DruidConfigurationKeys.azureMaxListingLengthDefaultKey)
+    val azureStorage = DeepStorageConstructorHelpers.createAzureStorage(conf)
+    val accountConfig = DeepStorageConstructorHelpers.createAzureAccountConfig(conf)
 
     val listBlobItemHolderFactory = new ListBlobItemHolderFactory {
       override def create(blobItem: ListBlobItem): ListBlobItemHolder = new ListBlobItemHolder(blobItem)
@@ -372,4 +277,8 @@ object DeepStorageConstructorHelpers extends TryWithResources {
       new AzureCloudBlobIterable(azureCloudBlobIteratorFactory, prefixes, maxListingLength)
     }
   }*/
+
+  private def convertConfToInstance[T](conf: Configuration, clazz: Class[T]): T = {
+    caseInsensitiveMapper.convertValue(conf.toMap, clazz)
+  }
 }

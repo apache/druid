@@ -19,64 +19,67 @@
 
 package org.apache.druid.spark.v2
 
-import java.util.{Map => JMap, Optional}
-
 import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling
 import org.apache.druid.data.input.impl.{DimensionSchema, DimensionsSpec, DoubleDimensionSchema,
   FloatDimensionSchema, LongDimensionSchema, StringDimensionSchema, TimestampSpec}
-import org.apache.druid.java.util.common.granularity.{Granularities, Granularity}
+import org.apache.druid.java.util.common.granularity.Granularity
 import org.apache.druid.java.util.common.{DateTimes, IAE}
 import org.apache.druid.query.aggregation.AggregatorFactory
 import org.apache.druid.segment.indexing.DataSchema
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec
 import org.apache.druid.spark.MAPPER
-import org.apache.druid.spark.utils.{DruidDataSourceOptionKeys, DruidDataWriterConfig}
+import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys,
+  DruidDataWriterConfig}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory}
 import org.apache.spark.sql.types.{ArrayType, DoubleType, FloatType, IntegerType, LongType,
   StringType, StructType}
 
-import scala.collection.JavaConverters.{mapAsScalaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 /**
-  * A factory to configure and create a DruidDataWiter from the given dataframe SCHEMA and options
-  * DATASOURCEOPTIONS. Runs on the driver, whereas the created DruidDataWriter runs on an executor.
+  * A factory to configure and create a DruidDataWiter from the given dataframe SCHEMA and conf
+  * CONF. Runs on the driver, whereas the created DruidDataWriter runs on an executor.
   *
   * @param schema The schema of the dataframe being written to Druid.
-  * @param dataSourceOptionsMap Options to use to configure created DruidDataWriters.
+  * @param conf Configuration properties to use to configure created DruidDataWriters.
   */
 class DruidDataWriterFactory(
                               schema: StructType,
-                              dataSourceOptionsMap: JMap[String, String]
+                              conf: Configuration
                             ) extends DataWriterFactory[InternalRow] {
-  private lazy val dataSourceOptions = new DataSourceOptions(dataSourceOptionsMap)
+
   override def createDataWriter(partitionId: Int, taskId: Long, epochId: Long):
   DataWriter[InternalRow] = {
-    val version = dataSourceOptions
-      .get(DruidDataSourceOptionKeys.versionKey)
-      .orElse(DateTimes.nowUtc().toString)
+    // The table name isn't name spaced since the key is special in DataSourceOptions, so we add it to the sub-conf here
+    val writerConf = conf
+      .dive(DruidConfigurationKeys.writerPrefix)
+      .merge(
+        Configuration.fromKeyValue(DruidConfigurationKeys.tableKey, conf.getString(DruidConfigurationKeys.tableKey))
+      )
+    val version = writerConf.get(DruidConfigurationKeys.versionKey, DateTimes.nowUtc().toString)
 
-    val partitionIdToDruidPartitionsMap = DruidDataWriterFactory.scalifyOptional(
-      dataSourceOptions
-        .get(DruidDataSourceOptionKeys.partitionMapKey)
-    ).map(serializedMap => MAPPER.readValue[Map[Int, Map[String, String]]](
-      serializedMap, new TypeReference[Map[Int, Map[String, String]]] {}
-    ))
+    val partitionIdToDruidPartitionsMap = writerConf
+      .get(DruidConfigurationKeys.partitionMapKey)
+      .map(serializedMap =>
+        MAPPER.readValue[Map[Int, Map[String, String]]](
+          serializedMap, new TypeReference[Map[Int, Map[String, String]]] {}
+        )
+      )
 
-    val dataSchema = DruidDataWriterFactory.createDataSchemaFromOptions(dataSourceOptions, schema)
+    val dataSchema = DruidDataWriterFactory.createDataSchemaFromConfiguration(writerConf, schema)
 
     new DruidDataWriter(
       new DruidDataWriterConfig(
-        dataSourceOptions.tableName().get,
+        conf.getString(DruidConfigurationKeys.tableKey),
         partitionId,
         schema,
         MAPPER.writeValueAsString(dataSchema),
-        dataSourceOptions.get(DruidDataSourceOptionKeys.shardSpecTypeKey).orElse("numbered"),
-        dataSourceOptions.getInt(DruidDataSourceOptionKeys.rowsPerPersistKey, 2000000),
-        dataSourceOptions.get(DruidDataSourceOptionKeys.deepStorageTypeKey).orElse("local"),
-        dataSourceOptions.asMap.asScala.toMap,
+        writerConf.get(DruidConfigurationKeys.shardSpecTypeDefaultKey),
+        writerConf.getInt(DruidConfigurationKeys.rowsPerPersistDefaultKey),
+        conf.get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
+        conf,
         version,
         partitionIdToDruidPartitionsMap
       )
@@ -110,27 +113,19 @@ object DruidDataWriterFactory {
       )
   }
 
-  def createDataSchemaFromOptions(
-                                   dataSourceOptions: DataSourceOptions,
+  def createDataSchemaFromConfiguration(
+                                   conf: Configuration,
                                    schema: StructType
                                  ): DataSchema = {
-    val dimensionsArr = DruidDataWriterFactory.scalifyOptional(
-      dataSourceOptions
-        .get(DruidDataSourceOptionKeys.dimensionsKey)
-    )
-      .map(_.split(','))
-      .getOrElse(Array.empty[String])
+    val dimensionsArr = conf.get(DruidConfigurationKeys.dimensionsKey).fold(Array.empty[String])(_.split(','))
     val metrics = MAPPER.readValue[Array[AggregatorFactory]](
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metricsKey).orElse("[]"),
+      conf.get(DruidConfigurationKeys.metricsDefaultKey),
       new TypeReference[Array[AggregatorFactory]] {}
     )
 
-    val excludedDimensions = DruidDataWriterFactory.scalifyOptional(
-      dataSourceOptions
-        .get(DruidDataSourceOptionKeys.excludedDimensionsKey)
-    )
-      .map(_.split(','))
-      .getOrElse(Array.empty[String]).toSeq
+    val excludedDimensions = conf.get(DruidConfigurationKeys.excludedDimensionsKey)
+      .fold(Array.empty[String])(_.split(','))
+      .toSeq
 
     val dimensions = if (dimensionsArr.isEmpty) {
       schema.fieldNames.filterNot((metrics.map(_.getName) ++ excludedDimensions).contains(_))
@@ -139,10 +134,10 @@ object DruidDataWriterFactory {
     }
 
     new DataSchema(
-      dataSourceOptions.tableName().get(),
+      conf.getString(DruidConfigurationKeys.tableKey),
       new TimestampSpec(
-        dataSourceOptions.get(DruidDataSourceOptionKeys.timestampColumnKey).orElse("ts"),
-        dataSourceOptions.get(DruidDataSourceOptionKeys.timestampFormatKey).orElse("auto"),
+        conf.get(DruidConfigurationKeys.timeStampColumnDefaultKey),
+        conf.get(DruidConfigurationKeys.timestampFormatDefaultKey),
         null // scalastyle:ignore null
       ),
       new DimensionsSpec(
@@ -155,27 +150,14 @@ object DruidDataWriterFactory {
       ),
       metrics,
       new UniformGranularitySpec(
-        DruidDataWriterFactory.scalifyOptional(
-          dataSourceOptions.get(DruidDataSourceOptionKeys.segmentGranularity)
-        )
-          .map(Granularity.fromString)
-          .getOrElse(Granularities.ALL),
-        DruidDataWriterFactory.scalifyOptional(
-          dataSourceOptions.get(DruidDataSourceOptionKeys.queryGranularity)
-        )
-          .map(Granularity.fromString)
-          .getOrElse(Granularities.NONE),
-        dataSourceOptions.getBoolean(DruidDataSourceOptionKeys.rollUpSegmentsKey, true),
+        Granularity.fromString(conf.get(DruidConfigurationKeys.segmentGranularityDefaultKey)),
+        Granularity.fromString(conf.get(DruidConfigurationKeys.queryGranularityDefaultKey)),
+        conf.getBoolean(DruidConfigurationKeys.rollUpSegmentsDefaultKey),
         null // scalastyle:ignore null
       ),
       null, // scalastyle:ignore null
       null, // scalastyle:ignore null
       MAPPER
     )
-  }
-
-  // Needed to work around Java Function's type invariance
-  def scalifyOptional[T](javaOptional: Optional[T]): Option[T] = {
-    if (javaOptional.isPresent) Some(javaOptional.get()) else None
   }
 }

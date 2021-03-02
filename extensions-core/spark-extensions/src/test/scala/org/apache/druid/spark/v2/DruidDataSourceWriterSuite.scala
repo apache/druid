@@ -20,31 +20,86 @@
 package org.apache.druid.spark.v2
 
 import org.apache.druid.java.util.common.{FileUtils, StringUtils}
-import org.apache.druid.spark.utils.DruidMetadataClient
-import org.apache.druid.spark.SparkFunSuite
+import org.apache.druid.spark.{MAPPER, SparkFunSuite}
+import org.apache.druid.spark.clients.DruidMetadataClient
+import org.apache.druid.spark.utils.Configuration
+import org.apache.druid.timeline.DataSegment
+import org.apache.druid.timeline.partition.NumberedShardSpec
 import org.apache.spark.sql.SaveMode
-import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
-
-import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with BeforeAndAfterEach
   with DruidDataSourceV2TestUtils {
   var uri: String = _
 
-  // TODO: Test that segment rationalization is handled correctly (rationalization logic should be tested in
-  //  SegmentRationalizerSuite, but we still need to verify that commit still works as expected)
   test("commit should correctly record segment data in the metadata database") {
     val druidDataSourceWriter = DruidDataSourceWriter(
       schema,
       SaveMode.Overwrite,
-      new DataSourceOptions((writerProps ++ metadataClientProps(uri)).asJava)
+      Configuration(writerProps ++ metadataClientProps(uri))
     ).get()
-    val metadataClient = DruidMetadataClient(new DataSourceOptions(metadataClientProps(uri).asJava))
+    val metadataClient = DruidMetadataClient(Configuration(metadataClientProps(uri)))
     val commitMessages =
       DruidWriterCommitMessage(Seq(firstSegmentString, secondSegmentString, thirdSegmentString))
+
+    druidDataSourceWriter.commit(Array(commitMessages.asInstanceOf[WriterCommitMessage]))
+    val committedSegments = metadataClient.getSegmentPayloads(dataSource, None, None)
+    Seq(firstSegment, secondSegment, thirdSegment) should contain theSameElementsInOrderAs committedSegments
+  }
+
+  // The point of this test isn't to test segment rationalization directly (that's handled in SegmentRationalizerSuite)
+  // but instead is to ensure that commit() remains able to handle discontinuous & reordered segments.
+  test("commit should correctly record rationalized segment data in the metadata database") {
+    val druidDataSourceWriter = DruidDataSourceWriter(
+      schema,
+      SaveMode.Overwrite,
+      Configuration(writerProps ++ metadataClientProps(uri))
+    ).get()
+    val metadataClient = DruidMetadataClient(Configuration(metadataClientProps(uri)))
+
+    val firstSpreadSegment: DataSegment = new DataSegment(
+      dataSource,
+      interval,
+      version,
+      loadSpec(makePath(segmentsDir.getCanonicalPath, firstSegmentPath)),
+      dimensions,
+      metrics,
+      new NumberedShardSpec(1, 1),
+      binaryVersion,
+      3278L
+    )
+    val secondSpreadSegment: DataSegment = new DataSegment(
+      dataSource,
+      interval,
+      version,
+      loadSpec(makePath(segmentsDir.getCanonicalPath, secondSegmentPath)),
+      dimensions,
+      metrics,
+      new NumberedShardSpec(2, 4),
+      binaryVersion,
+      3299L
+    )
+    val thirdSpreadSegment: DataSegment = new DataSegment(
+      dataSource,
+      secondInterval,
+      version,
+      loadSpec(makePath(segmentsDir.getCanonicalPath, thirdSegmentPath)),
+      dimensions,
+      metrics,
+      new NumberedShardSpec(4, 4),
+      binaryVersion,
+      3409L
+    )
+
+
+    val commitMessages =
+      DruidWriterCommitMessage(Seq(
+        MAPPER.writeValueAsString(firstSpreadSegment),
+        MAPPER.writeValueAsString(thirdSpreadSegment),
+        MAPPER.writeValueAsString(secondSpreadSegment)
+      ))
 
     druidDataSourceWriter.commit(Array(commitMessages.asInstanceOf[WriterCommitMessage]))
     val committedSegments = metadataClient.getSegmentPayloads(dataSource, None, None)
@@ -61,7 +116,7 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
     val druidDataSourceWriter = DruidDataSourceWriter(
       schema,
       SaveMode.Overwrite,
-      new DataSourceOptions((writerProps ++ metadataClientProps(uri)).asJava)
+      Configuration(writerProps ++ metadataClientProps(uri))
     ).get()
 
     // TODO: Make helper functions to create DataSegments from base paths

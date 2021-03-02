@@ -20,7 +20,7 @@
 package org.apache.druid.spark.v2
 
 import org.apache.druid.java.util.common.StringUtils
-import org.apache.druid.spark.utils.TryWithResources
+import org.apache.druid.spark.utils.{DruidConfigurationKeys, TryWithResources}
 import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
@@ -51,7 +51,7 @@ class DruidDataSourceV2Suite extends SparkFunSuite with Matchers
       .read
       .format("druid")
       .schema(schema)
-      .options(Map("segments" -> segmentsString))
+      .options(Map(s"${DruidConfigurationKeys.readerPrefix}.${DruidConfigurationKeys.segmentsKey}" -> segmentsString))
       .load()
 
     matchDfs(df, expected)

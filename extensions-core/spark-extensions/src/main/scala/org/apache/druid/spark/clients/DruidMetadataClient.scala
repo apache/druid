@@ -17,23 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
-
-import java.io.ByteArrayInputStream
-import java.util.Properties
+package org.apache.druid.spark.clients
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Suppliers
 import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler
 import org.apache.druid.java.util.common.StringUtils
-import org.apache.druid.spark.MAPPER
-import org.apache.druid.spark.registries.SQLConnectorRegistry
-import org.apache.druid.timeline.DataSegment
-import org.skife.jdbi.v2.{DBI, Handle}
 import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
   PasswordProvider, SQLMetadataConnector}
-import org.apache.spark.sql.sources.v2.DataSourceOptions
+import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.registries.SQLConnectorRegistry
+import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys, Logging}
+import org.apache.druid.timeline.DataSegment
+import org.skife.jdbi.v2.{DBI, Handle}
+
+import java.io.ByteArrayInputStream
+import java.util.Properties
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 
@@ -134,28 +134,33 @@ class DruidMetadataClient(
 }
 
 object DruidMetadataClient {
-  def apply(dataSourceOptions: DataSourceOptions): DruidMetadataClient = {
-    require(dataSourceOptions.get(DruidDataSourceOptionKeys.metadataDbTypeKey).isPresent,
-      s"Must set ${DruidDataSourceOptionKeys.metadataDbTypeKey} or provide segments directly!")
+  def apply(conf: Configuration): DruidMetadataClient = {
+    val metadataConf = conf.dive(DruidConfigurationKeys.metadataPrefix)
+
+    require(metadataConf.isPresent(DruidConfigurationKeys.metadataDbTypeKey),
+      s"Must set ${DruidConfigurationKeys.metadataPrefix}." +
+        s"${DruidConfigurationKeys.metadataDbTypeKey} or provide segments directly!")
     val dbcpProperties = new Properties()
-    if (dataSourceOptions.get(DruidDataSourceOptionKeys.metadataDbcpPropertiesKey).isPresent) {
+    if (metadataConf.isPresent(DruidConfigurationKeys.metadataDbcpPropertiesKey)) {
       // Assuming that .store was used to serialize the original DbcpPropertiesMap to a string
       dbcpProperties.load(
         new ByteArrayInputStream(
-          StringUtils.toUtf8(dataSourceOptions
-            .get(DruidDataSourceOptionKeys.metadataDbcpPropertiesKey).get())
+          StringUtils.toUtf8(metadataConf
+            .getString(DruidConfigurationKeys.metadataDbcpPropertiesKey)
+          )
         )
       )
     }
+
     new DruidMetadataClient(
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metadataDbTypeKey).get(),
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metadataHostKey).orElse("localhost"),
-      dataSourceOptions.getInt(DruidDataSourceOptionKeys.metadataPortKey, -1),
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metadataConnectUriKey).orElse(""),
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metadataUserKey).orElse(""),
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metadataPasswordKey).orElse(""),
+      metadataConf.getAs[String](DruidConfigurationKeys.metadataDbTypeKey),
+      metadataConf.get(DruidConfigurationKeys.metadataHostDefaultKey),
+      metadataConf.getInt(DruidConfigurationKeys.metadataPortDefaultKey),
+      metadataConf.getString(DruidConfigurationKeys.metadataConnectUriKey),
+      metadataConf.getString(DruidConfigurationKeys.metadataUserKey),
+      metadataConf.getString(DruidConfigurationKeys.metadataPasswordKey),
       dbcpProperties,
-      dataSourceOptions.get(DruidDataSourceOptionKeys.metadataBaseNameKey).orElse("druid")
+      metadataConf.get(DruidConfigurationKeys.metadataBaseNameDefaultKey)
     )
   }
 }

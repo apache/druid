@@ -29,17 +29,8 @@ class DruidDataWriterConfig(
                              val shardSpec: String,
                              val rowsPerPersist: Int,
                              val deepStorageType: String,
-                             val properties: Map[String, String],
+                             val properties: Configuration,
                              val version: String,
                              val partitionMap: Option[Map[Int, Map[String, String]]] = None,
                              val writeCompactSketches: Boolean = false
                            ) extends Serializable
-
-object DruidDataWriterConfig {
-  // IndexSpec keys
-  val bitmapTypeKey: String = "bitmapType"
-  val bitmapTypeCompressOnSerializationKey: String = "true"
-  val dimensionCompressionKey: String = "dimensionCompression"
-  val metricCompressionKey: String = "metricCompression"
-  val longEncodingKey: String = "longEncoding"
-}

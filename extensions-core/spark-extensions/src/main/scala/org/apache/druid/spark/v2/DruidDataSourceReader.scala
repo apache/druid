@@ -25,8 +25,9 @@ import java.util.{List => JList}
 import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.java.util.common.{DateTimes, Intervals, JodaUtils}
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.clients.{DruidClient, DruidMetadataClient}
 import org.apache.druid.spark.registries.ComplexMetricRegistry
-import org.apache.druid.spark.utils.{DruidClient, DruidDataSourceOptionKeys, DruidMetadataClient}
+import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.{And, EqualNullSafe, EqualTo, Filter, GreaterThan,
@@ -52,16 +53,16 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
   * To aid comprehensibility, some idiomatic Scala has been somewhat java-fied.
   *
   * @param schema
-  * @param dataSourceOptions
+  * @param conf
   */
 class DruidDataSourceReader(
                              var schema: Option[StructType] = None,
-                             dataSourceOptions: DataSourceOptions
+                             conf: Configuration
                            ) extends DataSourceReader
   with SupportsPushDownRequiredColumns with SupportsPushDownFilters with SupportsScanColumnarBatch {
   private lazy val metadataClient =
-    DruidDataSourceReader.createDruidMetaDataClient(dataSourceOptions)
-  private lazy val druidClient = DruidDataSourceReader.createDruidClient(dataSourceOptions)
+    DruidDataSourceReader.createDruidMetaDataClient(conf)
+  private lazy val druidClient = DruidDataSourceReader.createDruidClient(conf)
 
   private var filters: Array[Filter] = Array.empty
   private var druidColumnTypes: Option[Set[String]] = Option.empty
@@ -70,14 +71,14 @@ class DruidDataSourceReader(
     if (schema.isDefined) {
       schema.get
     } else {
-      require(dataSourceOptions.tableName().isPresent,
-        s"Must set ${DataSourceOptions.TABLE_KEY}!")
+      require(conf.isPresent(DruidConfigurationKeys.tableKey),
+        s"Must set ${DruidConfigurationKeys.tableKey}!")
       // TODO: Optionally accept a granularity so that if lowerBound to upperBound spans more than
       //  twice the granularity duration, we can send a list with two disjoint intervals and
       //  minimize the load on the broker from having to merge large numbers of segments
       val (lowerBound, upperBound) = getTimeFilterBounds
       val columnMap = druidClient.getSchema(
-        dataSourceOptions.tableName().get(),
+        conf.getString(DruidConfigurationKeys.tableKey),
         List[Interval](Intervals.utc(
           lowerBound.getOrElse(JodaUtils.MIN_INSTANT),
           upperBound.getOrElse(JodaUtils.MAX_INSTANT)
@@ -95,12 +96,13 @@ class DruidDataSourceReader(
     if (schema.isEmpty) {
       readSchema()
     }
-    val useCompactSketches =
-      dataSourceOptions.get(DruidDataSourceOptionKeys.useCompactSketchesKey).isPresent
+    println(conf.toString) // scalastyle:ignore println
+    val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
+    val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
     // Allow passing hard-coded list of segments to load
-    if (dataSourceOptions.get(DruidDataSourceOptionKeys.segmentsKey).isPresent) {
+    if (readerConf.isPresent(DruidConfigurationKeys.segmentsKey)) {
       val segments: JList[DataSegment] = MAPPER.readValue(
-        dataSourceOptions.get(DruidDataSourceOptionKeys.segmentsKey).get(),
+        readerConf.getString(DruidConfigurationKeys.segmentsKey),
         new TypeReference[JList[DataSegment]]() {})
       segments.asScala
         .map(segment =>
@@ -161,14 +163,14 @@ class DruidDataSourceReader(
   }
 
   private[v2] def getSegments: Seq[DataSegment] = {
-    require(dataSourceOptions.tableName().isPresent,
-      s"Must set ${DataSourceOptions.TABLE_KEY}!")
+    require(conf.isPresent(DruidConfigurationKeys.tableKey),
+      s"Must set ${DruidConfigurationKeys.tableKey}!")
 
     // Check filters for any bounds on __time
     // Otherwise, we'd need to full scan the segments table
     val (lowerTimeBound, upperTimeBound) = getTimeFilterBounds
 
-    metadataClient.getSegmentPayloads(dataSourceOptions.tableName().get(),
+    metadataClient.getSegmentPayloads(conf.getString(DruidConfigurationKeys.tableKey),
       lowerTimeBound.map(bound =>
         DateTimes.utc(bound).toString("yyyy-MM-ddTHH:mm:ss.SSS'Z'")
       ),
@@ -198,11 +200,11 @@ class DruidDataSourceReader(
 
 object DruidDataSourceReader {
   def apply(schema: StructType, dataSourceOptions: DataSourceOptions): DruidDataSourceReader = {
-    new DruidDataSourceReader(Option(schema), dataSourceOptions)
+    new DruidDataSourceReader(Option(schema), Configuration(dataSourceOptions))
   }
 
   def apply(dataSourceOptions: DataSourceOptions): DruidDataSourceReader = {
-    new DruidDataSourceReader(None, dataSourceOptions)
+    new DruidDataSourceReader(None, Configuration(dataSourceOptions))
   }
 
   /* Unfortunately, there's no single method of interacting with a Druid cluster that provides all
@@ -239,12 +241,12 @@ object DruidDataSourceReader {
    * JDBC protocol.
    */
 
-  def createDruidMetaDataClient(dataSourceOptions: DataSourceOptions): DruidMetadataClient = {
-    DruidMetadataClient(dataSourceOptions)
+  def createDruidMetaDataClient(conf: Configuration): DruidMetadataClient = {
+    DruidMetadataClient(conf)
   }
 
-  def createDruidClient(dataSourceOptions: DataSourceOptions): DruidClient = {
-    DruidClient(dataSourceOptions)
+  def createDruidClient(conf: Configuration): DruidClient = {
+    DruidClient(conf)
   }
 
   /**

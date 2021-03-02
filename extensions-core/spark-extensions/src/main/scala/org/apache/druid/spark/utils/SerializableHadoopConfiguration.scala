@@ -21,7 +21,7 @@ package org.apache.druid.spark.utils
 
 import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
 
-import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.conf.{Configuration => HConf}
 
 import scala.util.control.NonFatal
 
@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
   *
   * @param value Hadoop configuration
   */
-class SerializableHadoopConfiguration(@transient var value: Configuration) extends Serializable
+class SerializableHadoopConfiguration(@transient var value: HConf) extends Serializable
   with Logging {
   private def writeObject(out: ObjectOutputStream): Unit = {
     try {
@@ -49,7 +49,7 @@ class SerializableHadoopConfiguration(@transient var value: Configuration) exten
 
   private def readObject(in: ObjectInputStream): Unit = {
     try {
-      value = new Configuration(false)
+      value = new HConf(false)
       value.readFields(in)
     } catch  {
       case e: IOException =>

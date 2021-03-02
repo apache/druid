@@ -22,7 +22,6 @@ package org.apache.druid.spark.v2
 
 import java.io.Closeable
 import java.util.{List => JList}
-
 import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.data.input.MapBasedInputRow
 import org.apache.druid.java.util.common.{DateTimes, FileUtils, Intervals}
@@ -38,7 +37,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.registries.{ComplexMetricRegistry, SegmentWriterRegistry, ShardSpecRegistry}
-import org.apache.druid.spark.utils.{DruidDataWriterConfig, Logging}
+import org.apache.druid.spark.utils.{DruidConfigurationKeys, DruidDataWriterConfig, Logging}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeArrayData
@@ -87,31 +86,27 @@ class DruidDataWriter(config: DruidDataWriterConfig) extends DataWriter[Internal
   private val partitionMap = config.partitionMap.map(_(config.partitionId))
     .getOrElse(Map[String, String]("partitionId" -> config.partitionId.toString))
 
+  private val indexSpecConf = config.properties.dive(DruidConfigurationKeys.indexSpecPrefix)
   private val indexSpec: IndexSpec = new IndexSpec(
     DruidDataWriter.getBitmapSerde(
-      config.properties.getOrElse(
-        DruidDataWriterConfig.bitmapTypeKey,
-        DruidDataWriter.defaultBitmapType
-      ),
-      config.properties.get(DruidDataWriterConfig.bitmapTypeCompressOnSerializationKey)
-        .map(_.toBoolean)
-        .getOrElse(RoaringBitmapSerdeFactory.DEFAULT_COMPRESS_RUN_ON_SERIALIZATION)
+      indexSpecConf.get(DruidConfigurationKeys.bitmapTypeDefaultKey),
+      indexSpecConf.getBoolean(
+        DruidConfigurationKeys.compressRunOnSerializationKey,
+        RoaringBitmapSerdeFactory.DEFAULT_COMPRESS_RUN_ON_SERIALIZATION)
     ),
     DruidDataWriter.getCompressionStrategy(
-      config.properties.getOrElse(
-        DruidDataWriterConfig.dimensionCompressionKey,
-        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY.toString
-      )
+      indexSpecConf.get(
+        DruidConfigurationKeys.dimensionCompressionKey,
+        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY.toString)
     ),
     DruidDataWriter.getCompressionStrategy(
-      config.properties.getOrElse(
-        DruidDataWriterConfig.metricCompressionKey,
-        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY.toString
-      )
+      indexSpecConf.get(
+        DruidConfigurationKeys.metricCompressionKey,
+        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY.toString)
     ),
     DruidDataWriter.getLongEncodingStrategy(
-      config.properties.getOrElse(
-        DruidDataWriterConfig.longEncodingKey,
+      indexSpecConf.get(
+        DruidConfigurationKeys.longEncodingKey,
         CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY.toString
       )
     )
@@ -276,8 +271,6 @@ class DruidDataWriter(config: DruidDataWriterConfig) extends DataWriter[Internal
 }
 
 object DruidDataWriter {
-  private val defaultBitmapType: String = "roaring"
-
   def getBitmapSerde(serde: String, compressRunOnSerialization: Boolean): BitmapSerdeFactory = {
     if (serde == "concise") {
       new ConciseBitmapSerdeFactory

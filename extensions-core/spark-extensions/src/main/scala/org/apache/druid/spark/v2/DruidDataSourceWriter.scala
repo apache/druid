@@ -23,12 +23,12 @@ import java.util.Optional
 import org.apache.druid.java.util.common.ISE
 import org.apache.druid.segment.loading.DataSegmentKiller
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.clients.DruidMetadataClient
 import org.apache.druid.spark.registries.SegmentWriterRegistry
-import org.apache.druid.spark.utils.{DruidDataSourceOptionKeys, DruidMetadataClient, Logging, SegmentRationalizer}
+import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys, Logging, SegmentRationalizer}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.writer.{DataSourceWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.types.StructType
 
@@ -38,18 +38,18 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
   * A DruidDataSourceWriter orchestrates writing a dataframe to Druid.
   *
   * @param schema The schema of the dataframe to be written to Druid.
-  * @param dataSourceOptions A set of options to configure the DruidDataWriterFactories,
-  *                          DruidDataWriters, and clients used to write a dataframe to Druid
+  * @param conf A set of options to configure the DruidDataWriterFactories, DruidDataWriters, and
+  *             clients used to write a dataframe to Druid
   * @param metadataClient The client to use to read from and write to a Druid metadata server.
   */
 class DruidDataSourceWriter(
                              schema: StructType,
-                             dataSourceOptions: DataSourceOptions,
+                             conf: Configuration,
                              metadataClient: DruidMetadataClient
                            ) extends DataSourceWriter with Logging {
 
   override def createWriterFactory(): DataWriterFactory[InternalRow] = {
-    new DruidDataWriterFactory(schema, dataSourceOptions.asMap())
+    new DruidDataWriterFactory(schema, conf)
   }
 
   /**
@@ -69,9 +69,11 @@ class DruidDataSourceWriter(
     val segments =
       writerCommitMessages.flatMap(_.asInstanceOf[DruidWriterCommitMessage].serializedSegments)
 
-    val isPartitionMapDefined = dataSourceOptions.get(DruidDataSourceOptionKeys.partitionMapKey).isPresent
+    val writerConf = conf.dive(DruidConfigurationKeys.writerPrefix)
+    writerConf.isPresent(DruidConfigurationKeys.partitionMapKey)
+    val isPartitionMapDefined = writerConf.isPresent(DruidConfigurationKeys.partitionMapKey)
     val rationalizedSegments = if (
-      dataSourceOptions.getBoolean(DruidDataSourceOptionKeys.rationalizeSegmentsKey,!isPartitionMapDefined)
+      writerConf.getBoolean(DruidConfigurationKeys.rationalizeSegmentsKey, !isPartitionMapDefined)
     ) {
       SegmentRationalizer.rationalizeSegments(segments.map(MAPPER.readValue(_, classOf[DataSegment])))
     } else {
@@ -97,8 +99,8 @@ class DruidDataSourceWriter(
     logWarn(s"Aborting the following commits: ${segments.mkString(", ")}")
 
     val segmentKiller: DataSegmentKiller = SegmentWriterRegistry.getSegmentKiller(
-      dataSourceOptions.get(DruidDataSourceOptionKeys.deepStorageTypeKey).orElse("local"),
-      dataSourceOptions
+      conf.get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
+      conf
     )
     segments.foreach(segment =>
       segmentKiller.killQuietly(MAPPER.readValue(segment, classOf[DataSegment])))
@@ -109,11 +111,11 @@ object DruidDataSourceWriter extends Logging {
   def apply(
              schema: StructType,
              saveMode: SaveMode,
-             dataSourceOptions: DataSourceOptions
+             conf: Configuration
            ): Optional[DataSourceWriter] = {
-    validateDataSourceOption(dataSourceOptions, schema)
-    val dataSource = dataSourceOptions.tableName().get()
-    val metadataClient = DruidMetadataClient(dataSourceOptions)
+    validateDataSourceOption(conf, schema)
+    val dataSource = conf.getString(DruidConfigurationKeys.tableKey)
+    val metadataClient = DruidMetadataClient(conf)
     val dataSourceExists = metadataClient.checkIfDataSourceExists(dataSource)
     saveMode match {
       case SaveMode.Append => if (dataSourceExists) {
@@ -125,45 +127,46 @@ object DruidDataSourceWriter extends Logging {
           "Druid does not support appending to existing dataSources, only reindexing!"
         )
       } else {
-        createDataSourceWriterOptional(schema, dataSourceOptions, metadataClient)
+        createDataSourceWriterOptional(schema, conf, metadataClient)
       }
       case SaveMode.ErrorIfExists => if (dataSourceExists) {
         throw new ISE(s"$dataSource already exists!")
       } else {
-        createDataSourceWriterOptional(schema, dataSourceOptions, metadataClient)
+        createDataSourceWriterOptional(schema, conf, metadataClient)
       }
       case SaveMode.Ignore => if (dataSourceExists) {
         logInfo(s"$dataSource already exists and Save Mode is Ignore; not writing!")
         Optional.empty[DataSourceWriter]
       } else {
-        createDataSourceWriterOptional(schema, dataSourceOptions, metadataClient)
+        createDataSourceWriterOptional(schema, conf, metadataClient)
       }
       case SaveMode.Overwrite =>
-        createDataSourceWriterOptional(schema, dataSourceOptions, metadataClient)
+        createDataSourceWriterOptional(schema, conf, metadataClient)
     }
   }
 
   private[v2] def createDataSourceWriterOptional(
                                                   schema: StructType,
-                                                  dataSourceOptions: DataSourceOptions,
+                                                  conf: Configuration,
                                                   metadataClient: DruidMetadataClient
                                                 ): Optional[DataSourceWriter] = {
     Optional.of[DataSourceWriter](new DruidDataSourceWriter(
-      schema, dataSourceOptions, metadataClient)
+      schema, conf, metadataClient)
     )
   }
 
-  private[v2] def validateDataSourceOption(dataSourceOptions: DataSourceOptions, schema: StructType): Unit = {
-    require(dataSourceOptions.tableName().isPresent,
-      s"Must set ${DataSourceOptions.TABLE_KEY}!")
-    // TODO: default to derby?
-    require(dataSourceOptions.get(DruidDataSourceOptionKeys.metadataDbTypeKey).isPresent,
-      s"Must set ${DruidDataSourceOptionKeys.metadataDbTypeKey}!"
+  private[v2] def validateDataSourceOption(conf: Configuration, schema: StructType): Unit = {
+    require(conf.isPresent(DruidConfigurationKeys.tableKey),
+      s"Must set ${DruidConfigurationKeys.tableKey}!")
+
+    require(conf.isPresent(DruidConfigurationKeys.metadataPrefix, DruidConfigurationKeys.metadataDbTypeKey),
+      s"Must set ${DruidConfigurationKeys.metadataPrefix}.${DruidConfigurationKeys.metadataDbTypeKey}"
     )
-    // TODO: Create mapping between keys and defaults instead of constantly .orElse(<string literal>)ing everywhere
+    val tsColumn =
+      conf.dive(DruidConfigurationKeys.writerPrefix).get(DruidConfigurationKeys.timeStampColumnDefaultKey)
     require(
-      schema.fieldNames.contains(dataSourceOptions.get(DruidDataSourceOptionKeys.timestampColumnKey).orElse("ts")),
-      s"${DruidDataSourceOptionKeys.timestampColumnKey} must be a field in the dataframe to write!"
+      schema.fieldNames.contains(tsColumn),
+      s"$tsColumn must be a field in the dataframe to write!"
     )
   }
 }

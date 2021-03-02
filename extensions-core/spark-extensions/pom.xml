@@ -238,6 +238,11 @@
             <artifactId>aws-java-sdk-s3</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ec2</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
 
         <dependency>

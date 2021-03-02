@@ -17,27 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
-
-import java.net.URL
-import java.util.{List => JList}
+package org.apache.druid.spark.clients
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.net.HostAndPort
-import javax.ws.rs.core.MediaType
 import org.apache.druid.java.util.common.{ISE, StringUtils}
-import org.apache.druid.java.util.http.client.{HttpClient, Request}
 import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler,
   StringFullResponseHolder}
+import org.apache.druid.java.util.http.client.{HttpClient, Request}
 import org.apache.druid.query.Druids
 import org.apache.druid.query.metadata.metadata.{ColumnAnalysis, SegmentAnalysis,
   SegmentMetadataQuery}
 import org.apache.druid.spark.MAPPER
-import org.apache.spark.sql.sources.v2.DataSourceOptions
+import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys, Logging}
 import org.jboss.netty.handler.codec.http.{HttpMethod, HttpResponseStatus}
 import org.joda.time.{Duration, Interval}
 
+import java.net.URL
+import java.util.{List => JList}
+import javax.ws.rs.core.MediaType
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter,
   mapAsScalaMapConverter, seqAsJavaListConverter}
 
@@ -186,12 +185,13 @@ class DruidClient(
 
 object DruidClient {
   // TODO: Add support for Kerberized etc. clients
-  def apply(dataSourceOptions: DataSourceOptions): DruidClient = {
+  def apply(conf: Configuration): DruidClient = {
+    val brokerConf = conf.dive(DruidConfigurationKeys.brokerPrefix)
     new DruidClient(
       HttpClientHolder.create.get,
       MAPPER,
       HostAndPort.fromParts(
-        dataSourceOptions.get(DruidDataSourceOptionKeys.brokerHostKey).orElse("localhost"),
-        dataSourceOptions.getInt(DruidDataSourceOptionKeys.brokerPortKey, 8082)))
+        brokerConf.get(DruidConfigurationKeys.brokerHostDefaultKey),
+        brokerConf.getInt(DruidConfigurationKeys.brokerPortDefaultKey)))
   }
 }

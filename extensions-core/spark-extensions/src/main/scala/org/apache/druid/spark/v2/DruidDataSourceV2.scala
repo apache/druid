@@ -20,6 +20,7 @@
 package org.apache.druid.spark.v2
 
 import org.apache.druid.common.config.NullHandling
+import org.apache.druid.spark.utils.Configuration
 
 import java.util.Optional
 import org.apache.spark.internal.Logging
@@ -83,6 +84,6 @@ class DruidDataSourceV2 extends DataSourceV2 with ReadSupport with WriteSupport
     // Spark knows the partitioning information for the df, but it won't tell us. We also have very
     // limited ways to detect issues, so for now we'll need to trust that we're passed
     // TODO: Take advantage of the job id being provided (uuid in the args list)
-    DruidDataSourceWriter(schema, saveMode, dataSourceOptions)
+    DruidDataSourceWriter(schema, saveMode, Configuration(dataSourceOptions))
   }
 }

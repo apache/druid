@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
-
-import java.io.{Closeable, IOException}
+package org.apache.druid.spark.clients
 
 import com.google.common.base.Throwables
 import org.apache.druid.java.util.common.lifecycle.Lifecycle
 import org.apache.druid.java.util.http.client.{HttpClient, HttpClientConfig, HttpClientInit}
+
+import java.io.{Closeable, IOException}
 
 object HttpClientHolder {
   def create: HttpClientHolder = {
