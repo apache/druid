@@ -664,7 +664,10 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(datasourceToSegments.get(dataSource).size(), segmentsCaptor.getValue().size());
-    Assert.assertEquals(Granularities.YEAR, granularitySpecArgumentCaptor.getValue().getSegmentGranularity());
+    ClientCompactionTaskGranularitySpec actual = granularitySpecArgumentCaptor.getValue();
+    Assert.assertNotNull(actual);
+    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null);
+    Assert.assertEquals(expected, actual);
   }
 
   @Test
@@ -757,7 +760,10 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(datasourceToSegments.get(dataSource).size(), segmentsCaptor.getValue().size());
-    Assert.assertEquals(Granularities.YEAR, granularitySpecArgumentCaptor.getValue().getSegmentGranularity());
+    ClientCompactionTaskGranularitySpec actual = granularitySpecArgumentCaptor.getValue();
+    Assert.assertNotNull(actual);
+    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null);
+    Assert.assertEquals(expected, actual);
   }
 
   @Test
