@@ -22,9 +22,20 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.Objects;
 
+/**
+ * Spec containing Granularity configs for Compaction Task.
+ * This class mimics JSON field names for fields supported in compaction task with
+ * the corresponding fields in {@link GranularitySpec}.
+ * This is done for end-user ease of use. Basically, end-user will use the same syntax / JSON structure to set
+ * Granularity configs for Compaction task as they would for any other ingestion task.
+ * Note that this class is not the same as {@link GranularitySpec}. This class simply holds Granularity configs
+ * and use it to generate index task specs (Compaction task internally creates index task).
+ * This class does not do bucketing, group events or knows how to partition data.
+ */
 public class ClientCompactionTaskGranularitySpec
 {
   private final Granularity segmentGranularity;
