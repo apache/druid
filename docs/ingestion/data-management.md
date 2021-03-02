@@ -21,7 +21,7 @@ title: "Data management"
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-Within the context of this topic Data management refers to Apache Druid's data maintenance capabilities for existing datasources. There are several options to help you keep your data relevant and to help your Druid cluster remain performant.
+Within the context of this topic Data management refers to Apache Druid's data maintenance capabilities for existing datasources. There are several options to help you keep your data relevant and to help your Druid cluster remain performant. For example updating, reingesting, adding lookups, reindexing, or deleting data.
 
 In addition to the tasks covered on this page, you can also use segment compaction to improve the layout of your existing data. Refer to [Segment optimization](../operations/segment-optimization.md) to see if compaction will help in your environment. For an overview and steps to configure manual compaction tasks, see [Compaction](./compaction.md). 
 
