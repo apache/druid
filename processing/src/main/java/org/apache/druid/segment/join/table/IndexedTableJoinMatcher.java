@@ -456,6 +456,40 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public ConditionMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
+      if (index.keyType() == ValueType.LONG) {
+        return makePrimitiveLongMatcher(selector);
+      } else if (NullHandling.replaceWithDefault()) {
+        return () -> index.find(selector.getLong()).iterator();
+      } else {
+        return () -> selector.isNull() ? IntIterators.EMPTY_ITERATOR : index.find(selector.getLong()).iterator();
+      }
+    }
+
+    @Override
+    public ConditionMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
+    {
+      return new ConditionMatcher()
+      {
+        @Override
+        public int matchSingleRow()
+        {
+          return NO_CONDITION_MATCH;
+        }
+
+        @Override
+        public IntIterator match()
+        {
+          return IntIterators.EMPTY_ITERATOR;
+        }
+      };
+    }
+
+    /**
+     * Makes matchers for LONG-typed selectors against LONG-typed indexes. Specialized to use findUniqueLong
+     * when appropriate.
+     */
+    private ConditionMatcher makePrimitiveLongMatcher(BaseLongColumnValueSelector selector)
+    {
       if (NullHandling.replaceWithDefault()) {
         return new ConditionMatcher()
         {
@@ -487,25 +521,6 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           }
         };
       }
-    }
-
-    @Override
-    public ConditionMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
-    {
-      return new ConditionMatcher()
-      {
-        @Override
-        public int matchSingleRow()
-        {
-          return NO_CONDITION_MATCH;
-        }
-
-        @Override
-        public IntIterator match()
-        {
-          return IntIterators.EMPTY_ITERATOR;
-        }
-      };
     }
   }
 
