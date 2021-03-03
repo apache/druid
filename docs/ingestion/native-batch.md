@@ -1064,7 +1064,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": "hdfs:/foo/bar/", "hdfs:/bar/foo"
+        "paths": "hdfs://namenode_host/foo/bar/", "hdfs://namenode_host/bar/foo"
       },
       "inputFormat": {
         "type": "json"
@@ -1080,7 +1080,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": ["hdfs:/foo/bar", "hdfs:/bar/foo"]
+        "paths": "hdfs://namenode_host/foo/bar/", "hdfs://namenode_host/bar/foo"
       },
       "inputFormat": {
         "type": "json"
@@ -1096,7 +1096,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": "hdfs:/foo/bar/file.json", "hdfs:/bar/foo/file2.json"
+        "paths": "hdfs://namenode_host/foo/bar/file.json", "hdfs://namenode_host/bar/foo/file2.json"
       },
       "inputFormat": {
         "type": "json"
@@ -1112,7 +1112,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": ["hdfs:/foo/bar/file.json", "hdfs:/bar/foo/file2.json"]
+        "paths": ["hdfs://namenode_host/foo/bar/file.json", "hdfs://namenode_host/bar/foo/file2.json"]
       },
       "inputFormat": {
         "type": "json"
