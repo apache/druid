@@ -36,13 +36,14 @@ getComposeArgs()
       then
         echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
         exit 1
-      elif if [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
+      elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
+      then
         # default + schema registry container
         echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
+      else
+        # Replace MiddleManager with Indexer
+        echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml"
       fi
-
-      # Replace MiddleManager with Indexer
-      echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml"
     elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
     then
       # default + additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
