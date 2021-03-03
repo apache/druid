@@ -20,6 +20,36 @@
                     "fieldName": "delta"
                 },
                 {
+                    "type": "doubleFirst",
+                    "name": "double_first_delta",
+                    "fieldName": "double_first_delta"
+                },
+                {
+                    "type": "doubleLast",
+                    "name": "double_last_delta",
+                    "fieldName": "double_last_delta"
+                },
+                {
+                    "type": "longFirst",
+                    "name": "long_first_delta",
+                    "fieldName": "long_first_delta"
+                },
+                {
+                    "type": "longLast",
+                    "name": "long_last_delta",
+                    "fieldName": "long_last_delta"
+                },
+                {
+                    "type": "floatFirst",
+                    "name": "float_first_delta",
+                    "fieldName": "float_first_delta"
+                },
+                {
+                    "type": "floatLast",
+                    "name": "float_last_delta",
+                    "fieldName": "float_last_delta"
+                },
+                {
                     "type": "stringFirst",
                     "name": "first_user",
                     "fieldName": "first_user"
@@ -56,6 +86,68 @@
                 "type": "ingestSegment",
                 "dataSource": "%%DATASOURCE%%",
                 "interval": "2013-08-31/2013-09-01"
+            }
+        },
+        "tuningConfig": {
+            "type": "index"
+        }
+    }
+}
+
+{
+    "type": "index",
+    "spec": {
+        "dataSchema": {
+            "dataSource": "inline_data2_reindex4",
+            "metricsSpec": [
+
+                {
+                    "type": "longFirst",
+                    "name": "firstDelta",
+                    "fieldName": "firstDelta"
+                },
+                {
+                    "type": "longLast",
+                    "name": "lastDelta",
+                    "fieldName": "lastDelta"
+                },
+                {
+                    "type": "stringLast",
+                    "name": "lastUser",
+                    "fieldName": "lastUser"
+                },
+                {
+                    "type": "stringFirst",
+                    "name": "firstUser",
+                    "fieldName": "firstUser"
+                }
+            ],
+            "granularitySpec": {
+                "segmentGranularity": "DAY",
+                "queryGranularity": "DAY",
+                "intervals": [
+                    "2013-08-31/2013-09-01"
+                ]
+            },
+            "timestampSpec": {
+                "column": "timestamp",
+                "format": "iso"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "continent"
+                ]
+            }
+        },
+        "ioConfig": {
+            "type": "index",
+            "inputSource": {
+                "type": "ingestSegment",
+                "dataSource": "inline_data2",
+                "interval": "2013-08-31/2013-09-01"
+            },
+            "inputFormat": {
+                "type": "json"
             }
         },
         "tuningConfig": {

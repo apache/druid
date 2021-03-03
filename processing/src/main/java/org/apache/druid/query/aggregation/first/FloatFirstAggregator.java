@@ -20,26 +20,33 @@
 package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.query.aggregation.SerializablePairLongFloat;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
-public class FloatFirstAggregator extends NumericFirstAggregator<BaseFloatColumnValueSelector>
+public class FloatFirstAggregator extends NumericFirstAggregator
 {
   float firstValue;
 
   public FloatFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
-      BaseFloatColumnValueSelector valueSelector
+      ColumnValueSelector valueSelector,
+      boolean needsFoldCheck
   )
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, needsFoldCheck);
     firstValue = 0;
   }
 
   @Override
-  void setCurrentValue()
+  void setCurrentValue(ColumnValueSelector valueSelector)
   {
     firstValue = valueSelector.getFloat();
+  }
+
+  @Override
+  void setCurrentValue(Number number)
+  {
+    firstValue = number.floatValue();
   }
 
   @Override

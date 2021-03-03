@@ -50,9 +50,9 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
   }
 
   @Override
-  public ComplexMetricExtractor<T> getExtractor()
+  public ComplexMetricExtractor getExtractor()
   {
-    return new ComplexMetricExtractor<T>()
+    return new ComplexMetricExtractor()
     {
       @Override
       public Class<T> extractedClass()
@@ -61,9 +61,9 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
       }
 
       @Override
-      public T extractValue(InputRow inputRow, String metricName)
+      public Object extractValue(InputRow inputRow, String metricName)
       {
-        return (T) inputRow.getRaw(metricName);
+        return inputRow.getRaw(metricName);
       }
     };
   }

@@ -33,8 +33,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongLongSerde;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
@@ -55,7 +54,8 @@ public class LongLastAggregatorFactory extends AggregatorFactory
 {
   private static final Aggregator NIL_AGGREGATOR = new LongLastAggregator(
       NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance()
+      NilColumnValueSelector.instance(),
+      false
   )
   {
     @Override
@@ -67,7 +67,8 @@ public class LongLastAggregatorFactory extends AggregatorFactory
 
   private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new LongLastBufferAggregator(
       NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance()
+      NilColumnValueSelector.instance(),
+      false
   )
   {
     @Override
@@ -95,29 +96,39 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    final ColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_AGGREGATOR;
-    } else {
-      return new LongLastAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-          valueSelector
-      );
     }
+
+    return new LongLastAggregator(
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+        valueSelector,
+        StringFirstLastUtils.selectorNeedsFoldCheck(
+            valueSelector,
+            metricFactory.getColumnCapabilities(fieldName),
+            SerializablePairLongLong.class
+        )
+    );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
-    if (valueSelector instanceof NilColumnValueSelector) {
+    final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NIL_BUFFER_AGGREGATOR;
-    } else {
-      return new LongLastBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-          valueSelector
-      );
     }
+
+    return new LongLastBufferAggregator(
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+        selector,
+        StringFirstLastUtils.selectorNeedsFoldCheck(
+            selector,
+            metricFactory.getColumnCapabilities(fieldName),
+            SerializablePairLongLong.class
+        )
+    );
   }
 
   @Override
@@ -154,66 +165,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongLastAggregatorFactory(name, name)
-    {
-      @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
-      {
-        final ColumnValueSelector<SerializablePair<Long, Long>> selector = metricFactory.makeColumnValueSelector(name);
-        return new LongLastAggregator(null, null)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, Long> pair = selector.getObject();
-            if (pair.lhs >= lastTime) {
-              lastTime = pair.lhs;
-              if (pair.rhs != null) {
-                lastValue = pair.rhs;
-                rhsNull = false;
-              } else {
-                rhsNull = true;
-              }
-            }
-          }
-        };
-      }
-
-      @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
-      {
-        final ColumnValueSelector<SerializablePair<Long, Long>> selector = metricFactory.makeColumnValueSelector(name);
-        return new LongLastBufferAggregator(null, null)
-        {
-          @Override
-          public void putValue(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Long> pair = selector.getObject();
-            buf.putLong(position, pair.rhs);
-          }
-
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Long> pair = selector.getObject();
-            long lastTime = buf.getLong(position);
-            if (pair.lhs >= lastTime) {
-              if (pair.rhs != null) {
-                updateTimeWithValue(buf, position, pair.lhs);
-              } else {
-                updateTimeWithNull(buf, position, pair.lhs);
-              }
-            }
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        };
-      }
-    };
+    return new LongLastAggregatorFactory(name, name);
   }
 
   @Override

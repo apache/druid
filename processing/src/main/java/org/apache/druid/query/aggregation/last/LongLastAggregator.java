@@ -21,21 +21,31 @@ package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
-public class LongLastAggregator extends NumericLastAggregator<BaseLongColumnValueSelector>
+public class LongLastAggregator extends NumericLastAggregator
 {
   long lastValue;
 
-  public LongLastAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
+  public LongLastAggregator(BaseLongColumnValueSelector timeSelector,
+                            ColumnValueSelector valueSelector,
+                            boolean needsFoldCheck
+                            )
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, needsFoldCheck);
     lastValue = 0;
   }
 
   @Override
-  void setCurrentValue()
+  void setCurrentValue(ColumnValueSelector valueSelector)
   {
     lastValue = valueSelector.getLong();
+  }
+
+  @Override
+  void setCurrentValue(Number number)
+  {
+    lastValue = number.longValue();
   }
 
   @Override

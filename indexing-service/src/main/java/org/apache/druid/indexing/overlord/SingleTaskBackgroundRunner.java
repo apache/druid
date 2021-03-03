@@ -440,6 +440,14 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
 
       TaskStatus status;
 
+      for (int i = 60; i >= 0; i--) {
+        log.info("Waiting %s", i);
+        try {
+          Thread.sleep(1000);
+        }
+        catch (InterruptedException e) {
+        }
+      }
       try {
         log.info("Running task: %s", task.getId());
         TaskRunnerUtils.notifyLocationChanged(
