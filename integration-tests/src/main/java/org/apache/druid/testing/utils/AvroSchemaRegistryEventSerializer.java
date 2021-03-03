@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableMap;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 
@@ -40,6 +40,7 @@ import java.util.List;
 
 public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
 {
+  private static final int MAX_INITIALIZE_RETRIES = 10;
   public static final String TYPE = "avro-schema-registry";
 
   private final IntegrationTestingConfig config;
@@ -70,10 +71,17 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
   public void initialize(String topic)
   {
     try {
-      schemaId = client.register(topic, AvroEventSerializer.SCHEMA);
-      fromRegistry = client.getById(schemaId);
+      RetryUtils.retry(
+          () -> {
+            schemaId = client.register(topic, AvroEventSerializer.SCHEMA);
+            fromRegistry = client.getById(schemaId);
+            return 0;
+          },
+          (e) -> true,
+          MAX_INITIALIZE_RETRIES
+      );
     }
-    catch (IOException | RestClientException e) {
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
