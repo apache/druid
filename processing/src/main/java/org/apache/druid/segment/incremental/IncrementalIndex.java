@@ -590,7 +590,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     long truncated = 0;
     if (row.getTimestamp() != null) {
-      truncated = gran.bucketStart(row.getTimestamp()).getMillis();
+      truncated = gran.bucketStart(row.getTimestampFromEpoch());
     }
     IncrementalIndexRow incrementalIndexRow = IncrementalIndexRow.createTimeAndDimswithDimsKeySize(
         Math.max(truncated, minTimestamp),

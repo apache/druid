@@ -22,6 +22,8 @@ package org.apache.druid.data.input.avro;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import io.confluent.kafka.schemaregistry.ParsedSchema;
+import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import org.apache.avro.Schema;
@@ -31,7 +33,10 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
@@ -40,12 +45,19 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
 
   @JsonCreator
   public SchemaRegistryBasedAvroBytesDecoder(
-      @JsonProperty("url") String url,
-      @JsonProperty("capacity") Integer capacity
+      @JsonProperty("url") @Deprecated String url,
+      @JsonProperty("capacity") Integer capacity,
+      @JsonProperty("urls") @Nullable List<String> urls,
+      @JsonProperty("config") @Nullable Map<String, ?> config,
+      @JsonProperty("headers") @Nullable Map<String, String> headers
   )
   {
     int identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
-    this.registry = new CachedSchemaRegistryClient(url, identityMapCapacity);
+    if (url != null && !url.isEmpty()) {
+      this.registry = new CachedSchemaRegistryClient(url, identityMapCapacity, config, headers);
+    } else {
+      this.registry = new CachedSchemaRegistryClient(urls, identityMapCapacity, config, headers);
+    }
   }
 
   //For UT only
@@ -63,7 +75,8 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       int id = bytes.getInt(); // extract schema registry id
       int length = bytes.limit() - 1 - 4;
       int offset = bytes.position() + bytes.arrayOffset();
-      Schema schema = registry.getByID(id);
+      ParsedSchema parsedSchema = registry.getSchemaById(id);
+      Schema schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
       DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
     }

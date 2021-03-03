@@ -300,4 +300,11 @@
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
   </suppress>
+  <suppress>
+    <!-- We don't use scala compilation daemon. -->
+    <notes><![CDATA[
+     file name: kafka-clients-2.7.0.jar
+     ]]></notes>
+    <cve>CVE-2017-15288</cve>
+  </suppress>
 </suppressions>
