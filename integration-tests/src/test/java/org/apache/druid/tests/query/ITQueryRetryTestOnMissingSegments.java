@@ -54,7 +54,7 @@ import java.util.Map;
  * test spawns two historicals, a normal historical and a historical modified for testing. The later historical
  * announces all segments assigned, but doesn't serve all of them. Instead, it can report missing segments for some
  * segments. See {@link ServerManagerForQueryRetryTest} for more details.
- *
+ * <p>
  * To run this test properly, the test group must be specified as {@link TestNGGroup#QUERY_RETRY}.
  */
 @Test(groups = TestNGGroup.QUERY_RETRY)
@@ -134,7 +134,9 @@ public class ITQueryRetryTestOnMissingSegments
   {
     final List<QueryWithResults> queries = jsonMapper.readValue(
         queryWithResultsStr,
-        new TypeReference<List<QueryWithResults>>() {}
+        new TypeReference<List<QueryWithResults>>()
+        {
+        }
     );
     testQueries(queries, expectation);
   }
@@ -156,9 +158,15 @@ public class ITQueryRetryTestOnMissingSegments
 
           List<Map<String, Object>> result = jsonMapper.readValue(
               responseHolder.getContent(),
-              new TypeReference<List<Map<String, Object>>>() {}
+              new TypeReference<List<Map<String, Object>>>()
+              {
+              }
           );
-          if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults())) {
+          if (!QueryResultVerifier.compareResults(
+              result,
+              queryWithResult.getExpectedResults(),
+              queryWithResult.getFieldsToTest()
+          )) {
             if (expectation != Expectation.INCORRECT_RESULT) {
               throw new ISE(
                   "Incorrect query results for query %s \n expectedResults: %s \n actualResults : %s",
@@ -191,20 +199,20 @@ public class ITQueryRetryTestOnMissingSegments
 
     switch (expectation) {
       case ALL_SUCCESS:
-        Assert.assertEquals(ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN, querySuccess);
-        Assert.assertEquals(0, queryFailure);
-        Assert.assertEquals(ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN, resultMatches);
-        Assert.assertEquals(0, resultMismatches);
+        Assert.assertEquals(querySuccess, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(queryFailure, 0);
+        Assert.assertEquals(resultMatches, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(resultMismatches, 0);
         break;
       case QUERY_FAILURE:
         Assert.assertTrue(querySuccess > 0, "At least one query is expected to succeed.");
         Assert.assertTrue(queryFailure > 0, "At least one query is expected to fail.");
         Assert.assertEquals(querySuccess, resultMatches);
-        Assert.assertEquals(0, resultMismatches);
+        Assert.assertEquals(resultMismatches, 0);
         break;
       case INCORRECT_RESULT:
-        Assert.assertEquals(ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN, querySuccess);
-        Assert.assertEquals(0, queryFailure);
+        Assert.assertEquals(querySuccess, ITQueryRetryTestOnMissingSegments.TIMES_TO_RUN);
+        Assert.assertEquals(queryFailure, 0);
         Assert.assertTrue(resultMatches > 0, "At least one query is expected to return correct results.");
         Assert.assertTrue(resultMismatches > 0, "At least one query is expected to return less results.");
         break;

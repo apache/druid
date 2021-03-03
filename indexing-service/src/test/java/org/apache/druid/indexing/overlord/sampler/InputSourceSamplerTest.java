@@ -21,9 +21,17 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import net.thisptr.jackson.jq.internal.misc.Lists;
+import org.apache.druid.client.indexing.SamplerResponse;
+import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -34,7 +42,10 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
+import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -60,13 +71,18 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -1060,6 +1076,252 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testIndexParseException() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(StringDimensionSchema.create("dim1PlusBar"))
+    );
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE))
+    );
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        transformSpec
+    );
+
+    //
+    // add a invalid row to cause parse exception when indexing
+    //
+    Map<String, Object> rawColumns4ParseExceptionRow = ImmutableMap.of("t", "2019-04-22T12:00",
+                                                                       "dim1", "foo2",
+                                                                       "met1", "invalidNumber");
+    final List<String> inputTestRows = Lists.newArrayList(getTestRows());
+    inputTestRows.add(ParserType.STR_CSV.equals(parserType) ?
+                      "2019-04-22T12:00,foo2,,invalidNumber" :
+                      OBJECT_MAPPER.writeValueAsString(rawColumns4ParseExceptionRow));
+
+    final InputSource inputSource = createInputSource(inputTestRows, dataSchema);
+    final InputFormat inputFormat = createInputFormat();
+
+    SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
+
+    Assert.assertEquals(7, response.getNumRowsRead());
+    Assert.assertEquals(5, response.getNumRowsIndexed());
+    Assert.assertEquals(4, response.getData().size());
+
+    List<SamplerResponseRow> data = response.getData();
+
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            getRawColumns().get(0),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foobar")
+                .put("met1", 11L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(0)
+    );
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            getRawColumns().get(3),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foo2bar")
+                .put("met1", 4L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(1)
+    );
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            getRawColumns().get(5),
+            null,
+            true,
+            getUnparseableTimestampString()
+        ),
+        data.get(2)
+    );
+
+    //
+    // the last row has parse exception when indexing, check if rawColumns and exception message match the expected
+    //
+    String indexParseExceptioMessage = ParserType.STR_CSV.equals(parserType)
+           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
+           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            rawColumns4ParseExceptionRow,
+            null,
+            true,
+            indexParseExceptioMessage
+        ),
+        data.get(3)
+    );
+  }
+
+  /**
+   *
+   * This case tests sampling for multiple json lines in one text block
+   * Currently only RecordSupplierInputSource supports this kind of input, see https://github.com/apache/druid/pull/10383 for more information
+   *
+   * This test combines illegal json block and legal json block together to verify:
+   * 1. all lines in the illegal json block should not be parsed
+   * 2. the illegal json block should not affect the processing of the 2nd record
+   * 3. all lines in legal json block should be parsed successfully
+   *
+   */
+  @Test
+  public void testMultipleJsonStringInOneBlock() throws IOException
+  {
+    if (!ParserType.STR_JSON.equals(parserType) || !useInputFormatApi) {
+      return;
+    }
+
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(StringDimensionSchema.create("dim1PlusBar"))
+    );
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE))
+    );
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        transformSpec
+    );
+
+    List<String> jsonBlockList = ImmutableList.of(
+        // include the line which can't be parsed into JSON object to form a illegal json block
+        String.join("", STR_JSON_ROWS),
+
+        // exclude the last line to form a legal json block
+        STR_JSON_ROWS.stream().limit(STR_JSON_ROWS.size() - 1).collect(Collectors.joining())
+    );
+
+    SamplerResponse response = inputSourceSampler.sample(new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
+                                                         createInputFormat(),
+                                                         dataSchema,
+                                                         new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/));
+
+    //
+    // the 1st json block contains STR_JSON_ROWS.size() lines, and 2nd json block contains STR_JSON_ROWS.size()-1 lines
+    // together there should STR_JSON_ROWS.size() * 2 - 1 lines
+    //
+    int illegalRows = STR_JSON_ROWS.size();
+    int legalRows = STR_JSON_ROWS.size() - 1;
+    Assert.assertEquals(illegalRows + legalRows, response.getNumRowsRead());
+    Assert.assertEquals(legalRows, response.getNumRowsIndexed());
+    Assert.assertEquals(illegalRows + 2, response.getData().size());
+
+    List<SamplerResponseRow> data = response.getData();
+    List<Map<String, Object>> rawColumnList = this.getRawColumns();
+    int index = 0;
+
+    //
+    // first n rows are related to the first json block which fails to parse
+    //
+    String parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+    for (; index < illegalRows; index++) {
+      assertEqualsSamplerResponseRow(
+          new SamplerResponseRow(
+              rawColumnList.get(index),
+              null,
+              true,
+              parseExceptionMessage
+          ),
+          data.get(index)
+      );
+    }
+
+    //
+    // following are parsed rows for legal json block
+    //
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            rawColumnList.get(0),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foobar")
+                .put("met1", 11L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(index++)
+    );
+    assertEqualsSamplerResponseRow(
+        new SamplerResponseRow(
+            rawColumnList.get(3),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foo2bar")
+                .put("met1", 4L)
+                .build(),
+            null,
+            null
+        ),
+        data.get(index)
+    );
+  }
+
+  @Test(expected = SamplerException.class)
+  public void testReaderCreationException()
+  {
+    InputSource failingReaderInputSource = new InputSource()
+    {
+      @Override
+      public boolean isSplittable()
+      {
+        return false;
+      }
+
+      @Override
+      public boolean needsFormat()
+      {
+        return false;
+      }
+
+      @Override
+      public InputSourceReader reader(
+          InputRowSchema inputRowSchema,
+          @Nullable InputFormat inputFormat,
+          File temporaryDirectory
+      )
+      {
+        throw new RuntimeException();
+      }
+    };
+    inputSourceSampler.sample(failingReaderInputSource, null, null, null);
+  }
+
   private List<String> getTestRows()
   {
     switch (parserType) {
@@ -1175,13 +1437,13 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   private String getUnparseableTimestampString()
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-           : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+           ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
+           : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
   }
 
   private String unparseableTimestampErrorString(Map<String, Object> rawColumns)
   {
-    return StringUtils.format("Unparseable timestamp found! Event: %s", rawColumns);
+    return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
   }
 
   @Nullable
@@ -1245,5 +1507,100 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
 
     return false;
+  }
+
+  private static class TestRecordSupplier implements RecordSupplier<Integer, Long, ByteEntity>
+  {
+    private final List<String> jsonList;
+    private final Set<Integer> partitions;
+    private boolean polled;
+
+    public TestRecordSupplier(List<String> jsonList)
+    {
+      this.jsonList = jsonList;
+      partitions = ImmutableSet.of(5);
+      polled = false;
+    }
+
+    @Override
+    public void assign(Set<StreamPartition<Integer>> set)
+    {
+    }
+
+    @Override
+    public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
+    {
+    }
+
+    @Override
+    public void seekToEarliest(Set<StreamPartition<Integer>> set)
+    {
+    }
+
+    @Override
+    public void seekToLatest(Set<StreamPartition<Integer>> set)
+    {
+    }
+
+    @Override
+    public Collection<StreamPartition<Integer>> getAssignment()
+    {
+      return null;
+    }
+
+    @Nonnull
+    @Override
+    public List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> poll(long timeout)
+    {
+      if (polled) {
+        try {
+          Thread.sleep(timeout);
+        }
+        catch (InterruptedException e) {
+        }
+        return Collections.emptyList();
+      }
+
+      polled = true;
+      return jsonList.stream()
+                     .map(jsonText -> new OrderedPartitionableRecord<>(
+                         "topic",
+                         0,
+                         0L,
+                         Collections.singletonList(new ByteEntity(StringUtils.toUtf8(jsonText)))
+                     ))
+                     .collect(Collectors.toList());
+    }
+
+    @Nullable
+    @Override
+    public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
+    {
+      return null;
+    }
+
+    @Override
+    public Long getPosition(StreamPartition<Integer> partition)
+    {
+      return null;
+    }
+
+    @Override
+    public Set<Integer> getPartitionIds(String stream)
+    {
+      return partitions;
+    }
+
+    @Override
+    public void close()
+    {
+    }
   }
 }

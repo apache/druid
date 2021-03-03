@@ -21,11 +21,10 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -37,10 +36,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,7 +49,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String>
+public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, ByteEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTaskRunner.class);
   private static final long POLL_TIMEOUT = 100;
@@ -64,10 +60,6 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       KinesisIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
-      Optional<ChatHandlerProvider> chatHandlerProvider,
-      CircularBuffer<Throwable> savedParseExceptions,
-      RowIngestionMetersFactory rowIngestionMetersFactory,
-      AppenderatorsManager appenderatorsManager,
       LockGranularity lockGranularityToUse
   )
   {
@@ -75,10 +67,6 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         task,
         parser,
         authorizerMapper,
-        chatHandlerProvider,
-        savedParseExceptions,
-        rowIngestionMetersFactory,
-        appenderatorsManager,
         lockGranularityToUse
     );
     this.task = task;
@@ -93,8 +81,8 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<String, String>> getRecords(
-      RecordSupplier<String, String> recordSupplier, TaskToolbox toolbox
+  protected List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(
+      RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox
   )
   {
     return recordSupplier.poll(POLL_TIMEOUT);
@@ -131,7 +119,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<String, String> recordSupplier,
+      RecordSupplier<String, String, ByteEntity> recordSupplier,
       Set<StreamPartition<String>> assignment
   )
   {

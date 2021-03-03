@@ -317,9 +317,13 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   {
     switch (segmentHolder.getType()) {
       case LOAD:
-        segmentsToLoad.remove(segmentHolder.getSegment());
-        queuedSize.addAndGet(-segmentHolder.getSegmentSize());
-        timedOutSegments.remove(segmentHolder.getSegment());
+        // When load failed a segment will be removed from the segmentsToLoad twice and
+        // null value will be returned at the second time in which case queueSize may be negative.
+        // See https://github.com/apache/druid/pull/10362 for more details.
+        if (null != segmentsToLoad.remove(segmentHolder.getSegment())) {
+          queuedSize.addAndGet(-segmentHolder.getSegmentSize());
+          timedOutSegments.remove(segmentHolder.getSegment());
+        }
         break;
       case DROP:
         segmentsToDrop.remove(segmentHolder.getSegment());

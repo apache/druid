@@ -19,6 +19,7 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 32-bit
+500MiB
 64-bit
 ACL
 APIs
@@ -62,6 +63,7 @@ Dropwizard
 dropwizard
 DruidInputSource
 DruidSQL
+DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
@@ -86,6 +88,7 @@ HLL
 HashSet
 Homebrew
 HyperLogLog
+IAM
 IANA
 IETF
 IP
@@ -113,6 +116,7 @@ JRE
 JS
 JSON
 JsonPath
+JSSE
 JVM
 JVMs
 Joda
@@ -140,6 +144,7 @@ OCF
 OLAP
 OOMs
 OpenJDK
+OpenLDAP
 OpenTSDB
 OutputStream
 ParAccel
@@ -148,6 +153,7 @@ ParseSpecs
 Protobuf
 RDBMS
 RDDs
+RDS
 Rackspace
 Redis
 S3
@@ -163,6 +169,7 @@ Samza
 Splunk
 SqlFirehose
 SqlParameter
+SslContextFactory
 StatsD
 TCP
 TGT
@@ -178,6 +185,7 @@ UTF-8
 UTF8
 XMLs
 ZK
+ZSTD
 accessor
 ad-hoc
 aggregator
@@ -212,6 +220,7 @@ colocation
 compactable
 config
 configs
+consumerProperties
 cron
 csv
 customizable
@@ -232,6 +241,7 @@ deserialize
 deserialized
 downtimes
 druid
+druid–kubernetes-extensions
 e.g.
 encodings
 endian
@@ -271,6 +281,7 @@ joinable
 kerberos
 keystore
 keytab
+kubernetes
 laning
 lifecycle
 localhost
@@ -281,6 +292,8 @@ lookback
 lookups
 mapreduce
 masse
+maxNumFiles
+maxNumSegments
 max_map_count
 memcached
 mergeable
@@ -302,6 +315,8 @@ numerics
 parameterized
 parseable
 partitioner
+partitionFunction
+partitionsSpec
 performant
 plaintext
 pluggable
@@ -356,6 +371,7 @@ rsync
 runtime
 schemas
 searchable
+secondaryPartitionPruning
 seekable-stream
 servlet
 simple-client-sslcontext
@@ -373,7 +389,9 @@ subqueries
 subquery
 subsecond
 substring
+subtask
 subtasks
+supervisorTaskId
 symlink
 tiering
 timeseries
@@ -395,9 +413,11 @@ unmerged
 unparseable
 unparsed
 unsetting
+untrusted
 useFilterCNF
 uptime
 uris
+urls
 useFieldDiscovery
 v1
 v2
@@ -405,6 +425,7 @@ vCPUs
 validator
 vectorizable
 vectorize
+vectorizeVirtualColumns
 versioning
 w.r.t.
 whitelist
@@ -533,6 +554,7 @@ MeanNoNulls
 P1D
 cycleSize
 doubleMax
+doubleAny
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -540,6 +562,7 @@ doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
+longAny
 longMean
 longMeanNoNulls
 longMin
@@ -553,6 +576,8 @@ namespacePrefix
 src
  - ../docs/development/extensions-contrib/redis-cache.md
 loadList
+pull-deps
+PT2S
  - ../docs/development/extensions-contrib/sqlserver.md
 com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
@@ -589,6 +614,7 @@ url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
+fixedBucketsHistogram
 bucketNum
 lowerLimit
 numBuckets
@@ -599,6 +625,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+flattenSpec
 jq
 org.apache.druid.extensions
 schemaRepository
@@ -678,6 +705,12 @@ OAuth
 Okta
 OpenID
 pac4j
+ - ../docs/development/extensions-core/kubernetes.md
+Env
+POD_NAME
+POD_NAMESPACE
+ConfigMap
+PT17S
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
@@ -842,6 +875,7 @@ DistinctCount
 artifactId
 com.example
 common.runtime.properties
+druid-aws-rds-extensions
 druid-cassandra-storage
 druid-distinctcount
 druid-ec2-extensions
@@ -905,6 +939,7 @@ ctrl
 jsonLowercase
 listDelimiter
 timestampSpec
+urls
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -961,7 +996,6 @@ overwriteFiles
 partitionDimension
 partitionDimensions
 partitionSpec
-partitionsSpec
 pathFormat
 segmentOutputPath
 segmentTable
@@ -1003,6 +1037,7 @@ httpAuthenticationUsername
 ingestSegment
 InputSource
 DruidInputSource
+maxColumnsToMerge
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
@@ -1057,6 +1092,15 @@ array_to_string
 asin
 atan
 atan2
+bitwise
+bitwiseAnd
+bitwiseComplement
+bitwiseConvertDoubleToLongBits
+bitwiseConvertLongBitsToDouble
+bitwiseOr
+bitwiseShiftLeft
+bitwiseShiftRight
+bitwiseXor
 bloom_filter_test
 cartesian_fold
 cartesian_map
@@ -1087,6 +1131,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint
@@ -1097,6 +1143,7 @@ signum
 str1
 str2
 string_to_array
+stringAny
 strlen
 strpos
 timestamp_ceil
@@ -1176,6 +1223,7 @@ RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
+TaskSlotCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1481,10 +1529,12 @@ exprs
 group_id
 interval_expr
 is_available
+is_leader
 is_overshadowed
 is_published
 is_realtime
 java.sql.Types
+last_compaction_state
 max_size
 num_replicas
 num_rows
@@ -1495,6 +1545,7 @@ queue_insertion_time
 runner_status
 segment_id
 server_type
+shard_spec
 sqlTimeZone
 supervisor_id
 sys
@@ -1555,6 +1606,12 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+10KiB
+2GiB
+512KiB
+1GiB
+KiB
+GiB
 00.000Z
 100ms
 10ms
@@ -1659,6 +1716,7 @@ file.encoding
 fillCapacity
 first_location
 floatMax
+floatAny
 floatMin
 floatSum
 freeSpacePercent
@@ -1748,6 +1806,7 @@ expr
 jackson-jq
 missingValue
 schemaless
+skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
  - ../docs/tutorials/index.md
@@ -1771,3 +1830,20 @@ CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
+ - ../docs/configuration/human-readable-byte.md
+0s
+1T
+3G
+1_000
+1_000_000
+1_000_000_000
+1_000_000_000_000
+1_000_000_000_000_000
+Giga
+Tera
+Peta
+KiB
+MiB
+GiB
+TiB
+PiB

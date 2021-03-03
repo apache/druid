@@ -139,7 +139,7 @@ An example of compaction task is
 
 This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
 Since `segmentGranularity` is null, the original segment granularity will be remained and not changed after compaction.
-To control the number of result segments per time chunk, you can set [maxRowsPerSegment](../configuration/index.html#compaction-dynamic-configuration) or [numShards](../ingestion/native-batch.md#tuningconfig).
+To control the number of result segments per time chunk, you can set [maxRowsPerSegment](../configuration/index.md#compaction-dynamic-configuration) or [numShards](../ingestion/native-batch.md#tuningconfig).
 Please note that you can run multiple compactionTasks at the same time. For example, you can run 12 compactionTasks per month instead of running a single task for the entire year.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
@@ -159,8 +159,8 @@ In this case, the dimensions of recent segments precede that of old segments in 
 This is because more recent segments are more likely to have the new desired order and data types. If you want to use
 your own ordering and types, you can specify a custom `dimensionsSpec` in the compaction task spec.
 - Roll-up: the output segment is rolled up only when `rollup` is set for all input segments.
-See [Roll-up](../ingestion/index.html#rollup) for more details.
-You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes).
+See [Roll-up](../ingestion/index.md#rollup) for more details.
+You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
 
 
 ### Compaction IOConfig
@@ -222,7 +222,7 @@ We recommend keeping a copy of your raw data around in case you ever need to rei
 
 ### With Hadoop-based ingestion
 
-This section assumes the reader understands how to do batch ingestion using Hadoop. See
+This section assumes you understand how to do batch ingestion using Hadoop. See
 [Hadoop batch ingestion](./hadoop.md) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
 
 Druid uses an `inputSpec` in the `ioConfig` to know where the data to be ingested is located and how to read it.
@@ -232,22 +232,18 @@ There are other types of `inputSpec` to enable reindexing and delta ingestion.
 
 ### Reindexing with Native Batch Ingestion
 
-This section assumes the reader understands how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md),
-which uses an `inputSource` to know where and how to read the input data. The [`DruidInputSource`](native-batch.md#druid-input-source)
-can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as
-it has to do all processing inside a single process and can't scale. Please use Hadoop batch ingestion for production
-scenarios dealing with more than 1GB of data.
+This section assumes you understand how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md). Native batch indexing uses an `inputSource` to know where and how to read the input data. You can use the [`DruidInputSource`](native-batch.md#druid-input-source) to read data from segments inside Druid. You can use Parallel task (`index_parallel`) for all native batch reindexing tasks. Increase the `maxNumConcurrentSubTasks` to accommodate the amount of data your are reindexing. See [Capacity planning](native-batch.md#capacity-planning).
 
 <a name="delete"></a>
 
 ## Deleting data
 
 Druid supports permanent deletion of segments that are in an "unused" state (see the
-[Segment lifecycle](../design/architecture.html#segment-lifecycle) section of the Architecture page).
+[Segment lifecycle](../design/architecture.md#segment-lifecycle) section of the Architecture page).
 
 The Kill Task deletes unused segments within a specified interval from metadata storage and deep storage.
 
-For more information, please see [Kill Task](../ingestion/tasks.html#kill).
+For more information, please see [Kill Task](../ingestion/tasks.md#kill).
 
 Permanent deletion of a segment in Apache Druid has two steps:
 
@@ -257,7 +253,7 @@ Permanent deletion of a segment in Apache Druid has two steps:
 For documentation on retention rules, please see [Data Retention](../operations/rule-configuration.md).
 
 For documentation on disabling segments using the Coordinator API, please see the
-[Coordinator Datasources API](../operations/api-reference.html#coordinator-datasources) reference.
+[Coordinator Datasources API](../operations/api-reference.md#coordinator-datasources) reference.
 
 A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/tutorial-delete-data.md)
 

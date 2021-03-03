@@ -21,6 +21,7 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import java.util.Map;
 import java.util.Objects;
@@ -31,30 +32,45 @@ import java.util.Objects;
  */
 public class ClientCompactionTaskQuery implements ClientTaskQuery
 {
+  static final String TYPE = "compact";
+
+  private final String id;
   private final String dataSource;
   private final ClientCompactionIOConfig ioConfig;
   private final ClientCompactionTaskQueryTuningConfig tuningConfig;
+  private final ClientCompactionTaskGranularitySpec granularitySpec;
   private final Map<String, Object> context;
 
   @JsonCreator
   public ClientCompactionTaskQuery(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("ioConfig") ClientCompactionIOConfig ioConfig,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @JsonProperty("granularitySpec") ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
+    this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig;
+    this.granularitySpec = granularitySpec;
     this.context = context;
+  }
+
+  @JsonProperty
+  @Override
+  public String getId()
+  {
+    return id;
   }
 
   @JsonProperty
   @Override
   public String getType()
   {
-    return "compact";
+    return TYPE;
   }
 
   @JsonProperty
@@ -77,10 +93,17 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
+  public ClientCompactionTaskGranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
+  @JsonProperty
   public Map<String, Object> getContext()
   {
     return context;
   }
+
 
   @Override
   public boolean equals(Object o)
@@ -92,25 +115,29 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       return false;
     }
     ClientCompactionTaskQuery that = (ClientCompactionTaskQuery) o;
-    return Objects.equals(dataSource, that.dataSource) &&
+    return Objects.equals(id, that.id) &&
+           Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(context, that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, ioConfig, tuningConfig, context);
+    return Objects.hash(id, dataSource, ioConfig, tuningConfig, granularitySpec, context);
   }
 
   @Override
   public String toString()
   {
-    return "ClientCompactQuery{" +
-           "dataSource='" + dataSource + '\'' +
+    return "ClientCompactionTaskQuery{" +
+           "id='" + id + '\'' +
+           ", dataSource='" + dataSource + '\'' +
            ", ioConfig=" + ioConfig +
            ", tuningConfig=" + tuningConfig +
+           ", granularitySpec=" + granularitySpec +
            ", context=" + context +
            '}';
   }

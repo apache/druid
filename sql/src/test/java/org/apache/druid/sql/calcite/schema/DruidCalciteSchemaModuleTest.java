@@ -105,7 +105,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
         binder -> {
           binder.bind(QueryLifecycleFactory.class).toInstance(queryLifecycleFactory);
           binder.bind(TimelineServerView.class).toInstance(serverView);
-          binder.bind(JoinableFactory.class).toInstance(new MapJoinableFactory(ImmutableMap.of()));
+          binder.bind(JoinableFactory.class).toInstance(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()));
           binder.bind(PlannerConfig.class).toInstance(plannerConfig);
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
@@ -157,7 +157,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   {
     Set<NamedSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<NamedSchema>>(){}));
     Set<Class<? extends NamedSchema>> expectedSchemas =
-        ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class);
+        ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class, NamedViewSchema.class);
     Assert.assertEquals(expectedSchemas.size(), sqlSchemas.size());
     Assert.assertEquals(
         expectedSchemas,

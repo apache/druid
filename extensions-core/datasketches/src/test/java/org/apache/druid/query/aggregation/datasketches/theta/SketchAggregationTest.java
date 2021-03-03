@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -34,6 +35,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -71,26 +73,30 @@ import java.util.stream.Collectors;
 public class SketchAggregationTest
 {
   private final AggregationTestHelper helper;
+  private final QueryContexts.Vectorize vectorize;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public SketchAggregationTest(final GroupByQueryConfig config)
+  public SketchAggregationTest(final GroupByQueryConfig config, final String vectorize)
   {
     SketchModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new SketchModule().getJacksonModules(),
         config,
         tempFolder
     );
+    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
+      for (String vectorize : new String[]{"false", "force"}) {
+        constructors.add(new Object[]{config, vectorize});
+      }
     }
     return constructors;
   }
@@ -104,9 +110,8 @@ public class SketchAggregationTest
   @Test
   public void testSketchDataIngestAndGpByQuery() throws Exception
   {
-    final String groupByQueryString = readFileFromClasspathAsString("sketch_test_data_group_by_query.json");
-    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
-                                                           .readValue(groupByQueryString, Query.class);
+    final GroupByQuery groupByQuery =
+        readQueryFromClasspath("sketch_test_data_group_by_query.json", helper.getObjectMapper(), vectorize);
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
@@ -115,9 +120,21 @@ public class SketchAggregationTest
         0,
         Granularities.NONE,
         1000,
-        groupByQueryString
+        groupByQuery
     );
 
+    final String expectedSummary = "\n### HeapCompactSketch SUMMARY: \n"
+                                   + "   Estimate                : 50.0\n"
+                                   + "   Upper Bound, 95% conf   : 50.0\n"
+                                   + "   Lower Bound, 95% conf   : 50.0\n"
+                                   + "   Theta (double)          : 1.0\n"
+                                   + "   Theta (long)            : 9223372036854775807\n"
+                                   + "   Theta (long) hex        : 7fffffffffffffff\n"
+                                   + "   EstMode?                : false\n"
+                                   + "   Empty?                  : false\n"
+                                   + "   Retained Entries        : 50\n"
+                                   + "   Seed Hash               : 93cc | 37836\n"
+                                   + "### END SKETCH SUMMARY\n";
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
@@ -137,6 +154,7 @@ public class SketchAggregationTest
                         new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2)
                     )
                     .put("sketchUnionPostAggEstimate", 50.0)
+                    .put("sketchSummary", expectedSummary)
                     .put("sketchIntersectionPostAggEstimate", 50.0)
                     .put("sketchAnotBPostAggEstimate", 0.0)
                     .put("non_existing_col_validation", 0.0)
@@ -151,9 +169,8 @@ public class SketchAggregationTest
   @Test
   public void testEmptySketchAggregateCombine() throws Exception
   {
-    final String groupByQueryString = readFileFromClasspathAsString("empty_sketch_group_by_query.json");
-    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
-                                                           .readValue(groupByQueryString, Query.class);
+    final GroupByQuery groupByQuery =
+        readQueryFromClasspath("empty_sketch_group_by_query.json", helper.getObjectMapper(), vectorize);
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("empty_sketch_data.tsv").getFile()),
@@ -162,7 +179,7 @@ public class SketchAggregationTest
         0,
         Granularities.NONE,
         5,
-        groupByQueryString
+        groupByQuery
     );
 
     List<ResultRow> results = seq.toList();
@@ -186,9 +203,8 @@ public class SketchAggregationTest
   @Test
   public void testThetaCardinalityOnSimpleColumn() throws Exception
   {
-    final String groupByQueryString = readFileFromClasspathAsString("simple_test_data_group_by_query.json");
-    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
-                                                           .readValue(groupByQueryString, Query.class);
+    final GroupByQuery groupByQuery =
+        readQueryFromClasspath("simple_test_data_group_by_query.json", helper.getObjectMapper(), vectorize);
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("simple_test_data.tsv").getFile()),
@@ -202,7 +218,7 @@ public class SketchAggregationTest
         0,
         Granularities.NONE,
         1000,
-        groupByQueryString
+        groupByQuery
     );
 
     List<ResultRow> results = seq.toList();
@@ -413,9 +429,8 @@ public class SketchAggregationTest
   @Test
   public void testRetentionDataIngestAndGpByQuery() throws Exception
   {
-    final String groupByQueryString = readFileFromClasspathAsString("retention_test_data_group_by_query.json");
-    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
-                                                           .readValue(groupByQueryString, Query.class);
+    final GroupByQuery groupByQuery =
+        readQueryFromClasspath("retention_test_data_group_by_query.json", helper.getObjectMapper(), vectorize);
 
     final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("retention_test_data.tsv").getFile()),
@@ -424,7 +439,7 @@ public class SketchAggregationTest
         0,
         Granularities.NONE,
         5,
-        groupByQueryString
+        groupByQuery
     );
 
     List<ResultRow> results = seq.toList();
@@ -523,6 +538,19 @@ public class SketchAggregationTest
             PostAggregator.class
         )
     );
+  }
+
+  public static <T, Q extends Query<T>> Q readQueryFromClasspath(
+      final String fileName,
+      final ObjectMapper objectMapper,
+      final QueryContexts.Vectorize vectorize
+  ) throws IOException
+  {
+    final String queryString = readFileFromClasspathAsString(fileName);
+
+    //noinspection unchecked
+    return (Q) objectMapper.readValue(queryString, Query.class)
+                           .withOverriddenContext(ImmutableMap.of("vectorize", vectorize.toString()));
   }
 
   public static String readFileFromClasspathAsString(String fileName) throws IOException

@@ -19,6 +19,9 @@
 
 package org.apache.druid.common.utils;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -98,7 +101,7 @@ public class IdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "wtf\u000Bis line tabulation");
+    IdUtils.validateId(THINGO, "what\u000Bis line tabulation");
   }
 
   @Test
@@ -107,5 +110,67 @@ public class IdUtilsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
     IdUtils.validateId(THINGO, "form\u000cfeed?");
+  }
+
+  @Test
+  public void testInvalidUnprintableChars()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("thingToValidate cannot contain character #129 (at position 4).");
+    IdUtils.validateId(THINGO, "form\u0081feed?");
+  }
+
+  @Test
+  public void testInvalidEmojis()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("thingToValidate cannot contain character #55357 (at position 4).");
+    IdUtils.validateId(THINGO, "form💯feed?");
+  }
+
+  @Test
+  public void testNewTaskIdWithoutInterval()
+  {
+    final String id = IdUtils.newTaskId(
+        "prefix",
+        "suffix",
+        DateTimes.of("2020-01-01"),
+        "type",
+        "datasource",
+        null
+    );
+    final String expected = String.join(
+        "_",
+        "prefix",
+        "type",
+        "datasource",
+        "suffix",
+        DateTimes.of("2020-01-01").toString()
+    );
+    Assert.assertEquals(expected, id);
+  }
+
+  @Test
+  public void testNewTaskIdWithInterval()
+  {
+    final String id = IdUtils.newTaskId(
+        "prefix",
+        "suffix",
+        DateTimes.of("2020-01-01"),
+        "type",
+        "datasource",
+        Intervals.of("2020-01-01/2020-06-01")
+    );
+    final String expected = String.join(
+        "_",
+        "prefix",
+        "type",
+        "datasource",
+        "suffix",
+        DateTimes.of("2020-01-01").toString(),
+        DateTimes.of("2020-06-01").toString(),
+        DateTimes.of("2020-01-01").toString()
+    );
+    Assert.assertEquals(expected, id);
   }
 }

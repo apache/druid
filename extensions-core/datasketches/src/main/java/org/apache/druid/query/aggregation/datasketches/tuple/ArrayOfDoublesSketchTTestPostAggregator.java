@@ -23,12 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.inference.TTest;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketchIterator;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketchIterator;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -86,6 +87,12 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
     return pValues;
   }
 
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.DOUBLE_ARRAY;
+  }
+
   private static SummaryStatistics[] getStats(final ArrayOfDoublesSketch sketch)
   {
     final SummaryStatistics[] stats = new SummaryStatistics[sketch.getNumValues()];
@@ -107,5 +114,4 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
         .appendCacheables(getFields())
         .build();
   }
-
 }

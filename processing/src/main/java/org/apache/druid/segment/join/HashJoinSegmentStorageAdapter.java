@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
@@ -33,6 +34,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
@@ -224,8 +226,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
 
     if (!keyIn.equals(keyCached)) {
-      // It is a bug if this happens. We expect the comparison to be quick, because in the sane case, identical objects
-      // will be used and therefore deep equality checks will be unnecessary.
+      // It is a bug if this happens. The implied key and the cached key should always match.
       throw new ISE("Pre-analysis mismatch, cannot execute query");
     }
 
@@ -255,14 +256,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         queryMetrics
     );
 
-    return Sequences.map(
+    Closer joinablesCloser = Closer.create();
+    return Sequences.<Cursor, Cursor>map(
         baseCursorSequence,
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
 
           for (JoinableClause clause : clauses) {
-            retVal = HashJoinEngine.makeJoinCursor(retVal, clause);
+            retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
           }
 
           return PostJoinCursor.wrap(
@@ -271,7 +273,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
               joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
           );
         }
-    );
+    ).withBaggage(joinablesCloser);
   }
 
   /**
@@ -304,6 +306,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   )
   {
     final Set<String> baseColumns = new HashSet<>();
+    baseColumns.add(ColumnHolder.TIME_COLUMN_NAME);
     Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
     Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
 

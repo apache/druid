@@ -105,7 +105,7 @@ public class RegexpLikeOperatorConversion implements SqlOperatorConversion
       VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           druidExpression,
-          operands.get(0).getType().getSqlTypeName()
+          operands.get(0).getType()
       );
 
       return new RegexDimFilter(v.getOutputName(), pattern, null, null);

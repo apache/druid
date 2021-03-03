@@ -25,12 +25,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -53,7 +47,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Base class for different implementations of {@link ParallelIndexTaskRunner}.
@@ -74,7 +67,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
    * Max number of sub tasks which can be executed concurrently at the same time.
    */
   private final int maxNumConcurrentSubTasks;
-  private final IndexingServiceClient indexingServiceClient;
 
   private final BlockingQueue<SubTaskCompleteEvent<SubTaskType>> taskCompleteEvents = new LinkedBlockingDeque<>();
 
@@ -91,8 +83,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
       String taskId,
       String groupId,
       ParallelIndexTuningConfig tuningConfig,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
     this.toolbox = toolbox;
@@ -101,7 +92,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     this.tuningConfig = tuningConfig;
     this.context = context;
     this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
-    this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
   }
 
   /**
@@ -126,7 +116,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
-        Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
+        toolbox.getIndexingServiceClient(),
         tuningConfig.getMaxRetry(),
         estimateTotalNumSubTasks()
     );
@@ -195,8 +185,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
               if (lastStatus != null) {
                 LOG.error("Failed because of the failed sub task[%s]", lastStatus.getId());
               } else {
-                final SinglePhaseSubTaskSpec spec = (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
-                LOG.error("Failed to run sub tasks for inputSplits[%s]", spec.getInputSplit());
+                final SubTaskSpec<?> spec = taskCompleteEvent.getSpec();
+                LOG.error("Failed to process spec[%s] with an unknown last status", spec.getId());
               }
               break;
             default:
@@ -252,7 +242,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
       SubTaskSpec<SubTaskType> spec
   )
   {
-    LOG.info("Submit a new task for spec[%s] and inputSplit[%s]", spec.getId(), spec.getInputSplit());
+    LOG.info("Submit a new task for spec[%s]", spec.getId());
     final ListenableFuture<SubTaskCompleteEvent<SubTaskType>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,
@@ -269,25 +259,11 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
           public void onFailure(Throwable t)
           {
             // this callback is called only when there were some problems in TaskMonitor.
-            LOG.error(t, "Error while running a task for subTaskSpec[%s]", spec);
+            LOG.error(t, "Error while running a task for spec[%s]", spec.getId());
             taskCompleteEvents.offer(SubTaskCompleteEvent.fail(spec, t));
           }
         }
     );
-  }
-
-  private static List<InputSplit> getSplitsIfSplittable(
-      InputSource inputSource,
-      InputFormat inputFormat,
-      @Nullable SplitHintSpec splitHintSpec
-  ) throws IOException
-  {
-    if (inputSource instanceof SplittableInputSource) {
-      final SplittableInputSource<?> splittableInputSource = (SplittableInputSource) inputSource;
-      return splittableInputSource.createSplits(inputFormat, splitHintSpec).collect(Collectors.toList());
-    } else {
-      throw new ISE("inputSource[%s] is not splittable", inputSource.getClass().getSimpleName());
-    }
   }
 
   @Override
@@ -491,11 +467,5 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   int getAndIncrementNextSpecId()
   {
     return nextSpecId++;
-  }
-
-  @VisibleForTesting
-  IndexingServiceClient getIndexingServiceClient()
-  {
-    return indexingServiceClient;
   }
 }

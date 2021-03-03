@@ -25,14 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 
@@ -43,7 +40,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
+public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>
 {
   private static final String TYPE = "index_kafka";
 
@@ -61,11 +58,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject ObjectMapper configMapper,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JacksonInject ObjectMapper configMapper
   )
   {
     super(
@@ -75,11 +68,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         tuningConfig,
         ioConfig,
         context,
-        chatHandlerProvider,
-        authorizerMapper,
-        rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
-        appenderatorsManager
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
     this.configMapper = configMapper;
     this.ioConfig = ioConfig;
@@ -109,6 +98,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
           configMapper,
           ioConfig.getConsumerProperties()
       );
+      props.putIfAbsent("isolation.level", "read_committed");
       props.putAll(consumerConfigs);
 
       return new KafkaConsumer<>(props);
@@ -133,17 +123,13 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   }
 
   @Override
-  protected SeekableStreamIndexTaskRunner<Integer, Long> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<Integer, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new IncrementalPublishingKafkaIndexTaskRunner(
         this,
         dataSchema.getParser(),
         authorizerMapper,
-        chatHandlerProvider,
-        savedParseExceptions,
-        rowIngestionMetersFactory,
-        appenderatorsManager,
         lockGranularityToUse
     );
   }

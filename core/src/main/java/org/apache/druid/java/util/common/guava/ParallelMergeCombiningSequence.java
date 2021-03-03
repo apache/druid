@@ -25,6 +25,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -45,7 +46,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
@@ -187,7 +187,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               {
                 final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
                 if (hasTimeout && thisTimeoutNanos < 0) {
-                  throw new RE(new TimeoutException("Sequence iterator timed out"));
+                  throw new QueryTimeoutException("Sequence iterator timed out");
                 }
 
                 if (currentBatch != null && !currentBatch.isTerminalResult() && !currentBatch.isDrained()) {
@@ -202,7 +202,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                     }
                   }
                   if (currentBatch == null) {
-                    throw new RE(new TimeoutException("Sequence iterator timed out waiting for data"));
+                    throw new QueryTimeoutException("Sequence iterator timed out waiting for data");
                   }
 
                   if (cancellationGizmo.isCancelled()) {
@@ -779,7 +779,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
           if (thisTimeoutNanos < 0) {
-            throw new RE(new TimeoutException("QueuePusher timed out offering data"));
+            throw new QueryTimeoutException("QueuePusher timed out offering data");
           }
           success = queue.offer(item, thisTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {
@@ -1126,7 +1126,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
           if (thisTimeoutNanos < 0) {
-            throw new RE(new TimeoutException("BlockingQueue cursor timed out waiting for data"));
+            throw new QueryTimeoutException("BlockingQueue cursor timed out waiting for data");
           }
           resultBatch = queue.poll(thisTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {

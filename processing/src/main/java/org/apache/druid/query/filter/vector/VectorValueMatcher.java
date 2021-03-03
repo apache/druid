@@ -34,9 +34,12 @@ public interface VectorValueMatcher extends VectorSizeInspector
   /**
    * Examine the current vector and return a match indicating what is accepted.
    *
+   * Does not modify "mask".
+   *
    * @param mask must not be null; use {@link VectorMatch#allTrue} if you don't need a mask.
    *
-   * @return the subset of "mask" that this value matcher accepts
+   * @return the subset of "mask" that this value matcher accepts. May be the same instance as {@param mask} if
+   * every row in the mask matches the filter.
    */
   ReadableVectorMatch match(ReadableVectorMatch mask);
 }

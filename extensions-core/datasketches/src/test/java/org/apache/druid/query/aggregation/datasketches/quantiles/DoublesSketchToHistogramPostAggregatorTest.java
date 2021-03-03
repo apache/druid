@@ -19,19 +19,91 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class DoublesSketchToHistogramPostAggregatorTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final PostAggregator there = new DoublesSketchToHistogramPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[]{0.25, 0.75},
+        null
+    );
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    DoublesSketchToHistogramPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        DoublesSketchToHistogramPostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+  }
+
+  @Test
+  public void testToString()
+  {
+    final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[]{0.25, 0.75},
+        null
+    );
+
+    Assert.assertEquals(
+        "DoublesSketchToHistogramPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, splitPoints=[0.25, 0.75], numBins=null}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testComparator()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Comparing histograms is not supported");
+    final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[]{0.25, 0.75},
+        null
+    );
+    postAgg.getComparator();
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(DoublesSketchToHistogramPostAggregator.class)
+                  .withNonnullFields("name", "field", "splitPoints")
+                  .usingGetClass()
+                  .verify();
+  }
+
   @Test
   public void emptySketch()
   {
@@ -116,10 +188,33 @@ public class DoublesSketchToHistogramPostAggregatorTest
   }
 
   @Test
-  public void testEquals()
+  public void testResultArraySignature()
   {
-    EqualsVerifier.forClass(DoublesSketchToHistogramPostAggregator.class)
-                  .usingGetClass()
-                  .verify();
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new DoublesSketchAggregatorFactory("sketch", "col", 8)
+              )
+              .postAggregators(
+                  new DoublesSketchToHistogramPostAggregator(
+                      "a",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      new double[] {3.5},
+                      null
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("sketch", null)
+                    .add("a", ValueType.DOUBLE_ARRAY)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

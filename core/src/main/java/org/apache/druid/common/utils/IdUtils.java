@@ -19,11 +19,19 @@
 
 package org.apache.druid.common.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,6 +61,17 @@ public class IdUtils
         !m.matches(),
         StringUtils.format("%s cannot contain whitespace character except space.", thingToValidate)
     );
+
+    for (int i = 0; i < stringToValidate.length(); i++) {
+      final char c = stringToValidate.charAt(i);
+
+      // Curator doesn't permit any of the following ranges, so we can't either, because IDs are often used as
+      // znode paths. The first two ranges are control characters, the second two ranges correspond to surrogate
+      // pairs. This means that characters outside the basic multilingual plane, such as emojis, are not allowed. 😢
+      if (c > 0 && c < 31 || c > 127 && c < 159 || c > '\ud800' && c < '\uf8ff' || c > '\ufff0' && c < '\uffff') {
+        throw new IAE("%s cannot contain character #%d (at position %d).", thingToValidate, (int) c, i);
+      }
+    }
   }
 
   public static String getRandomId()
@@ -67,5 +86,45 @@ public class IdUtils
   public static String getRandomIdWithPrefix(String prefix)
   {
     return UNDERSCORE_JOINER.join(prefix, IdUtils.getRandomId());
+  }
+
+  public static String newTaskId(String typeName, String dataSource, @Nullable Interval interval)
+  {
+    return newTaskId(null, typeName, dataSource, interval);
+  }
+
+  public static String newTaskId(@Nullable String idPrefix, String typeName, String dataSource, @Nullable Interval interval)
+  {
+    return newTaskId(idPrefix, getRandomId(), DateTimes.nowUtc(), typeName, dataSource, interval);
+  }
+
+  /**
+   * This method is only visible to outside only for testing.
+   * Use {@link #newTaskId(String, String, Interval)} or {@link #newTaskId(String, String, String, Interval)} instead.
+   */
+  @VisibleForTesting
+  static String newTaskId(
+      @Nullable String idPrefix,
+      String idSuffix,
+      DateTime now,
+      String typeName,
+      String dataSource,
+      @Nullable Interval interval
+  )
+  {
+    final List<String> objects = new ArrayList<>();
+    if (idPrefix != null) {
+      objects.add(idPrefix);
+    }
+    objects.add(typeName);
+    objects.add(dataSource);
+    objects.add(idSuffix);
+    if (interval != null) {
+      objects.add(interval.getStart().toString());
+      objects.add(interval.getEnd().toString());
+    }
+    objects.add(now.toString());
+
+    return String.join("_", objects);
   }
 }

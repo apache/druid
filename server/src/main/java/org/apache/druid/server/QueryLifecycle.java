@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
@@ -38,6 +40,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
@@ -77,6 +80,7 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
+  private final DefaultQueryConfig defaultQueryConfig;
   private final long startMs;
   private final long startNs;
 
@@ -92,6 +96,7 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
+      final DefaultQueryConfig defaultQueryConfig,
       final long startMs,
       final long startNs
   )
@@ -102,18 +107,20 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = defaultQueryConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
 
+
   /**
-   * For callers where simplicity is desired over flexibility. This method does it all in one call. If the request
-   * is unauthorized, an IllegalStateException will be thrown. Logs and metrics are emitted when the Sequence is
-   * either fully iterated or throws an exception.
+   * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
+   * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an
+   * exception.
    *
-   * @param query                the query
-   * @param authenticationResult authentication result indicating identity of the requester
-   * @param remoteAddress        remote address, for logging; or null if unknown
+   * @param query                 the query
+   * @param authenticationResult  authentication result indicating identity of the requester
+   * @param authorizationResult   authorization result of requester
    *
    * @return results
    */
@@ -121,7 +128,7 @@ public class QueryLifecycle
   public <T> Sequence<T> runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
-      @Nullable final String remoteAddress
+      final Access authorizationResult
   )
   {
     initialize(query);
@@ -129,8 +136,8 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      final Access access = authorize(authenticationResult);
-      if (!access.isAllowed()) {
+      preAuthorized(authenticationResult, authorizationResult);
+      if (!authorizationResult.isAllowed()) {
         throw new ISE("Unauthorized");
       }
 
@@ -138,7 +145,7 @@ public class QueryLifecycle
       results = queryResponse.getResults();
     }
     catch (Throwable e) {
-      emitLogsAndMetrics(e, remoteAddress, -1);
+      emitLogsAndMetrics(e, null, -1);
       throw e;
     }
 
@@ -149,7 +156,7 @@ public class QueryLifecycle
           @Override
           public void after(final boolean isDone, final Throwable thrown)
           {
-            emitLogsAndMetrics(thrown, remoteAddress, -1);
+            emitLogsAndMetrics(thrown, null, -1);
           }
         }
     );
@@ -170,31 +177,15 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    this.baseQuery = baseQuery.withId(queryId);
-    this.toolChest = warehouse.getToolChest(baseQuery);
-  }
+    Map<String, Object> mergedUserAndConfigContext;
+    if (baseQuery.getContext() != null) {
+      mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(defaultQueryConfig.getContext(), baseQuery.getContext());
+    } else {
+      mergedUserAndConfigContext = defaultQueryConfig.getContext();
+    }
 
-  /**
-   * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
-   *
-   * @param authenticationResult authentication result indicating the identity of the requester
-   *
-   * @return authorization result
-   */
-  public Access authorize(final AuthenticationResult authenticationResult)
-  {
-    transition(State.INITIALIZED, State.AUTHORIZING);
-    return doAuthorize(
-        authenticationResult,
-        AuthorizationUtils.authorizeAllResourceActions(
-            authenticationResult,
-            Iterables.transform(
-                baseQuery.getDataSource().getTableNames(),
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-            ),
-            authorizerMapper
-        )
-    );
+    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);
+    this.toolChest = warehouse.getToolChest(baseQuery);
   }
 
   /**
@@ -219,6 +210,13 @@ public class QueryLifecycle
             authorizerMapper
         )
     );
+  }
+
+  private void preAuthorized(final AuthenticationResult authenticationResult, final Access access)
+  {
+    // gotta transition those states, even if we are already authorized
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    doAuthorize(authenticationResult, access);
   }
 
   private Access doAuthorize(final AuthenticationResult authenticationResult, final Access authorizationResult)
@@ -319,7 +317,7 @@ public class QueryLifecycle
       if (e != null) {
         statsMap.put("exception", e.toString());
         log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
-        if (e instanceof QueryInterruptedException) {
+        if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
           // Mimic behavior from QueryResource, where this code was originally taken from.
           statsMap.put("interrupted", true);
           statsMap.put("reason", e.toString());

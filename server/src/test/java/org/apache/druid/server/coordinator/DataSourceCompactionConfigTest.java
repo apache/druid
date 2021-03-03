@@ -22,11 +22,16 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -52,6 +57,7 @@ public class DataSourceCompactionConfigTest
         null,
         new Period(3600),
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -64,6 +70,7 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
   }
 
   @Test
@@ -75,6 +82,7 @@ public class DataSourceCompactionConfigTest
         500L,
         30,
         new Period(3600),
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -107,8 +115,18 @@ public class DataSourceCompactionConfigTest
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null
         ),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -140,8 +158,18 @@ public class DataSourceCompactionConfigTest
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null
         ),
+        null,
         ImmutableMap.of("key", "val")
     );
 
@@ -161,24 +189,131 @@ public class DataSourceCompactionConfigTest
   public void testSerdeUserCompactionTuningConfig() throws IOException
   {
     final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
-        1000,
-        10000L,
+        40000,
         2000L,
-        new SegmentsSplitHintSpec(10000L),
+        null,
+        new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
+        new DynamicPartitionsSpec(1000, 20000L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            new DefaultBitmapSerdeFactory(),
+            CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
-            CompressionStrategy.UNCOMPRESSED,
-            CompressionFactory.LongEncodingStrategy.LONGS
+            LongEncodingStrategy.LONGS
         ),
-        1,
-        3000L,
-        null
+        new IndexSpec(
+            new DefaultBitmapSerdeFactory(),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.UNCOMPRESSED,
+            LongEncodingStrategy.AUTO
+        ),
+        2,
+        1000L,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
+        100,
+        5,
+        1000L,
+        new Duration(3000L),
+        7,
+        1000,
+        100
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
     final UserCompactionTaskQueryTuningConfig fromJson =
         OBJECT_MAPPER.readValue(json, UserCompactionTaskQueryTuningConfig.class);
     Assert.assertEquals(tuningConfig, fromJson);
+  }
+
+  @Test
+  public void testSerdeGranularitySpec() throws IOException
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        ImmutableMap.of("key", "val")
+    );
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(25, fromJson.getTaskPriority());
+    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
+    Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testFailIfGranularitySpecContainsNonDefaultQueryGranularity()
+  {
+    new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, Granularities.MONTH),
+        ImmutableMap.of("key", "val")
+    );
+  }
+
+  @Test
+  public void testSerdeWithNullGranularitySpec() throws IOException
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        null,
+        ImmutableMap.of("key", "val")
+    );
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(25, fromJson.getTaskPriority());
+    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
+    Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
+  }
+
+  @Test
+  public void testSerdeGranularitySpecWithNullValues() throws IOException
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(null, null),
+        ImmutableMap.of("key", "val")
+    );
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(25, fromJson.getTaskPriority());
+    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
+    Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
   }
 }

@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 export const LocalStorageKeys = {
   CAPABILITIES_OVERRIDE: 'capabilities-override' as 'capabilities-override',
   INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
@@ -36,7 +38,7 @@ export const LocalStorageKeys = {
   SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as 'supervisors-refresh-rate',
   LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as 'lookups-refresh-rate',
   QUERY_HISTORY: 'query-history' as 'query-history',
-  AUTO_RUN: 'auto-run' as 'auto-run',
+  LIVE_QUERY_MODE: 'live-query-mode' as 'live-query-mode',
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 
@@ -48,7 +50,7 @@ export function localStorageSet(key: LocalStorageKeys, value: string): void {
 }
 
 export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
-  localStorageSet(key, JSON.stringify(value));
+  localStorageSet(key, JSONBig.stringify(value));
 }
 
 export function localStorageGet(key: LocalStorageKeys): string | undefined {

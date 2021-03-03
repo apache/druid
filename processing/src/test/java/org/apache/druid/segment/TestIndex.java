@@ -49,6 +49,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -134,8 +135,8 @@ public class TestIndex
 
   public static final String[] DOUBLE_METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   public static final String[] FLOAT_METRICS = new String[]{"indexFloat", "indexMinFloat", "indexMaxFloat"};
+  public static final Interval DATA_INTERVAL = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final Logger log = new Logger(TestIndex.class);
-  private static final Interval DATA_INTERVAL = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       Collections.singletonList(
           new ExpressionVirtualColumn("expr", "index + 10", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
@@ -150,11 +151,11 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
+  public static final IndexSpec INDEX_SPEC = new IndexSpec();
 
-  private static final IndexMerger INDEX_MERGER =
+  public static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+  public static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
@@ -207,7 +208,8 @@ public class TestIndex
               METRIC_AGGS,
               mergedFile,
               INDEX_SPEC,
-              null
+              null,
+              -1
           )
       );
     }
@@ -292,10 +294,10 @@ public class TestIndex
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)
         .build();
-    final IncrementalIndex retVal = new IncrementalIndex.Builder()
+    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(10000)
-        .buildOnheap();
+        .build();
 
     try {
       return loadIncrementalIndex(retVal, source);

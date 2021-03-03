@@ -26,6 +26,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -55,28 +56,27 @@ public abstract class ArrayOfDoublesSketchPostAggregator implements PostAggregat
   }
 
   @Override
-  public boolean equals(final Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof ArrayOfDoublesSketchPostAggregator)) {
-      return false;
-    }
-    final ArrayOfDoublesSketchPostAggregator that = (ArrayOfDoublesSketchPostAggregator) o;
-    return name.equals(that.getName());
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return name.hashCode();
-  }
-
-  @Override
   public PostAggregator decorate(final Map<String, AggregatorFactory> map)
   {
     return this;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ArrayOfDoublesSketchPostAggregator that = (ArrayOfDoublesSketchPostAggregator) o;
+    return name.equals(that.name);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name);
+  }
 }

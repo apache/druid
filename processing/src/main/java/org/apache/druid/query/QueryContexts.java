@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -46,6 +47,7 @@ public class QueryContexts
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
   public static final String VECTORIZE_KEY = "vectorize";
+  public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
   public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
@@ -56,6 +58,7 @@ public class QueryContexts
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
   public static final String USE_CACHE_KEY = "useCache";
+  public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -63,6 +66,7 @@ public class QueryContexts
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
+  public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.FALSE;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
@@ -73,6 +77,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
+  public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -184,9 +189,29 @@ public class QueryContexts
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
   }
 
+  public static <T> Vectorize getVectorize(Query<T> query)
+  {
+    return getVectorize(query, QueryContexts.DEFAULT_VECTORIZE);
+  }
+
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
     return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
+  }
+
+  public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query)
+  {
+    return getVectorizeVirtualColumns(query, QueryContexts.DEFAULT_VECTORIZE_VIRTUAL_COLUMN);
+  }
+
+  public static <T> Vectorize getVectorizeVirtualColumns(Query<T> query, Vectorize defaultValue)
+  {
+    return parseEnum(query, VECTORIZE_VIRTUAL_COLUMNS_KEY, Vectorize.class, defaultValue);
+  }
+
+  public static <T> int getVectorSize(Query<T> query)
+  {
+    return getVectorSize(query, QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
   }
 
   public static <T> int getVectorSize(Query<T> query, int defaultSize)
@@ -267,6 +292,10 @@ public class QueryContexts
     return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
+  public static <T> boolean isSecondaryPartitionPruningEnabled(Query<T> query)
+  {
+    return parseBoolean(query, SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
+  }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {

@@ -22,11 +22,15 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.config.Config;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.Map;
@@ -40,6 +44,9 @@ public class DruidProcessingConfigTest
   private static final int NUM_PROCESSORS = 4;
   private static final long DIRECT_SIZE = BUFFER_SIZE * (3L + 2L + 1L);
   private static final long HEAP_SIZE = BUFFER_SIZE * 2L;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private static Injector makeInjector(int numProcessors, long directMemorySize, long heapSize)
   {
@@ -144,6 +151,41 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(1, config.columnCacheSizeBytes());
     Assert.assertTrue(config.isFifo());
     Assert.assertEquals("/test/path", config.getTmpDir());
+  }
+
+  @Test
+  public void testInvalidSizeBytes()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.processing.buffer.sizeBytes", "-1");
+
+    expectedException.expectCause(CoreMatchers.isA(IAE.class));
+
+    Injector injector = makeInjector(
+        NUM_PROCESSORS,
+        DIRECT_SIZE,
+        HEAP_SIZE,
+        props,
+        ImmutableMap.of("base_path", "druid.processing")
+    );
+  }
+
+  @Test
+  public void testSizeBytesUpperLimit()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.processing.buffer.sizeBytes", "2GiB");
+    Injector injector = makeInjector(
+        NUM_PROCESSORS,
+        DIRECT_SIZE,
+        HEAP_SIZE,
+        props,
+        ImmutableMap.of("base_path", "druid.processing")
+    );
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+
+    expectedException.expectMessage("druid.processing.buffer.sizeBytes must be less than 2GiB");
+    config.intermediateComputeSizeBytes();
   }
 
   static class MockRuntimeInfo extends RuntimeInfo

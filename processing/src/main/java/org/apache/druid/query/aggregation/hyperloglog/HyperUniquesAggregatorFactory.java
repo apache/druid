@@ -260,13 +260,28 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     if (isInputHyperUnique) {
       return "preComputedHyperUnique";
     } else {
       return "hyperUnique";
     }
+  }
+
+  /**
+   * actual type is {@link HyperLogLogCollector}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return round ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @Override

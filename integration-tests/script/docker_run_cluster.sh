@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Create docker network
-{
-  docker network create --subnet=172.172.172.0/24 druid-it-net
-}
+set -e
+
+. $(dirname "$0")/docker_compose_args.sh
 
 if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
 then
@@ -47,21 +46,10 @@ fi
 
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
-     if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
-     then
-       # Start default Druid services and additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
-       docker-compose -f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.security.yml up -d
-     elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
-     then
-       # Start default Druid services with an additional historical modified for query retry test
-       # See CliHistoricalForQueryRetryTest.
-       docker-compose -f ${DOCKERDIR}/docker-compose.query-retry-test.yml up -d
-     else
-       # Start default Druid services
-       docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d
-     fi
+    # Start Druid cluster
+    docker-compose $(getComposeArgs) up -d
   else
     # run druid cluster with override config
-    OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up -d
+    OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose $(getComposeArgs) up -d
   fi
 }

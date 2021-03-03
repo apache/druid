@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
@@ -32,7 +33,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
-import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -55,9 +55,8 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           ),
           new TestServerInventoryView(Collections.emptyList()),
           new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
-          new MapJoinableFactory(ImmutableMap.of()),
+          new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           PLANNER_CONFIG_DEFAULT,
-          new NoopViewManager(),
           new NoopEscalator()
       );
 

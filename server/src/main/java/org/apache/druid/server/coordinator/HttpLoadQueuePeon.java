@@ -227,7 +227,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                             break;
                           default:
                             scheduleNextRunImmediately = false;
-                            log.error("WTF! Server[%s] returned unknown state in status[%s].", serverId, e.getStatus());
+                            log.error("Server[%s] returned unknown state in status[%s].", serverId, e.getStatus());
                         }
                       }
                     }

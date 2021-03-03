@@ -55,6 +55,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -156,6 +157,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.LONG.toString(),
                 false,
+                false,
                 100,
                 null,
                 null,
@@ -166,6 +168,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
+                false,
                 120,
                 1,
                 DIM_VALUE,
@@ -175,6 +178,7 @@ public class DoubleStorageTest
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
                 ValueType.DOUBLE.toString(),
+                false,
                 false,
                 80,
                 null,
@@ -198,6 +202,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.LONG.toString(),
                 false,
+                false,
                 100,
                 null,
                 null,
@@ -208,6 +213,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
+                false,
                 120,
                 1,
                 DIM_VALUE,
@@ -217,6 +223,7 @@ public class DoubleStorageTest
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
                 ValueType.FLOAT.toString(),
+                false,
                 false,
                 80,
                 null,
@@ -315,10 +322,10 @@ public class DoubleStorageTest
         )
         .build();
 
-    final IncrementalIndex index = new IncrementalIndex.Builder()
+    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .build();
 
 
     getStreamOfEvents().forEach(o -> {

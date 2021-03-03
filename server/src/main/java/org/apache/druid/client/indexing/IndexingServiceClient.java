@@ -31,20 +31,22 @@ import java.util.Set;
 
 public interface IndexingServiceClient
 {
-  void killUnusedSegments(String dataSource, Interval interval);
+  void killUnusedSegments(String idPrefix, String dataSource, Interval interval);
 
   int killPendingSegments(String dataSource, DateTime end);
 
   String compactSegments(
+      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable Map<String, Object> context
   );
 
   int getTotalWorkerCapacity();
 
-  String runTask(Object taskObject);
+  String runTask(String taskId, Object taskObject);
 
   String cancelTask(String taskId);
 
@@ -62,4 +64,6 @@ public interface IndexingServiceClient
 
   @Nullable
   TaskPayloadResponse getTaskPayload(String taskId);
+
+  SamplerResponse sample(SamplerSpec samplerSpec);
 }

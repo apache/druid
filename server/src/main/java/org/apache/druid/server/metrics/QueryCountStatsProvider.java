@@ -21,9 +21,23 @@ package org.apache.druid.server.metrics;
 
 public interface QueryCountStatsProvider
 {
+  /**
+   * Returns the number of successful queries processed during the emission period.
+   */
   long getSuccessfulQueryCount();
 
+  /**
+   * Returns the number of failed queries during the emission period.
+   */
   long getFailedQueryCount();
 
+  /**
+   * Returns the number of queries interrupted due to cancellation during the emission period.
+   */
   long getInterruptedQueryCount();
+
+  /**
+   * Returns the number of timed out queries during the emission period.
+   */
+  long getTimedOutQueryCount();
 }

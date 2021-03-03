@@ -40,35 +40,36 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
+ *
  */
 public class AndFilter implements BooleanFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
-  private final Set<Filter> filters;
+  private final LinkedHashSet<Filter> filters;
 
-  @VisibleForTesting
-  public AndFilter(List<Filter> filters)
-  {
-    this(new HashSet<>(filters));
-  }
-
-  public AndFilter(Set<Filter> filters)
+  public AndFilter(LinkedHashSet<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty AndFilter");
     this.filters = filters;
   }
 
+  @VisibleForTesting
+  public AndFilter(List<Filter> filters)
+  {
+    this(new LinkedHashSet<>(filters));
+  }
+
   public static <T> ImmutableBitmap getBitmapIndex(
       BitmapIndexSelector selector,
       BitmapResultFactory<T> bitmapResultFactory,
-      Set<Filter> filters
+      List<Filter> filters
   )
   {
     return bitmapResultFactory.toImmutableBitmap(getBitmapResult(selector, bitmapResultFactory, filters));
@@ -77,7 +78,7 @@ public class AndFilter implements BooleanFilter
   private static <T> T getBitmapResult(
       BitmapIndexSelector selector,
       BitmapResultFactory<T> bitmapResultFactory,
-      Set<Filter> filters
+      Collection<Filter> filters
   )
   {
     if (filters.size() == 1) {
@@ -165,7 +166,7 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public Set<Filter> getFilters()
+  public LinkedHashSet<Filter> getFilters()
   {
     return filters;
   }
