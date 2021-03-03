@@ -297,7 +297,14 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
           () -> {
             try {
               if (curator.checkExists().forPath(path) != null) {
-                failAssign(segmentHolder, true, new ISE("%s was never removed! Failing this operation!", path));
+                failAssign(
+                    segmentHolder,
+                    true,
+                    new ISE("Failing this %s operation since it timed out and %s was never removed! These segments might still get processed",
+                            segmentHolder.getType() == DROP ? "DROP" : "LOAD",
+                            path
+                    )
+                );
               } else {
                 log.debug("%s detected to be removed. ", path);
               }
