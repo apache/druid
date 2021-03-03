@@ -1041,7 +1041,7 @@ name: org.bouncycastle bcprov-ext-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.66
+version: 1.68
 libraries:
   - org.bouncycastle: bcprov-ext-jdk15on
 
