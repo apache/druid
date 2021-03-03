@@ -141,12 +141,14 @@ We have included a compaction task spec that will create DAY granularity segment
   "type": "compact",
   "dataSource": "compaction-tutorial",
   "interval": "2015-09-12/2015-09-13",
-  "segmentGranularity": "DAY",
   "tuningConfig" : {
     "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true
+  },
+  "granularitySpec" : {
+    "segmentGranularity" : "DAY"
   }
 }
 ```
