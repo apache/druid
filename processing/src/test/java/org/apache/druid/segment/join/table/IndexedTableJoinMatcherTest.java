@@ -24,10 +24,10 @@ import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -85,7 +85,7 @@ public class IndexedTableJoinMatcherTest
             new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
         final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
 
-        Assert.assertEquals(ImmutableList.of(2), Lists.newArrayList(processor.match()));
+        Assert.assertEquals(ImmutableList.of(2), ImmutableList.copyOf(processor.match()));
       }
 
       @Test
@@ -105,7 +105,7 @@ public class IndexedTableJoinMatcherTest
             new IndexedTableJoinMatcher.ConditionMatcherFactory(longAlwaysOneTwoThreeIndex());
         final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
 
-        Assert.assertEquals(ImmutableList.of(1, 2, 3), Lists.newArrayList(processor.match()));
+        Assert.assertEquals(ImmutableList.of(1, 2, 3), ImmutableList.copyOf(processor.match()));
       }
 
       @Test
@@ -126,7 +126,7 @@ public class IndexedTableJoinMatcherTest
             new IndexedTableJoinMatcher.ConditionMatcherFactory(certainStringToThreeIndex());
         final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
 
-        Assert.assertEquals(ImmutableList.of(3), Lists.newArrayList(processor.match()));
+        Assert.assertEquals(ImmutableList.of(3), ImmutableList.copyOf(processor.match()));
       }
 
       @Test
@@ -137,6 +137,45 @@ public class IndexedTableJoinMatcherTest
         final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
 
         Assert.assertEquals(3, processor.matchSingleRow());
+      }
+    }
+
+    public static class MakeComplexProcessorTest extends InitializedNullHandlingTest
+    {
+      @Rule
+      public ExpectedException expectedException = ExpectedException.none();
+
+      @Mock
+      private BaseObjectColumnValueSelector<?> selector;
+
+      @Before
+      public void setUp()
+      {
+        MockitoAnnotations.initMocks(this);
+      }
+
+      @Test
+      public void testMatch()
+      {
+        final IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
+
+        final IndexedTableJoinMatcher.ConditionMatcher processor =
+            conditionMatcherFactory.makeComplexProcessor(selector);
+
+        Assert.assertEquals(ImmutableList.of(), ImmutableList.copyOf(processor.match()));
+      }
+
+      @Test
+      public void testMatchSingleRow()
+      {
+        final IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
+
+        final IndexedTableJoinMatcher.ConditionMatcher processor =
+            conditionMatcherFactory.makeComplexProcessor(selector);
+
+        Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, processor.matchSingleRow());
       }
     }
 
