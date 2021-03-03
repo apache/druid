@@ -375,8 +375,8 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.
 > For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/.
-> The connector JAR should locate in the classpath of Druid's main class loader.
-> An easy way to add it in the classpath is copying or symlinking the downloaded file to `lib/` under the distribution root directory.
+> The connector JAR should reside in the classpath of Druid's main class loader.
+> To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
 
 ## Introspection
 
