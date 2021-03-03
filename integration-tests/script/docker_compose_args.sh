@@ -36,6 +36,9 @@ getComposeArgs()
       then
         echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
         exit 1
+      elif if [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
+        # default + schema registry container
+        echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
       fi
 
       # Replace MiddleManager with Indexer

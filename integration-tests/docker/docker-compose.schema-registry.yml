@@ -27,3 +27,4 @@ services:
       - druid-broker:druid-broker
       - druid-middlemanager:druid-middlemanager
       - druid-historical:druid-historical
+      - druid-indexer:druid-indexer
