@@ -110,14 +110,28 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
       String queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_RESOURCE);
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      // QueryGranularity was SECOND, now we will change it to HOUR
+      // QueryGranularity was SECOND, now we will change it to HOUR (QueryGranularity changed to coarser)
       compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, null, GranularityType.HOUR);
 
-      // The original 4 segments should be compacted into 2 new segments
+      // The original 4 segments should be compacted into 2 new segments since data only has 2 days and the compaction
+      // segmentGranularity is DAY
       checkNumberOfSegments(2);
       queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_HOUR_RESOURCE);
       queryHelper.testQueriesFromString(queryResponseTemplate);
       checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.HOUR.name(), 2);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      // QueryGranularity was HOUR, now we will change it to MINUTE (QueryGranularity changed to finer)
+      compactData(COMPACTION_TASK_WITH_GRANULARITY_SPEC, null, GranularityType.MINUTE);
+
+      // There will be no change in number of segments as compaction segmentGranularity is the same and data interval
+      // is the same. Since QueryGranularity is changed to finer qranularity, the data will remains the same. (data
+      // will just be bucketed to a finer qranularity but roll up will not be different
+      // i.e. 2020-10-29T05:00 will just be bucketed to 2020-10-29T05:00:00)
+      checkNumberOfSegments(2);
+      queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_HOUR_RESOURCE);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.MINUTE.name(), 2);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
