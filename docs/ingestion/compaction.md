@@ -43,11 +43,11 @@ See [Setting up a manual compaction task](#setting-up-manual-compaction) more ab
 ## Data handling with compaction
 During compaction, Druid overwrites the original set of segments with the compacted set without modifying the data. During compaction Druid locks the segments for the time interval being compacted to ensure data consistency.
 
-If an ingestion task needs to write data to a segment for a time interval locked for compaction, the ingestion task supercedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid confilcts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjustment the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information.
+If an ingestion task needs to write data to a segment for a time interval locked for compaction, the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjustment the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information.
 
 ### Segment granularity handling
 
-Unless you modify the segment granularity in the [granularity spec](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a seperate compaction task for each to retain the segment granularity in the compacted segment. If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment.
+Unless you modify the segment granularity in the [granularity spec](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment. If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment.
 
 ### Query granularity handling
 
@@ -204,4 +204,4 @@ See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
 - [Compacting Segments](../design/coordinator.md#compacting-segments) for more on automatic compaction.
 - See [Compaction Configuration API](../operations/api-reference.md#compaction-configuration)
-and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for automatic copmaction configuration information.
+and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for automatic compaction configuration information.
