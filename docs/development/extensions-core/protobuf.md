@@ -56,8 +56,7 @@ Here is a JSON example of the 'metrics' data schema used in the example.
 
 ### Proto file
 
-The corresponding proto file for our 'metrics' dataset looks like this. You can use Protobuf parser with a proto file or Confluent schema registry.
-
+The corresponding proto file for our 'metrics' dataset looks like this. You can use Protobuf parser with a proto file or [Confluent Schema Registry](https://docs.confluent.io/platform/current/schema-registry/index.html).
 ```
 syntax = "proto3";
 message Metrics {
@@ -72,7 +71,7 @@ message Metrics {
 }
 ```
 
-### When use descriptor file
+### When using a descriptor file
 
 Next, we use the `protoc` Protobuf compiler to generate the descriptor file and save it as `metrics.desc`. The descriptor file must be either in the classpath or reachable by URL.  In this example the descriptor file was saved at `/tmp/metrics.desc`, however this file is also available in the example files. From your Druid install directory:
 
@@ -80,9 +79,9 @@ Next, we use the `protoc` Protobuf compiler to generate the descriptor file and 
 protoc -o /tmp/metrics.desc ./quickstart/protobuf/metrics.proto
 ```
 
-### When use schema registry
+### When using Schema Registry
 
-At first make sure your schema registry version is later than 5.5. Next, we post this schema to schema registry.
+Make sure your Schema Registry version is later than 5.5. Next, we can post a schema to add it to the registry:
 
 ```
 POST /subjects/test/versions HTTP/1.1
@@ -95,7 +94,7 @@ Accept: application/vnd.schemaregistry.v1+json, application/vnd.schemaregistry+j
 }
 ```
 
-This feature uses Confluent's Protobuf provider which is not included in the Druid distribution and must be installed separately. You can fetch it and its dependencies from Maven Central at: 
+This feature uses Confluent's Protobuf provider which is not included in the Druid distribution and must be installed separately. You can fetch it and its dependencies from the Confluent repository and Maven Central at: 
 - https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/6.0.1/kafka-protobuf-provider-6.0.1.jar
 - https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.4.0/kotlin-stdlib-1.4.0.jar
 - https://repo1.maven.org/maven2/com/squareup/wire/wire-schema/3.2.2/wire-schema-3.2.2.jar
@@ -107,7 +106,7 @@ Copy or symlink those files to `extensions/protobuf-extensions` under the distri
 Below is the complete Supervisor spec JSON to be submitted to the Overlord.
 Make sure these keys are properly configured for successful ingestion.
 
-### When use descriptor file
+### When using a descriptor file
 
 Important supervisor properties
 - `protoBytesDecoder.descriptor` for the descriptor file URL
@@ -204,7 +203,7 @@ To adopt to old version. You can use old parser style, which also works.
 }
 ```
 
-### When use schema registry
+### When using Schema Registry
 
 Important supervisor properties
 - `protoBytesDecoder.url` for the schema registry URL
