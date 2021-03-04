@@ -60,7 +60,7 @@ public class BitmapBenchmarkWithVaryingOrder
 {
   private static final Random RANDOM = new Random(0);
 
-  @Param({"roaring"})
+  @Param({"roaring", "concise"})
   private String type;
 
   @Param("10000")
