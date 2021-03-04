@@ -29,7 +29,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 
@@ -88,19 +87,6 @@ public interface DimensionSpec extends Cacheable
    * transforming or filtering values.
    */
   default MultiValueDimensionVectorSelector decorate(MultiValueDimensionVectorSelector selector)
-  {
-    throw new UOE("DimensionSpec[%s] cannot vectorize", getClass().getName());
-  }
-
-  /**
-   * Vectorized version of {@link #decorate(DimensionSelector)} for dimension {@link VectorObjectSelector}, most likely
-   * produced with
-   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory#makeObjectDimensionSelector(DimensionSpec)}
-   *
-   * Decoration allows a {@link DimensionSpec} to customize the behavior of the underlying selector, for example
-   * transforming or filtering values.
-   */
-  default VectorObjectSelector decorate(VectorObjectSelector selector)
   {
     throw new UOE("DimensionSpec[%s] cannot vectorize", getClass().getName());
   }

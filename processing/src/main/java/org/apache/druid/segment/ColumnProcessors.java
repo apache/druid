@@ -162,7 +162,6 @@ public class ColumnProcessors
         factory -> factory.getColumnCapabilities(column),
         factory -> factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(column)),
         factory -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(column)),
-        factory -> factory.makeObjectDimensionSelector(DefaultDimensionSpec.of(column)),
         factory -> factory.makeValueSelector(column),
         factory -> factory.makeObjectSelector(column),
         processorFactory,
@@ -191,7 +190,6 @@ public class ColumnProcessors
         ),
         factory -> factory.makeSingleValueDimensionSelector(dimensionSpec),
         factory -> factory.makeMultiValueDimensionSelector(dimensionSpec),
-        factory -> factory.makeObjectDimensionSelector(dimensionSpec),
         factory -> factory.makeValueSelector(dimensionSpec.getDimension()),
         factory -> factory.makeObjectSelector(dimensionSpec.getDimension()),
         processorFactory,
@@ -302,7 +300,6 @@ public class ColumnProcessors
       final Function<VectorColumnSelectorFactory, ColumnCapabilities> inputCapabilitiesFn,
       final Function<VectorColumnSelectorFactory, SingleValueDimensionVectorSelector> singleValueDimensionSelectorFn,
       final Function<VectorColumnSelectorFactory, MultiValueDimensionVectorSelector> multiValueDimensionSelectorFn,
-      final Function<VectorColumnSelectorFactory, VectorObjectSelector> objectDimensionSelectorFn,
       final Function<VectorColumnSelectorFactory, VectorValueSelector> valueSelectorFn,
       final Function<VectorColumnSelectorFactory, VectorObjectSelector> objectSelectorFn,
       final VectorColumnProcessorFactory<T> processorFactory,
@@ -325,7 +322,7 @@ public class ColumnProcessors
         if (capabilities.isDictionaryEncoded().isFalse() || capabilities.areDictionaryValuesUnique().isFalse()) {
           return processorFactory.makeObjectProcessor(
               capabilities,
-              objectDimensionSelectorFn.apply(selectorFactory)
+              objectSelectorFn.apply(selectorFactory)
           );
         }
 

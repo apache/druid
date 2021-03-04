@@ -161,7 +161,7 @@ public class ExpressionFilter implements Filter
         ).makeMatcher(predicateFactory);
       case STRING:
         return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
-            ColumnCapabilitiesImpl.createSimpleStringColumnCapabilities(),
+            ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities(),
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       default:

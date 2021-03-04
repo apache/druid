@@ -112,12 +112,6 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public VectorObjectSelector decorate(VectorObjectSelector selector)
-  {
-    return selector;
-  }
-
-  @Override
   public boolean canVectorize()
   {
     return true;

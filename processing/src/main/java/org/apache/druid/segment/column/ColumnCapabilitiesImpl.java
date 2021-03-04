@@ -178,9 +178,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
-   * Simple, non dictionary encoded string without bitmap index or anything fancy
+   * Simple, single valued, non dictionary encoded string without bitmap index or anything fancy
    */
-  public static ColumnCapabilitiesImpl createSimpleStringColumnCapabilities()
+  public static ColumnCapabilitiesImpl createSimpleSingleValueStringColumnCapabilities()
   {
     return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                        .setHasMultipleValues(false)

@@ -77,19 +77,6 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
   MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec);
 
   /**
-   * Returns a dimension object selector. Useful for non-dictionary encoded strings, or when using the dictionary
-   * isn't useful. Right now, this should probably only be called on single valued STRING inputs (multi-value STRING
-   * vector object selector is not yet implemented), but perhaps a world can be imagined where this could work with
-   * COMPLEX too perhaps if it were useful for them to interact with {@link DimensionSpec} in some manner? May be called
-   * for non-existent columns.
-   *
-   * If you need to write code that adapts to different input types, you should write a
-   * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
-   */
-  VectorObjectSelector makeObjectDimensionSelector(DimensionSpec dimensionSpec);
-
-  /**
    * Returns a primitive column selector. Should only be called on columns where {@link #getColumnCapabilities}
    * indicates they return DOUBLE, FLOAT, or LONG, or on nonexistent columns.
    *
@@ -102,6 +89,11 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
   /**
    * Returns an object selector. Should only be called on columns where {@link #getColumnCapabilities} indicates that
    * they return STRING or COMPLEX, or on nonexistent columns.
+   *
+   * For STRING, this is needed if values are not dictionary encoded, such as computed virtual columns, or can
+   * optionally be used in place of {@link SingleValueDimensionVectorSelector} when using the dictionary isn't helpful.
+   * Currently, this should only be called on single valued STRING inputs (multi-value STRING vector object selector
+   * is not yet implemented).
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
