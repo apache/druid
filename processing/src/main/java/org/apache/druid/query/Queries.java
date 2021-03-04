@@ -26,6 +26,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -192,6 +193,7 @@ public class Queries
       final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
       DataSource current = newBaseDataSource;
+      DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
       for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
         current = JoinDataSource.create(
@@ -199,8 +201,10 @@ public class Queries
             clause.getDataSource(),
             clause.getPrefix(),
             clause.getCondition(),
-            clause.getJoinType()
+            clause.getJoinType(),
+            joinBaseFilter
         );
+        joinBaseFilter = null;
       }
 
       retVal = query.withDataSource(current);
