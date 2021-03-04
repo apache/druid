@@ -21,6 +21,7 @@ package org.apache.druid.spark.utils
 
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass
 import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.microsoft.azure.storage.blob.{CloudBlobClient, ListBlobItem}
 import com.microsoft.azure.storage.{StorageCredentials, StorageUri}
 import org.apache.druid.common.aws.{AWSClientConfig, AWSCredentialsConfig, AWSEndpointConfig,
@@ -52,7 +53,9 @@ object DeepStorageConstructorHelpers extends TryWithResources {
   // our user-provided property keys will come to us via a DataSourceOption, we need to use a case-insensisitive jackson
   // mapper to deserialize property maps into objects. We want to be case-aware in the rest of our code, so we create a
   // private, case-insensitive copy of our mapper here.
-  private val caseInsensitiveMapper = MAPPER.copy().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+  private val caseInsensitiveMapper = MAPPER.copy()
+    .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+    .registerModule(DefaultScalaModule)
 
   // Local Storage Helpers
 

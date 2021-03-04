@@ -39,6 +39,11 @@ object SegmentReaderRegistry extends Logging {
   private val registeredSegmentLoaderFunctions: mutable.HashMap[String, JMap[String, AnyRef] => URI] =
     new mutable.HashMap()
 
+  /**
+    *
+    * @param loadSpecType
+    * @param loadFunc
+    */
   def register(loadSpecType: String, loadFunc: JMap[String, AnyRef] => URI): Unit = {
     registeredSegmentLoaderFunctions(loadSpecType) = loadFunc
   }
@@ -66,7 +71,7 @@ object SegmentReaderRegistry extends Logging {
   // TODO: Add Azure
   private val knownTypes: Map[String, JMap[String, AnyRef] => URI] =
     Map[String, JMap[String, AnyRef] => URI](
-      S3StorageDruidModule.SCHEME_S3_ZIP -> ((loadSpec: JMap[String, AnyRef])=>
+      S3StorageDruidModule.SCHEME_S3_ZIP -> ((loadSpec: JMap[String, AnyRef]) =>
         if ("s3a" == loadSpec.get("S3Schema")) {
           URI.create(StringUtils.format("s3a://%s/%s", loadSpec.get("bucket"),
             loadSpec.get("key")))

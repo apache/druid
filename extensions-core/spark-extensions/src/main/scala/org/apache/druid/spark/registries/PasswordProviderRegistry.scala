@@ -28,6 +28,12 @@ import org.apache.druid.spark.MAPPER
   * pattern and let Jackson handle the polymorphism for our current use cases.
   */
 class PasswordProviderRegistry {
+  /**
+    * Register a password provider with the given name. NAME must match the Jackson sub-type for PASSWORDPROVIDER.
+    *
+    * @param name The Jackson subtype for PASSWORDPROVIDER
+    * @param passwordProvider An implementation of PasswordProvider to use when deserializing passwords.
+    */
   def register(name: String, passwordProvider: PasswordProvider): Unit = {
     // Cheat
     MAPPER.registerSubtypes(new NamedType(passwordProvider.getClass, name))

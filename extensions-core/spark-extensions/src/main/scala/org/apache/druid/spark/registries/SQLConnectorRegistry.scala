@@ -41,13 +41,27 @@ object SQLConnectorRegistry extends Logging {
       SQLMetadataConnector] =
     new mutable.HashMap()
 
+  /**
+    * Register the provided creation function for the metadata server type SQLCONNECTORTYPE. This function should take
+    * two arguments, a `Supplier[MetadataStorageConnectorConfig]` and a `Supplier[MetadataStorageTablesConfig]`. These
+    * configs are parsed from the `metadata.*` properties specified when calling read() or .write() on a dataframe.
+    *
+    * @param sqlConnectorType The SQL database type to create a connector for.
+    * @param createFunc The function to use to create a SQLMetadataConnector for SQLCONNECTORTYPE.
+    */
   def register(sqlConnectorType: String,
-               loadFunc:
+               createFunc:
                (Supplier[MetadataStorageConnectorConfig], Supplier[MetadataStorageTablesConfig]) =>
                  SQLMetadataConnector): Unit = {
-    registeredSQLConnectorFunctions(sqlConnectorType) = loadFunc
+    registeredSQLConnectorFunctions(sqlConnectorType) = createFunc
   }
 
+  /**
+    * Register the known SQLMetadataConnector for the given SQLCONNECTORTYPE. Known SQL Connector types and the
+    * corresponding creator functions are defined in `SQLConnectorRegistry.knownTypes`.
+    *
+    * @param sqlConnectorType The known SQL Connector type to register a bundled creation function for.
+    */
   def registerByType(sqlConnectorType: String): Unit = {
     if (!registeredSQLConnectorFunctions.contains(sqlConnectorType)
       && knownTypes.contains(sqlConnectorType)) {
@@ -55,6 +69,17 @@ object SQLConnectorRegistry extends Logging {
     }
   }
 
+  /**
+    * Return a SQLMetadataConnector using the creation function registered for SQLCONNECTORTYPE. SQLCONNECTORTYPE must
+    * have either already been registered via `register(sqlConnectorType, ...)` or must be a known type.
+    *
+    * @param sqlConnectorType The SQL database type to create a Connector for.
+    * @param connectorConfigSupplier The supplier for the connector config used to configure the returned connector.
+    * @param metadataTableConfigSupplier The supplier for the metadata table config used to configure the returned
+    *                                    connector.
+    * @return A SQLMetadataConnector capable of querying an instance of a metadata server database of type
+    *         SQLCONNECTORTYPE, configured according to the provided config suppliers.
+    */
   def create(
               sqlConnectorType: String,
               connectorConfigSupplier: Supplier[MetadataStorageConnectorConfig],

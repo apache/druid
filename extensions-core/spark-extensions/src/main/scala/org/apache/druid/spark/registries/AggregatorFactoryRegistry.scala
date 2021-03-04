@@ -30,6 +30,12 @@ import org.apache.druid.spark.MAPPER
   * AggregatorFactories ourselves, this will have to be changed.
   */
 object AggregatorFactoryRegistry {
+  /**
+    * Register an aggregator factory with the given name. NAME must match the Jackson sub-type for AGGREGATORFACTORY.
+    *
+    * @param name The Jackson subtype for AGGREGATORFACTORY
+    * @param passwordProvider An implementation of AggregatorFactory to use when processing metrics.
+    */
   def register(name: String, factory: AggregatorFactory): Unit = {
     // Cheat
     MAPPER.registerSubtypes(new NamedType(factory.getClass, name))

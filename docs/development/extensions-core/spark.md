@@ -155,7 +155,7 @@ The properties used to configure the DataSourceWriter when writing data to Druid
 |`table`|The Druid data source to write to|Yes||
 |`deepStorageType`|The type of deep storage used to back the target Druid cluster|No|`local`|
 |`writer.version`|The version of the segments to be written|No|The current Unix epoch time|
-|`writer.dimensions`|A comma-delimited list of the dimensions to write to Druid. If not set, all dimensions in the dataframe that aren't either explicitly set as metrics or excluded via `excludedDimensions` will be used|No||
+|`writer.dimensions`|A list of the dimensions to write to Druid. If not set, all dimensions in the dataframe that aren't either explicitly set as metric or timestamp columns or excluded via `excludedDimensions` will be used|No||
 |`writer.metrics`|The [metrics spec](../../ingestion/index.md#metricsspec) used to define the metrics for the segments written to Druid. `fieldName` must match a column in the source dataframe|No|`[]`|
 |`writer.excludedDimensions`|A comma-delimited list of the columns in the data frame to exclude when writing to Druid. Ignored if `dimensions` is set|No||
 |`writer.segmentGranularity`|The chunking [granularity](../../querying/granularities.md) of the Druid segments written (e.g. what granularity to partition the output segments by on disk)|No|`all`|
@@ -168,8 +168,9 @@ The properties used to configure the DataSourceWriter when writing data to Druid
 |`writer.rowsPerPersist`|How many rows to hold in memory before flushing intermediate indices to disk|No|2000000|
 |`writer.rationalizeSegments`|Whether or not to rationalize segments to ensure contiguity and completeness|No|True if `partitionMap` is not set, False otherwise|
 
-Note that at the moment there is no way to disable creating bitmap indices for String dimensions or to specify a
-multi-value handling strategy other than `SORTED_ARRAY`.
+`writer.dimensions` may be either a comma-delimited list of column names _or_ a JSON list of Druid DimensionSchema
+objects (i.e. the `dimensions` section of a `DimensionSpec`). If DimensionSchemas are provided, dimension types must
+match the type of the corresponding Spark columns exactly. Otherwise, an IllegalArgumentException will be thrown.
 
 Users can also specify properties to be passed along to the [IndexSpec](../../ingestion/index.md#indexspec). The
 defaults will likely be more performant for most users.

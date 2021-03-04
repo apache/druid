@@ -103,6 +103,7 @@ class DruidInputPartitionReader(segmentStr: String,
     }
   }
 
+  // TODO: Rewrite this to use SegmentPullers instead of manually constructing URIs
   private def loadSegment(segment: DataSegment): QueryableIndex = {
     val path = new Path(SegmentReaderRegistry.load(segment.getLoadSpec))
     val segmentDir = new File(tmpDir, segment.getId.toString)

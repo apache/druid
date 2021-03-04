@@ -265,8 +265,7 @@ object DruidDataSourceReader {
           case "DOUBLE" => DoubleType
           case "FLOAT" => FloatType
           case "TIMESTAMP" => TimestampType
-          case complexType
-            if ComplexMetricRegistry.getRegisteredMetricNames.contains(complexType) =>
+          case complexType: String if ComplexMetricRegistry.getRegisteredMetricNames.contains(complexType) =>
             BinaryType
           // Add other supported types later
           case _ => throw new IllegalArgumentException(s"Unrecognized type $colType!")

@@ -38,51 +38,48 @@ class DruidDataSourceV2 extends DataSourceV2 with ReadSupport with WriteSupport
 
   override def shortName(): String = DruidDataSourceV2ShortName
 
+  /**
+    * Create a DataSourceReader to read data in from Druid, configured via DATASOURCEOPTIONS.
+    *
+    * @param dataSourceOptions A wrapper around the properties map specifed via `.option` or `.options` calls on the
+    *                          DataSourceReader.
+    * @return A DataSourceReader capable of reading data from Druid as configured via DATASOURCEOPTIONS.
+    */
   override def createReader(dataSourceOptions: DataSourceOptions): DataSourceReader = {
     DruidDataSourceReader(dataSourceOptions)
   }
 
+  /**
+    * Create a DataSourceReader to read data in from Druid, configured via DATASOURCEOPTIONS. The provided schema will
+    * be used instead of making calls to the broker.
+    *
+    * @param dataSourceOptions A wrapper around the properties map specifed via `.option` or `.options` calls on the
+    *                          DataSourceReader.
+    * @param schema The schema to use when reading data. Specified via the `.schema` method of a DataSourceReader.
+    * @return A DataSourceReader capable of reading data from Druid as configured via DATASOURCEOPTIONS.
+    */
   override def createReader(schema: StructType,
                             dataSourceOptions: DataSourceOptions): DataSourceReader = {
     DruidDataSourceReader(schema, dataSourceOptions)
   }
 
   /**
-    * Create a writer to save a dataframe as a Druid table. Spark knows the partitioning information
-    * for the dataframe, but won't share. Something like the DateBucketAndHashPartitioner from the
-    * druid-spark-batch GitHub project can be used to ensure that all partitions have only one time
-    * bucket they're responsible for while also setting a soft upper bound on the maximum size of a
-    * segment. Otherwise, multiple indexing segments may be stored in memory, causing memory
-    * pressure, and segments may contain up to the number of rows in a partition. We can't construct
-    * multiple partitions for the same segment interval in a single DruidDataWriter because we can't
-    * be sure we won't chose a partition number that isn't also being used for the same interval by
-    * a separate DruidDataWriter.
+    * Create a writer to save a dataframe as a Druid table with save mode SAVEMODE, configured via DATASOURCEOPTIONS.
+    * SCHEMA is inferred automatically from the source dataframe. The segments written out by this writer will match the
+    * partitioning of the source dataframe.
     *
-    * Additionally, while the caller knows how many partitions there are total for each segment, we
-    * don't, and so the caller will need to provide the total number of partitions if necessary for
-    * the desired shard spec (e.g. Numbered or HashedNumbered). Otherwise, we'll have to default to
-    * a partition count of 1 in the shard spec, meaning that Numbered will degrade to Linear and
-    * users won't have atomic loading of segments within an interval.
-    *
-    * To work around this, users can provide a broadcast map from (Spark) partition id to the
-    * partition num and total partition count for the segment
-    *
-    * TODO: This may actually be bigger problem. Partition ids may not be contiguous for all segments
-    *  in a bucket unless callers are meticulous about partitioning, in which case almost all shard
-    *  specs will consider the output incomplete.
-    *
-    * @param uuid
-    * @param schema
-    * @param saveMode
-    * @param dataSourceOptions
-    * @return
+    * @param uuid The unique job id assigned by Spark.
+    * @param schema The schema of the dataframe to write to Druid.
+    * @param saveMode The save mode to use when writing data to Druid.
+    * @param dataSourceOptions A wrapper around the properties map specified via `.option` or `.options` call on the
+    *                          DataSourceWriter.
+    * @return A DataSourceWriter capable of writing data to Druid based on the specified schema, save mode, and
+    *         data source options.
     */
   override def createWriter(uuid: String,
                             schema: StructType,
                             saveMode: SaveMode,
                             dataSourceOptions: DataSourceOptions): Optional[DataSourceWriter] = {
-    // Spark knows the partitioning information for the df, but it won't tell us. We also have very
-    // limited ways to detect issues, so for now we'll need to trust that we're passed
     // TODO: Take advantage of the job id being provided (uuid in the args list)
     DruidDataSourceWriter(schema, saveMode, Configuration(dataSourceOptions))
   }

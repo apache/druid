@@ -21,7 +21,6 @@ package org.apache.druid
 
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.databind.{InjectableValues, Module, ObjectMapper}
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.apache.druid.jackson.DefaultObjectMapper
 import org.apache.druid.math.expr.ExprMacroTable
 import org.apache.druid.query.expression.{LikeExprMacro, RegexpExtractExprMacro,
@@ -35,7 +34,6 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 package object spark {
 
   private[spark] val MAPPER: ObjectMapper = new DefaultObjectMapper()
-  MAPPER.registerModule(DefaultScalaModule)
 
   private val injectableValues: InjectableValues =
     new InjectableValues.Std()

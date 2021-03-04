@@ -72,6 +72,13 @@ class Configuration(properties: Map[String, String]) extends Serializable {
     this.getBoolean(StringUtils.toLowerCase(keyWithDefault._1), keyWithDefault._2)
   }
 
+  def apply(key: String): String = {
+    this.get(key) match {
+      case Some(v) => v
+      case None => throw new NoSuchElementException(s"Key $key not found!")
+    }
+  }
+
   def isPresent(key: String): Boolean = {
     properties.isDefinedAt(StringUtils.toLowerCase(key))
   }

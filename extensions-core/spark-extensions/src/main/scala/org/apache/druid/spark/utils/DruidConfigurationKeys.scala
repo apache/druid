@@ -68,6 +68,7 @@ object DruidConfigurationKeys {
   val rollUpSegmentsKey: String = "rollUpSegments"
   val rowsPerPersistKey: String = "rowsPerPersist"
   val rationalizeSegmentsKey: String = "rationalizeSegments"
+  private[spark] val dimensionsDefaultKey: (String, String) = (dimensionsKey, "[]")
   private[spark] val metricsDefaultKey: (String, String) = (metricsKey, "[]")
   private[spark] val segmentGranularityDefaultKey: (String, String) = (segmentGranularityKey, "ALL")
   private[spark] val queryGranularityDefaultKey: (String, String) = (queryGranularityKey, "None")

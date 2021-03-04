@@ -36,6 +36,17 @@ object ShardSpecRegistry extends Logging {
     new mutable.HashMap()
   private var shardSpecClassToTypeNameMap: Map[Class[_], String] = Map[Class[_], String]()
 
+  /**
+    * Register creation and update functions for Shard Specs of type SHARDSPECTYPE.
+    *
+    * @param shardSpecType The shard spec type to register creation and update functions for. This type should match
+    *                      the shard spec's Jackson subtype.
+    * @param shardSpecCreationFunc A function that takes a Map[String, String] of partition properties and returns a
+    *                              shard spec derived from those properties.
+    * @param shardSpecUpdateFunc A function that takes a ShardSpec, a new partition number, and a total number of
+    *                            partitions and returns a new ShardSpec matching the input shard spec with its partition
+    *                            number and total partitions updated to match the other arguments.
+    */
   def register(
                 shardSpecType: String,
                 shardSpecCreationFunc: Map[String, String] => ShardSpec,

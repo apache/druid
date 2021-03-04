@@ -82,7 +82,7 @@ class HashedNumberedSegmentPartitioner(
       val eventMap: Map[String, AnyRef] = v match {
         case mm: JMap[String, AnyRef] @unchecked => mm.asScala.toMap
         case mm: Map[String, AnyRef] @unchecked => mm
-        case x => throw new IAE(s"Unknown value type ${x.getClass} : [$x]")
+        case x: Any => throw new IAE(s"Unknown value type ${x.getClass} : [$x]")
       }
       val dateBucket = granularity.bucketStart(DateTimes.utc(k)).getMillis
       val shardLookup = shardLookups.get(dateBucket) match {
@@ -104,7 +104,7 @@ class HashedNumberedSegmentPartitioner(
         case Some(part) => part
         case None => throw new ISE(s"bad date and partition combo: ($dateBucket, $timePartNum)")
       }
-    case x => throw new IAE(s"Unknown type ${x.getClass} : [$x]")
+    case x: Any => throw new IAE(s"Unknown type ${x.getClass} : [$x]")
   }
 
   override def getPartitionMap: Map[Int, Map[String, String]] = {
