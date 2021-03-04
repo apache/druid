@@ -148,7 +148,8 @@ We have included a compaction task spec that will create DAY granularity segment
     "forceExtendableShardSpecs" : true
   },
   "granularitySpec" : {
-    "segmentGranularity" : "DAY"
+    "segmentGranularity" : "DAY",
+    "queryGranularity" : "none"
   }
 }
 ```
