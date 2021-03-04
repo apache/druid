@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -42,6 +43,7 @@ public class HttpInputSourceTest
   {
     HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(null);
     final ObjectMapper mapper = new ObjectMapper();
+    mapper.setInjectableValues(new Std().addValue(HttpInputSourceConfig.class, httpInputSourceConfig));
     final HttpInputSource source = new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
         "myName",
