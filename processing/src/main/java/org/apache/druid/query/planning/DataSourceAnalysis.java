@@ -108,7 +108,7 @@ public class DataSourceAnalysis
 
   public static DataSourceAnalysis forDataSource(final DataSource dataSource)
   {
-    // Strip outer queries, retaining querySegmentSpecs as we go down (lowest will become the 'baseQuerySegmentSpec'o).
+    // Strip outer queries, retaining querySegmentSpecs as we go down (lowest will become the 'baseQuerySegmentSpec').
     Query<?> baseQuery = null;
     DataSource current = dataSource;
 
