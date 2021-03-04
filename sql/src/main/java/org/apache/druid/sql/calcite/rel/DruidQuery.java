@@ -671,6 +671,8 @@ public class DruidQuery
     if (joinDataSource.getLeftFilter() == null) {
       return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry));
     }
+    //TODO: We should avoid promoting the time filter as interval for right outer and full outer joins. This is not
+    // donw now as we apply the intervals to left base table today irrespective of the join type.
 
     // If the join is left or inner, we can pull the intervals up to the query. This is done
     // so that broker can prune the segments to query.
