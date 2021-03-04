@@ -36,9 +36,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * The class serializes a Long-X pair object
- * <p>
- * Note: T must be a concrete class which inherits from SerializablePair, such as {@link SerializablePairLongDouble}
+ * The class serializes a Pair<Long, ?> object for double/float/longFirst and double/float/longLast aggregators
  */
 public abstract class AbstractSerializablePairSerde<T extends SerializablePair<Long, ?>> extends ComplexMetricSerde
 {

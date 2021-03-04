@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -60,7 +59,10 @@ public class DoubleLastBufferAggregator extends NumericLastBufferAggregator<Base
   public Object get(ByteBuffer buf, int position)
   {
     final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePairLongDouble(buf.getLong(position), rhsNull ? null : buf.getDouble(position + VALUE_OFFSET));
+    return new SerializablePairLongDouble(
+        buf.getLong(position),
+        rhsNull ? null : buf.getDouble(position + VALUE_OFFSET)
+    );
   }
 
   @Override

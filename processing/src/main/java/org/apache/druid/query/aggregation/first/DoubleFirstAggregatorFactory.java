@@ -100,16 +100,16 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    if (selector instanceof NilColumnValueSelector) {
+    final ColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_AGGREGATOR;
     }
 
     return new DoubleFirstAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
+        valueSelector,
         StringFirstLastUtils.selectorNeedsFoldCheck(
-            selector,
+            valueSelector,
             metricFactory.getColumnCapabilities(fieldName),
             SerializablePairLongDouble.class
         )
