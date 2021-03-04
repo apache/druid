@@ -860,12 +860,8 @@ An example of compaction config is:
 }
 ```
 
-Note that compaction tasks can fail if their locks are revoked by other tasks of higher priorities.
-Since realtime tasks have a higher priority than compaction task by default,
-it can be problematic if there are frequent conflicts between compaction tasks and realtime tasks.
-If this is the case, the coordinator's automatic compaction might get stuck because of frequent compaction task failures.
-This kind of problem may happen especially in Kafka/Kinesis indexing systems which allow late data arrival.
-If you see this problem, it's recommended to set `skipOffsetFromLatest` to some large enough value to avoid such conflicts between compaction tasks and realtime tasks.
+Compaction tasks fail when higher priority tasks cause Druid to revokes their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Therefore frequent conflicts between compaction tasks and realtime tasks can cause the coordinator's automatic compaction to get stuck.
+You may see this issue with streaming ingestion from Kafka and Kinesis that ingest late arriving data. To mitigate this problem, set `skipOffsetFromLatest` to a value large enough to avoid conflicts between compaction tasks and realtime ingestion tasks.
 
 ###### Compaction TuningConfig
 

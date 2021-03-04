@@ -9,6 +9,7 @@
     "forceExtendableShardSpecs" : true
   },
   "granularitySpec" : {
-    "segmentGranularity" : "DAY"
+    "segmentGranularity" : "DAY",
+    "queryGranularity" : "none"
   }
 }

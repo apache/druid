@@ -204,4 +204,4 @@ See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
 - [Compacting Segments](../design/coordinator.md#compacting-segments) for more on automatic compaction.
 - See [Compaction Configuration API](../operations/api-reference.md#compaction-configuration)
-and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for configuration information.
+and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for automatic copmaction configuration information.
