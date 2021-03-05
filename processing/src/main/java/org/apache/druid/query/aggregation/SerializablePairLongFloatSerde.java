@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
  * The serialization structure is: Long:Float
  * <p>
  * The class is used on first/last Float aggregators to store the time and the first/last Float.
- * Long:Long -> Timestamp:Long
+ * Long:Float -> Timestamp:Float
  */
 public class SerializablePairLongFloatSerde extends AbstractSerializablePairSerde<SerializablePairLongFloat>
 {

@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
  * The serialization structure is: Long:Double
  * <p>
  * The class is used on first/last Double aggregators to store the time and the first/last Double.
- * Long:Long -> Timestamp:Long
+ * Long:Double -> Timestamp:Double
  */
 public class SerializablePairLongDoubleSerde extends AbstractSerializablePairSerde<SerializablePairLongDouble>
 {
