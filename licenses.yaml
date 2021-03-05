@@ -1902,9 +1902,10 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.4.14
+version: 3.5.9
 libraries:
   - org.apache.zookeeper: zookeeper
+  - org.apache.zookeeper: zookeeper-jute
 notices:
   - zookeeper: |
       Apache ZooKeeper
