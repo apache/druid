@@ -161,6 +161,7 @@ name: Code adopted from org.apache.commons.dbcp2.BasicDataSource
 license_category: source
 module: server
 license_name: Apache License version 2.0
+version: 2.0.1
 source_paths:
   - server/src/main/java/org/apache/druid/metadata/BasicDataSourceExt.java
 notice: |
