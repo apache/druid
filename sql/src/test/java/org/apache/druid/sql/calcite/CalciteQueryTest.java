@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -16463,11 +16464,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .dataSource(CalciteTests.DATASOURCE1)
                              .intervals(querySegmentSpec(Filtration.eternity()))
                              .virtualColumns(
-                                 expressionVirtualColumn(
-                                     "v0",
-                                     "timestamp_shift(\"__time\",'P1M',1,'UTC')",
-                                     ValueType.LONG
-                                 )
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",'P1M',1,'UTC')", ValueType.LONG)
                              )
                              .columns("v0")
                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -16491,11 +16488,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .dataSource(CalciteTests.DATASOURCE1)
                              .intervals(querySegmentSpec(Filtration.eternity()))
                              .virtualColumns(
-                                 expressionVirtualColumn(
-                                     "v0",
-                                     "timestamp_shift(\"__time\",concat('P', (1 * \"cnt\"), 'M'),1,'UTC')",
-                                     ValueType.LONG
-                                 )
+                                 expressionVirtualColumn("v0", "timestamp_shift(\"__time\",concat('P', (1 * \"cnt\"), 'M'),1,'UTC')", ValueType.LONG)
                              )
                              .columns("v0")
                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -16510,6 +16503,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
   public void testGroupingSetsWithLimit() throws Exception
   {
     // Cannot vectorize due to virtual columns.
@@ -16576,6 +16570,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
   public void testGroupingSetsWithLimitOrderByGran() throws Exception
   {
     // Cannot vectorize due to virtual columns.
