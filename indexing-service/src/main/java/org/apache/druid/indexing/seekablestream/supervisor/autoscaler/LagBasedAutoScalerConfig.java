@@ -184,4 +184,25 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   {
     return minTriggerScaleActionFrequencyMillis;
   }
+
+  @Override
+  public String toString()
+  {
+    return "autoScalerConfig{" +
+            "enableTaskAutoScaler=" + enableTaskAutoScaler +
+            ", taskCountMax=" + taskCountMax +
+            ", taskCountMin=" + taskCountMin +
+            ", minTriggerScaleActionFrequencyMillis=" + minTriggerScaleActionFrequencyMillis +
+            ", lagCollectionIntervalMillis=" + lagCollectionIntervalMillis +
+            ", lagCollectionIntervalMillis=" + lagCollectionIntervalMillis +
+            ", scaleOutThreshold=" + scaleOutThreshold +
+            ", triggerScaleOutFractionThreshold=" + triggerScaleOutFractionThreshold +
+            ", scaleInThreshold=" + scaleInThreshold +
+            ", triggerScaleInFractionThreshold=" + triggerScaleInFractionThreshold +
+            ", scaleActionStartDelayMillis=" + scaleActionStartDelayMillis +
+            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
+            ", scaleInStep=" + scaleInStep +
+            ", scaleOutStep=" + scaleOutStep +
+            '}';
+  }
 }

@@ -383,7 +383,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   @Override
   public LagStats computeLagStats()
   {
-    return null;
+    throw new UnsupportedOperationException("Compute Lag Stats is not supported in KinesisSupervisor yet.");
   }
 
   @Override

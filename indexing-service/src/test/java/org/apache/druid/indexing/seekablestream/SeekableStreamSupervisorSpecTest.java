@@ -350,7 +350,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     }
 
     @Override
-    public int getPartitionNumbers()
+    public int getPartitionCount()
     {
       return partitionNumbers;
     }

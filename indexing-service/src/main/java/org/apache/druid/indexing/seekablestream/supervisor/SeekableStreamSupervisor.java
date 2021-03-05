@@ -2058,7 +2058,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  public int getPartitionNumbers()
+  public int getPartitionCount()
   {
     return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
   }

@@ -203,13 +203,13 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       // Do Scale out
       int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
 
-      int partitionNumbers = supervisor.getPartitionNumbers();
-      if (partitionNumbers <= 0) {
+      int partitionCount = supervisor.getPartitionCount();
+      if (partitionCount <= 0) {
         log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
         return -1;
       }
 
-      int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionNumbers);
+      int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMax) {
         log.warn("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
             dataSource
