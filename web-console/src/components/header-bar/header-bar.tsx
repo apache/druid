@@ -225,6 +225,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     </Menu>
   );
 
+  const capabilitiesMode = capabilities.getModeExtended();
   const configMenu = (
     <Menu>
       <MenuItem
@@ -264,23 +265,30 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           />
         ) : (
           <>
-            <MenuItem
-              text="Force Coordinator mode"
-              onClick={() => {
-                localStorageSetJson(
-                  LocalStorageKeys.CAPABILITIES_OVERRIDE,
-                  Capabilities.COORDINATOR,
-                );
-                location.reload();
-              }}
-            />
-            <MenuItem
-              text="Force Overlord mode"
-              onClick={() => {
-                localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, Capabilities.OVERLORD);
-                location.reload();
-              }}
-            />
+            {capabilitiesMode !== 'coordinator' && (
+              <MenuItem
+                text="Force Coordinator mode"
+                onClick={() => {
+                  localStorageSetJson(
+                    LocalStorageKeys.CAPABILITIES_OVERRIDE,
+                    Capabilities.COORDINATOR,
+                  );
+                  location.reload();
+                }}
+              />
+            )}
+            {capabilitiesMode !== 'overlord' && (
+              <MenuItem
+                text="Force Overlord mode"
+                onClick={() => {
+                  localStorageSetJson(
+                    LocalStorageKeys.CAPABILITIES_OVERRIDE,
+                    Capabilities.OVERLORD,
+                  );
+                  location.reload();
+                }}
+              />
+            )}
           </>
         )}
       </MenuItem>
