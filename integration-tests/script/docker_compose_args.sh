@@ -37,7 +37,7 @@ getComposeArgs()
         exit 1
       elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
       then
-        # default + schema registry container
+        # Replace MiddleManager with Indexer + schema registry container
         echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml -f ${DOCKERDIR}/docker-compose.schema-registry-indexer.yml"
       else
         # Replace MiddleManager with Indexer
