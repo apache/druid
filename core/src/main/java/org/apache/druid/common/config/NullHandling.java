@@ -62,15 +62,6 @@ public class NullHandling
   }
 
   /**
-   * This function should only be called by unit tests
-   */
-  @VisibleForTesting
-  public static void updateForTests(boolean useDefaultValuesForNull)
-  {
-    INSTANCE = new NullValueHandlingConfig(useDefaultValuesForNull);
-  }
-
-  /**
    * whether nulls should be replaced with default value.
    */
   public static boolean replaceWithDefault()

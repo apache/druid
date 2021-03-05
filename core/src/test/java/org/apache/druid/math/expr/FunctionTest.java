@@ -697,31 +697,6 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSizeFormatWithNoDefaultValueForNull()
-  {
-    NullHandling.updateForTests(false);
-    {
-      //
-      // normal cases
-      // y is not null, the function returns correctly
-      //
-      assertExpr("human_readable_binary_byte_format(y)", "2 B");
-      assertExpr("human_readable_decimal_byte_format(y)", "2 B");
-      assertExpr("human_readable_decimal_format(y)", "2");
-
-      //
-      // since 'druid.generic.useDefaultValueForNull' has been disabled above,
-      // the 'nonexist' below returns null, and the function calls also return null
-      //
-      assertExpr("human_readable_binary_byte_format(nonexist)", null);
-      assertExpr("human_readable_decimal_byte_format(nonexist)", null);
-      assertExpr("human_readable_decimal_format(nonexist)", null);
-
-    }
-    NullHandling.updateForTests(true);
-  }
-
-  @Test
   public void testBitwise()
   {
     // happy path maths
