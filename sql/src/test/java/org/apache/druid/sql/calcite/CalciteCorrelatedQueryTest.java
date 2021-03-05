@@ -28,6 +28,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -59,6 +60,7 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -270,6 +272,93 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                         )
                         .setQuerySegmentSpec(querySegmentSpec(Intervals.of(
                             "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z")))
+                        .setDimensions(new DefaultDimensionSpec("country", "d0"))
+                        .setAggregatorSpecs(new LongAnyAggregatorFactory("a0", "j0._a0"))
+                        .setGranularity(new AllGranularity())
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"canada", 4L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> inputContext) throws Exception
+  {
+    cannotVectorize();
+    HashMap<String, Object> queryContext = new HashMap<>(inputContext);
+    queryContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, false);
+
+    testQuery(
+        "select country, ANY_VALUE(\n"
+        + "        select max(\"users\") from (\n"
+        + "            select floor(__time to day), count(*) \"users\" from visits f where f.country = visits.country group by 1\n"
+        + "        )\n"
+        + "     ) as \"dailyVisits\"\n"
+        + "from visits \n"
+        + " where city = 'B' and __time between '2021-01-01 01:00:00' AND '2021-01-02 23:59:59'"
+        + " group by 1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new QueryDataSource(newScanQueryBuilder().dataSource("visits")
+                                                                         .intervals(querySegmentSpec(Intervals.of(
+                                                                             "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z")))
+                                                                         .filters(selector("city", "B", null))
+                                                                         .columns("__time", "city", "country")
+                                                                         .build()),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(
+                                                    GroupByQuery.builder()
+                                                                .setDataSource("visits")
+                                                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                                .setVirtualColumns(new ExpressionVirtualColumn(
+                                                                    "v0",
+                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    ValueType.LONG,
+                                                                    TestExprMacroTable.INSTANCE
+                                                                ))
+                                                                .setDimFilter(not(selector("country", null, null)))
+                                                                .setDimensions(
+                                                                    new DefaultDimensionSpec(
+                                                                        "v0",
+                                                                        "d0",
+                                                                        ValueType.LONG
+                                                                    ),
+                                                                    new DefaultDimensionSpec(
+                                                                        "country",
+                                                                        "d1"
+                                                                    )
+                                                                )
+                                                                .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                                                                .setContext(queryContext)
+                                                                .setGranularity(new AllGranularity())
+                                                                .build()
+                                                )
+                                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
+                                                .setAggregatorSpecs(
+                                                    new LongMaxAggregatorFactory("_a0", "a0")
+                                                )
+                                                .setGranularity(new AllGranularity())
+                                                .setContext(queryContext)
+                                                .build()
+                                ),
+                                "j0.",
+                                equalsCondition(
+                                    DruidExpression.fromColumn("country"),
+                                    DruidExpression.fromColumn("j0._d0")
+                                ),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                         .setDimensions(new DefaultDimensionSpec("country", "d0"))
                         .setAggregatorSpecs(new LongAnyAggregatorFactory("a0", "j0._a0"))
                         .setGranularity(new AllGranularity())
