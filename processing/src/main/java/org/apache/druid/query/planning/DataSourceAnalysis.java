@@ -28,6 +28,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
@@ -80,12 +81,15 @@ public class DataSourceAnalysis
   private final DataSource baseDataSource;
   @Nullable
   private final Query<?> baseQuery;
+  @Nullable
+  private final DimFilter joinBaseTableFilter;
   private final List<PreJoinableClause> preJoinableClauses;
 
   private DataSourceAnalysis(
       DataSource dataSource,
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
+      @Nullable DimFilter joinBaseTableFilter,
       List<PreJoinableClause> preJoinableClauses
   )
   {
@@ -98,6 +102,7 @@ public class DataSourceAnalysis
     this.dataSource = dataSource;
     this.baseDataSource = baseDataSource;
     this.baseQuery = baseQuery;
+    this.joinBaseTableFilter = joinBaseTableFilter;
     this.preJoinableClauses = preJoinableClauses;
   }
 
@@ -121,10 +126,10 @@ public class DataSourceAnalysis
     }
 
     if (current instanceof JoinDataSource) {
-      final Pair<DataSource, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
-      return new DataSourceAnalysis(dataSource, flattened.lhs, baseQuery, flattened.rhs);
+      final Pair<Pair<DataSource, DimFilter>, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
+      return new DataSourceAnalysis(dataSource, flattened.lhs.lhs, baseQuery, flattened.lhs.rhs, flattened.rhs);
     } else {
-      return new DataSourceAnalysis(dataSource, current, baseQuery, Collections.emptyList());
+      return new DataSourceAnalysis(dataSource, current, baseQuery, null, Collections.emptyList());
     }
   }
 
@@ -134,14 +139,19 @@ public class DataSourceAnalysis
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static Pair<DataSource, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  private static Pair<Pair<DataSource, DimFilter>, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
   {
     DataSource current = dataSource;
+    DimFilter currentDimFilter = null;
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
     while (current instanceof JoinDataSource) {
       final JoinDataSource joinDataSource = (JoinDataSource) current;
       current = joinDataSource.getLeft();
+      if (currentDimFilter != null) {
+        throw new IAE("Left filters are only allowed when left child is direct table access");
+      }
+      currentDimFilter = joinDataSource.getLeftFilter();
       preJoinableClauses.add(
           new PreJoinableClause(
               joinDataSource.getRightPrefix(),
@@ -156,7 +166,7 @@ public class DataSourceAnalysis
     // going-up order. So reverse them.
     Collections.reverse(preJoinableClauses);
 
-    return Pair.of(current, preJoinableClauses);
+    return Pair.of(Pair.of(current, currentDimFilter), preJoinableClauses);
   }
 
   /**
@@ -215,10 +225,19 @@ public class DataSourceAnalysis
   }
 
   /**
+   * If the original data source is a join data source and there is a DimFilter on the base table data source,
+   * that DimFilter is returned here
+   */
+  public Optional<DimFilter> getJoinBaseTableFilter()
+  {
+    return Optional.ofNullable(joinBaseTableFilter);
+  }
+
+  /**
    * Returns the {@link QuerySegmentSpec} that is associated with the base datasource, if any. This only happens
    * when there is an outer query datasource. In this case, the base querySegmentSpec is the one associated with the
    * innermost subquery.
-   *
+   * <p>
    * This {@link QuerySegmentSpec} is taken from the query returned by {@link #getBaseQuery()}.
    *
    * @return the query segment spec associated with the base datasource if {@link #isQuery()} is true, else empty

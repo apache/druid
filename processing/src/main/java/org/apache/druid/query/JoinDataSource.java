@@ -27,10 +27,12 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -58,13 +60,17 @@ public class JoinDataSource implements DataSource
   private final String rightPrefix;
   private final JoinConditionAnalysis conditionAnalysis;
   private final JoinType joinType;
+  // An optional filter on the left side if left is direct table access
+  @Nullable
+  private final DimFilter leftFilter;
 
   private JoinDataSource(
       DataSource left,
       DataSource right,
       String rightPrefix,
       JoinConditionAnalysis conditionAnalysis,
-      JoinType joinType
+      JoinType joinType,
+      @Nullable DimFilter leftFilter
   )
   {
     this.left = Preconditions.checkNotNull(left, "left");
@@ -72,6 +78,12 @@ public class JoinDataSource implements DataSource
     this.rightPrefix = JoinPrefixUtils.validatePrefix(rightPrefix);
     this.conditionAnalysis = Preconditions.checkNotNull(conditionAnalysis, "conditionAnalysis");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
+    //TODO: Add support for union data sources
+    Preconditions.checkArgument(
+        leftFilter == null || left instanceof TableDataSource,
+        "left filter is only supported if left data source is direct table access"
+    );
+    this.leftFilter = leftFilter;
   }
 
   /**
@@ -84,6 +96,7 @@ public class JoinDataSource implements DataSource
       @JsonProperty("rightPrefix") String rightPrefix,
       @JsonProperty("condition") String condition,
       @JsonProperty("joinType") JoinType joinType,
+      @Nullable @JsonProperty("leftFilter") DimFilter leftFilter,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -96,7 +109,8 @@ public class JoinDataSource implements DataSource
             StringUtils.nullToEmptyNonDruidDataString(rightPrefix),
             macroTable
         ),
-        joinType
+        joinType,
+        leftFilter
     );
   }
 
@@ -108,10 +122,26 @@ public class JoinDataSource implements DataSource
       final DataSource right,
       final String rightPrefix,
       final JoinConditionAnalysis conditionAnalysis,
-      final JoinType joinType
+      final JoinType joinType,
+      final DimFilter leftFilter
   )
   {
-    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType);
+    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
+  }
+
+  /**
+   * Create a join dataSource from an existing {@link JoinConditionAnalysis}.
+   */
+  public static JoinDataSource create(
+      final DataSource left,
+      final DataSource right,
+      final String rightPrefix,
+      final String condition,
+      final JoinType joinType,
+      final ExprMacroTable macroTable
+  )
+  {
+    return create(left, right, rightPrefix, condition, joinType, null, macroTable);
   }
 
   @Override
@@ -158,6 +188,13 @@ public class JoinDataSource implements DataSource
     return joinType;
   }
 
+  @JsonProperty
+  @Nullable
+  public DimFilter getLeftFilter()
+  {
+    return leftFilter;
+  }
+
   @Override
   public List<DataSource> getChildren()
   {
@@ -171,7 +208,14 @@ public class JoinDataSource implements DataSource
       throw new IAE("Expected [2] children, got [%d]", children.size());
     }
 
-    return new JoinDataSource(children.get(0), children.get(1), rightPrefix, conditionAnalysis, joinType);
+    return new JoinDataSource(
+        children.get(0),
+        children.get(1),
+        rightPrefix,
+        conditionAnalysis,
+        joinType,
+        leftFilter
+    );
   }
 
   @Override
@@ -206,13 +250,14 @@ public class JoinDataSource implements DataSource
            Objects.equals(right, that.right) &&
            Objects.equals(rightPrefix, that.rightPrefix) &&
            Objects.equals(conditionAnalysis, that.conditionAnalysis) &&
+           Objects.equals(leftFilter, that.leftFilter) &&
            joinType == that.joinType;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(left, right, rightPrefix, conditionAnalysis, joinType);
+    return Objects.hash(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
   }
 
   @Override
@@ -224,6 +269,7 @@ public class JoinDataSource implements DataSource
            ", rightPrefix='" + rightPrefix + '\'' +
            ", condition=" + conditionAnalysis +
            ", joinType=" + joinType +
+           ", leftFilter=" + leftFilter +
            '}';
   }
 }

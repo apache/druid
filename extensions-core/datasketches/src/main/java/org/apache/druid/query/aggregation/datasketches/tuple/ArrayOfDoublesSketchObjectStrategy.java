@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketches;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;

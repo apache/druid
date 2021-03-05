@@ -356,3 +356,20 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-custom-check-tls
+
+  druid-openldap:
+    image: osixia/openldap:1.4.0
+    container_name: druid-openldap
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.74
+    ports:
+      - 8389:389
+      - 8636:636
+    privileged: true
+    volumes:
+      - ./ldap-configs/bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/bootstrap.ldif
+      - ${HOME}/shared:/shared
+    env_file:
+      - ./environment-configs/common
+    command: --copy-service
