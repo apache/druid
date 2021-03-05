@@ -53,7 +53,9 @@ For example, you have queries that frequently include incoming data from a Kafka
 
 ### Whole-query caching
 
-If real-time ingestion invalidating the cache is not an issue for your queries, you can use **whole-query caching** on the Broker to increase query efficiency. The Broker performs whole-query caching operations before sending fan out queries to Historicals. Therefore Druid no longer needs to merge the per-segment results on the Broker. For instance, whole-query caching is a good option when you have queries that include data from a batch ingestion task that runs every few hours or once a day. Per-segment caching would be less efficient in this case because it requires Druid to merge the per-segment results for each query, even when the results are cached.
+If real-time ingestion invalidating the cache is not an issue for your queries, you can use **whole-query caching** on the Broker to increase query efficiency. The Broker performs whole-query caching operations before sending fan out queries to Historicals. Therefore Druid no longer needs to merge the per-segment results on the Broker.
+
+For instance, whole-query caching is a good option when you have queries that include data from a batch ingestion task that runs every few hours or once a day. Per-segment caching would be less efficient in this case because it requires Druid to merge the per-segment results for each query, even when the results are cached.
 
 ## Where to enable caching
 
@@ -70,6 +72,15 @@ If real-time ingestion invalidating the cache is not an issue for your queries, 
      Do not use per-segment caches on the Broker for large production clusters. When `druid.broker.cache.populateCache` is `true` and query context parameter `populateCache` _is not_ `false`, Historicals return results on a per-segment basis without merging results locally thus negatively impacting cluster scalability.
 
 **Whole-query cache** is only available on Brokers.
+
+## Performance considerations for caching
+Caching enables increased concurrency on the same system, therefore leading to noticeable performance improvements for queries on Druid clusters handling throughput for concurrent, mixed workloads.
+
+If you are looking to improve response time for a single query or page load, you should ignore caching. In general, response time for a single task should meet performance objectives even when the cache is cold.
+
+During query processing, the per-segment cache intercepts the query and sends the results directly to the Broker. This way the query bypasses the data server processing threads. For queries requiring minimal processing in the Broker, cached queries are very quick. If work done on the Broker causes a query bottleneck, enabling caching results in little noticeable query improvement.
+
+The largest performance gains from segment caching tend to apply to `topN` and time series queries. The impact is less for `groupBy` queries. The same applies to queries with or without joins.
 
 ### Scenarios where caching does not increase query performance
 
