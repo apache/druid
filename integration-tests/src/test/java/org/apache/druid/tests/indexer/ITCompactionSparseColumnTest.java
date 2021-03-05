@@ -146,28 +146,28 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
     List<Map<String, List<List<Object>>>> expectedResultBeforeCompaction = new ArrayList<>();
     // First segments have the following rows:
     List<List<Object>> segment1Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L,"F","C",1,1),
-        ImmutableList.of(1442016000000L,"J","C",1,1),
-        ImmutableList.of(1442016000000L,"X","H",1,1)
+        ImmutableList.of(1442016000000L, "F", "C", 1, 1),
+        ImmutableList.of(1442016000000L, "J", "C", 1, 1),
+        ImmutableList.of(1442016000000L, "X", "H", 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment1Rows));
     // Second segments have the following rows:
     List<List<Object>> segment2Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L,"S","Z",1,1),
-        ImmutableList.of(1442016000000L,"X","H",1,1),
-        ImmutableList.of(1442016000000L,"Z","H",1,1)
+        ImmutableList.of(1442016000000L, "S", "Z", 1, 1),
+        ImmutableList.of(1442016000000L, "X", "H", 1, 1),
+        ImmutableList.of(1442016000000L, "Z", "H", 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment2Rows));
     // Third segments have the following rows:
     List<List<Object>> segment3Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L,"R","J",1,1),
-        ImmutableList.of(1442016000000L,"T","H",1,1),
-        ImmutableList.of(1442016000000L,"X","H",1,1)
+        ImmutableList.of(1442016000000L, "R", "J", 1, 1),
+        ImmutableList.of(1442016000000L, "T", "H", 1, 1),
+        ImmutableList.of(1442016000000L, "X", "H", 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment3Rows));
     // Fourth segments have the following rows:
     List<List<Object>> segment4Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L,"X","A",1,1)
+        ImmutableList.of(1442016000000L, "X", "A", 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment4Rows));
     verifyQueryResult(expectedResultBeforeCompaction, 10, 10, 1);
