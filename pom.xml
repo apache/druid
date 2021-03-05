@@ -99,7 +99,6 @@
         <mysql.version>5.1.48</mysql.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.63.Final</netty4.version>
         <node.version>v10.24.0</node.version>
         <npm.version>6.14.11</npm.version>
@@ -117,7 +116,7 @@
              If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
              see http://curator.apache.org/zk-compatibility.html -->
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.4.14</zookeeper.version>
+        <zookeeper.version>3.5.9</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
@@ -316,10 +315,19 @@
                         <artifactId>netty</artifactId>
                     </exclusion>
                     <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-transport-native-epoll</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-annotations</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper-jute</artifactId>
+                <version>${zookeeper.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -349,11 +357,6 @@
                 </exclusions>
             </dependency>
             <dependency>
-              <!--
-                ~ TODO: This dependency transitively pulls in org.codehaus.jackson:jackson-mapper.asl.1.9.13 which has
-                ~ security vulnerability CVE-2017-7525. https://github.com/apache/druid/pull/8177 tracks
-                ~ upgrading to a newer curator version.
-              -->
               <groupId>org.apache.curator</groupId>
               <artifactId>curator-x-discovery</artifactId>
               <version>${apache.curator.version}</version>
