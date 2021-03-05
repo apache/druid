@@ -160,6 +160,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinLookupStringKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesLookupStringKey,
         preAnalysisLookupStringKey
     );
@@ -194,6 +195,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinLookupLongKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesLookupLongKey,
         preAnalysisLookupLongKey
     );
@@ -228,6 +230,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesIndexedTableStringKey,
         preAnalysisIndexedStringKey
     );
@@ -262,6 +265,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesIndexedTableLongKey,
         preAnalysisIndexedLongKey
     );

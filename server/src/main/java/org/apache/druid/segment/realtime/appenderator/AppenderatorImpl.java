@@ -333,11 +333,11 @@ public class AppenderatorImpl implements Appenderator
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
         log.info("Flushing in-memory data to disk because %s.", String.join(",", persistReasons));
 
-        long bytesPersisted = 0L;
+        long bytesToBePersisted = 0L;
         for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
           final Sink sinkEntry = entry.getValue();
           if (sinkEntry != null) {
-            bytesPersisted += sinkEntry.getBytesInMemory();
+            bytesToBePersisted += sinkEntry.getBytesInMemory();
             if (sinkEntry.swappable()) {
               // After swapping the sink, we use memory mapped segment instead. However, the memory mapped segment still consumes memory.
               // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
@@ -347,7 +347,7 @@ public class AppenderatorImpl implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesPersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(

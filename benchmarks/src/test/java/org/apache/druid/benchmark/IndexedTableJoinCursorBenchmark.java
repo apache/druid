@@ -197,6 +197,7 @@ public class IndexedTableJoinCursorBenchmark
     hashJoinSegment = closer.register(
         new HashJoinSegment(
             ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+            null,
             clauses,
             preAnalysis
         )

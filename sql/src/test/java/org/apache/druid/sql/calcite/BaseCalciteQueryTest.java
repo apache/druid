@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -374,7 +375,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       DataSource right,
       String rightPrefix,
       String condition,
-      JoinType joinType
+      JoinType joinType,
+      DimFilter filter
   )
   {
     return JoinDataSource.create(
@@ -383,8 +385,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         rightPrefix,
         condition,
         joinType,
+        filter,
         CalciteTests.createExprMacroTable()
     );
+  }
+
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType
+  )
+  {
+    return join(left, right, rightPrefix, condition, joinType, null);
   }
 
   public static String equalsCondition(DruidExpression left, DruidExpression right)
@@ -827,5 +841,40 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
+  }
+
+  /**
+   * This is a provider of query contexts that should be used by join tests.
+   * It tests various configs that can be passed to join queries. All the configs provided by this provider should
+   * have the join query engine return the same results.
+   */
+  public static class QueryContextForJoinProvider
+  {
+    @UsedByJUnitParamsRunner
+    public static Object[] provideQueryContexts()
+    {
+      return new Object[]{
+          // default behavior
+          QUERY_CONTEXT_DEFAULT,
+          // filter value re-writes enabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .build(),
+          // rewrite values enabled but filter re-writes disabled.
+          // This should be drive the same behavior as the previous config
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .build(),
+          // filter re-writes disabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .build(),
+          };
+    }
   }
 }

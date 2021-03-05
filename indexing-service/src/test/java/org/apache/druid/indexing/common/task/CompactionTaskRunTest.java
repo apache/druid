@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -583,6 +584,183 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
           segments.get(i).getLastCompactionState()
       );
+    }
+  }
+
+  @Test
+  public void testWithGranularitySpecNonNullSegmentGranularityAndNullQueryGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+    Assert.assertEquals(
+        getDefaultCompactionState(Granularities.DAY, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        segments.get(0).getLastCompactionState()
+    );
+
+    // hour segmentGranularity
+    final CompactionTask compactionTask2 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null))
+        .build();
+
+    resultPair = runTask(compactionTask2);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    segments = resultPair.rhs;
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
+      Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
+          segments.get(i).getLastCompactionState()
+      );
+    }
+  }
+
+  @Test
+  public void testWithGranularitySpecNonNullQueryGranularityAndNullSegmentGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day queryGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.SECOND, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      }
+    }
+  }
+
+  @Test
+  public void testWithGranularitySpecNonNullQueryGranularityAndNonNullSegmentGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity and day queryGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+    Assert.assertEquals(
+        getDefaultCompactionState(Granularities.DAY, Granularities.DAY, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
+  public void testWithGranularitySpecNullQueryGranularityAndNullSegmentGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      }
     }
   }
 
