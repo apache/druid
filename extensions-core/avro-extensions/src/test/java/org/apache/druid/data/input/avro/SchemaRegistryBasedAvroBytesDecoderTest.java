@@ -106,9 +106,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
     bb.rewind();
     // When
-    GenericRecord actual = new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
-    // Then
-    Assert.assertEquals(someAvroDatum.get("id"), actual.get("id"));
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
@@ -118,8 +116,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(2).put((byte) 0).put(1, (byte) 1);
     bb.rewind();
     // When
-    GenericRecord record = new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
-    Assert.assertNull(record);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
@@ -134,8 +131,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);
     bb.rewind();
     // When
-    GenericRecord record = new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
-    Assert.assertNull(record);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = RE.class)

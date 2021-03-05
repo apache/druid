@@ -28,7 +28,6 @@ getComposeArgs()
       echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')"
       exit 1
     fi
-
     if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
     then
       # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
