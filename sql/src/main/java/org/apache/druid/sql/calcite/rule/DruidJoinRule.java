@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
@@ -97,18 +98,19 @@ public class DruidJoinRule extends RelOptRule
 
     final DruidRel<?> newLeft;
     final DruidRel<?> newRight;
+    final Filter leftFilter;
     final List<RexNode> newProjectExprs = new ArrayList<>();
 
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
     ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType()).get();
 
-    if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
-        && left.getPartialDruidQuery().getWhereFilter() == null) {
+    if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
       // Swap the left-side projection above the join, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
       final RelNode leftScan = left.getPartialDruidQuery().getScan();
       final Project leftProject = left.getPartialDruidQuery().getSelectProject();
+      leftFilter = left.getPartialDruidQuery().getWhereFilter();
 
       // Left-side projection expressions rewritten to be on top of the join.
       newProjectExprs.addAll(leftProject.getProjects());
@@ -121,6 +123,7 @@ public class DruidJoinRule extends RelOptRule
       }
 
       newLeft = left;
+      leftFilter = null;
     }
 
     if (right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
@@ -163,6 +166,7 @@ public class DruidJoinRule extends RelOptRule
             join.getJoinType(),
             join.isSemiJoinDone()
         ),
+        leftFilter,
         left.getQueryMaker()
     );
 

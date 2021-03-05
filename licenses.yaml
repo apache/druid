@@ -1962,7 +1962,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.34.v20201102
+version: 9.4.38.v20210224
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -1975,6 +1975,7 @@ libraries:
   - org.eclipse.jetty: jetty-servlet
   - org.eclipse.jetty: jetty-servlets
   - org.eclipse.jetty: jetty-util
+  - org.eclipse.jetty: jetty-util-ajax
 notice: |
   ==============================================================
    Jetty Web Container
