@@ -74,10 +74,14 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
   private static final String QUERIES_FILE = "/stream/queries/stream_index_queries.json";
   private static final String SUPERVISOR_SPEC_TEMPLATE_FILE = "supervisor_spec_template.json";
+  private static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE = "supervisor_with_autoscaler_spec_template.json";
 
   protected static final String DATA_RESOURCE_ROOT = "/stream/data";
   protected static final String SUPERVISOR_SPEC_TEMPLATE_PATH =
       String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_SPEC_TEMPLATE_FILE);
+  protected static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_PATH =
+          String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE);
+
   protected static final String SERIALIZER_SPEC_DIR = "serializer";
   protected static final String INPUT_FORMAT_SPEC_DIR = "input_format";
   protected static final String INPUT_ROW_PARSER_SPEC_DIR = "parser";
@@ -293,6 +297,70 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       verifyIngestedData(generatedTestConfig, numWritten);
     }
   }
+
+  protected void doTestIndexDataWithAutoscaler(@Nullable Boolean transactionEnabled) throws Exception
+  {
+    final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
+            INPUT_FORMAT,
+            getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    try (
+            final Closeable closer = createResourceCloser(generatedTestConfig);
+            final StreamEventWriter streamEventWriter = createStreamEventWriter(config, transactionEnabled)
+    ) {
+      final String taskSpec = generatedTestConfig.getStreamIngestionPropsTransform()
+              .apply(getResourceAsString(SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
+      LOG.info("Submitted supervisor");
+      // Start generating half of the data
+      int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
+      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
+      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
+      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+              new JsonEventSerializer(jsonMapper),
+              EVENTS_PER_SECOND,
+              CYCLE_PADDING_MS
+      );
+      long numWritten = streamGenerator.run(
+              generatedTestConfig.getStreamName(),
+              streamEventWriter,
+              secondsToGenerateFirstRound,
+              FIRST_EVENT_TIME
+      );
+      // Verify supervisor is healthy before suspension
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
+              true,
+              10000,
+              30,
+              "Waiting for supervisor to be healthy"
+      );
+
+      // wait for autoScaling task numbers from 1 to 2.
+      ITRetryUtil.retryUntil(
+          () -> indexer.getRunningTasks().size() == 2,
+              true,
+              10000,
+              50,
+              "waiting for autoScaling task numbers from 1 to 2"
+      );
+
+      // Start generating remainning half of the data
+      numWritten += streamGenerator.run(
+              generatedTestConfig.getStreamName(),
+              streamEventWriter,
+              secondsToGenerateRemaining,
+              FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound)
+      );
+
+      // Verify that supervisor can catch up with the stream
+      verifyIngestedData(generatedTestConfig, numWritten);
+    }
+  }
+
+
 
   protected void doTestIndexDataWithStreamReshardSplit(@Nullable Boolean transactionEnabled) throws Exception
   {
