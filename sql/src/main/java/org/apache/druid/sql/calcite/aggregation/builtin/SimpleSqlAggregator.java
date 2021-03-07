@@ -88,10 +88,11 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
       expression = arg.getExpression();
     }
 
-    return getAggregation(name, aggregateCall, macroTable, fieldName, expression);
+    return getAggregation(plannerContext, name, aggregateCall, macroTable, fieldName, expression);
   }
 
   abstract Aggregation getAggregation(
+      PlannerContext plannerContext,
       String name,
       AggregateCall aggregateCall,
       ExprMacroTable macroTable,

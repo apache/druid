@@ -103,6 +103,7 @@ public class AvgSqlAggregator implements SqlAggregator
     final String sumName = Calcites.makePrefixedName(name, "sum");
     final String countName = Calcites.makePrefixedName(name, "count");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
+        plannerContext,
         sumType,
         sumName,
         fieldName,

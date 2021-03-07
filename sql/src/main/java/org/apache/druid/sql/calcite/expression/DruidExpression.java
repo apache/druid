@@ -23,11 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Arrays;
 import java.util.List;
@@ -153,23 +151,23 @@ public class DruidExpression
     return simpleExtraction != null;
   }
 
-  public Expr parse(final ExprMacroTable macroTable)
-  {
-    return Parser.parse(expression, macroTable);
-  }
-
   public SimpleExtraction getSimpleExtraction()
   {
     return Preconditions.checkNotNull(simpleExtraction);
   }
 
   public ExpressionVirtualColumn toVirtualColumn(
+      final PlannerContext plannerContext,
       final String name,
-      final ValueType outputType,
-      final ExprMacroTable macroTable
+      final ValueType outputType
   )
   {
-    return new ExpressionVirtualColumn(name, expression, outputType, macroTable);
+    return new ExpressionVirtualColumn(
+        name,
+        expression,
+        outputType,
+        plannerContext.getCachingExprParser().lazyParse(expression)
+    );
   }
 
   public DruidExpression map(

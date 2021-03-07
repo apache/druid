@@ -22,7 +22,9 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -46,6 +48,17 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   )
   {
     super(macroTable, name, fieldName, expression);
+  }
+
+  public DoubleSumAggregatorFactory(
+      String name,
+      String fieldName,
+      @Nullable String expression,
+      Supplier<Expr> expressionSupplier,
+      ExprMacroTable macroTable
+  )
+  {
+    super(macroTable, name, fieldName, expression, expressionSupplier);
   }
 
   public DoubleSumAggregatorFactory(String name, String fieldName)

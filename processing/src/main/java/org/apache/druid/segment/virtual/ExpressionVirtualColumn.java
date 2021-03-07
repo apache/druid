@@ -69,10 +69,20 @@ public class ExpressionVirtualColumn implements VirtualColumn
       @JacksonInject ExprMacroTable macroTable
   )
   {
+    this(name, expression, outputType, Suppliers.memoize(() -> Parser.parse(expression, macroTable)));
+  }
+
+  public ExpressionVirtualColumn(
+      String name,
+      String expression,
+      @Nullable ValueType outputType,
+      Supplier<Expr> exprSupplier
+  )
+  {
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
     this.outputType = outputType;
-    this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.parsedExpression = exprSupplier;
   }
 
   /**

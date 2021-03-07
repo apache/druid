@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class MinSqlAggregator extends SimpleSqlAggregator
 {
@@ -42,6 +43,7 @@ public class MinSqlAggregator extends SimpleSqlAggregator
 
   @Override
   Aggregation getAggregation(
+      final PlannerContext plannerContext,
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
@@ -50,10 +52,18 @@ public class MinSqlAggregator extends SimpleSqlAggregator
   )
   {
     final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
-    return Aggregation.create(createMinAggregatorFactory(valueType, name, fieldName, expression, macroTable));
+    return Aggregation.create(createMinAggregatorFactory(
+        plannerContext,
+        valueType,
+        name,
+        fieldName,
+        expression,
+        macroTable
+    ));
   }
 
   private static AggregatorFactory createMinAggregatorFactory(
+      final PlannerContext plannerContext,
       final ValueType aggregationType,
       final String name,
       final String fieldName,
@@ -63,11 +73,29 @@ public class MinSqlAggregator extends SimpleSqlAggregator
   {
     switch (aggregationType) {
       case LONG:
-        return new LongMinAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongMinAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       case FLOAT:
-        return new FloatMinAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatMinAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       case DOUBLE:
-        return new DoubleMinAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleMinAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       default:
         throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
     }

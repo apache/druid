@@ -96,6 +96,26 @@ public class ExpressionPostAggregator implements PostAggregator
     );
   }
 
+  public ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final ExprMacroTable macroTable,
+      final Supplier<Expr> parsed
+  )
+  {
+    this(
+        name,
+        expression,
+        ordering,
+        null, // in the future this will be computed by decorate
+        macroTable,
+        ImmutableMap.of(),
+        parsed,
+        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredBindings())
+    );
+  }
+
   private ExpressionPostAggregator(
       final String name,
       final String expression,

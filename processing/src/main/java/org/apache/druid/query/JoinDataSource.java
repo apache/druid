@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -108,6 +110,30 @@ public class JoinDataSource implements DataSource
             Preconditions.checkNotNull(condition, "condition"),
             StringUtils.nullToEmptyNonDruidDataString(rightPrefix),
             macroTable
+        ),
+        joinType,
+        leftFilter
+    );
+  }
+
+  public static JoinDataSource create(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType,
+      DimFilter leftFilter,
+      Supplier<Expr> conditionExprSupplier
+  )
+  {
+    return new JoinDataSource(
+        left,
+        right,
+        StringUtils.nullToEmptyNonDruidDataString(rightPrefix),
+        JoinConditionAnalysis.forExpression(
+            Preconditions.checkNotNull(condition, "condition"),
+            StringUtils.nullToEmptyNonDruidDataString(rightPrefix),
+            conditionExprSupplier
         ),
         joinType,
         leftFilter

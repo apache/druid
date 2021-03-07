@@ -792,8 +792,8 @@ public class DruidQuery
     } else if (grouping.getDimensions().size() == 1) {
       final DimensionExpression dimensionExpression = Iterables.getOnlyElement(grouping.getDimensions());
       queryGranularity = Expressions.toQueryGranularity(
-          dimensionExpression.getDruidExpression(),
-          plannerContext.getExprMacroTable()
+          plannerContext,
+          dimensionExpression.getDruidExpression()
       );
 
       if (queryGranularity == null) {

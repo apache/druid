@@ -56,6 +56,13 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
     this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
+  public ExpressionDimFilter(final String expression, final Supplier<Expr> exprSupplier)
+  {
+    this.expression = expression;
+    this.filterTuning = null;
+    this.parsed = exprSupplier;
+  }
+
   @VisibleForTesting
   public ExpressionDimFilter(final String expression, ExprMacroTable macroTable)
   {

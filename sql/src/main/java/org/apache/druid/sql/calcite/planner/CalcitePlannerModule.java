@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -28,10 +29,13 @@ import org.apache.druid.guice.JsonConfigProvider;
  */
 public class CalcitePlannerModule implements Module
 {
+  @VisibleForTesting
+  static final String PLANNER_CONFIG_PREFIX = "druid.sql.planner";
+
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
+    JsonConfigProvider.bind(binder, PLANNER_CONFIG_PREFIX, PlannerConfig.class);
     binder.bind(PlannerFactory.class);
     binder.bind(DruidOperatorTable.class);
   }

@@ -50,7 +50,7 @@ public abstract class BaseExpressionDimFilterOperatorConversion extends DirectOp
 
     return new ExpressionDimFilter(
         filterExpr,
-        plannerContext.getExprMacroTable()
+        plannerContext.getCachingExprParser().lazyParse(filterExpr)
     );
   }
 

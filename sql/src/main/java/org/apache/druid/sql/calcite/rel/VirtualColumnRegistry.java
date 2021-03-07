@@ -86,9 +86,9 @@ public class VirtualColumnRegistry
     if (!virtualColumnsByExpression.containsKey(expression.getExpression())) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
       final VirtualColumn virtualColumn = expression.toVirtualColumn(
+          plannerContext,
           virtualColumnName,
-          valueType,
-          plannerContext.getExprMacroTable()
+          valueType
       );
       virtualColumnsByExpression.put(
           expression.getExpression(),

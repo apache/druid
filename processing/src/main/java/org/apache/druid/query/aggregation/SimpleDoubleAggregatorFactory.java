@@ -67,12 +67,29 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
       @Nullable String expression
   )
   {
+    this(
+        macroTable,
+        name,
+        fieldName,
+        expression,
+        Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable))
+    );
+  }
+
+  public SimpleDoubleAggregatorFactory(
+      ExprMacroTable macroTable,
+      String name,
+      String fieldName,
+      @Nullable String expression,
+      Supplier<Expr> expressionSupplier
+  )
+  {
     this.macroTable = macroTable;
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
     this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
-    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
+    this.fieldExpression = expressionSupplier;
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,

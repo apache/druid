@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class SumSqlAggregator extends SimpleSqlAggregator
 {
@@ -42,6 +43,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
 
   @Override
   Aggregation getAggregation(
+      final PlannerContext plannerContext,
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
@@ -50,10 +52,18 @@ public class SumSqlAggregator extends SimpleSqlAggregator
   )
   {
     final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
-    return Aggregation.create(createSumAggregatorFactory(valueType, name, fieldName, expression, macroTable));
+    return Aggregation.create(createSumAggregatorFactory(
+        plannerContext,
+        valueType,
+        name,
+        fieldName,
+        expression,
+        macroTable
+    ));
   }
 
   static AggregatorFactory createSumAggregatorFactory(
+      final PlannerContext plannerContext,
       final ValueType aggregationType,
       final String name,
       final String fieldName,
@@ -63,11 +73,29 @@ public class SumSqlAggregator extends SimpleSqlAggregator
   {
     switch (aggregationType) {
       case LONG:
-        return new LongSumAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongSumAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       case FLOAT:
-        return new FloatSumAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatSumAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       case DOUBLE:
-        return new DoubleSumAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleSumAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       default:
         throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
     }

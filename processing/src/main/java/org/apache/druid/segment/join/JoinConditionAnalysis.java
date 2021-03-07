@@ -20,6 +20,8 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -82,21 +84,34 @@ public class JoinConditionAnalysis
     rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).collect(Collectors.toSet());
   }
 
-  /**
-   * Analyze a join condition.
-   *
-   * @param condition   the condition expression
-   * @param rightPrefix prefix for the right-hand side of the join; will be used to determine which identifiers in
-   *                    the condition come from the right-hand side and which come from the left-hand side
-   * @param macroTable  macro table for parsing the condition expression
-   */
   public static JoinConditionAnalysis forExpression(
       final String condition,
       final String rightPrefix,
       final ExprMacroTable macroTable
   )
   {
-    final Expr conditionExpr = Parser.parse(condition, macroTable);
+    return forExpression(
+        condition,
+        rightPrefix,
+        Suppliers.memoize(() -> Parser.parse(condition, macroTable))
+    );
+  }
+
+  /**
+   * Analyze a join condition.
+   *
+   * @param condition    the condition expression
+   * @param rightPrefix  prefix for the right-hand side of the join; will be used to determine which identifiers in
+   *                     the condition come from the right-hand side and which come from the left-hand side
+   * @param exprSupplier {@link Expr} supplier for the parsed condition
+   */
+  public static JoinConditionAnalysis forExpression(
+      final String condition,
+      final String rightPrefix,
+      final Supplier<Expr> exprSupplier
+      )
+  {
+    final Expr conditionExpr = exprSupplier.get();
     final List<Equality> equiConditions = new ArrayList<>();
     final List<Expr> nonEquiConditions = new ArrayList<>();
 

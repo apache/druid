@@ -31,6 +31,7 @@ public class PlannerConfig
 {
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_KEY_USE_PARSED_EXPR_CACHE = "useParsedExprCache";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -58,6 +59,9 @@ public class PlannerConfig
 
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
+
+  @JsonProperty
+  private boolean useParsedExprCache = false;
 
   public long getMetadataSegmentPollPeriod()
   {
@@ -111,6 +115,11 @@ public class PlannerConfig
     return serializeComplexValues;
   }
 
+  public boolean isUseParsedExprCache()
+  {
+    return useParsedExprCache;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -136,6 +145,11 @@ public class PlannerConfig
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
+    newConfig.useParsedExprCache = getContextBoolean(
+        context,
+        CTX_KEY_USE_PARSED_EXPR_CACHE,
+        isUseParsedExprCache()
+    );
     return newConfig;
   }
 
@@ -174,6 +188,7 @@ public class PlannerConfig
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
            metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
+           useParsedExprCache == that.useParsedExprCache &&
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
@@ -182,7 +197,6 @@ public class PlannerConfig
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         metadataRefreshPeriod,
         maxTopNLimit,
@@ -193,6 +207,7 @@ public class PlannerConfig
         sqlTimeZone,
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
+        useParsedExprCache,
         serializeComplexValues
     );
   }
@@ -207,9 +222,10 @@ public class PlannerConfig
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", sqlTimeZone=" + sqlTimeZone +
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
-           ", sqlTimeZone=" + sqlTimeZone +
+           ", useParsedExprCache=" + useParsedExprCache +
            ", serializeComplexValues=" + serializeComplexValues +
            '}';
   }

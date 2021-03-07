@@ -68,6 +68,7 @@ public class PlannerContext
   private final DateTime localNow;
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
+  private final CachingExprParser cachingExprParser;
   private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
@@ -98,6 +99,7 @@ public class PlannerContext
       sqlQueryId = UUID.randomUUID().toString();
     }
     this.sqlQueryId = sqlQueryId;
+    this.cachingExprParser = new CachingExprParser(macroTable, plannerConfig);
   }
 
   public static PlannerContext create(
@@ -281,5 +283,10 @@ public class PlannerContext
   public void setResources(Set<Resource> resources)
   {
     this.resources = Preconditions.checkNotNull(resources, "resources");
+  }
+
+  public CachingExprParser getCachingExprParser()
+  {
+    return cachingExprParser;
   }
 }

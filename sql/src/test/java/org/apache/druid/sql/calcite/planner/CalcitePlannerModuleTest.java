@@ -29,6 +29,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -40,6 +41,8 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,6 +50,7 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.util.Properties;
 import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
@@ -78,6 +82,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   private Set<NamedSchema> calciteSchemas;
 
   private CalcitePlannerModule target;
+  private Properties properties;
   private Injector injector;
 
   @Before
@@ -92,6 +97,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     aggregators = ImmutableSet.of();
     operatorConversions = ImmutableSet.of();
     target = new CalcitePlannerModule();
+    properties = new Properties();
     injector = Guice.createInjector(
         new JacksonModule(),
         binder -> {
@@ -105,6 +111,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>(){})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>(){})).toInstance(operatorConversions);
           binder.bind(SchemaPlus.class).toInstance(rootSchema);
+          binder.bind(Properties.class).toInstance(properties);
         },
         target
     );
@@ -129,9 +136,51 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   }
 
   @Test
-  public void testPlannerConfigIsInjected()
+  public void testDefaultPlannerConfigIsInjected()
   {
     PlannerConfig plannerConfig = injector.getInstance(PlannerConfig.class);
     Assert.assertNotNull(plannerConfig);
+    Assert.assertEquals(new Period("PT1M"), plannerConfig.getMetadataRefreshPeriod());
+    Assert.assertEquals(100000, plannerConfig.getMaxTopNLimit());
+    Assert.assertTrue(plannerConfig.isUseApproximateCountDistinct());
+    Assert.assertTrue(plannerConfig.isUseApproximateTopN());
+    Assert.assertFalse(plannerConfig.isRequireTimeCondition());
+    Assert.assertTrue(plannerConfig.isAwaitInitializationOnStart());
+    Assert.assertEquals(DateTimeZone.UTC, plannerConfig.getSqlTimeZone());
+    Assert.assertFalse(plannerConfig.isMetadataSegmentCacheEnable());
+    Assert.assertEquals(60000, plannerConfig.getMetadataSegmentPollPeriod());
+    Assert.assertFalse(plannerConfig.isUseParsedExprCache());
+  }
+
+  @Test
+  public void testInjectPlannerConfigWithCustomProperties()
+  {
+    properties.setProperty(getPlannerConfigKey("metadataRefreshPeriod"), "PT10M");
+    properties.setProperty(getPlannerConfigKey("maxTopNLimit"), "10");
+    properties.setProperty(getPlannerConfigKey("useApproximateCountDistinct"), "false");
+    properties.setProperty(getPlannerConfigKey("useApproximateTopN"), "false");
+    properties.setProperty(getPlannerConfigKey("requireTimeCondition"), "true");
+    properties.setProperty(getPlannerConfigKey("awaitInitializationOnStart"), "false");
+    properties.setProperty(getPlannerConfigKey("sqlTimeZone"), DateTimeZone.forID("Asia/Seoul").toString());
+    properties.setProperty(getPlannerConfigKey("metadataSegmentCacheEnable"), "true");
+    properties.setProperty(getPlannerConfigKey("metadataSegmentPollPeriod"), "20");
+    properties.setProperty(getPlannerConfigKey("useParsedExprCache"), "true");
+    PlannerConfig plannerConfig = injector.getInstance(PlannerConfig.class);
+    Assert.assertNotNull(plannerConfig);
+    Assert.assertEquals(new Period("PT10M"), plannerConfig.getMetadataRefreshPeriod());
+    Assert.assertEquals(10, plannerConfig.getMaxTopNLimit());
+    Assert.assertFalse(plannerConfig.isUseApproximateCountDistinct());
+    Assert.assertFalse(plannerConfig.isUseApproximateTopN());
+    Assert.assertTrue(plannerConfig.isRequireTimeCondition());
+    Assert.assertFalse(plannerConfig.isAwaitInitializationOnStart());
+    Assert.assertEquals(DateTimeZone.forID("Asia/Seoul"), plannerConfig.getSqlTimeZone());
+    Assert.assertTrue(plannerConfig.isMetadataSegmentCacheEnable());
+    Assert.assertEquals(20, plannerConfig.getMetadataSegmentPollPeriod());
+    Assert.assertTrue(plannerConfig.isUseParsedExprCache());
+  }
+
+  private static String getPlannerConfigKey(String suffix)
+  {
+    return StringUtils.format("%s.%s", CalcitePlannerModule.PLANNER_CONFIG_PREFIX, suffix);
   }
 }

@@ -184,7 +184,8 @@ public class Projection
           postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
           postAggregatorExpression.getExpression(),
           null,
-          plannerContext.getExprMacroTable()
+          plannerContext.getExprMacroTable(),
+          plannerContext.getCachingExprParser().lazyParse(postAggregatorExpression.getExpression())
       );
       postAggregatorVisitor.addPostAgg(postAggregator);
       rowOrder.add(postAggregator.getName());

@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class MaxSqlAggregator extends SimpleSqlAggregator
 {
@@ -42,6 +43,7 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
 
   @Override
   Aggregation getAggregation(
+      final PlannerContext plannerContext,
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
@@ -50,10 +52,18 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
   )
   {
     final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
-    return Aggregation.create(createMaxAggregatorFactory(valueType, name, fieldName, expression, macroTable));
+    return Aggregation.create(createMaxAggregatorFactory(
+        plannerContext,
+        valueType,
+        name,
+        fieldName,
+        expression,
+        macroTable
+    ));
   }
 
   private static AggregatorFactory createMaxAggregatorFactory(
+      final PlannerContext plannerContext,
       final ValueType aggregationType,
       final String name,
       final String fieldName,
@@ -63,11 +73,29 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
   {
     switch (aggregationType) {
       case LONG:
-        return new LongMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongMaxAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       case FLOAT:
-        return new FloatMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatMaxAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       case DOUBLE:
-        return new DoubleMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleMaxAggregatorFactory(
+            name,
+            fieldName,
+            expression,
+            plannerContext.getCachingExprParser().lazyParse(expression),
+            macroTable
+        );
       default:
         throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
     }

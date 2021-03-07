@@ -36,8 +36,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -541,7 +539,7 @@ public class Expressions
       }
 
       // Special handling for filters on FLOOR(__time TO granularity).
-      final Granularity queryGranularity = toQueryGranularity(lhsExpression, plannerContext.getExprMacroTable());
+      final Granularity queryGranularity = toQueryGranularity(plannerContext, lhsExpression);
       if (queryGranularity != null) {
         // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
         final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
@@ -659,9 +657,14 @@ public class Expressions
   )
   {
     final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, rexNode);
-    return druidExpression != null
-           ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
-           : null;
+    if (druidExpression != null) {
+      return new ExpressionDimFilter(
+          druidExpression.getExpression(),
+          plannerContext.getCachingExprParser().lazyParse(druidExpression.getExpression())
+      );
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -671,9 +674,9 @@ public class Expressions
    * @return granularity or null if not possible
    */
   @Nullable
-  public static Granularity toQueryGranularity(final DruidExpression expression, final ExprMacroTable macroTable)
+  public static Granularity toQueryGranularity(final PlannerContext plannerContext, final DruidExpression expression)
   {
-    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, macroTable);
+    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(plannerContext, expression);
 
     if (expr == null) {
       return null;
@@ -691,11 +694,11 @@ public class Expressions
 
   @Nullable
   public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(
-      final DruidExpression expression,
-      final ExprMacroTable macroTable
+      final PlannerContext plannerContext,
+      final DruidExpression expression
   )
   {
-    final Expr expr = Parser.parse(expression.getExpression(), macroTable);
+    final Expr expr = plannerContext.getCachingExprParser().parse(expression.getExpression());
 
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
       return (TimestampFloorExprMacro.TimestampFloorExpr) expr;

@@ -65,11 +65,28 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
       @Nullable String expression
   )
   {
+    this(
+        macroTable,
+        name,
+        fieldName,
+        expression,
+        Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable))
+    );
+  }
+
+  public SimpleLongAggregatorFactory(
+      ExprMacroTable macroTable,
+      String name,
+      String fieldName,
+      @Nullable String expression,
+      Supplier<Expr> expressionSupplier
+  )
+  {
     this.macroTable = macroTable;
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
-    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
+    this.fieldExpression = expressionSupplier;
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,

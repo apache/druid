@@ -27,7 +27,6 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -93,7 +92,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
     final DruidExpression rightExpr = druidExpressions.get(1);
 
     if (leftExpr.isSimpleExtraction()) {
-      Expr expr = Parser.parse(rightExpr.getExpression(), plannerContext.getExprMacroTable());
+      Expr expr = plannerContext.getCachingExprParser().parse(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
       // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
       // by traversing the Expr. Note that all implementations of Expr are defined as package-private classes in a
