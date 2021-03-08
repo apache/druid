@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
@@ -97,7 +98,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testDefaultCapacity()
   {
     // Given
-    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null);
+    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null, null, null, null);
     // When
     Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), Integer.MAX_VALUE);
   }
@@ -107,7 +108,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   {
     int capacity = 100;
     // Given
-    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity);
+    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity, null, null, null);
     // When
     Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), capacity);
   }
@@ -127,5 +128,48 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         .setSomeLongColumn(816L)
         .build();
     return event;
+  }
+
+
+  @Test
+  public void testMultipleUrls() throws Exception
+  {
+    String json = "{\"urls\":[\"http://localhost\"],\"type\": \"schema_registry\"}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedProtobufBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+        .readerFor(ProtobufBytesDecoder.class)
+        .readValue(json);
+
+    // Then
+    Assert.assertNotEquals(decoder.hashCode(), 0);
+  }
+
+  @Test
+  public void testUrl() throws Exception
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\"}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedProtobufBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+        .readerFor(ProtobufBytesDecoder.class)
+        .readValue(json);
+
+    // Then
+    Assert.assertNotEquals(decoder.hashCode(), 0);
+  }
+
+  @Test
+  public void testConfig() throws Exception
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\", \"config\":{}}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedProtobufBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+        .readerFor(ProtobufBytesDecoder.class)
+        .readValue(json);
+
+    // Then
+    Assert.assertNotEquals(decoder.hashCode(), 0);
   }
 }

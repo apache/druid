@@ -32,9 +32,13 @@ import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDecoder
 {
@@ -46,12 +50,19 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
 
   @JsonCreator
   public SchemaRegistryBasedProtobufBytesDecoder(
-      @JsonProperty("url") String url,
-      @JsonProperty("capacity") Integer capacity
+      @JsonProperty("url") @Deprecated String url,
+      @JsonProperty("capacity") Integer capacity,
+      @JsonProperty("urls") @Nullable List<String> urls,
+      @JsonProperty("config") @Nullable Map<String, ?> config,
+      @JsonProperty("headers") @Nullable Map<String, String> headers
   )
   {
     this.identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
-    registry = new CachedSchemaRegistryClient(Collections.singletonList(url), identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), null);
+    if (url != null && !url.isEmpty()) {
+      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(url), identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), config, headers);
+    } else {
+      this.registry = new CachedSchemaRegistryClient(urls, identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), config, headers);
+    }
   }
 
   @VisibleForTesting

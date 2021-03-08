@@ -85,7 +85,7 @@ Make sure your Schema Registry version is later than 5.5. Next, we can post a sc
 
 ```
 POST /subjects/test/versions HTTP/1.1
-Host: schemaregistry.example.com
+Host: schemaregistry.example1.com
 Accept: application/vnd.schemaregistry.v1+json, application/vnd.schemaregistry+json, application/json
 
 {
@@ -206,19 +206,37 @@ To adopt to old version. You can use old parser style, which also works.
 ### When using Schema Registry
 
 Important supervisor properties
-- `protoBytesDecoder.url` for the schema registry URL
-- `protoBytesDecoder.capacity` capacity for schema registry cached schemas
-- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode Protobuf file
-- `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`
+- `protoBytesDecoder.url` for the schema registry URL with single instance.
+- `protoBytesDecoder.urls` for the schema registry URLs with multi instances.
+- `protoBytesDecoder.capacity` capacity for schema registry cached schemas.
+- `protoBytesDecoder.config` to send additional configurations, configured for Schema Registry.
+- `protoBytesDecoder.headers` to send headers to the Schema Registry.
+- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode Protobuf file.
+- `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`.
 
 ```json
 {
   "parser": {
     "type": "protobuf",
     "protoBytesDecoder": {
-      "url": "http://schemaregistry.example.com:8081",
+      "urls": ["http://schemaregistry.example1.com:8081","http://schemaregistry.example2.com:8081"],
       "type": "schema_registry",
-      "capacity": 100
+      "capacity": 100,
+      "config" : {
+           "basic.auth.credentials.source": "USER_INFO",
+           "basic.auth.user.info": "fred:letmein",
+           "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
+           "schema.registry.ssl.truststore.password": "<password>",
+           "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
+           "schema.registry.ssl.keystore.password": "<password>",
+           "schema.registry.ssl.key.password": "<password>",
+             ... 
+      },
+      "headers": {
+          "traceID" : "b29c5de2-0db4-490b-b421",
+          "timeStamp" : "1577191871865",
+          ...
+      }
     }
   }
 }
