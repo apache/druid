@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.common.config.NullHandling;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -48,17 +50,25 @@ public class SerializablePairLongLongSerde extends AbstractSerializablePairSerde
   {
     final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
     long lhs = readOnlyBuffer.getLong();
-    long rhs = readOnlyBuffer.getLong();
-    return new SerializablePairLongLong(lhs, rhs);
+    boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
+    if (isNotNull) {
+      return new SerializablePairLongLong(lhs, readOnlyBuffer.getLong());
+    } else {
+      return new SerializablePairLongLong(lhs, null);
+    }
   }
 
   @Override
   protected byte[] pairToBytes(SerializablePairLongLong val)
   {
-    ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Long.BYTES);
+    ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Long.BYTES);
     bbuf.putLong(val.lhs);
-    bbuf.putLong(val.rhs);
+    if (val.rhs == null) {
+      bbuf.put(NullHandling.IS_NULL_BYTE);
+    } else {
+      bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
+      bbuf.putLong(val.rhs);
+    }
     return bbuf.array();
   }
-
 }

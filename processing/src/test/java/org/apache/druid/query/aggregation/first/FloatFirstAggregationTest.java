@@ -72,14 +72,15 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector).atLeastOnce();
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector).atLeastOnce();
-    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(new ColumnCapabilitiesImpl().setType(
-        ValueType.FLOAT));
-    EasyMock.replay(colSelectorFactory);
   }
 
   @Test
   public void testDoubleFirstAggregator()
   {
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(new ColumnCapabilitiesImpl().setType(
+        ValueType.FLOAT));
+    EasyMock.replay(colSelectorFactory);
+
     Aggregator agg = floatFirstAggregatorFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
@@ -98,6 +99,10 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testDoubleFirstBufferAggregator()
   {
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(new ColumnCapabilitiesImpl().setType(
+        ValueType.FLOAT));
+    EasyMock.replay(colSelectorFactory);
+
     BufferAggregator agg = floatFirstAggregatorFactory.factorizeBuffered(
         colSelectorFactory);
 
@@ -140,6 +145,10 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testDoubleFirstCombiningAggregator()
   {
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(new ColumnCapabilitiesImpl().setType(
+        ValueType.COMPLEX));
+    EasyMock.replay(colSelectorFactory);
+
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
@@ -159,6 +168,10 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testDoubleFirstCombiningBufferAggregator()
   {
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(new ColumnCapabilitiesImpl().setType(
+        ValueType.COMPLEX));
+    EasyMock.replay(colSelectorFactory);
+
     BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
