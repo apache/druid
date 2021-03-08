@@ -849,6 +849,28 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testDeleteSegments()
+  {
+    Exception e = null;
+    try {
+      coordinator.deleteSegments(SEGMENTS);
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNull(e);
+    Assert.assertEquals(
+            0,
+            ImmutableSet.copyOf(
+                    coordinator.retrieveUnusedSegmentsForInterval(
+                            defaultSegment.getDataSource(),
+                            defaultSegment.getInterval()
+                    )
+            ).size()
+    );
+  }
+
+  @Test
   public void testSingleAdditionalNumberedShardWithNoCorePartitions() throws IOException
   {
     additionalNumberedShardTest(ImmutableSet.of(numberedSegment0of0));

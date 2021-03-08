@@ -1278,9 +1278,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
+            int segmentSize = segments.size();
+            String dataSource = "";
             for (final DataSegment segment : segments) {
+              dataSource = segment.getDataSource();
               deleteSegment(handle, segment);
             }
+            log.info("Removed [%d] segments'metadata for dataSource [%s]!", segmentSize, dataSource);
 
             return null;
           }
@@ -1290,9 +1294,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private void deleteSegment(final Handle handle, final DataSegment segment)
   {
-    handle.createStatement(StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable()))
-          .bind("id", segment.getId().toString())
-          .execute();
+    String segmentsTable = dbTables.getSegmentsTable();
+    String segmentId = segment.getId().toString();
+    log.info("Removing segment [%s] [%s] from Metadata Storage [%s]!", segmentId, segment.getDataSource(), segmentsTable);
+    handle.createStatement(StringUtils.format("DELETE from %s WHERE id = :id", segmentsTable))
+            .bind("id", segmentId)
+            .execute();
   }
 
   private void updatePayload(final Handle handle, final DataSegment segment) throws IOException
