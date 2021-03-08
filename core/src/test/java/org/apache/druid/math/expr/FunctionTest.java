@@ -571,7 +571,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatWithEdgeCases()
   {
     //a nonexist value is null which is treated as 0
-    assertExpr("human_readable_binary_byte_format(nonexist)", "0 B");
+    assertExpr("human_readable_binary_byte_format(nonexist)", NullHandling.sqlCompatible() ? null : "0 B");
 
     //f = 12.34
     assertExpr("human_readable_binary_byte_format(f)", "12 B");
@@ -603,8 +603,9 @@ public class FunctionTest extends InitializedNullHandlingTest
       Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
             .eval(bindings);
 
-      //must not go to here
-      Assert.assertTrue(false);
+      // for sqlCompatible, function above returns null and goes here
+      // but for non-sqlCompatible, it must not go to here
+      Assert.assertTrue(NullHandling.sqlCompatible() ? true : false);
     }
     catch (IAE e) {
       Assert.assertEquals("Function[human_readable_binary_byte_format] needs a number as its first argument", e.getMessage());
