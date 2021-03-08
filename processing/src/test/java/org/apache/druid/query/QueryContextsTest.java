@@ -135,7 +135,7 @@ public class QueryContextsTest
   @Test
   public void testGetEnableJoinLeftScanDirect()
   {
-    Assert.assertTrue(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));
     Assert.assertTrue(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
         QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
         true

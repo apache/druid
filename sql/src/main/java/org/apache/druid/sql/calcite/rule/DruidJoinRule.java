@@ -42,6 +42,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
+import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
@@ -108,6 +109,7 @@ public class DruidJoinRule extends RelOptRule
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
     ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType()).get();
+    boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
     if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && (enableLeftScanDirect || left.getPartialDruidQuery().getWhereFilter() == null)) {
