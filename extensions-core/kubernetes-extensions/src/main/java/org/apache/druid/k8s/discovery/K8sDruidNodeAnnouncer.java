@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -42,7 +41,7 @@ import java.util.Map;
  *
  * Labels -
  * druidDiscoveryAnnouncement-<nodeRole.getJsonName()> = true
- * druidDiscoveryAnnouncement-id = encodeHostPort(host:port)
+ * druidDiscoveryAnnouncement-id-hash = hashEncodeStringForLabelValue(host:port)
  * druidDiscoveryAnnouncement-cluster-identifier = <clusterIdentifier>
  *
  * Annotation -
@@ -87,7 +86,7 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
     LOGGER.info("Announcing DiscoveryDruidNode[%s]", discoveryDruidNode);
 
     String roleAnnouncementLabel = getRoleAnnouncementLabel(discoveryDruidNode.getNodeRole());
-    String idAnnouncementLabel = getIdAnnouncementLabel();
+    String idAnnouncementLabel = getIdHashAnnouncementLabel();
     String clusterIdentifierAnnouncementLabel = getClusterIdentifierAnnouncementLabel();
     String infoAnnotation = getInfoAnnotation(discoveryDruidNode.getNodeRole());
 
@@ -100,7 +99,7 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
       // checking if label/annotation path exists and create if not, however that could lead to race conditions
       // so assuming the existence for now.
       patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(roleAnnouncementLabel), ANNOUNCEMENT_DONE));
-      patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(idAnnouncementLabel), encodeHostPort(discoveryDruidNode.getDruidNode().getHostAndPortToUse())));
+      patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(idAnnouncementLabel), hashEncodeStringForLabelValue(discoveryDruidNode.getDruidNode().getHostAndPortToUse())));
       patches.add(createPatchObj(OP_ADD, getPodDefLabelPath(clusterIdentifierAnnouncementLabel), discoveryConfig.getClusterIdentifier()));
       patches.add(createPatchObj(OP_ADD, getPodDefAnnocationPath(infoAnnotation), jsonMapper.writeValueAsString(discoveryDruidNode)));
 
@@ -130,14 +129,14 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
     LOGGER.info("Unannouncing DiscoveryDruidNode[%s]", discoveryDruidNode);
 
     String roleAnnouncementLabel = getRoleAnnouncementLabel(discoveryDruidNode.getNodeRole());
-    String idAnnouncementLabel = getIdAnnouncementLabel();
+    String idHashAnnouncementLabel = getIdHashAnnouncementLabel();
     String clusterIdentifierAnnouncementLabel = getClusterIdentifierAnnouncementLabel();
     String infoAnnotation = getInfoAnnotation(discoveryDruidNode.getNodeRole());
 
     try {
       List<Map<String, Object>> patches = new ArrayList<>();
       patches.add(createPatchObj(OP_REMOVE, getPodDefLabelPath(roleAnnouncementLabel), null));
-      patches.add(createPatchObj(OP_REMOVE, getPodDefLabelPath(idAnnouncementLabel), null));
+      patches.add(createPatchObj(OP_REMOVE, getPodDefLabelPath(idHashAnnouncementLabel), null));
       patches.add(createPatchObj(OP_REMOVE, getPodDefLabelPath(clusterIdentifierAnnouncementLabel), null));
       patches.add(createPatchObj(OP_REMOVE, getPodDefAnnocationPath(infoAnnotation), null));
 
@@ -188,9 +187,9 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
     return StringUtils.format("druidDiscoveryAnnouncement-%s", nodeRole.getJsonName());
   }
 
-  private static String getIdAnnouncementLabel()
+  private static String getIdHashAnnouncementLabel()
   {
-    return "druidDiscoveryAnnouncement-id";
+    return "druidDiscoveryAnnouncement-id-hash";
   }
 
   public static String getClusterIdentifierAnnouncementLabel()
@@ -222,8 +221,8 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
         discoveryConfig.getClusterIdentifier(),
         K8sDruidNodeAnnouncer.getRoleAnnouncementLabel(nodeRole),
         K8sDruidNodeAnnouncer.ANNOUNCEMENT_DONE,
-        K8sDruidNodeAnnouncer.getIdAnnouncementLabel(),
-        encodeHostPort(node.getHostAndPortToUse())
+        K8sDruidNodeAnnouncer.getIdHashAnnouncementLabel(),
+        hashEncodeStringForLabelValue(node.getHostAndPortToUse())
     );
   }
 
@@ -237,30 +236,14 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
     return StringUtils.format("%s/%s", POD_ANNOTATIONS_PATH_PREFIX, annotation);
   }
 
-  private static String encodeHostPort(String hostPort)
+  // a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and
+  // must start and end with an alphanumeric character
+  private static String hashEncodeStringForLabelValue(String str)
   {
-    //K8S requires that label values must match regex (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?
-    //So, it is essential to replace ':' with '-'
-
-    // it is assumed that hostname does not have ':' in it except for separating host and port
-    Preconditions.checkState(
-        hostPort.indexOf(':') == hostPort.lastIndexOf(':'),
-        "hostname in host:port[%s] has ':' in it", hostPort
-    );
-
-    return hostPort.replace(':', '-');
-  }
-
-  private String replaceLast(String str, char oldChar, char newChar)
-  {
-    char[] chars = str.toCharArray();
-    for (int i = chars.length - 1; i >= 0; i--) {
-      if (chars[i] == oldChar) {
-        chars[i] = newChar;
-        break;
-      }
+    int hash = str.hashCode();
+    if (hash < 0) {
+      hash = -1 * hash;
     }
-
-    return String.valueOf(chars);
+    return String.valueOf(hash);
   }
 }
