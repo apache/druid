@@ -30,6 +30,7 @@ import com.google.inject.Provider;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -656,6 +657,22 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         List<QueryableIndex> indexes,
         boolean rollup,
         AggregatorFactory[] metricAggs,
+        File outDir,
+        IndexSpec indexSpec,
+        ProgressIndicator progress,
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
+    )
+    {
+      throw new UOE(ERROR_MSG);
+    }
+
+    @Override
+    public File mergeQueryableIndex(
+        List<QueryableIndex> indexes,
+        boolean rollup,
+        AggregatorFactory[] metricAggs,
+        DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,

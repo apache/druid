@@ -824,6 +824,7 @@ public class AppenderatorImpl implements Appenderator
             indexes,
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
+            schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
@@ -848,7 +849,7 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())),
               useUniquePath
           ),
           exception -> exception instanceof Exception,
