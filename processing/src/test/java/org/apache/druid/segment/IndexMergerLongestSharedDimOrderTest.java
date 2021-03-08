@@ -57,9 +57,9 @@ public class IndexMergerLongestSharedDimOrderTest
   @Before
   public void setUp() throws Exception
   {
-      when(mockSupplier.get()).thenReturn(mockColumnHolder);
-      // This value does not matter
-      when(mockColumnHolder.getLength()).thenReturn(1);
+    when(mockSupplier.get()).thenReturn(mockColumnHolder);
+    // This value does not matter
+    when(mockColumnHolder.getLength()).thenReturn(1);
   }
 
   @Test
@@ -139,7 +139,7 @@ public class IndexMergerLongestSharedDimOrderTest
     //  No valid ordering as ordering is not the same in all indexes
     QueryableIndexIndexableAdapter index1 = makeIndexWithDimensionList(ImmutableList.of("a", "b", "c"));
     QueryableIndexIndexableAdapter index2 = makeIndexWithDimensionList(ImmutableList.of("c", "b"));
-    List<String>  actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), valid);
+    List<String> actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), valid);
     // Since ordering of index2 is not the same as the ordering of the schema in DimensionSpec
     Assert.assertNull(actual);
   }
@@ -151,12 +151,13 @@ public class IndexMergerLongestSharedDimOrderTest
     //  No valid ordering as ordering is not the same in all indexes
     QueryableIndexIndexableAdapter index1 = makeIndexWithDimensionList(ImmutableList.of("a", "b", "c"));
     QueryableIndexIndexableAdapter index2 = makeIndexWithDimensionList(ImmutableList.of("c", "b", "e"));
-    List<String>  actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), valid);
+    List<String> actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), valid);
     // Since index2 has dimension that is not in the schema in DimensionSpec. This should not be possible.
     Assert.assertNull(actual);
   }
 
-  private QueryableIndexIndexableAdapter makeIndexWithDimensionList(List<String> dimensions) {
+  private QueryableIndexIndexableAdapter makeIndexWithDimensionList(List<String> dimensions)
+  {
     return new QueryableIndexIndexableAdapter(
         new SimpleQueryableIndex(
             new Interval("2012-01-01/2012-01-02"),

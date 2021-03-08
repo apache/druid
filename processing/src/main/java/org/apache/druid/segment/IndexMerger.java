@@ -127,27 +127,27 @@ public interface IndexMerger
         log.info("Cannot fall back on dimension ordering from ingestionSpec as it does not exist");
         return null;
       }
-        List<String> candidate = dimensionsSpec.getDimensionNames();
-        // Remove all dimensions that does not exist within the indexes from the candidate
-        Set<String> allValidDimensions = indexes.stream()
-                                           .flatMap(indexableAdapter -> indexableAdapter.getDimensionNames().stream())
-                                           .collect(Collectors.toSet());
-        candidate.retainAll(allValidDimensions);
-        // Sanity check that there is no extra/missing columns
-        if (candidate.size() != allValidDimensions.size()) {
-          log.error("Dimension mismatched between ingestionSpec and indexes. ingestionSpec[%s] indexes[%s]",
-                    candidate,
-                    allValidDimensions);
-          return null;
-        }
+      List<String> candidate = dimensionsSpec.getDimensionNames();
+      // Remove all dimensions that does not exist within the indexes from the candidate
+      Set<String> allValidDimensions = indexes.stream()
+                                         .flatMap(indexableAdapter -> indexableAdapter.getDimensionNames().stream())
+                                         .collect(Collectors.toSet());
+      candidate.retainAll(allValidDimensions);
+      // Sanity check that there is no extra/missing columns
+      if (candidate.size() != allValidDimensions.size()) {
+        log.error("Dimension mismatched between ingestionSpec and indexes. ingestionSpec[%s] indexes[%s]",
+                  candidate,
+                  allValidDimensions);
+        return null;
+      }
 
-        // Sanity check that all indexes dimension ordering is the same as the ordering in candidate
-        if (!isDimensionOrderingValid(indexes, candidate)) {
-          log.error("Dimension from ingestionSpec has invalid ordering");
-          return null;
-        }
-        log.info("Dimension ordering from ingestionSpec is valid. Fall back on dimension ordering [%s]", candidate);
-        return candidate;
+      // Sanity check that all indexes dimension ordering is the same as the ordering in candidate
+      if (!isDimensionOrderingValid(indexes, candidate)) {
+        log.error("Dimension from ingestionSpec has invalid ordering");
+        return null;
+      }
+      log.info("Dimension ordering from ingestionSpec is valid. Fall back on dimension ordering [%s]", candidate);
+      return candidate;
     }
   }
 
