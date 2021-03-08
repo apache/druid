@@ -19,13 +19,19 @@
 
 package org.apache.druid.java.util.metrics;
 
+import org.junit.Assume;
 import org.junit.Test;
 
 public class SigarPidDiscovererTest
 {
+  private static final String CPU_ARCH = System.getProperty("os.arch");
+
   @Test
   public void simpleTest()
   {
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+
     // Just make sure we don't crash
     SigarPidDiscoverer.instance().getPid();
   }

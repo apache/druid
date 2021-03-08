@@ -303,6 +303,17 @@ jobs:
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
+    - name: "Build and test on ARM64 CPU architecture"
+        stage: Tests - phase 2
+        arch: arm64-graviton2
+        dist: focal
+        virt: vm
+        group: edge
+        jdk: openjdk11
+        env:
+          - MAVEN_PROJECTS='core,indexing-hadoop,indexing-service,processing,server,services'
+        script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m -T1C
+
     - name: "web console end-to-end test"
       before_install: *setup_generate_license
       install: web-console/script/druid build
