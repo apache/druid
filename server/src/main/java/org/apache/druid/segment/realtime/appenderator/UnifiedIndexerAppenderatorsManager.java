@@ -657,9 +657,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         List<QueryableIndex> indexes,
         boolean rollup,
         AggregatorFactory[] metricAggs,
+        @Nullable DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
-        ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         int maxColumnsToMerge
     )
@@ -672,7 +672,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         List<QueryableIndex> indexes,
         boolean rollup,
         AggregatorFactory[] metricAggs,
-        DimensionsSpec dimensionsSpec,
+        @Nullable DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
