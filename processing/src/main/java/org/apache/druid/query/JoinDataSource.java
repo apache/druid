@@ -129,21 +129,6 @@ public class JoinDataSource implements DataSource
     return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
   }
 
-  /**
-   * Create a join dataSource from an existing {@link JoinConditionAnalysis}.
-   */
-  public static JoinDataSource create(
-      final DataSource left,
-      final DataSource right,
-      final String rightPrefix,
-      final String condition,
-      final JoinType joinType,
-      final ExprMacroTable macroTable
-  )
-  {
-    return create(left, right, rightPrefix, condition, joinType, null, macroTable);
-  }
-
   @Override
   public Set<String> getTableNames()
   {

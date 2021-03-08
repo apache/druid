@@ -109,10 +109,10 @@ public class DruidJoinRule extends RelOptRule
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
     ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType()).get();
-    boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
+    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
     if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
-        && (enableLeftScanDirect || left.getPartialDruidQuery().getWhereFilter() == null)) {
+        && (isLeftDirectAccessPossible || left.getPartialDruidQuery().getWhereFilter() == null)) {
       // Swap the left-side projection above the join, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
       final RelNode leftScan = left.getPartialDruidQuery().getScan();
