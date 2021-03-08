@@ -866,9 +866,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
           unfilteredIterator,
           Objects::nonNull
       );
-      // We add all the entries via batch add to avoid overhead of single add call. The call to add an entry to interval
-      // is O(N) when N is the number of entries already present in timeline for that interval. Thus the call can
-      // be very slow when there are lot of segments in a single interval
+      // VersionedIntervalTimeline#addAll implementation is much more efficient than calling VersionedIntervalTimeline#add
+      // in a loop when there are lot of segments to be added for same interval and version.
       timeline2.addAll(iterator);
       return timeline2;
     }

@@ -852,6 +852,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
+  /**
+   * Stores a {@link org.apache.druid.timeline.partition.PartitionChunk} for a given interval and version. The
+   * interval corresponds to the {@link LogicalSegment#getInterval()}
+   */
   public static class PartitionChunkEntry<VersionType, ObjectType>
   {
     private final Interval interval;

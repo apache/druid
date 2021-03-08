@@ -71,8 +71,8 @@ import java.util.concurrent.ForkJoinPool;
 import static org.mockito.ArgumentMatchers.any;
 
 /**
- * Performance tests for {@link CachingClusteredClient} can be added here. There is one test for a scenario
- * where a single interval has large number of segments.
+ * Performance tests for {@link CachingClusteredClient}, that do not require a real cluster, can be added here.
+ * There is one test for a scenario where a single interval has large number of segments.
  */
 public class CachingClusteredClientPerfTest
 {
