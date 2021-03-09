@@ -1357,13 +1357,13 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>3.1.12</version>
+                <version>4.2.0</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs</artifactId>
-                        <version>3.1.12</version>
+                        <version>4.2.2</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -1373,7 +1373,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.8</version>
+                <version>3.14.0</version>
                 <configuration>
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
@@ -1396,7 +1396,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>2.6</version>
+                <version>3.1</version>
                 <configuration>
                     <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <bundledSignatures>
