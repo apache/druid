@@ -3474,6 +3474,27 @@ libraries:
         
 ---
 
+name: Kafka Schema Registry Client 6.0.1
+version: 6.0.1
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.confluent: kafka-schema-registry-client
+  - io.confluent: common-utils
+
+---
+
+name: Confluent Kafka Client
+version: 6.0.1-ccs
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
+
+---
+
 name: Apache Velocity Engine
 version: 2.2
 license_category: binary
@@ -3670,7 +3691,7 @@ version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-kinesis
   - com.amazonaws: aws-java-sdk-sts
-  - com.amazonaws: jmespath-java  
+  - com.amazonaws: jmespath-java
 
 ---
 
