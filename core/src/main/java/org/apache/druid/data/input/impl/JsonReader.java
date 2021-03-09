@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
@@ -90,11 +91,12 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   @Override
   protected List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException
   {
+    List<InputRow> inputRows;
     try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
       final MappingIterator<JsonNode> delegate = mapper.readValues(parser, JsonNode.class);
-      return FluentIterable.from(() -> delegate)
-                           .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
-                           .toList();
+      inputRows = FluentIterable.from(() -> delegate)
+                                               .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
+                                               .toList();
     }
     catch (RuntimeException e) {
       //convert Jackson's JsonParseException into druid's exception for further processing
@@ -106,6 +108,10 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       //throw unknown exception
       throw e;
     }
+    if (CollectionUtils.isEmpty(inputRows)) {
+      throw new ParseException("Unable to parse [%s] as the intermediateRow resulted in empty input row", intermediateRow);
+    }
+    return inputRows;
   }
 
   @Override
