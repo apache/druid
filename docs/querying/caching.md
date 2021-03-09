@@ -41,7 +41,7 @@ Druid supports the following types of caches:
 
 To avoid returning stale results, Druid invalidates the cache the moment any underlying data changes for both types of cache.
 
-Druid can store cache data the local JVM heap or in an external distributed key/value store. The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). Maximum cache storage defaults to the minimum value of 1 GiB or the ten percent of the maximum runtime memory for the JVM with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.
+Druid can store cache data on the local JVM heap or in an external distributed key/value store. The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). Maximum cache storage defaults to the minimum value of 1 GiB or the ten percent of the maximum runtime memory for the JVM with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.
 
 ### Per-segment caching
 
@@ -80,7 +80,7 @@ If you are looking to improve response time for a single query or page load, you
 
 During query processing, the per-segment cache intercepts the query and sends the results directly to the Broker. This way the query bypasses the data server processing threads. For queries requiring minimal processing in the Broker, cached queries are very quick. If work done on the Broker causes a query bottleneck, enabling caching results in little noticeable query improvement.
 
-The largest performance gains from segment caching tend to apply to `topN` and time series queries. The impact is less for `groupBy` queries. The same applies to queries with or without joins.
+The largest performance gains from segment caching tend to apply to `topN` and time series queries. For `groupBy` queries, if the bottleneck is in the merging phase on the broker, the impact is less. The same applies to queries with or without joins.
 
 ### Scenarios where caching does not increase query performance
 
@@ -105,5 +105,4 @@ See the following topics for more information:
 - [Druid Design](../design/architecture.md) to learn about Druid processes.  
 - [Segments](../design/segments.md) to learn how Druid stores data.
 - [Query execution](./query-execution.md) to learn how Druid services process query statements.
-
 

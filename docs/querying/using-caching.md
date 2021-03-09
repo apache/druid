@@ -23,7 +23,7 @@ title: "Using query caching"
   -->
 
 
-This topic covers how to configure services to populate and use the Druid query cache. For a conceptual overview and use cases, see [Query caching](./caching.md). For information on how to configure the caching mechanism, see [Cache configuration](../configuration/index.md#cache-configuration).
+This topic covers how to configure services to populate and use the Druid query caches. For a conceptual overview and use cases, see [Query caching](./caching.md). For information on how to configure the caching mechanism, see [Cache configuration](../configuration/index.md#cache-configuration).
 
 All query caches have a pair of parameters that control the way individual queries interact with the cache:
 
@@ -32,7 +32,7 @@ All query caches have a pair of parameters that control the way individual queri
 
 The separation of concerns, usage and population, lets you include cached results for queries on uncommon data without polluting the cache with results that are unlikely to be reused by other queries, for example, large reports or queries on very old data.
 
-To use caching, it must be enabled in the settings for at least one service in the runtime properties. By default, per-query cache is enabled on Historicals. For individual queries, you can control cache usage and population within the query context.
+To use caching, it must be enabled in the settings for the service to perform caching in the service's runtime properties. By default, per-segment cache is enabled on Historicals. For individual queries, you can control cache usage and population within the query context.
 
 
 ## Enabling query caching on Historicals
@@ -51,7 +51,7 @@ druid.realtime.cache.useCache=true
 druid.realtime.cache.populateCache=true
 ```
 
-See [Peon caching](configuration/index.md#peon-caching) for a description of all available task executor service caching options.
+See [Peon caching](configuration/index.md#peon-caching) and [Indexer caching](configuration/index.md#indexer-caching) for a description of all available task executor service caching options.
 
 ## Enabling query caching on Brokers
 Brokers support both segment-level and whole-query result level caching.
@@ -69,7 +69,7 @@ druid.broker.cache.populateResultLevelCache=true
 See [Broker caching](../configuration/index.md#broker-caching) for a description of all available Broker cache configurations.
  
 ## Enabling caching in the query context
-As long as one service is set to populate the cache, you can set cache options for individual queries in the query [context](./query-context.md). For example, you can `POST` a Druid SQL request to the HTTP POST API and include the context as a JSON object:
+As long as the service is set to populate the cache, you can set cache options for individual queries in the query [context](./query-context.md). For example, you can `POST` a Druid SQL request to the HTTP POST API and include the context as a JSON object:
 
 ```
 {
