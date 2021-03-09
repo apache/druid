@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;

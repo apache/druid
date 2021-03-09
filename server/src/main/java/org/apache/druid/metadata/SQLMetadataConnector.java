@@ -19,12 +19,12 @@
 
 package org.apache.druid.metadata;
 
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.base.Throwables;
 import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;

@@ -19,12 +19,12 @@
 
 package org.apache.druid.sql.guice;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.avatica.AvaticaModule;

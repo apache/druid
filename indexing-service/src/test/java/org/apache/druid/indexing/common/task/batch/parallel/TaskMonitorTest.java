@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;

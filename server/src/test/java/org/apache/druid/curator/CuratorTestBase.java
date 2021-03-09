@@ -20,7 +20,6 @@
 package org.apache.druid.curator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
@@ -28,6 +27,7 @@ import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.initialization.ZkPathsConfig;

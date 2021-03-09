@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;

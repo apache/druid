@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.hrtr;
 
-import org.apache.druid.com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.server.http.security.StateResourceFilter;

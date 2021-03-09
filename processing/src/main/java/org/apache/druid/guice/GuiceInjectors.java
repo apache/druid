@@ -19,10 +19,10 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.JacksonModule;
 
 import java.util.ArrayList;

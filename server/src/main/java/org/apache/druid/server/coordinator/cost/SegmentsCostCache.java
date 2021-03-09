@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.coordinator.cost;
 
+import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.Ordering;
-import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;

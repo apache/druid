@@ -20,6 +20,8 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.collections.CloseableDefaultBlockingPool;
+import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.com.google.common.base.Functions;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.base.Suppliers;
@@ -29,8 +31,6 @@ import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.com.google.common.collect.Sets;
-import org.apache.druid.collections.CloseableDefaultBlockingPool;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;

@@ -21,6 +21,8 @@ package org.apache.druid.indexing.worker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
@@ -29,8 +31,6 @@ import org.apache.druid.com.google.common.util.concurrent.FutureCallback;
 import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.SettableFuture;
-import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;

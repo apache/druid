@@ -21,8 +21,8 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;

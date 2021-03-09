@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;

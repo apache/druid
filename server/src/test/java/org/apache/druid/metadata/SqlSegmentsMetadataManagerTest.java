@@ -20,14 +20,14 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;

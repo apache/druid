@@ -19,8 +19,8 @@
 
 package org.apache.druid.tests.query;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;

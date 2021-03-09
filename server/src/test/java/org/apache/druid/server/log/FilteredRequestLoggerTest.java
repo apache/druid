@@ -21,9 +21,9 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.ProvisionException;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Query;

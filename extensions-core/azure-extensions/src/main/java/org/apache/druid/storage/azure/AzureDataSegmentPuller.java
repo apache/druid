@@ -19,8 +19,8 @@
 
 package org.apache.druid.storage.azure;
 
-import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;

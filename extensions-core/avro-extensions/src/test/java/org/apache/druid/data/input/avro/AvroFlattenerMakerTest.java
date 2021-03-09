@@ -23,6 +23,7 @@ import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.util.Collections;
 import java.util.List;
 

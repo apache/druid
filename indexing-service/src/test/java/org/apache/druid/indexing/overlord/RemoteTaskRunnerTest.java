@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.com.google.common.base.Predicate;
@@ -28,8 +30,6 @@ import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;

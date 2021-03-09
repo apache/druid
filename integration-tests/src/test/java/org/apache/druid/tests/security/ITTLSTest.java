@@ -20,8 +20,8 @@
 package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Throwables;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.https.SSLClientConfig;

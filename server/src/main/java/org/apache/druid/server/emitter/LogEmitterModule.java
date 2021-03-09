@@ -20,11 +20,11 @@
 package org.apache.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.emitter.core.Emitter;

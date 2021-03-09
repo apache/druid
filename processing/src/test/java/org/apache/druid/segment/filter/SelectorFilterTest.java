@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.filter;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.MapLookupExtractor;

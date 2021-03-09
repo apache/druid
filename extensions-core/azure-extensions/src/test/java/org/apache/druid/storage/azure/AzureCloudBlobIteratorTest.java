@@ -19,12 +19,12 @@
 
 package org.apache.druid.storage.azure;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.Lists;
 import com.microsoft.azure.storage.ResultContinuation;
 import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.ListBlobItem;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolder;

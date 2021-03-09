@@ -22,11 +22,11 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.collect.RangeSet;
-import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.SpatialFilter;
 

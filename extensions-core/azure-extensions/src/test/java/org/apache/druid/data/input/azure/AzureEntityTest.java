@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input.azure;
 
-import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.commons.io.input.NullInputStream;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.storage.azure.AzureByteSource;
 import org.apache.druid.storage.azure.AzureByteSourceFactory;

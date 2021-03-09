@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.data;
 
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.primitives.Ints;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;

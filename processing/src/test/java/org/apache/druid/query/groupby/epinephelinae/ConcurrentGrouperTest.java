@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryTimeoutException;

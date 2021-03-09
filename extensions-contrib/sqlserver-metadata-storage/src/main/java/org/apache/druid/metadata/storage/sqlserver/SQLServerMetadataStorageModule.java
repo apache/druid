@@ -20,9 +20,9 @@
 package org.apache.druid.metadata.storage.sqlserver;
 
 import com.fasterxml.jackson.databind.Module;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SQLMetadataStorageDruidModule;

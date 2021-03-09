@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Maps;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;

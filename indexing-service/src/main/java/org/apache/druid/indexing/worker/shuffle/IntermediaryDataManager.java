@@ -19,13 +19,13 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import org.apache.druid.com.google.common.collect.Iterators;
-import org.apache.druid.com.google.common.io.Files;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.config.TaskConfig;

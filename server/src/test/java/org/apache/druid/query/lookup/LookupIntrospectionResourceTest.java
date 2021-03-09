@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.lookup;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.server.WebserverTestUtils;
 import org.easymock.EasyMock;

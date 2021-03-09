@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.dimension;
 
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.base.Predicates;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;

@@ -19,10 +19,10 @@
 
 package org.apache.druid.collections;
 
-import org.apache.druid.com.google.common.collect.Lists;
-import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.roaringbitmap.IntIterator;
 
 import java.util.BitSet;

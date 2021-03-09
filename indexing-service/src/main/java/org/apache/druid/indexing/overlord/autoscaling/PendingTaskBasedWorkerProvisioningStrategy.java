@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.com.google.common.base.Predicate;
@@ -28,7 +29,6 @@ import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Sets;
-import com.google.inject.Inject;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;

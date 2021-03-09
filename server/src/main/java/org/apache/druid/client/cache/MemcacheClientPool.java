@@ -19,11 +19,11 @@
 
 package org.apache.druid.client.cache;
 
+import net.spy.memcached.MemcachedClientIF;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Supplier;
-import net.spy.memcached.MemcachedClientIF;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.logger.Logger;
 

@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;

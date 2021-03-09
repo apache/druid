@@ -20,9 +20,9 @@
 package org.apache.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Functions;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BySegmentSkippingQueryRunner;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.AbstractIntList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 public class IntListUtils
 {

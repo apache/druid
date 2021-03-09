@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 
 import java.nio.ByteBuffer;

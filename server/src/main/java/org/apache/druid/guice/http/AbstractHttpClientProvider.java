@@ -19,14 +19,14 @@
 
 package org.apache.druid.guice.http;
 
-import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.net.ssl.SSLContext;

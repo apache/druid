@@ -20,9 +20,9 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;

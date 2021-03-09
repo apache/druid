@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

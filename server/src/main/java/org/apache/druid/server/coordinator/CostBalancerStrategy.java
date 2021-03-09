@@ -19,11 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;

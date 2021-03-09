@@ -19,9 +19,9 @@
 
 package org.apache.druid.security.authentication.validator;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
 import com.google.inject.util.Providers;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;

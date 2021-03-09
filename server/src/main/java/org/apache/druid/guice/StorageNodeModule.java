@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -27,6 +26,7 @@ import com.google.inject.ProvisionException;
 import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.EmittingLogger;

@@ -19,12 +19,12 @@
 
 package org.apache.druid.curator.inventory;
 
-import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.apache.curator.framework.api.CuratorListener;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.zookeeper.CreateMode;

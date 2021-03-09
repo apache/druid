@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.base.Preconditions;
-import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.java.util.common.Pair;
@@ -31,7 +31,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

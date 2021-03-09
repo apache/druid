@@ -84,7 +84,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;

@@ -19,14 +19,6 @@
 
 package org.apache.druid.sql.avatica;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.com.google.common.base.Joiner;
-import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
-import org.apache.druid.com.google.common.collect.ImmutableSet;
-import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.calcite.avatica.MetaImpl;
@@ -35,6 +27,14 @@ import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;

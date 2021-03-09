@@ -19,9 +19,9 @@
 
 package org.apache.druid.testing.guice;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;

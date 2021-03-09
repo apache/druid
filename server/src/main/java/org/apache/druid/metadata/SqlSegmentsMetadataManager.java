@@ -20,6 +20,10 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.inject.Inject;
+import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.base.Preconditions;
@@ -30,10 +34,6 @@ import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.util.concurrent.Futures;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.google.inject.Inject;
-import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;

@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.groupby.strategy;
 
+import com.google.inject.Inject;
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.base.Supplier;
@@ -26,8 +28,6 @@ import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.inject.Inject;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Sequence;

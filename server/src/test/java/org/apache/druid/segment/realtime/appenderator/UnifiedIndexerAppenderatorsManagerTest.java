@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;

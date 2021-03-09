@@ -19,9 +19,6 @@
 
 package org.apache.druid.server.emitter;
 
-import org.apache.druid.com.google.common.base.Strings;
-import org.apache.druid.com.google.common.base.Supplier;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
@@ -33,6 +30,9 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;

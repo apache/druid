@@ -19,10 +19,10 @@
 
 package org.apache.druid.collections.spatial;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.spatial.split.SplitStrategy;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import java.util.Arrays;
 

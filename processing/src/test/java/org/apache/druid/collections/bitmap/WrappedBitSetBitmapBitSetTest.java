@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections.bitmap;
 
-import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.collections.IntSetTestUtility;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;

@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.stats;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.teststats.PvaluefromZscorePostAggregator;
 import org.apache.druid.query.aggregation.teststats.ZtestPostAggregator;

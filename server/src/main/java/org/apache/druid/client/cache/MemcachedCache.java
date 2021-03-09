@@ -19,16 +19,6 @@
 
 package org.apache.druid.client.cache;
 
-import org.apache.druid.com.google.common.base.Function;
-import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.base.Predicate;
-import org.apache.druid.com.google.common.base.Supplier;
-import org.apache.druid.com.google.common.base.Suppliers;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
-import org.apache.druid.com.google.common.collect.ImmutableSet;
-import org.apache.druid.com.google.common.collect.Maps;
-import org.apache.druid.com.google.common.hash.HashFunction;
-import org.apache.druid.com.google.common.hash.Hashing;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -44,6 +34,16 @@ import net.spy.memcached.ops.OperationQueueFactory;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidResourceHolder;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;

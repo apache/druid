@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.overlord.hrtr;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedGlobal;

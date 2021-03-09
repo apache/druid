@@ -19,16 +19,16 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
-import org.apache.druid.com.google.common.collect.ImmutableSet;
-import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby;
 
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.Lists;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;

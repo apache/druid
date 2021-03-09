@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.http;
 
-import org.apache.druid.com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 

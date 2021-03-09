@@ -19,11 +19,11 @@
 
 package org.apache.druid.cli;
 
-import org.apache.druid.com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.initialization.Initialization;

@@ -19,12 +19,12 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;

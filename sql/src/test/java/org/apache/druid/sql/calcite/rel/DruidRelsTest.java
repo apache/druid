@@ -19,13 +19,13 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.util.mapping.MappingType;
 import org.apache.calcite.util.mapping.Mappings;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.easymock.EasyMock;
 import org.junit.Assert;

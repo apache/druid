@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.com.google.common.primitives.Ints;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;

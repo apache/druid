@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;

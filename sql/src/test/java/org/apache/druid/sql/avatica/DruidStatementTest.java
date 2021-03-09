@@ -19,11 +19,11 @@
 
 package org.apache.druid.sql.avatica;
 
-import org.apache.druid.com.google.common.base.Function;
-import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;

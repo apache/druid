@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.overlord.sampler;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.Consumes;

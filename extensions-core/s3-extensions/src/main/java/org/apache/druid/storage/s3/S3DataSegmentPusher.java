@@ -20,9 +20,9 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.SegmentUtils;

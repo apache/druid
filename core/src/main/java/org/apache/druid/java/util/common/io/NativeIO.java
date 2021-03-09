@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.common.io;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.sun.jna.LastErrorException;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;

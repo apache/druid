@@ -19,12 +19,12 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 

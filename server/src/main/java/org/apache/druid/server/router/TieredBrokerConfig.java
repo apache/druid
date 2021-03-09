@@ -20,9 +20,9 @@
 package org.apache.druid.server.router;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
 import org.joda.time.Period;
 
 import javax.validation.constraints.NotNull;

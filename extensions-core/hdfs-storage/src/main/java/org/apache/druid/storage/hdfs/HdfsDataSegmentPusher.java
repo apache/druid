@@ -20,11 +20,11 @@
 package org.apache.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IOE;

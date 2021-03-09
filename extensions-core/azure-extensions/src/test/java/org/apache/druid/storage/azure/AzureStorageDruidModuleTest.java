@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -27,6 +26,7 @@ import com.google.inject.Module;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.ListBlobItem;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;

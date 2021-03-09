@@ -19,10 +19,10 @@
 
 package org.apache.druid.timeline.partition;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Sets;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.timeline.partition.OvershadowableManager.RootPartitionRange;
 import org.apache.druid.timeline.partition.OvershadowableManager.State;
 import org.junit.Assert;

@@ -21,8 +21,8 @@ package org.apache.druid.security.basic.authentication.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 public class BasicAuthenticatorCredentialUpdate
 {

@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -34,6 +33,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;

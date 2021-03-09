@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.scan;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
@@ -29,7 +30,6 @@ import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.com.google.common.io.CharSource;
 import org.apache.druid.com.google.common.io.LineProcessor;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;

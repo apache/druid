@@ -19,11 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;

@@ -20,6 +20,9 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.collections.Releaser;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.com.google.common.base.Suppliers;
@@ -31,9 +34,6 @@ import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.collections.Releaser;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;

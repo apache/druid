@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
@@ -27,7 +28,6 @@ import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.com.google.common.primitives.Doubles;
 import org.apache.druid.com.google.common.primitives.Longs;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;

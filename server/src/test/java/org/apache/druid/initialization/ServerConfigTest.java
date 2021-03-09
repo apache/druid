@@ -19,9 +19,9 @@
 
 package org.apache.druid.initialization;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;

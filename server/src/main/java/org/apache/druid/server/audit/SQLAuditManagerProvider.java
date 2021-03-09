@@ -20,9 +20,9 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;

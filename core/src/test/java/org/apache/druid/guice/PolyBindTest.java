@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -28,6 +27,7 @@ import com.google.inject.Module;
 import com.google.inject.ProvisionException;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.junit.Assert;
 import org.junit.Test;
 

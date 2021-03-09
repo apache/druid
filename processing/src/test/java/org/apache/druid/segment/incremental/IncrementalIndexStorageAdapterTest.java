@@ -20,13 +20,13 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Lists;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;

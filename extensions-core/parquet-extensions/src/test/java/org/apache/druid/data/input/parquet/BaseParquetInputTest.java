@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input.parquet;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.directory.api.util.Strings;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;

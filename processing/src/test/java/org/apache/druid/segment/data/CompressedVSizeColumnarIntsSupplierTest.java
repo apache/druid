@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment.data;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.com.google.common.primitives.Longs;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;

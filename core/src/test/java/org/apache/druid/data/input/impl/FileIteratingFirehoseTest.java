@@ -19,9 +19,9 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.commons.io.LineIterator;
 import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.InputRow;
 import org.junit.Assert;
 import org.junit.Test;

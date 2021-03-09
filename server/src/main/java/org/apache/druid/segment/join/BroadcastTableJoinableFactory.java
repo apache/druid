@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.join;
 
-import org.apache.druid.com.google.common.collect.Iterators;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;

@@ -19,10 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.collect.Ordering;
-import org.apache.druid.com.google.common.primitives.Doubles;
-import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.datasketches.Family;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.theta.AnotB;
@@ -31,12 +27,15 @@ import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Sketch;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.Union;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Comparator;
 

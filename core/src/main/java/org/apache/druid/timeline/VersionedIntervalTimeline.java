@@ -19,12 +19,12 @@
 
 package org.apache.druid.timeline;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.FluentIterable;
 import org.apache.druid.com.google.common.collect.Iterators;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;

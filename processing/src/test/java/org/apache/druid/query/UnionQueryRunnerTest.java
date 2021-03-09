@@ -19,8 +19,8 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.com.google.common.collect.Iterables;
 import junit.framework.Assert;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;

@@ -20,14 +20,14 @@
 package org.apache.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.Module;
-import org.apache.druid.com.google.common.base.Function;
-import org.apache.druid.com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;

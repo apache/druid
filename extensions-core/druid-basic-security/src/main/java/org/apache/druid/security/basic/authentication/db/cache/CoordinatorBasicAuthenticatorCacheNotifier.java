@@ -19,8 +19,8 @@
 
 package org.apache.druid.security.basic.authentication.db.cache;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.ManageLifecycle;

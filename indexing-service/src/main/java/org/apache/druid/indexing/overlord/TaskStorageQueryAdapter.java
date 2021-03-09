@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;

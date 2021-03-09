@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.histogram.sql.FixedBucketsHistogramQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.histogram.sql.QuantileSqlAggregator;

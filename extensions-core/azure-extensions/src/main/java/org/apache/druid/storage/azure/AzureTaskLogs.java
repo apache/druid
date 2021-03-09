@@ -19,10 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
-import org.apache.druid.com.google.common.base.Optional;
-import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
-import org.apache.druid.com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.java.util.common.ISE;

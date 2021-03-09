@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.common.task;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.CloseableIterators;

@@ -20,6 +20,8 @@
 package org.apache.druid.server.router;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.selector.Server;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.collect.ImmutableList;
@@ -27,8 +29,6 @@ import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Maps;
-import org.apache.druid.client.DruidServer;
-import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;

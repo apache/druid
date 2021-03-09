@@ -20,11 +20,11 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.FileContent;
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;

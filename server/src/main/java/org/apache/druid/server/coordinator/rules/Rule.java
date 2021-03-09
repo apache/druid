@@ -21,8 +21,8 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;

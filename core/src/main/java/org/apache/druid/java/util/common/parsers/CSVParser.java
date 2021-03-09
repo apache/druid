@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 
 import javax.annotation.Nullable;

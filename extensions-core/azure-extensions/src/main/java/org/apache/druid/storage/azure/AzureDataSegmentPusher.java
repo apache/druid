@@ -19,11 +19,11 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.inject.Inject;
+import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;

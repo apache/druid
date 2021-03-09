@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.scheduling;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;

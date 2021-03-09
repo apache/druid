@@ -19,14 +19,14 @@
 
 package org.apache.druid.client.cache;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.Sets;
-import org.apache.druid.com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Global;

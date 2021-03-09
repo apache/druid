@@ -19,11 +19,11 @@
 
 package org.apache.druid.java.util.common;
 
+import io.netty.util.SuppressForbidden;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.io.ByteSource;
-import io.netty.util.SuppressForbidden;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 
 import javax.annotation.Nullable;

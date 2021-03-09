@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
+import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.io.Files;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;

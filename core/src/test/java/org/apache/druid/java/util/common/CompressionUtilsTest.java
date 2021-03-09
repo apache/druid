@@ -19,6 +19,10 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
+import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
+import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
+import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
 import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.io.ByteSink;
@@ -26,10 +30,6 @@ import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.com.google.common.io.CountingInputStream;
 import org.apache.druid.com.google.common.io.Files;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
-import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
-import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
-import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;

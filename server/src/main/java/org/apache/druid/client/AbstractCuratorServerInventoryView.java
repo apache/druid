@@ -21,8 +21,8 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Function;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.curator.inventory.CuratorInventoryManager;
 import org.apache.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import org.apache.druid.curator.inventory.InventoryManagerConfig;

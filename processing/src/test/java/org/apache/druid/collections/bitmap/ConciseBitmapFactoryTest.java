@@ -19,10 +19,10 @@
 
 package org.apache.druid.collections.bitmap;
 
+import junit.framework.Assert;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.collect.Iterables;
-import junit.framework.Assert;
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.junit.Test;

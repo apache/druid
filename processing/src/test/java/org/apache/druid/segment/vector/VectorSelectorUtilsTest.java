@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.collections.IntSetTestUtility;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -27,6 +26,7 @@ import org.apache.druid.collections.bitmap.WrappedBitSetBitmap;
 import org.apache.druid.collections.bitmap.WrappedConciseBitmap;
 import org.apache.druid.collections.bitmap.WrappedImmutableConciseBitmap;
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
 import org.junit.Test;

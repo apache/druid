@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 
 import java.util.Collections;
 import java.util.HashMap;

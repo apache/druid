@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexing.overlord.http.security;
 
+import com.google.inject.Injector;
+import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Iterables;
-import com.google.inject.Injector;
-import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;

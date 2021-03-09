@@ -20,11 +20,11 @@
 package org.apache.druid.query.aggregation.histogram.sql;
 
 import com.fasterxml.jackson.databind.Module;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;

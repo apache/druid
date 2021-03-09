@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-
 import java.util.Objects;
 
 /**

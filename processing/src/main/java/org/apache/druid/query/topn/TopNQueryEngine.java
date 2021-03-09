@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Predicates;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.curator.discovery;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -46,6 +45,7 @@ import org.apache.curator.x.discovery.ServiceProviderBuilder;
 import org.apache.curator.x.discovery.details.ServiceCacheListener;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidNodeAnnouncer;

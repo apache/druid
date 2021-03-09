@@ -19,8 +19,8 @@
 
 package org.apache.druid.cli;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;

@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import org.apache.druid.com.google.common.collect.Lists;
-import org.apache.druid.com.google.common.collect.Ordering;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.junit.Assert;
 import org.junit.Test;
 

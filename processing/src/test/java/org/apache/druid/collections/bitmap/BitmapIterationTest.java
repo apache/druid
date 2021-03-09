@@ -19,15 +19,15 @@
 
 package org.apache.druid.collections.bitmap;
 
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
 import org.apache.druid.com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.com.google.common.collect.testing.CollectionTestSuiteBuilder;
 import org.apache.druid.com.google.common.collect.testing.SampleElements;
 import org.apache.druid.com.google.common.collect.testing.TestCollectionGenerator;
 import org.apache.druid.com.google.common.collect.testing.features.CollectionFeature;
 import org.apache.druid.com.google.common.collect.testing.features.CollectionSize;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 import org.roaringbitmap.IntIterator;
 
 import java.util.AbstractCollection;

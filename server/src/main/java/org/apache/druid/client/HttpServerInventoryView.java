@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Predicate;
@@ -28,7 +29,6 @@ import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.com.google.common.collect.Collections2;
 import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.com.google.common.net.HostAndPort;
-import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;

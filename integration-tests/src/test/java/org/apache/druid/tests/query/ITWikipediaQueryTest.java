@@ -19,8 +19,8 @@
 
 package org.apache.druid.tests.query;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryCapacityExceededException;

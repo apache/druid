@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.inject.Injector;
 import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Lists;
-import com.google.inject.Injector;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.TaskToolbox;

@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexer;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;

@@ -20,15 +20,15 @@
 package org.apache.druid.query.groupby.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.inject.Inject;
-import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;

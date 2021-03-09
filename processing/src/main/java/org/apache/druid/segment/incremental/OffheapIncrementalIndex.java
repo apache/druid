@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;

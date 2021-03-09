@@ -19,14 +19,14 @@
 
 package org.apache.druid.collections.spatial;
 
-import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.collections.spatial.search.GutmanSearchStrategy;
 import org.apache.druid.collections.spatial.search.SearchStrategy;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.io.Channels;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 

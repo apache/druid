@@ -20,11 +20,11 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.GuiceInjectors;

@@ -21,11 +21,11 @@ package org.apache.druid.indexing.worker.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.com.google.common.util.concurrent.FutureCallback;
 import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
-import com.google.inject.Inject;
-import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.task.Task;

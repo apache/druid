@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.join.table;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ValueType;
 

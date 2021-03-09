@@ -19,10 +19,10 @@
 
 package org.apache.druid.metadata.storage.postgresql;
 
-import org.apache.druid.com.google.common.base.Supplier;
-import org.apache.druid.com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataCASUpdate;

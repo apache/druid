@@ -19,8 +19,8 @@
 
 package org.apache.druid.k8s.discovery;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.annotations.SuppressFBWarnings;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.annotations.Self;

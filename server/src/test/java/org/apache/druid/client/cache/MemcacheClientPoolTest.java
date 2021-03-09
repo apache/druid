@@ -19,8 +19,8 @@
 
 package org.apache.druid.client.cache;
 
-import org.apache.druid.com.google.common.base.Suppliers;
 import net.spy.memcached.MemcachedClientIF;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.junit.Assert;
 import org.junit.Test;
 

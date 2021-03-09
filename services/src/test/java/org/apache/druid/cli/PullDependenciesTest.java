@@ -19,9 +19,9 @@
 
 package org.apache.druid.cli;
 
+import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableSet;
-import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.eclipse.aether.artifact.Artifact;

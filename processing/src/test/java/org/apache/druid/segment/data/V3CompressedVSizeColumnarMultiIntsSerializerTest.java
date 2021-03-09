@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Sets;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;

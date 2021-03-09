@@ -20,12 +20,12 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.util.Types;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.guava.DSuppliers;
 

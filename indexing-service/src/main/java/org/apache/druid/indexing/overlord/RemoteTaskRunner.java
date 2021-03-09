@@ -20,6 +20,11 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.com.google.common.base.Optional;
@@ -42,11 +47,6 @@ import org.apache.druid.com.google.common.util.concurrent.ListenableScheduledFut
 import org.apache.druid.com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.com.google.common.util.concurrent.SettableFuture;
-import org.apache.commons.lang.mutable.MutableInt;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;

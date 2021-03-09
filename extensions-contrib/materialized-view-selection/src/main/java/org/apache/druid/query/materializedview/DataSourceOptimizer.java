@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.materializedview;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
-import org.apache.druid.com.google.common.collect.ImmutableSortedSet;
 import com.google.inject.Inject;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSortedSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;

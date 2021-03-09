@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.writeout;
 
-import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;

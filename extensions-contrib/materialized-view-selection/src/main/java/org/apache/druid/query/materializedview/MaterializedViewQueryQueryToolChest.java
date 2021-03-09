@@ -21,8 +21,8 @@ package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Function;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.collect.HashMultimap;
 import org.apache.druid.com.google.common.collect.SetMultimap;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 

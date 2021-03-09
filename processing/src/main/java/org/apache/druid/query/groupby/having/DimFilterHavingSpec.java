@@ -21,9 +21,9 @@ package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;

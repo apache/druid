@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.http;
 
-import org.apache.druid.com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;

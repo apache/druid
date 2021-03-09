@@ -20,6 +20,7 @@
 package org.apache.druid.query.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Functions;
@@ -29,7 +30,6 @@ import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.com.google.common.collect.Sets;
-import com.google.inject.Inject;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.JodaUtils;

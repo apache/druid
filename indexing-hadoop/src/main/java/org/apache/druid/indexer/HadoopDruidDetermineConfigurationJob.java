@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexer;
 
-import org.apache.druid.com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;

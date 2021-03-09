@@ -20,11 +20,11 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.Module;
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;

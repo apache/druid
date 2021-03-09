@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexer;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.com.google.common.io.ByteStreams;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;

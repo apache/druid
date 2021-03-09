@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;

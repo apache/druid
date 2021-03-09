@@ -20,11 +20,11 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;

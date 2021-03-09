@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.join.table;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;

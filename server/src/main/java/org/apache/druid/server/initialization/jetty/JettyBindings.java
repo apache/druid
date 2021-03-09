@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.servlets.QoSFilter;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;

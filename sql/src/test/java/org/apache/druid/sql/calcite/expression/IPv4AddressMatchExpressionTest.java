@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;

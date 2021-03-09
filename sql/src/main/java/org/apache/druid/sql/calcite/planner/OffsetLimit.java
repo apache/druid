@@ -19,13 +19,13 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
 import java.util.Objects;

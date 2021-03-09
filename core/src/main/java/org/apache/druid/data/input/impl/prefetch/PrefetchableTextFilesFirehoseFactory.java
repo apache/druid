@@ -20,11 +20,11 @@
 package org.apache.druid.data.input.impl.prefetch;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.io.LineIterator;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.FileIteratingFirehose;

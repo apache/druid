@@ -22,7 +22,6 @@ package org.apache.druid.client.cache;
 import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import org.apache.druid.com.google.common.base.Suppliers;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -31,6 +30,7 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 import org.apache.druid.collections.StupidResourceHolder;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;

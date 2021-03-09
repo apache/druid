@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment;
 
+import com.google.inject.ImplementedBy;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.PeekingIterator;
-import com.google.inject.ImplementedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.java.util.common.ByteBufferUtils;

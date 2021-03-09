@@ -19,8 +19,6 @@
 
 package org.apache.druid.testing.utils;
 
-import org.apache.druid.com.google.common.collect.BiMap;
-import org.apache.druid.com.google.common.collect.HashBiMap;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -28,6 +26,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.druid.com.google.common.collect.BiMap;
+import org.apache.druid.com.google.common.collect.HashBiMap;
 import org.apache.druid.java.util.common.Pair;
 
 import java.io.ByteArrayOutputStream;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.collect.Iterables;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;

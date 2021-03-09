@@ -19,14 +19,14 @@
 
 package org.apache.druid.query.groupby;
 
+import com.google.inject.Inject;
+import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Maps;
-import com.google.inject.Inject;
-import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.annotations.Global;

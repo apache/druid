@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Lists;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryPlus;

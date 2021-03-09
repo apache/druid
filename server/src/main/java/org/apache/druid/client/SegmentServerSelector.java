@@ -19,8 +19,8 @@
 
 package org.apache.druid.client;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.SegmentDescriptor;
 

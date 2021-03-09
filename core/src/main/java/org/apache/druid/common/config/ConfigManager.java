@@ -19,8 +19,8 @@
 
 package org.apache.druid.common.config;
 
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.security.authentication;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
 import com.google.inject.util.Providers;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;

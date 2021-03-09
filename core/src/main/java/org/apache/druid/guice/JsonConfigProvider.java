@@ -19,13 +19,13 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.base.Supplier;
-import org.apache.druid.com.google.common.base.Suppliers;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.util.Types;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.guice.annotations.PublicApi;
 
 import javax.annotation.Nullable;

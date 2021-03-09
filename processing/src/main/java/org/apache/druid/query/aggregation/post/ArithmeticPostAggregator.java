@@ -32,7 +32,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;

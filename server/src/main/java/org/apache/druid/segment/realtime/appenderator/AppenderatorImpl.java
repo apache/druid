@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.cache.Cache;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Joiner;
@@ -36,7 +37,6 @@ import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;

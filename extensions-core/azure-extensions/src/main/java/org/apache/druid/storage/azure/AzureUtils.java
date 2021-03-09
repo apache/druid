@@ -19,10 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
+import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.collect.ImmutableList;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;

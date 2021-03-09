@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;

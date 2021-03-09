@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.com.google.common.base.Supplier;
@@ -30,7 +31,6 @@ import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;

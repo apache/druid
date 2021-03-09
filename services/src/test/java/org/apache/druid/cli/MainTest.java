@@ -19,8 +19,8 @@
 
 package org.apache.druid.cli;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.GuiceInjectors;
 import org.junit.Assert;
 import org.junit.Test;

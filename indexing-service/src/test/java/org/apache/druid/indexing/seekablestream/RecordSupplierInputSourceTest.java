@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;

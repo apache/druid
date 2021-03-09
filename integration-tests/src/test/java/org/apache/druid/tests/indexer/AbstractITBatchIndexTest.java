@@ -19,9 +19,9 @@
 
 package org.apache.druid.tests.indexer;
 
-import org.apache.druid.com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.com.google.common.collect.FluentIterable;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;

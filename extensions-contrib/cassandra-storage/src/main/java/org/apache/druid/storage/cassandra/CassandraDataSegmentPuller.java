@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.cassandra;
 
-import org.apache.druid.com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;

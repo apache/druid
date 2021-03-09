@@ -19,16 +19,16 @@
 
 package org.apache.druid.server;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.com.google.common.collect.HashMultimap;
-import org.apache.druid.com.google.common.collect.Multimaps;
-import org.apache.druid.com.google.common.collect.SetMultimap;
-import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.HashMultimap;
+import org.apache.druid.com.google.common.collect.Multimaps;
+import org.apache.druid.com.google.common.collect.SetMultimap;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;

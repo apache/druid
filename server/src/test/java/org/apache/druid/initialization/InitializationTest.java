@@ -21,13 +21,13 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.collect.Collections2;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Sets;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Key;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -30,6 +29,7 @@ import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.core.spi.component.ioc.IoCComponentProviderFactory;
 import com.sun.jersey.guice.spi.container.GuiceComponentProviderFactory;
 import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.initialization.Initialization;

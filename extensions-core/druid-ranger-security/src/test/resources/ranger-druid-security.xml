@@ -16,7 +16,7 @@
   limitations under the License.
 -->
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration xmlns:xi="http://www.w3.org/2001/XInclude">
+<configuration>
     <property>
         <name>ranger.plugin.druid.service.name</name>
         <value>cl1_druid</value>

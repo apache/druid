@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexer.path;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.timeline.DataSegment;

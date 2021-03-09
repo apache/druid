@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 
 /**

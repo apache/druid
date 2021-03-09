@@ -19,7 +19,6 @@
 
 package org.apache.druid.curator;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -31,6 +30,7 @@ import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.testing.junit.LoggerCaptureRule;

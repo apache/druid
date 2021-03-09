@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.primitives.Doubles;
-import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.http;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthConfig;

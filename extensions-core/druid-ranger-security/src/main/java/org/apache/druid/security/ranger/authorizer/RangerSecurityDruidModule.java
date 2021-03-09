@@ -21,9 +21,9 @@ package org.apache.druid.security.ranger.authorizer;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.security.ranger.authorizer.guice.Ranger;
 import org.apache.hadoop.conf.Configuration;

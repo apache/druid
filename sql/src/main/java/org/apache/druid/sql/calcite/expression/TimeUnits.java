@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;

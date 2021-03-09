@@ -20,7 +20,6 @@
 package org.apache.druid.curator.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
@@ -29,6 +28,7 @@ import org.apache.curator.framework.recipes.cache.NodeCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.discovery.BaseNodeRoleWatcher;

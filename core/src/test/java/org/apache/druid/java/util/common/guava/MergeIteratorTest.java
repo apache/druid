@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import junit.framework.Assert;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.collect.Ordering;
-import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;

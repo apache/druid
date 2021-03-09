@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.overlord;
 
+import io.netty.handler.timeout.TimeoutException;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.base.Throwables;
 import org.apache.druid.com.google.common.collect.Iterables;
-import io.netty.handler.timeout.TimeoutException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.java.util.common.RE;

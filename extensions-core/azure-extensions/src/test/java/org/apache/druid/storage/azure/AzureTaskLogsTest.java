@@ -19,12 +19,12 @@
 
 package org.apache.druid.storage.azure;
 
+import com.microsoft.azure.storage.StorageException;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.io.ByteSource;
-import com.microsoft.azure.storage.StorageException;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;

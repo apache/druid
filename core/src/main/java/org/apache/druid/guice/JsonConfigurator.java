@@ -24,13 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotatedField;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
+import com.google.inject.Inject;
+import com.google.inject.ProvisionException;
+import com.google.inject.spi.Message;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.com.google.common.collect.Iterables;
-import com.google.inject.Inject;
-import com.google.inject.ProvisionException;
-import com.google.inject.spi.Message;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 

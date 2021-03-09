@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.common.tasklogs;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.com.google.common.io.Files;
-import com.google.inject.Inject;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;

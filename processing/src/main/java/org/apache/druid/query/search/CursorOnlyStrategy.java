@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.search;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;

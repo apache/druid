@@ -21,8 +21,8 @@ package org.apache.druid.storage.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
-import org.apache.druid.com.google.common.base.Predicates;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;

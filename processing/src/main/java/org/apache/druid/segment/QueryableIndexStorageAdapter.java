@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.collect.Sets;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;

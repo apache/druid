@@ -20,8 +20,8 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 

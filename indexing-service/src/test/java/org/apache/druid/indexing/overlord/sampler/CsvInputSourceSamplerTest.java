@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.sampler;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;

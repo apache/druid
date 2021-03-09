@@ -19,9 +19,9 @@
 
 package org.apache.druid.utils;
 
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Maps;
-import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;

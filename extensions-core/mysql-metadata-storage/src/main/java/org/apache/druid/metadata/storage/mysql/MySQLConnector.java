@@ -19,12 +19,12 @@
 
 package org.apache.druid.metadata.storage.mysql;
 
-import org.apache.druid.com.google.common.base.Joiner;
-import org.apache.druid.com.google.common.base.Supplier;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;

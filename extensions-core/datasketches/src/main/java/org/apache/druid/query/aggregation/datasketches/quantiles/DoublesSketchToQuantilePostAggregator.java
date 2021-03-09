@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.primitives.Doubles;
-import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;

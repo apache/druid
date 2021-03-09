@@ -19,12 +19,12 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;

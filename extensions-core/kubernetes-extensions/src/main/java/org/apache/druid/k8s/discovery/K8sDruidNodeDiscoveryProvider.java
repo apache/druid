@@ -19,10 +19,10 @@
 
 package org.apache.druid.k8s.discovery;
 
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import io.kubernetes.client.util.Watch;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.BaseNodeRoleWatcher;
 import org.apache.druid.discovery.DiscoveryDruidNode;

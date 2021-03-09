@@ -19,13 +19,13 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
-import com.google.inject.Inject;
 import org.apache.druid.concurrent.TaskThreadPriority;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.TaskLocation;

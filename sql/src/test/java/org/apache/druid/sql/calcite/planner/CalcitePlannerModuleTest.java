@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -27,6 +26,7 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;

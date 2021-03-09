@@ -26,7 +26,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
 import javax.annotation.Nullable;
-
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;

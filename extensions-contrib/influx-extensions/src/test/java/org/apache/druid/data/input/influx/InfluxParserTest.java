@@ -19,10 +19,10 @@
 
 package org.apache.druid.data.input.influx;
 
-import org.apache.druid.com.google.common.collect.Lists;
-import org.apache.druid.com.google.common.collect.Sets;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;

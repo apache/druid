@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -29,6 +28,7 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import io.airlift.airline.Command;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;

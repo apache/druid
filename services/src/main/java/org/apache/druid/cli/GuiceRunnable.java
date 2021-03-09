@@ -19,11 +19,11 @@
 
 package org.apache.druid.cli;
 
-import org.apache.druid.com.google.common.collect.Ordering;
-import org.apache.druid.com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;

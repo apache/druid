@@ -22,6 +22,7 @@ package org.apache.druid.emitter.opentsdb;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.com.google.common.base.Preconditions;
+
 import java.util.Objects;
 
 public class OpentsdbEmitterConfig

@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.hadoop;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.indexer.path.UsedSegmentsRetriever;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;

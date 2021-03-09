@@ -20,11 +20,11 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;

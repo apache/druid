@@ -19,10 +19,10 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.ConfigManagerConfig;
 import org.apache.druid.common.config.JacksonConfigManager;

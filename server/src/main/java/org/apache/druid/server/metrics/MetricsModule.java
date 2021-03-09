@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.com.google.common.base.Supplier;
-import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -28,6 +26,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.timeandspace.cronscheduler.CronScheduler;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;

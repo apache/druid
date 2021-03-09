@@ -21,9 +21,9 @@ package org.apache.druid.collections.spatial.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.collections.spatial.ImmutablePoint;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.collections.spatial.ImmutablePoint;
 
 import java.nio.ByteBuffer;
 

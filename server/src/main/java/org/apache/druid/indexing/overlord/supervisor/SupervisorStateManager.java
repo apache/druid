@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;

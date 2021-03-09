@@ -20,8 +20,8 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;

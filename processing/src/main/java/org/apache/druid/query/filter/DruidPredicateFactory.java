@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.com.google.common.base.Predicate;
 
 @SubclassesMustOverrideEqualsAndHashCode
 public interface DruidPredicateFactory

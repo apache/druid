@@ -20,8 +20,8 @@
 package org.apache.druid.metadata.input;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;

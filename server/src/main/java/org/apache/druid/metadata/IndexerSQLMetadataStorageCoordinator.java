@@ -21,6 +21,8 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.collect.FluentIterable;
 import org.apache.druid.com.google.common.collect.ImmutableList;
@@ -30,8 +32,6 @@ import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.com.google.common.io.BaseEncoding;
-import com.google.inject.Inject;
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;

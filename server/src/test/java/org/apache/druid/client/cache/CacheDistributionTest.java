@@ -19,15 +19,15 @@
 
 package org.apache.druid.client.cache;
 
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.com.google.common.collect.Sets;
 import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.KetamaNodeLocator;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.util.DefaultKetamaNodeLocatorConfiguration;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.easymock.EasyMock;
 import org.junit.BeforeClass;
 import org.junit.Ignore;

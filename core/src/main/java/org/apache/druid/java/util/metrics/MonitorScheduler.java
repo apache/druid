@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.metrics;
 
-import org.apache.druid.com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;

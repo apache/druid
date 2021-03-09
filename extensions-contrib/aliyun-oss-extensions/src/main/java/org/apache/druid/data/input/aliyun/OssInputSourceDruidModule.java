@@ -22,8 +22,8 @@ package org.apache.druid.data.input.aliyun;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 

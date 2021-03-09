@@ -20,13 +20,13 @@
 package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.guice.AnnouncerModule;

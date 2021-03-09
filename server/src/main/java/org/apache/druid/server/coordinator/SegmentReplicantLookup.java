@@ -19,11 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.com.google.common.collect.HashBasedTable;
-import org.apache.druid.com.google.common.collect.Table;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.com.google.common.collect.HashBasedTable;
+import org.apache.druid.com.google.common.collect.Table;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 

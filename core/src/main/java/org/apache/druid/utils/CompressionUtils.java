@@ -19,6 +19,10 @@
 
 package org.apache.druid.utils;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
+import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.com.google.common.base.Throwables;
@@ -26,10 +30,6 @@ import org.apache.druid.com.google.common.io.ByteSink;
 import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.com.google.common.io.Files;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
-import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
-import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;

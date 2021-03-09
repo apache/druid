@@ -19,11 +19,11 @@
 
 package org.apache.druid.guice;
 
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;

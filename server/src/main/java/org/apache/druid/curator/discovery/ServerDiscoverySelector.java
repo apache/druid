@@ -19,14 +19,14 @@
 
 package org.apache.druid.curator.discovery;
 
-import org.apache.druid.com.google.common.base.Function;
-import org.apache.druid.com.google.common.base.Preconditions;
-import org.apache.druid.com.google.common.collect.Collections2;
-import org.apache.druid.com.google.common.net.HostAndPort;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.selector.DiscoverySelector;
 import org.apache.druid.client.selector.Server;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.net.HostAndPort;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;

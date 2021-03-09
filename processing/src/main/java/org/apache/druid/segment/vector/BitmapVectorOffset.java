@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.roaringbitmap.BatchIterator;
 
 public class BitmapVectorOffset implements VectorOffset

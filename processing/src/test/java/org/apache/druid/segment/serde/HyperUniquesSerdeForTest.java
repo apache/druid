@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.serde;
 
-import org.apache.druid.com.google.common.hash.HashFunction;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import org.apache.druid.com.google.common.hash.HashFunction;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;

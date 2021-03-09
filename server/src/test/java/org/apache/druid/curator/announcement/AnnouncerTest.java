@@ -19,7 +19,6 @@
 
 package org.apache.druid.curator.announcement;
 
-import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
@@ -28,6 +27,7 @@ import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.test.KillSession;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;

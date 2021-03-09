@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.lookup.namespace;
 
-import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.java.util.common.IAE;

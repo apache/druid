@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.ImmutableMultiset;
 import org.apache.druid.com.google.common.collect.Sets;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;

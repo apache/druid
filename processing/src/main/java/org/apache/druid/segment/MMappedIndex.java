@@ -28,7 +28,6 @@ import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.Map;
 
 /**

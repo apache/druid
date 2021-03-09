@@ -20,8 +20,8 @@
 package org.apache.druid.security.pac4j;
 
 
-import org.apache.druid.com.google.common.primitives.Ints;
 import com.nimbusds.jose.util.DefaultResourceRetriever;
+import org.apache.druid.com.google.common.primitives.Ints;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;

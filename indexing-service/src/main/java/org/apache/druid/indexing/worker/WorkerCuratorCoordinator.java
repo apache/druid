@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Joiner;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;

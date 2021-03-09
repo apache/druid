@@ -19,11 +19,6 @@
 
 package org.apache.druid.server.http.security;
 
-import org.apache.druid.com.google.common.base.Function;
-import org.apache.druid.com.google.common.base.Predicate;
-import org.apache.druid.com.google.common.collect.Collections2;
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -32,6 +27,11 @@ import com.google.inject.Module;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ResourceFilter;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;

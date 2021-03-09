@@ -20,8 +20,8 @@
 package org.apache.druid.https;
 
 import com.fasterxml.jackson.databind.Module;
-import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;

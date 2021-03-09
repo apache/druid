@@ -19,13 +19,13 @@
 
 package org.apache.druid.server.router;
 
+import com.google.inject.Inject;
+import org.apache.druid.client.selector.Server;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Maps;
-import com.google.inject.Inject;
-import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;

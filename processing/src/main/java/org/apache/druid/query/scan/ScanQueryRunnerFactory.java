@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.scan;
 
+import com.google.inject.Inject;
+import org.apache.druid.collections.StableLimitingSorter;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.com.google.common.collect.Lists;
-import com.google.inject.Inject;
-import org.apache.druid.collections.StableLimitingSorter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;

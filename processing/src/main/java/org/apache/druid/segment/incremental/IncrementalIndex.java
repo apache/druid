@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.com.google.common.base.Strings;
@@ -30,7 +31,6 @@ import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.com.google.common.primitives.Longs;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;

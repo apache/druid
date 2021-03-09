@@ -19,10 +19,10 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;

@@ -20,10 +20,10 @@
 package org.apache.druid.sql.calcite.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.collect.ImmutableList;
-import org.apache.druid.com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.calcite.avatica.SqlType;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.http.ResultFormat;

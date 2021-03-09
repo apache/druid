@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import junit.framework.Assert;
 import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.com.google.common.collect.Lists;
-import junit.framework.Assert;
 import org.junit.Test;
 import org.mozilla.javascript.EvaluatorException;
 

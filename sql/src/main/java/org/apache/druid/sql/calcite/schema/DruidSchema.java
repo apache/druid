@@ -19,6 +19,12 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.inject.Inject;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.druid.client.ServerView;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.com.google.common.base.Predicates;
@@ -28,12 +34,6 @@ import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.com.google.common.collect.Sets;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.google.inject.Inject;
-import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
-import org.apache.druid.client.ServerView;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;

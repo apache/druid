@@ -21,8 +21,8 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;

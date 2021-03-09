@@ -19,10 +19,10 @@
 
 package org.apache.druid.benchmark;
 
-import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;

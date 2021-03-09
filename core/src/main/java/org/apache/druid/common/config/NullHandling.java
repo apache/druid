@@ -19,9 +19,9 @@
 
 package org.apache.druid.common.config;
 
+import com.google.inject.Inject;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Strings;
-import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
 

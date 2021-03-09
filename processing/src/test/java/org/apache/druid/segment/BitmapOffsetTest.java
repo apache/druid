@@ -19,16 +19,16 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.com.google.common.base.Function;
-import org.apache.druid.com.google.common.collect.ImmutableSet;
-import org.apache.druid.com.google.common.collect.Iterables;
-import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.collections.bitmap.BitSetBitmapFactory;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.segment.data.Offset;
 import org.junit.Assert;
 import org.junit.Test;

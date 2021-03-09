@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.filter;
 
+import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.com.google.common.base.Supplier;
-import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;

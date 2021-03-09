@@ -22,7 +22,6 @@ package org.apache.druid.segment.data;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;

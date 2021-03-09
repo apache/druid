@@ -26,7 +26,6 @@ import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.segment.indexing.IOConfig;
 
 import javax.annotation.Nullable;
-
 import java.util.Map;
 
 /**

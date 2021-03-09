@@ -19,9 +19,9 @@
 
 package org.apache.druid.client.selector;
 
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.com.google.common.collect.Ordering;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
