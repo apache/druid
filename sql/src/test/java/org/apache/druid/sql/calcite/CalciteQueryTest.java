@@ -84,6 +84,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -5470,8 +5471,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testViewAndJoin() throws Exception
   {
     cannotVectorize();
+    Map<String, Object> queryContext = withLeftDirectAccessEnabled(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "SELECT COUNT(*) FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
+        queryContext,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
@@ -5482,7 +5485,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE3)
                                                      .intervals(querySegmentSpec(Filtration.eternity()))
                                                      .columns("dim2")
-                                                     .context(QUERY_CONTEXT_DEFAULT)
+                                                     .context(queryContext)
                                                      .build()
                             ),
                             "j0.",
@@ -5494,7 +5497,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
                                                  .intervals(querySegmentSpec(Filtration.eternity()))
                                                  .columns("dim2")
-                                                 .context(QUERY_CONTEXT_DEFAULT)
+                                                 .context(queryContext)
                                                  .build()
                         ),
                         "_j0.",
@@ -5506,7 +5509,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1))))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(withLeftDirectAccessEnabled(TIMESERIES_CONTEXT_DEFAULT))
                   .build()
         ),
         ImmutableList.of(
@@ -13333,7 +13336,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .builder()
                         .setDataSource(
                             join(
-                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .dataSource(CalciteTests.DATASOURCE1)
+                                        .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                                        .columns("dim1")
+                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                        .context(queryContext)
+                                        .build()
+                                ),
                                 new QueryDataSource(
                                     newScanQueryBuilder()
                                         .dataSource(CalciteTests.DATASOURCE1)
@@ -13352,7 +13363,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setGranularity(Granularities.ALL)
-                        .setInterval(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimFilter(selector("dim1", "def", null))
                         .setDimensions(
                             dimensions(
@@ -16135,6 +16146,76 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(
+                                    querySegmentSpec(
+                                        Intervals.utc(
+                                            DateTimes.of("1999-01-01").getMillis(),
+                                            JodaUtils.MAX_INSTANT
+                                        )
+                                    )
+                                )
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                                .columns(ImmutableList.of("__time", "v0"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(
+                                    querySegmentSpec(
+                                        Intervals.utc(
+                                            DateTimes.of("1999-01-01").getMillis(),
+                                            JodaUtils.MAX_INSTANT
+                                        )
+                                    )
+                                )
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                                .columns(ImmutableList.of("v0"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.v0")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "_v0")
+                .filters(new SelectorDimFilter("v0", "10.1", null))
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess(Map<String, Object> queryContext) throws Exception
+  {
+    queryContext = withLeftDirectAccessEnabled(queryContext);
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1' AND \"__time\" >= '1999'\n"
+        + ")\n"
+        + "SELECT t1.dim1, t1.\"__time\" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
@@ -16192,6 +16273,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                                .columns(ImmutableList.of("__time", "v0"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .columns(ImmutableList.of("dim1"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "_v0")
+                .filters(new SelectorDimFilter("v0", "10.1", null))
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testLeftJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess(Map<String, Object> queryContext) throws Exception
+  {
+    queryContext = withLeftDirectAccessEnabled(queryContext);
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
+        + ")\n"
+        + "SELECT t1.dim1, t1.\"__time\" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
@@ -16225,6 +16361,60 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testLeftJoinOnTwoInlineDataSources(Map<String, Object> queryContext) throws Exception
   {
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
+        + ")\n"
+        + "SELECT t1.dim1, t1.\"__time\" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                                .columns(ImmutableList.of("__time", "v0"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .columns(ImmutableList.of("dim1"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "_v0")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testLeftJoinOnTwoInlineDataSources_withLeftDirectAccess(Map<String, Object> queryContext) throws Exception
+  {
+    queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
         + "(\n"
@@ -16280,6 +16470,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(
                     join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                                .columns(ImmutableList.of("__time", "v0"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .columns(ImmutableList.of("dim1"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "_v0")
+                .filters(new NotDimFilter(new SelectorDimFilter("v0", null, null)))
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testInnerJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess(Map<String, Object> queryContext) throws Exception
+  {
+    queryContext = withLeftDirectAccessEnabled(queryContext);
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
+        + ")\n"
+        + "SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
                             newScanQueryBuilder()
@@ -16313,6 +16558,60 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext) throws Exception
   {
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
+        + ")\n"
+        + "SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
+                                .columns(ImmutableList.of("__time", "v0"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                .columns(ImmutableList.of("dim1"))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
+                .columns("__time", "_v0")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testInnerJoinOnTwoInlineDataSources_withLeftDirectAccess(Map<String, Object> queryContext) throws Exception
+  {
+    queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
         + "(\n"
