@@ -58,7 +58,7 @@ public class QueryContexts
   // This flag control whether a sql join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, druid can push down the join operation to
   // data servers.
-  public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableSQLLeftTableScanDirect";
+  public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";

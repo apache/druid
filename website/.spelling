@@ -1422,6 +1422,7 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 DatasourceMetadata
 TimeBoundary
