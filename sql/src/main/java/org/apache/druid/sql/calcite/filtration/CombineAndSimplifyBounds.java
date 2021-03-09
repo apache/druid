@@ -134,7 +134,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
     final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
 
-    boolean allFalse = true;
+    boolean allFalse = newChildren.size() > 0;
     for (final DimFilter child : newChildren) {
       if (child instanceof BoundDimFilter) {
         final BoundDimFilter bound = (BoundDimFilter) child;

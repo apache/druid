@@ -718,6 +718,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     } else if (Granularities.ALL.equals(granularity)) {
       final List<Interval> intervals = getIntervals();
       if (CollectionUtils.isNullOrEmpty(intervals)) {
+        // null, the "universal timestamp" of nothing
         return null;
       }
       final DateTime timeStart = intervals.get(0).getStart();
