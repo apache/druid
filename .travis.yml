@@ -591,71 +591,71 @@ jobs:
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
-    # START - Integration tests for Compile with Java 8 and Run with Java 11
+    # START - Integration tests for Compile with Java 8 and Run with Java 15
     - <<: *integration_batch_index
-      name: "(Compile=openjdk8, Run=openjdk11) batch index integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) batch index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_input_format
-      name: "(Compile=openjdk8, Run=openjdk11) input format integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) input format integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_input_source
-      name: "(Compile=openjdk8, Run=openjdk11) input source integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) input source integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_perfect_rollup_parallel_batch_index
-      name: "(Compile=openjdk8, Run=openjdk11) perfect rollup parallel batch index integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) perfect rollup parallel batch index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_query
-      name: "(Compile=openjdk8, Run=openjdk11) query integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) query integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_query_retry
-      name: "(Compile=openjdk8, Run=openjdk11) query retry integration test for missing segments"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) query retry integration test for missing segments"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_security
-      name: "(Compile=openjdk8, Run=openjdk11) security integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) security integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_ldap_security
-      name: "(Compile=openjdk8, Run=openjdk11) ldap security integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) ldap security integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_realtime_index
-      name: "(Compile=openjdk8, Run=openjdk11) realtime index integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) realtime index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_append_ingestion
-      name: "(Compile=openjdk8, Run=openjdk11) append ingestion integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) append ingestion integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_compaction_tests
-      name: "(Compile=openjdk8, Run=openjdk11) compaction integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) compaction integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_tests
-      name: "(Compile=openjdk8, Run=openjdk11) other integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) other integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     - <<: *integration_tests
-      name: "(Compile=openjdk8, Run=openjdk11) leadership and high availability integration tests"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      name: "(Compile=openjdk11, Run=openjdk15) leadership and high availability integration tests"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=15' USE_INDEXER='middleManager'
 
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
