@@ -20,16 +20,21 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -53,7 +58,128 @@ public class IndexedTableJoinMatcherTest
   @RunWith(Enclosed.class)
   public static class ConditionMatcherFactoryTest
   {
-    public static class MakeDimensionProcessorTest
+    public static class MakeLongProcessorTest extends InitializedNullHandlingTest
+    {
+      @Rule
+      public ExpectedException expectedException = ExpectedException.none();
+
+      @Mock
+      private BaseLongColumnValueSelector selector;
+
+      @Before
+      public void setUp()
+      {
+        MockitoAnnotations.initMocks(this);
+
+        if (NullHandling.sqlCompatible()) {
+          Mockito.doReturn(false).when(selector).isNull();
+        }
+
+        Mockito.doReturn(1L).when(selector).getLong();
+      }
+
+      @Test
+      public void testMatchToUniqueLongIndex()
+      {
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
+        final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
+
+        Assert.assertEquals(ImmutableList.of(2), ImmutableList.copyOf(processor.match()));
+      }
+
+      @Test
+      public void testMatchSingleRowToUniqueLongIndex()
+      {
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
+        final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
+
+        Assert.assertEquals(2, processor.matchSingleRow());
+      }
+
+      @Test
+      public void testMatchToNonUniqueLongIndex()
+      {
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longAlwaysOneTwoThreeIndex());
+        final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
+
+        Assert.assertEquals(ImmutableList.of(1, 2, 3), ImmutableList.copyOf(processor.match()));
+      }
+
+      @Test
+      public void testMatchSingleRowToNonUniqueLongIndex()
+      {
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longAlwaysOneTwoThreeIndex());
+        final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
+
+        expectedException.expect(UnsupportedOperationException.class);
+        processor.matchSingleRow();
+      }
+
+      @Test
+      public void testMatchToUniqueStringIndex()
+      {
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(certainStringToThreeIndex());
+        final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
+
+        Assert.assertEquals(ImmutableList.of(3), ImmutableList.copyOf(processor.match()));
+      }
+
+      @Test
+      public void testMatchSingleRowToUniqueStringIndex()
+      {
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(certainStringToThreeIndex());
+        final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
+
+        Assert.assertEquals(3, processor.matchSingleRow());
+      }
+    }
+
+    public static class MakeComplexProcessorTest extends InitializedNullHandlingTest
+    {
+      @Rule
+      public ExpectedException expectedException = ExpectedException.none();
+
+      @Mock
+      private BaseObjectColumnValueSelector<?> selector;
+
+      @Before
+      public void setUp()
+      {
+        MockitoAnnotations.initMocks(this);
+      }
+
+      @Test
+      public void testMatch()
+      {
+        final IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
+
+        final IndexedTableJoinMatcher.ConditionMatcher processor =
+            conditionMatcherFactory.makeComplexProcessor(selector);
+
+        Assert.assertEquals(ImmutableList.of(), ImmutableList.copyOf(processor.match()));
+      }
+
+      @Test
+      public void testMatchSingleRow()
+      {
+        final IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(longPlusOneIndex());
+
+        final IndexedTableJoinMatcher.ConditionMatcher processor =
+            conditionMatcherFactory.makeComplexProcessor(selector);
+
+        Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, processor.matchSingleRow());
+      }
+    }
+
+    public static class MakeDimensionProcessorTest extends InitializedNullHandlingTest
     {
       @Rule
       public ExpectedException expectedException = ExpectedException.none();
@@ -62,10 +188,6 @@ public class IndexedTableJoinMatcherTest
       private DimensionSelector dimensionSelector;
 
       private static final String KEY = "key";
-
-      static {
-        NullHandling.initializeForTests();
-      }
 
       @Test
       public void testMatchMultiValuedRowCardinalityUnknownShouldThrowException()
@@ -370,6 +492,106 @@ public class IndexedTableJoinMatcherTest
       public IntList find(Object key)
       {
         return IntLists.singleton(((String) key).length());
+      }
+
+      @Override
+      public int findUniqueLong(long key)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  private static IndexedTable.Index certainStringToThreeIndex()
+  {
+    return new IndexedTable.Index()
+    {
+      @Override
+      public ValueType keyType()
+      {
+        return ValueType.STRING;
+      }
+
+      @Override
+      public boolean areKeysUnique()
+      {
+        return true;
+      }
+
+      @Override
+      public IntList find(Object key)
+      {
+        if ("1".equals(DimensionHandlerUtils.convertObjectToString(key))) {
+          return IntLists.singleton(3);
+        } else {
+          return IntLists.EMPTY_LIST;
+        }
+      }
+
+      @Override
+      public int findUniqueLong(long key)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  private static IndexedTable.Index longPlusOneIndex()
+  {
+    return new IndexedTable.Index()
+    {
+      @Override
+      public ValueType keyType()
+      {
+        return ValueType.LONG;
+      }
+
+      @Override
+      public boolean areKeysUnique()
+      {
+        return true;
+      }
+
+      @Override
+      public IntList find(Object key)
+      {
+        final Long l = DimensionHandlerUtils.convertObjectToLong(key);
+
+        if (l == null && NullHandling.sqlCompatible()) {
+          return IntLists.EMPTY_LIST;
+        } else {
+          return IntLists.singleton(Ints.checkedCast((l == null ? 0L : l) + 1));
+        }
+      }
+
+      @Override
+      public int findUniqueLong(long key)
+      {
+        return Ints.checkedCast(key + 1);
+      }
+    };
+  }
+
+  private static IndexedTable.Index longAlwaysOneTwoThreeIndex()
+  {
+    return new IndexedTable.Index()
+    {
+      @Override
+      public ValueType keyType()
+      {
+        return ValueType.LONG;
+      }
+
+      @Override
+      public boolean areKeysUnique()
+      {
+        return false;
+      }
+
+      @Override
+      public IntList find(Object key)
+      {
+        return new IntArrayList(new int[]{1, 2, 3});
       }
 
       @Override

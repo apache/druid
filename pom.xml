@@ -90,7 +90,7 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.34.v20201102</jetty.version>
+        <jetty.version>9.4.38.v20210224</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
         <jackson.databind.version>2.10.5.1</jackson.databind.version>
@@ -956,6 +956,11 @@
                 <groupId>net.java.dev.jna</groupId>
                 <artifactId>jna</artifactId>
                 <version>4.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.2</version>
             </dependency>
             <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
@@ -1944,6 +1949,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/docker/schema-registry/*</exclude>
                                 <exclude>LICENSE</exclude>
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>

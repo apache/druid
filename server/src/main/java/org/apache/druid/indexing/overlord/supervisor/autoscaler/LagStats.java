@@ -17,28 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-import org.apache.druid.timeline.Overshadowable;
-
-/**
- */
-public class ImmutablePartitionHolder<T extends Overshadowable<T>> extends PartitionHolder<T>
+public class LagStats
 {
-  protected ImmutablePartitionHolder(OvershadowableManager<T> overshadowableManager)
+  private final long maxLag;
+  private final long totalLag;
+  private final long avgLag;
+
+  public LagStats(long maxLag, long totalLag, long avgLag)
   {
-    super(overshadowableManager);
+    this.maxLag = maxLag;
+    this.totalLag = totalLag;
+    this.avgLag = avgLag;
   }
 
-  @Override
-  public PartitionChunk<T> remove(PartitionChunk<T> tPartitionChunk)
+  public long getMaxLag()
   {
-    throw new UnsupportedOperationException();
+    return maxLag;
   }
 
-  @Override
-  public boolean add(PartitionChunk<T> tPartitionChunk)
+  public long getTotalLag()
   {
-    throw new UnsupportedOperationException();
+    return totalLag;
+  }
+
+  public long getAvgLag()
+  {
+    return avgLag;
   }
 }

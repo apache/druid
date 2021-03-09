@@ -24,12 +24,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.JoinType;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
 import java.util.Collections;
 
@@ -152,11 +154,52 @@ public class JoinDataSourceTest
   public void test_serde() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    JoinDataSource joinDataSource = JoinDataSource.create(
+        new TableDataSource("table1"),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil()
+    );
+
     final JoinDataSource deserialized = (JoinDataSource) jsonMapper.readValue(
-        jsonMapper.writeValueAsString(joinTableToLookup),
+        jsonMapper.writeValueAsString(joinDataSource),
         DataSource.class
     );
 
-    Assert.assertEquals(joinTableToLookup, deserialized);
+    Assert.assertEquals(joinDataSource, deserialized);
+  }
+
+  @Test
+  public void testException_leftFilterOnNonTableSource()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("left filter is only supported if left data source is direct table access");
+    JoinDataSource ignored = JoinDataSource.create(
+        new QueryDataSource(Mockito.mock(Query.class)),
+        new TableDataSource("table"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil()
+    );
+  }
+
+  @Test
+  public void testLeftFilter()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        new TableDataSource("table1"),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil()
+    );
+    Assert.assertEquals(TrueDimFilter.instance(), dataSource.getLeftFilter());
   }
 }

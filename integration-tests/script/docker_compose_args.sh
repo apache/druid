@@ -28,7 +28,6 @@ getComposeArgs()
       echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')"
       exit 1
     fi
-
     if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
     then
       # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
@@ -36,10 +35,14 @@ getComposeArgs()
       then
         echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
         exit 1
+      elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
+      then
+        # Replace MiddleManager with Indexer + schema registry container
+        echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml -f ${DOCKERDIR}/docker-compose.schema-registry-indexer.yml"
+      else
+        # Replace MiddleManager with Indexer
+        echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml"
       fi
-
-      # Replace MiddleManager with Indexer
-      echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml"
     elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
     then
       # default + additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
@@ -57,6 +60,10 @@ getComposeArgs()
     then
       # the 'high availability' test cluster with multiple coordinators and overlords
       echo "-f ${DOCKERDIR}/docker-compose.high-availability.yml"
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
+    then
+      # default + schema registry container
+      echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
     else
       # default
       echo "-f ${DOCKERDIR}/docker-compose.yml"

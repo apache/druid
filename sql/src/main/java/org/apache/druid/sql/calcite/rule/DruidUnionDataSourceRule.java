@@ -69,8 +69,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
     final DruidRel<?> firstDruidRel = call.rel(1);
     final DruidQueryRel secondDruidRel = call.rel(2);
 
-    // Can only do UNION ALL of inputs that have compatible schemas (or schema mappings).
-    return unionRel.all && isUnionCompatible(firstDruidRel, secondDruidRel);
+    return isCompatible(unionRel, firstDruidRel, secondDruidRel);
   }
 
   @Override
@@ -109,6 +108,17 @@ public class DruidUnionDataSourceRule extends RelOptRule
           )
       );
     }
+  }
+
+  // Can only do UNION ALL of inputs that have compatible schemas (or schema mappings) and right side
+  // is a simple table scan
+  public static boolean isCompatible(final Union unionRel, final DruidRel<?> first, final DruidRel<?> second)
+  {
+    if (!(second instanceof DruidQueryRel)) {
+      return false;
+    }
+
+    return unionRel.all && isUnionCompatible(first, second);
   }
 
   private static boolean isUnionCompatible(final DruidRel<?> first, final DruidRel<?> second)

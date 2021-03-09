@@ -69,6 +69,7 @@
           "querying/multi-value-dimensions",
           "querying/multitenancy",
           "querying/caching",
+          "querying/using-caching",
           "querying/query-context"
         ]
       },

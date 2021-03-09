@@ -65,11 +65,6 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     this.overshadowableManager = overshadowableManager;
   }
 
-  public ImmutablePartitionHolder<T> asImmutable()
-  {
-    return new ImmutablePartitionHolder<>(OvershadowableManager.copyVisible(overshadowableManager));
-  }
-
   public boolean add(PartitionChunk<T> chunk)
   {
     return overshadowableManager.addChunk(chunk);

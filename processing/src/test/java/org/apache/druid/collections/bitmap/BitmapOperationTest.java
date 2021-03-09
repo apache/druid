@@ -19,16 +19,10 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.carrotsearch.junitbenchmarks.BenchmarkRule;
-import com.carrotsearch.junitbenchmarks.Clock;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
@@ -41,23 +35,17 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 
-/**
- * TODO rewrite this benchmark to JMH
- * If you want to run locally, remove @Ignore on the class.
- */
-@BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
-@Ignore
-public class BitmapBenchmark
+public class BitmapOperationTest
 {
-  public static final int LENGTH = 500_000;
-  public static final int SIZE = 10_000;
-  static final ImmutableConciseSet[] CONCISE = new ImmutableConciseSet[SIZE];
-  static final ImmutableConciseSet[] OFF_HEAP_CONCISE = new ImmutableConciseSet[SIZE];
-  static final ImmutableRoaringBitmap[] ROARING = new ImmutableRoaringBitmap[SIZE];
-  static final ImmutableRoaringBitmap[] IMMUTABLE_ROARING = new ImmutableRoaringBitmap[SIZE];
-  static final ImmutableRoaringBitmap[] OFF_HEAP_ROARING = new ImmutableRoaringBitmap[SIZE];
-  static final ImmutableBitmap[] GENERIC_CONCISE = new ImmutableBitmap[SIZE];
-  static final ImmutableBitmap[] GENERIC_ROARING = new ImmutableBitmap[SIZE];
+  public static final int BITMAP_LENGTH = 500_000;
+  public static final int NUM_BITMAPS = 1000;
+  static final ImmutableConciseSet[] CONCISE = new ImmutableConciseSet[NUM_BITMAPS];
+  static final ImmutableConciseSet[] OFF_HEAP_CONCISE = new ImmutableConciseSet[NUM_BITMAPS];
+  static final ImmutableRoaringBitmap[] ROARING = new ImmutableRoaringBitmap[NUM_BITMAPS];
+  static final ImmutableRoaringBitmap[] IMMUTABLE_ROARING = new ImmutableRoaringBitmap[NUM_BITMAPS];
+  static final ImmutableRoaringBitmap[] OFF_HEAP_ROARING = new ImmutableRoaringBitmap[NUM_BITMAPS];
+  static final ImmutableBitmap[] GENERIC_CONCISE = new ImmutableBitmap[NUM_BITMAPS];
+  static final ImmutableBitmap[] GENERIC_ROARING = new ImmutableBitmap[NUM_BITMAPS];
   static final ConciseBitmapFactory CONCISE_FACTORY = new ConciseBitmapFactory();
   static final RoaringBitmapFactory ROARING_FACTORY = new RoaringBitmapFactory();
   static Random rand = new Random(0);
@@ -67,8 +55,6 @@ public class BitmapBenchmark
   static long roaringCount = 0;
   static long unionCount = 0;
   static long minIntersection = 0;
-  @Rule
-  public TestRule benchmarkRun = new BenchmarkRule();
 
   static {
     NullHandling.initializeForTests();
@@ -141,67 +127,63 @@ public class BitmapBenchmark
   }
 
   @Test
-  @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
-  public void timeConciseUnion()
+  public void testConciseUnion()
   {
     ImmutableConciseSet union = ImmutableConciseSet.union(CONCISE);
     Assert.assertEquals(unionCount, union.size());
   }
 
   @Test
-  @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
-  public void timeOffheapConciseUnion()
+  public void testOffheapConciseUnion()
   {
     ImmutableConciseSet union = ImmutableConciseSet.union(OFF_HEAP_CONCISE);
     Assert.assertEquals(unionCount, union.size());
   }
 
   @Test
-  @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
-  public void timeGenericConciseUnion()
+  public void testGenericConciseUnion()
   {
     ImmutableBitmap union = CONCISE_FACTORY.union(Arrays.asList(GENERIC_CONCISE));
     Assert.assertEquals(unionCount, union.size());
   }
 
   @Test
-  @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 5)
-  public void timeGenericConciseIntersection()
+  public void testGenericConciseIntersection()
   {
     ImmutableBitmap intersection = CONCISE_FACTORY.intersection(Arrays.asList(GENERIC_CONCISE));
     Assert.assertTrue(intersection.size() >= minIntersection);
   }
 
   @Test
-  public void timeRoaringUnion()
+  public void testRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Arrays.asList(ROARING).iterator());
     Assert.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
-  public void timeImmutableRoaringUnion()
+  public void testImmutableRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Arrays.asList(IMMUTABLE_ROARING).iterator());
     Assert.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
-  public void timeOffheapRoaringUnion()
+  public void testOffheapRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Arrays.asList(OFF_HEAP_ROARING).iterator());
     Assert.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
-  public void timeGenericRoaringUnion()
+  public void testGenericRoaringUnion()
   {
     ImmutableBitmap union = ROARING_FACTORY.union(Arrays.asList(GENERIC_ROARING));
     Assert.assertEquals(unionCount, union.size());
   }
 
   @Test
-  public void timeGenericRoaringIntersection()
+  public void testGenericRoaringIntersection()
   {
     ImmutableBitmap intersection = ROARING_FACTORY.intersection(Arrays.asList(GENERIC_ROARING));
     Assert.assertTrue(intersection.size() >= minIntersection);
