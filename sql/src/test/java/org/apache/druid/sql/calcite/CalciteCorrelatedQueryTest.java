@@ -102,6 +102,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   public void testCorrelatedSubquery(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
+    queryContext = withLeftDirectAccessEnabled(queryContext);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -207,6 +208,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
+    queryContext = withLeftDirectAccessEnabled(queryContext);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -286,11 +288,9 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> inputContext) throws Exception
+  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
-    HashMap<String, Object> queryContext = new HashMap<>(inputContext);
-    queryContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, false);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -376,6 +376,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
+    queryContext = withLeftDirectAccessEnabled(queryContext);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -463,7 +464,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
-
+    queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "select country, ANY_VALUE(\n"
         + "        select max(\"users\") from (\n"
@@ -566,5 +567,13 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   private MapBasedInputRow toRow(String time, Map<String, Object> event)
   {
     return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), DIMENSIONS, event);
+  }
+
+  private Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
+  {
+    // since context is usually immutable in tests, make a copy
+    HashMap<String, Object> newContext = new HashMap<>(context);
+    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
+    return newContext;
   }
 }
