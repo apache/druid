@@ -67,6 +67,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -715,7 +716,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     if (!timestampStringFromContext.isEmpty()) {
       return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(granularity)) {
-      final DateTime timeStart = getIntervals().get(0).getStart();
+      final List<Interval> intervals = getIntervals();
+      if (CollectionUtils.isNullOrEmpty(intervals)) {
+        return null;
+      }
+      final DateTime timeStart = intervals.get(0).getStart();
       return granularity.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;
