@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;

@@ -20,8 +20,8 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.junit.Assert;

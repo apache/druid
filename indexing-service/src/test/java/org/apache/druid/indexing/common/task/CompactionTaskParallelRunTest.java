@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;

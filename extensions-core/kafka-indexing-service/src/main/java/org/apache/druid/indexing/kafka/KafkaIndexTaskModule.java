@@ -22,7 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.LazySingleton;

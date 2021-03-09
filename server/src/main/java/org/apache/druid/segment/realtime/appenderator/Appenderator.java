@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.query.QuerySegmentWalker;

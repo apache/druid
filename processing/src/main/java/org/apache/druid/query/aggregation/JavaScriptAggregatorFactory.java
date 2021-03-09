@@ -22,11 +22,11 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
@@ -182,7 +182,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     return ImmutableList.copyOf(
         Lists.transform(
             fieldNames,
-            new com.google.common.base.Function<String, AggregatorFactory>()
+            new org.apache.druid.com.google.common.base.Function<String, AggregatorFactory>()
             {
               @Override
               public AggregatorFactory apply(String input)

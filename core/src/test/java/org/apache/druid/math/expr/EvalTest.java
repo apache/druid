@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;

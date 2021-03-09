@@ -19,7 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.Objects;

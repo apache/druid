@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;

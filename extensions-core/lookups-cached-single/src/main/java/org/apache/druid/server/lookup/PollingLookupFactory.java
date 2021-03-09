@@ -22,7 +22,7 @@ package org.apache.druid.server.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupIntrospectHandler;

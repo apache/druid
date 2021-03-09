@@ -19,15 +19,15 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Stopwatch;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Stopwatch;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.util.concurrent.FutureCallback;
+import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;

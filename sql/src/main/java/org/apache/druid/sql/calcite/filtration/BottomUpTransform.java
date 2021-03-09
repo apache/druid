@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.filtration;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;

@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.distinctcount;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;

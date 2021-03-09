@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;

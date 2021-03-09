@@ -20,10 +20,10 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;

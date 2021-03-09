@@ -20,7 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.query.Query;
 
 import javax.validation.constraints.Min;

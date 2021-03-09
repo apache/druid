@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;

@@ -21,8 +21,8 @@ package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.emitter;
 
-import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;

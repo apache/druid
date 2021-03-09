@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.impl.prefetch;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.junit.After;

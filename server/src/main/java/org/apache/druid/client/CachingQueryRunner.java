@@ -21,9 +21,9 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
-import com.google.common.primitives.Bytes;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.primitives.Bytes;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;

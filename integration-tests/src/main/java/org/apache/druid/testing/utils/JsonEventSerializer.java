@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
 

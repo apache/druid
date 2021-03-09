@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;

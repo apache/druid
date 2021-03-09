@@ -20,7 +20,7 @@
 package org.apache.druid.query.dimension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.IndexedInts;

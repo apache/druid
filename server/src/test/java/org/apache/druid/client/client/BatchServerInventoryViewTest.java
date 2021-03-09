@@ -20,15 +20,15 @@
 package org.apache.druid.client.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Stopwatch;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.util.concurrent.Futures;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;

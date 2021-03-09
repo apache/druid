@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.variance.sql;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Iterables;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.schema.SchemaPlus;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.coordination;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.FutureCallback;
+import org.apache.druid.com.google.common.util.concurrent.Futures;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.junit.Assert;
 import org.junit.Test;
 

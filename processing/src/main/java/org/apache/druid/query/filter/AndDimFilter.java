@@ -21,10 +21,10 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.Filters;
 

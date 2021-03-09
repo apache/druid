@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;

@@ -19,11 +19,11 @@
 
 package org.apache.druid.server;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.HashMultimap;
+import org.apache.druid.com.google.common.collect.Multimaps;
+import org.apache.druid.com.google.common.collect.SetMultimap;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;

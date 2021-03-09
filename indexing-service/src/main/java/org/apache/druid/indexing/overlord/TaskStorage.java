@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;

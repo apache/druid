@@ -19,8 +19,8 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;

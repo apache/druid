@@ -21,7 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.initialization.DruidModule;

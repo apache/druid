@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;

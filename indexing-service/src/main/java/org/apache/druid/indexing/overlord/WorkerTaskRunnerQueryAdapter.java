@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import io.netty.handler.timeout.TimeoutException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;

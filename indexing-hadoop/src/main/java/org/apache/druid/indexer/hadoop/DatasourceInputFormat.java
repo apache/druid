@@ -20,8 +20,8 @@
 package org.apache.druid.indexer.hadoop;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.JobHelper;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;

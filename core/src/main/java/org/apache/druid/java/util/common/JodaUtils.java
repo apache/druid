@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.PeekingIterator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

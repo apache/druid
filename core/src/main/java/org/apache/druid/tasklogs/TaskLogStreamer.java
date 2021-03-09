@@ -19,8 +19,8 @@
 
 package org.apache.druid.tasklogs;
 
-import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import java.io.IOException;

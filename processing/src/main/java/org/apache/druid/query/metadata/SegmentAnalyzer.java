@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.metadata;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;

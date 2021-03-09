@@ -19,10 +19,10 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
-import com.google.common.io.BaseEncoding;
-import com.google.common.primitives.Chars;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.io.BaseEncoding;
+import org.apache.druid.com.google.common.primitives.Chars;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;

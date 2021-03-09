@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.extraction;
 
-import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;

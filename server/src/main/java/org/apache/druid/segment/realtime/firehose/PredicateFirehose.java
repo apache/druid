@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.logger.Logger;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.ISE;
 
 import java.nio.ByteBuffer;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;

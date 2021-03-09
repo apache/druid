@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.guice;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;

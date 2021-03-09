@@ -21,7 +21,7 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**

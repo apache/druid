@@ -20,9 +20,9 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;

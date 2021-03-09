@@ -19,10 +19,10 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
-import com.google.common.util.concurrent.AbstractListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.AbstractListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import java.util.Collections;
@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-// Copy of Guava's Apache 2.0 licensed https://github.com/google/guava/blob/a5cafa67da64a12444037bd4f4c30c39a0c184aa/guava/src/com/google/common/util/concurrent/MoreExecutors.java#L240-L339
+// Copy of Guava's Apache 2.0 licensed https://github.com/google/guava/blob/a5cafa67da64a12444037bd4f4c30c39a0c184aa/guava/src/org.apache.druid.com.google.common/util/concurrent/MoreExecutors.java#L240-L339
 
 /**
  * Creates an executor service that runs each task in the thread that invokes {@code

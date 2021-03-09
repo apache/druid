@@ -20,7 +20,7 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.guice.GuiceInjectors;

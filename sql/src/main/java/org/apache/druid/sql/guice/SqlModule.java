@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.guice;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;

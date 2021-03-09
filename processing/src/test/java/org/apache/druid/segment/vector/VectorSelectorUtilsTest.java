@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.vector;
 
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.collections.IntSetTestUtility;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;

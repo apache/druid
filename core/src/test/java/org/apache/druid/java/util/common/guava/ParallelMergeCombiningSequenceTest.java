@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;

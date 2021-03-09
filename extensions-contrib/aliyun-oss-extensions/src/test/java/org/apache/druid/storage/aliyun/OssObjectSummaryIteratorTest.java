@@ -24,8 +24,8 @@ import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.junit.Assert;
 import org.junit.Test;
 

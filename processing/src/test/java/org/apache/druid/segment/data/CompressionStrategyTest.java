@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.io.Closer;
 import org.junit.After;
 import org.junit.Assert;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 
 /**
  */

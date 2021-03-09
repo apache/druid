@@ -19,8 +19,8 @@
 
 package org.apache.druid.k8s.discovery;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 

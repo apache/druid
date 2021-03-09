@@ -20,7 +20,7 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;

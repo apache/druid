@@ -19,8 +19,8 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;

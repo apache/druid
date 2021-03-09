@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Floats;
+import org.apache.druid.com.google.common.primitives.Longs;
 
 import javax.annotation.Nullable;
 

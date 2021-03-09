@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.search;
 
-import com.google.common.base.Suppliers;
-import com.google.common.collect.Sets;
-import com.google.common.io.CharSource;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.io.CharSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;

@@ -19,11 +19,11 @@
 
 package org.apache.druid.java.util.common.io.smoosh;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
-import com.google.common.collect.Lists;
-import com.google.common.io.Closeables;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.collect.Interner;
+import org.apache.druid.com.google.common.collect.Interners;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.io.Closeables;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.ISE;
 

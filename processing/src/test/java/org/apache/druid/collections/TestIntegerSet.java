@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.WrappedBitSetBitmap;
 import org.apache.druid.collections.bitmap.WrappedConciseBitmap;

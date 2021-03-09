@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.strategy;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;

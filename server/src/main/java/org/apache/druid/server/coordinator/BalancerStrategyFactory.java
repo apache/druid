@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {

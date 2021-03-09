@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.lookup.namespace;
 
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;

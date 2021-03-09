@@ -22,8 +22,8 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;

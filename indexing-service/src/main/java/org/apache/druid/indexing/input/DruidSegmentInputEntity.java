@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.input;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoader;

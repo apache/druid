@@ -19,8 +19,8 @@
 
 package org.apache.druid.client;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;

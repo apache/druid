@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.security;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Sets;
 
 import javax.annotation.Nonnull;
 import javax.servlet.Filter;

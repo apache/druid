@@ -21,8 +21,8 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;

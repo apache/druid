@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Key;
 import org.apache.druid.data.input.MapBasedRow;

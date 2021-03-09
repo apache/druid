@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.collections.spatial.search.RadiusBound;
 import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.data.input.MapBasedInputRow;

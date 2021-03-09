@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.hash.HashCode;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.hash.HashCode;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 
 import java.io.IOException;

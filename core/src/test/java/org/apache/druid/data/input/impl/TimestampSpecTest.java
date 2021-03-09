@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;

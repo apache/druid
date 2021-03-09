@@ -20,8 +20,8 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;

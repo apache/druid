@@ -19,8 +19,8 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.Execs;

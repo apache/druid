@@ -19,8 +19,8 @@
 
 package org.apache.druid.cli.convert;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Sets;
 
 import java.util.HashMap;
 import java.util.Map;

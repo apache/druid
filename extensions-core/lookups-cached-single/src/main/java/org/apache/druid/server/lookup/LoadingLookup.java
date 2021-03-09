@@ -20,7 +20,7 @@
 package org.apache.druid.server.lookup;
 
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;

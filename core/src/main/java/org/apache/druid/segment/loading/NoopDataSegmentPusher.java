@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;

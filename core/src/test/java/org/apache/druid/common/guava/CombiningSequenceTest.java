@@ -19,12 +19,12 @@
 
 package org.apache.druid.common.guava;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.ExplodingSequence;
 import org.apache.druid.java.util.common.guava.Sequence;

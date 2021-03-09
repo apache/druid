@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
 import junit.framework.Assert;
 import org.junit.Test;
 

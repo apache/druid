@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexer.path;
 
-import com.google.common.base.Functions;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Functions;
+import org.apache.druid.com.google.common.collect.Iterables;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.datasketches.Family;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.theta.AnotB;

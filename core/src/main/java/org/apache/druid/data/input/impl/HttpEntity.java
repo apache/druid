@@ -19,9 +19,9 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.net.HttpHeaders;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.net.HttpHeaders;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;

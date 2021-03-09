@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.planning;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;

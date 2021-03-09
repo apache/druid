@@ -19,7 +19,7 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;

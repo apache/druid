@@ -20,7 +20,7 @@
 package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.search.FragmentSearchQuerySpec;
 import org.apache.druid.query.search.SearchQuerySpec;

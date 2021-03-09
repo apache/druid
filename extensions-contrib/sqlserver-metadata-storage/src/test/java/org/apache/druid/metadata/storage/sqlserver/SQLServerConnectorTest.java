@@ -19,7 +19,7 @@
 
 package org.apache.druid.metadata.storage.sqlserver;
 
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;

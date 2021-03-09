@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;

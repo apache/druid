@@ -20,12 +20,12 @@
 package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;

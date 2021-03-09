@@ -19,7 +19,7 @@
 
 package org.apache.druid.metadata;
 
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
 import org.joda.time.DateTime;
 

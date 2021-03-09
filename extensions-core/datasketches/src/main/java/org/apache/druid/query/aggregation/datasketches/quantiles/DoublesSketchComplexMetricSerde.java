@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Doubles;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.datasketches.quantiles.UpdateDoublesSketch;

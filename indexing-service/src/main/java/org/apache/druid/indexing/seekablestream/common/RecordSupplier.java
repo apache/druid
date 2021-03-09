@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
-import com.google.common.annotations.Beta;
+import org.apache.druid.com.google.common.annotations.Beta;
 import org.apache.druid.data.input.impl.ByteEntity;
 
 import javax.annotation.Nullable;

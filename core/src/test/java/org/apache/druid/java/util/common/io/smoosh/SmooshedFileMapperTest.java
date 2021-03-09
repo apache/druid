@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common.io.smoosh;
 
-import com.google.common.io.Files;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.io.Files;
+import org.apache.druid.com.google.common.primitives.Ints;
 import junit.framework.Assert;
 import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;

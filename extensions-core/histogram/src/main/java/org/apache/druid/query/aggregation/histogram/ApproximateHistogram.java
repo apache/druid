@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Floats;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.primitives.Floats;
 
 import javax.annotation.Nullable;
 

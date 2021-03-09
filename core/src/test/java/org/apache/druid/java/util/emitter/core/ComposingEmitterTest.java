@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;

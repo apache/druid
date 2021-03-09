@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.vector;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;

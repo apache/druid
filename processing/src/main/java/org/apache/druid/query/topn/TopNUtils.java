@@ -29,7 +29,7 @@ final class TopNUtils
    * needed, because when TopNScannerPrototype is specialized, occurrences of {@link org.apache.druid.segment.data.Offset} are
    * replaced with the specific Offset subtype in the TopNScannerPrototype bytecode, via {@link
    * org.apache.druid.query.monomorphicprocessing.SpecializationService#getSpecializationState(Class, String,
-   * com.google.common.collect.ImmutableMap)}, providing ImmutableMap.of(Offset.class, specificOffsetSubtype) as the
+   * org.apache.druid.com.google.common.collect.ImmutableMap)}, providing ImmutableMap.of(Offset.class, specificOffsetSubtype) as the
    * classRemapping argument.
    *
    * Casting to the specific Offset subtype helps Hotspot JIT (OpenJDK 8) to generate better assembly. It shouldn't be

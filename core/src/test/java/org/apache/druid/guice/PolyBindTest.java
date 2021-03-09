@@ -19,7 +19,7 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;

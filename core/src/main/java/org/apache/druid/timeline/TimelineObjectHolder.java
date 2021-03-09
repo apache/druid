@@ -19,7 +19,7 @@
 
 package org.apache.druid.timeline;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 

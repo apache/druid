@@ -21,7 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.serde.MetaSerdeHelper;

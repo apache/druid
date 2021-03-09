@@ -20,8 +20,8 @@
 package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;

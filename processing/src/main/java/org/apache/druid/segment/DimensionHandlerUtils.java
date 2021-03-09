@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Floats;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.IAE;

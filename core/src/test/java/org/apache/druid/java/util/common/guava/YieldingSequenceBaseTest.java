@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;

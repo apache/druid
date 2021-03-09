@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 public abstract class FeedDefiningMonitor extends AbstractMonitor

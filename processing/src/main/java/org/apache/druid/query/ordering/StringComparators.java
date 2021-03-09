@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.ordering;
 
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.UnsignedBytes;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.UnsignedBytes;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;

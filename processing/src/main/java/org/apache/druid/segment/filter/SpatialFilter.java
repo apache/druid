@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.query.BitmapResultFactory;

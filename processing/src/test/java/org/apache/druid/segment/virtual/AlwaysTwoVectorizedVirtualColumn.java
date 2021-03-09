@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;

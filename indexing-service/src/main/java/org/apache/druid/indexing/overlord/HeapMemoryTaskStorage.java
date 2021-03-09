@@ -19,13 +19,13 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ArrayListMultimap;
+import org.apache.druid.com.google.common.collect.HashMultimap;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Multimap;
+import org.apache.druid.com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;

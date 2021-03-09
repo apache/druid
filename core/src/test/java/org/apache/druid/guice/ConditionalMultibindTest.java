@@ -19,8 +19,8 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Guice;

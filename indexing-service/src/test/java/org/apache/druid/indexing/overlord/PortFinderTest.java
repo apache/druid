@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;

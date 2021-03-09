@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.metadata;
 
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.StringUtils;

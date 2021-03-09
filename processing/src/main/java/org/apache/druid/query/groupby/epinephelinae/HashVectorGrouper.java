@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.datasketches.memory.Memory;

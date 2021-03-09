@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.router;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 

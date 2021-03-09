@@ -20,9 +20,9 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.CacheStrategy;

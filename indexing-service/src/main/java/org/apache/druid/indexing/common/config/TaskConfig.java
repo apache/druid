@@ -21,7 +21,7 @@ package org.apache.druid.indexing.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 

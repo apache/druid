@@ -19,10 +19,10 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;

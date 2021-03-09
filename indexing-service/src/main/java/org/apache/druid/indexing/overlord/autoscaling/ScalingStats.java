@@ -21,9 +21,9 @@ package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.Lists;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;

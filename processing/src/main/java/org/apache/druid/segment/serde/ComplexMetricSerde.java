@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Function;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;

@@ -21,9 +21,9 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.guice.ManageLifecycle;

@@ -20,8 +20,8 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;

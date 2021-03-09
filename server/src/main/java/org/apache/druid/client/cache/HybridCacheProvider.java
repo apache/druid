@@ -21,7 +21,7 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 
 public class HybridCacheProvider extends HybridCacheConfig implements CacheProvider

@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.metrics.CgroupUtil;
 

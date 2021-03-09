@@ -20,8 +20,8 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.utils.JvmUtils;
 
 import java.io.File;

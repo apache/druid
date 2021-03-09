@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;

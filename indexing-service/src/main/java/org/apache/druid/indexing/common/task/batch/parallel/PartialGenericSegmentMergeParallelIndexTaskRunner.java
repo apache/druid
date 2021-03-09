@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.segment.indexing.DataSchema;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.writeout;
 
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 

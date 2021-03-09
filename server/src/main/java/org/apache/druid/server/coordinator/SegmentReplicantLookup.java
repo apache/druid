@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import org.apache.druid.com.google.common.collect.HashBasedTable;
+import org.apache.druid.com.google.common.collect.Table;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;

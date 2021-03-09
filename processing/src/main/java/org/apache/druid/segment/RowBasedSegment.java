@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;

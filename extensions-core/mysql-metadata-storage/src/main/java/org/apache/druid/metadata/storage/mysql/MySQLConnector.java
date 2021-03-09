@@ -19,9 +19,9 @@
 
 package org.apache.druid.metadata.storage.mysql;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.apache.commons.dbcp2.BasicDataSource;

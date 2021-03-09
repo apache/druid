@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;

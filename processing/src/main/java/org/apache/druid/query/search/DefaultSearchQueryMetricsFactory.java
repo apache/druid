@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.search;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.GenericQueryMetricsFactory;

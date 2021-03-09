@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.view;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 
 import java.util.Map;

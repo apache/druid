@@ -19,7 +19,7 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Provides;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 
 import java.io.IOException;
 

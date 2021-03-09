@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.search;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;

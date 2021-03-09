@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Splitter;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -21,7 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;

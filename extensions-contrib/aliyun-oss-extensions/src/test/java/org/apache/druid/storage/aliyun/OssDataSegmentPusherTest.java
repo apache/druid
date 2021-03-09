@@ -21,7 +21,7 @@ package org.apache.druid.storage.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.PutObjectResult;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;

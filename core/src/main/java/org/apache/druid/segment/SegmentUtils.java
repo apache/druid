@@ -19,12 +19,12 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Collections2;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
-import com.google.common.io.Files;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hasher;
+import org.apache.druid.com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.io.Files;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;

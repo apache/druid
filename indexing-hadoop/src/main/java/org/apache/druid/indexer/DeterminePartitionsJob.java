@@ -20,16 +20,16 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
-import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.io.Closeables;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Splitter;
+import org.apache.druid.com.google.common.collect.ComparisonChain;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.PeekingIterator;
+import org.apache.druid.com.google.common.io.Closeables;
 import org.apache.druid.collections.CombiningIterable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;

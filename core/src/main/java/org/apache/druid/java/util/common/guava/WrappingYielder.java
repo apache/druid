@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Throwables;
 
 import java.io.IOException;
 

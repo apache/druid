@@ -19,8 +19,8 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.google.common.base.Predicate;
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.FileUtils;

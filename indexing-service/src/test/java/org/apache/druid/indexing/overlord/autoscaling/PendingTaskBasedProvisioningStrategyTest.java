@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;

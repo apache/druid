@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicLong;
 

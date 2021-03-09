@@ -19,10 +19,10 @@
 
 package org.apache.druid.curator.discovery;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Collections2;
-import com.google.common.net.HostAndPort;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.net.HostAndPort;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.selector.DiscoverySelector;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.initialization;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.jackson.DefaultObjectMapper;

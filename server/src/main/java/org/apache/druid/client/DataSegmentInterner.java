@@ -19,8 +19,8 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
+import org.apache.druid.com.google.common.collect.Interner;
+import org.apache.druid.com.google.common.collect.Interners;
 import org.apache.druid.timeline.DataSegment;
 
 /**

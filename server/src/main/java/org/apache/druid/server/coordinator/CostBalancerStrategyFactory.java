@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 
 public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {

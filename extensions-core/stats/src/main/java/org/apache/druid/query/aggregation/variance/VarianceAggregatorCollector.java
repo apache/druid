@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;

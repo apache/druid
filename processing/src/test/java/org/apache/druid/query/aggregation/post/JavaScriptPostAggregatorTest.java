@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.post;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Druids;

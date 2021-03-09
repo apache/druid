@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.http.SqlParameter;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 import org.openjdk.jmh.annotations.Benchmark;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Preconditions;
-import com.google.common.math.IntMath;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.math.IntMath;
 
 import javax.annotation.Nullable;
 import java.util.AbstractList;
@@ -33,7 +33,7 @@ import java.util.RandomAccess;
 /**
  * {@link CartesianList} computes the cartesian product of n lists. It is adapted from and is *nearly* identical to one
  * Guava CartesianList which comes from a version from "the future" that we don't yet have, with the key difference that
- * it is not {@link com.google.common.collect.ImmutableList} based, so it can hold null values to be compatible with the
+ * it is not {@link org.apache.druid.com.google.common.collect.ImmutableList} based, so it can hold null values to be compatible with the
  * evaluation and handling of cartesian products of expression arrays with null elements, e.g. ['a', 'b', null]
   */
 

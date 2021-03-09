@@ -19,8 +19,8 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

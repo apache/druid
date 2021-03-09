@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.vector;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.roaringbitmap.BatchIterator;
 

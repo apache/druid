@@ -19,7 +19,7 @@
 
 package org.apache.druid.benchmark.bitmap;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;

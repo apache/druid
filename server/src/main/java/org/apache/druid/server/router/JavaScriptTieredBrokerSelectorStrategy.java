@@ -22,8 +22,8 @@ package org.apache.druid.server.router;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Query;
 

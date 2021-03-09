@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.lookup.namespace;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 
 import java.io.Closeable;
 

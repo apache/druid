@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.Ordering;
 
 import java.io.Closeable;
 import java.util.ArrayList;

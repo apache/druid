@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.collect.FluentIterable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;

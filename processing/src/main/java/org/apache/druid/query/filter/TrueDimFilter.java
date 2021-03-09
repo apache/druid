@@ -20,7 +20,7 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.collect.RangeSet;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.TrueFilter;
 

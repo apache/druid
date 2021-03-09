@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import javax.annotation.Nullable;

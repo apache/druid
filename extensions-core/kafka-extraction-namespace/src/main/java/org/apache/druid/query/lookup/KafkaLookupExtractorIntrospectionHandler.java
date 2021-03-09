@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.lookup;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.core.Response;

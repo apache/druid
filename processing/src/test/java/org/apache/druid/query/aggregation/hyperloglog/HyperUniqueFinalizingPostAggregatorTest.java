@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.hyperloglog;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;

@@ -22,7 +22,7 @@ package org.apache.druid.data.input.s3;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;

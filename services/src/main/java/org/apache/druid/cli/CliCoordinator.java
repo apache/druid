@@ -20,7 +20,7 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicates;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;

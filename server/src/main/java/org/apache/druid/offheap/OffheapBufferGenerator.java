@@ -19,7 +19,7 @@
 
 package org.apache.druid.offheap;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.nio.ByteBuffer;

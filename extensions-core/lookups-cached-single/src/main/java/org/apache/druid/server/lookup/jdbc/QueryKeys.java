@@ -20,7 +20,7 @@
 package org.apache.druid.server.lookup.jdbc;
 
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.skife.jdbi.v2.ContainerBuilder;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.customizers.Define;

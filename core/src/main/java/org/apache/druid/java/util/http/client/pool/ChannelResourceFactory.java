@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.http.client.pool;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.PeekingIterator;
 
 import java.util.Comparator;
 import java.util.Iterator;

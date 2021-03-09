@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.common.tasklogs;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;

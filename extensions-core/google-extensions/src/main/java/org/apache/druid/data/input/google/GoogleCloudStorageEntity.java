@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.google;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;

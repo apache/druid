@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.search;
 
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;

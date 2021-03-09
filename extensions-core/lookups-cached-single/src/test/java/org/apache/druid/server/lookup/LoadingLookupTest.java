@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.lookup;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import org.apache.druid.testing.InitializedNullHandlingTest;

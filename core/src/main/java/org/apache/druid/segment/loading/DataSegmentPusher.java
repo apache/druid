@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;

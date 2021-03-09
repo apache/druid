@@ -19,7 +19,7 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;

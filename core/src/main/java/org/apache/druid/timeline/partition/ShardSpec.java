@@ -22,7 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.collect.RangeSet;
 
 import java.util.List;
 import java.util.Map;

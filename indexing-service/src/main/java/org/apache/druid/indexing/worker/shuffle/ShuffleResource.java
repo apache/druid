@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.DateTimes;

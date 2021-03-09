@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.google.common.util.concurrent.Striped;
+import org.apache.druid.com.google.common.util.concurrent.Striped;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;

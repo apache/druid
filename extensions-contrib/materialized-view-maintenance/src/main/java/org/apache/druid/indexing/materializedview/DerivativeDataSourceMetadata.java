@@ -21,9 +21,9 @@ package org.apache.druid.indexing.materializedview;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
 import java.util.Objects;

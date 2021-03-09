@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.collect.PeekingIterator;
+import org.apache.druid.com.google.common.collect.PeekingIterator;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;

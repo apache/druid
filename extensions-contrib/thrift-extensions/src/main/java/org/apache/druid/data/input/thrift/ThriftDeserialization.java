@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.thrift;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TDeserializer;

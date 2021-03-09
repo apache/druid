@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.util.Arrays;

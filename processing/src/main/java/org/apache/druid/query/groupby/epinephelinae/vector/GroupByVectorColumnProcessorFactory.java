@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;

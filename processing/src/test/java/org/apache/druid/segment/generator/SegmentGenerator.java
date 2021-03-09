@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.generator;
 
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.FileUtils;

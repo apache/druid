@@ -20,7 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.skife.jdbi.v2.DBI;

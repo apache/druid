@@ -21,7 +21,7 @@ package org.apache.druid.query.groupby.orderby;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.groupby.GroupByQuery;

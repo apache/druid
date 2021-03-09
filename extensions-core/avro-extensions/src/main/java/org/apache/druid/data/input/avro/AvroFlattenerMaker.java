@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.avro;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;

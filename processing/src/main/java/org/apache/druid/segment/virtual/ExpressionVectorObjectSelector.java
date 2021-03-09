@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.vector.ReadableVectorInspector;

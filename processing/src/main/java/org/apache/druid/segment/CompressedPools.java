@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import com.ning.compress.BufferRecycler;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;

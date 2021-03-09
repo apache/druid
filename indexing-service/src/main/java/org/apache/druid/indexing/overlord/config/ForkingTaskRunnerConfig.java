@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 
 import javax.validation.constraints.Max;

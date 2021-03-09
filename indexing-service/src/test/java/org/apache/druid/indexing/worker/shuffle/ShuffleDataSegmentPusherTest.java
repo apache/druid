@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.Files;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.io.Files;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;

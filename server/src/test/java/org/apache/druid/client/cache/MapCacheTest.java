@@ -19,7 +19,7 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;

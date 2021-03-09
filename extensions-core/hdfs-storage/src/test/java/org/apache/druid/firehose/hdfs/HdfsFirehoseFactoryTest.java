@@ -21,7 +21,7 @@ package org.apache.druid.firehose.hdfs;
 
 import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;

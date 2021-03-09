@@ -20,7 +20,7 @@
 package org.apache.druid.indexer.path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.easymock.EasyMock;

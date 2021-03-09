@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.cache;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.UnsignedBytes;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.primitives.UnsignedBytes;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;

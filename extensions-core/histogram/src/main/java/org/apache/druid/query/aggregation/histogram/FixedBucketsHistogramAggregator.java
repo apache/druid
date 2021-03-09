@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 

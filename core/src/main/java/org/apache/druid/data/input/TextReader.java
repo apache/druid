@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Strings;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;

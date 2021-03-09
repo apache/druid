@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.util.concurrent.Runnables;
+import org.apache.druid.com.google.common.util.concurrent.Runnables;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

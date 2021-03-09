@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;

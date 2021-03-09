@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexCall;

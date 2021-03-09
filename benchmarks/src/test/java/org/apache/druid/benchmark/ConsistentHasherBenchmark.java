@@ -19,7 +19,7 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.router.ConsistentHasher;
 import org.openjdk.jmh.annotations.Benchmark;

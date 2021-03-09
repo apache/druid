@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;

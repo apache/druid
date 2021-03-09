@@ -19,8 +19,8 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.granularity.Granularity;
 

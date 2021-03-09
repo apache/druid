@@ -19,13 +19,13 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableRangeSet;
+import org.apache.druid.com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Range;
+import org.apache.druid.com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.Pair;

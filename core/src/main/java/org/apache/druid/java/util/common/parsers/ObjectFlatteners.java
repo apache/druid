@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;

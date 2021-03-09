@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;

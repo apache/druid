@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.selector.Server;

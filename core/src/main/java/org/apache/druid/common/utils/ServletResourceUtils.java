@@ -19,7 +19,7 @@
 
 package org.apache.druid.common.utils;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;

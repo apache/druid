@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.utils.SerializerUtils;

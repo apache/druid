@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

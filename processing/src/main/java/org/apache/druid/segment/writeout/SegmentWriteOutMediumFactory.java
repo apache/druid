@@ -21,7 +21,7 @@ package org.apache.druid.segment.writeout;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 
 import java.io.File;
 import java.io.IOException;

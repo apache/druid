@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexer;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;

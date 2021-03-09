@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 
 public class EntireLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 {

@@ -19,7 +19,7 @@
 
 package org.apache.druid.crypto;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;

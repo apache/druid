@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.extraction;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.BeforeClass;

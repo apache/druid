@@ -20,8 +20,8 @@
 package org.apache.druid.storage.cassandra;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;

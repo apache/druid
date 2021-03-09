@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.cloudfiles;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.router;
 
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectSortedMap;

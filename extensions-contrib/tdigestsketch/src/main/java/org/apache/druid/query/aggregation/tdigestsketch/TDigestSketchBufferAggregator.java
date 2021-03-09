@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import com.tdunning.math.stats.MergingDigest;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

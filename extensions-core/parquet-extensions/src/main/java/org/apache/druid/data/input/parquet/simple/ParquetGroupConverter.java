@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input.parquet.simple;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.parquet.example.data.Group;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.join.lookup;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;

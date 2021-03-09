@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.apache.druid.java.util.common.ISE;
 

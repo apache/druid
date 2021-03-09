@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;

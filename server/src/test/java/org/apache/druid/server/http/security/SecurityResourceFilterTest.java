@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.http.security;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.druid.server.BrokerQueryResource;

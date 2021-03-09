@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.TableDataSource;

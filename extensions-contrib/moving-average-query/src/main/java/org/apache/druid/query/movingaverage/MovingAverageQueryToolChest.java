@@ -20,8 +20,8 @@
 package org.apache.druid.query.movingaverage;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Functions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.data.input.MapBasedRow;

@@ -55,7 +55,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
    * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
+   * {@link java.util.HashSet} or {@link org.apache.druid.com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
    * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
   default Collection<DataSegment> retrieveUsedSegmentsForInterval(
@@ -112,7 +112,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
    * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
+   * {@link java.util.HashSet} or {@link org.apache.druid.com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
    * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
   Collection<DataSegment> retrieveUsedSegmentsForIntervals(

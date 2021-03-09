@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.junit.Assert;
 import org.junit.Test;

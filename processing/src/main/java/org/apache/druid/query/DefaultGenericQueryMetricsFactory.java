@@ -19,7 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.guice.LazySingleton;
 
 @LazySingleton

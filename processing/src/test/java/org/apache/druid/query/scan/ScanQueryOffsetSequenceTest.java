@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.scan;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.junit.Assert;
 import org.junit.Test;

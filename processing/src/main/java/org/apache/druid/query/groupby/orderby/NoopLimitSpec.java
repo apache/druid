@@ -20,8 +20,8 @@
 package org.apache.druid.query.groupby.orderby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Functions;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;

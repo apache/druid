@@ -19,8 +19,8 @@
 
 package org.apache.druid.metadata;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;

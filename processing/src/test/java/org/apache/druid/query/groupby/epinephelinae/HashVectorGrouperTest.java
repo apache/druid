@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.junit.Test;
 import org.mockito.Mockito;

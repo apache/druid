@@ -19,10 +19,10 @@
 
 package org.apache.druid.collections.spatial;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import com.google.common.primitives.Bytes;
+import org.apache.druid.com.google.common.base.Stopwatch;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.primitives.Bytes;
 import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;

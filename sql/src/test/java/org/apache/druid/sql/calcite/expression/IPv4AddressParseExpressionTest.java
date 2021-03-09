@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.RowSignature;

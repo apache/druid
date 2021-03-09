@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;

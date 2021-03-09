@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Ignore;

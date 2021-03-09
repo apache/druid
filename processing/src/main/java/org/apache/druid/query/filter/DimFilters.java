@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Lists;
 
 import java.util.Arrays;
 import java.util.List;

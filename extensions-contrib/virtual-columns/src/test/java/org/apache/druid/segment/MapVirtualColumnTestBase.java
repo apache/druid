@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.io.CharSource;
+import org.apache.druid.com.google.common.io.CharSource;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;

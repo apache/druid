@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.VersionZeroHyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;

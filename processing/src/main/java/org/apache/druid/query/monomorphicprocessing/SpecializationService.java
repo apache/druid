@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.monomorphicprocessing;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.DefineClassUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;

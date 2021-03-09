@@ -21,7 +21,7 @@ package org.apache.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 

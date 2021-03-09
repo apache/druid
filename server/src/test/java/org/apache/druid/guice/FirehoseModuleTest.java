@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.reflect.ClassPath;
+import org.apache.druid.com.google.common.reflect.ClassPath;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.utils.JvmUtils;

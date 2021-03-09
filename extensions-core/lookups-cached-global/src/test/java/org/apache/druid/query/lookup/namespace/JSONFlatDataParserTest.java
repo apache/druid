@@ -20,12 +20,12 @@
 package org.apache.druid.query.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.io.CharSink;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.io.CharSink;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;

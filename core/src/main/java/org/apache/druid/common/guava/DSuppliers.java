@@ -19,7 +19,7 @@
 
 package org.apache.druid.common.guava;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 
 import java.util.concurrent.atomic.AtomicReference;
 

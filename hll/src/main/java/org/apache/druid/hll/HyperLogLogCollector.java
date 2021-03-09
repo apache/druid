@@ -20,7 +20,7 @@
 package org.apache.druid.hll;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.primitives.UnsignedBytes;
+import org.apache.druid.com.google.common.primitives.UnsignedBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 

@@ -20,8 +20,8 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;

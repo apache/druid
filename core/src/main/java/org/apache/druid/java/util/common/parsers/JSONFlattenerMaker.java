@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;

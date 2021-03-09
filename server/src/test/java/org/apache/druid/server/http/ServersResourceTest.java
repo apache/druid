@@ -20,7 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;

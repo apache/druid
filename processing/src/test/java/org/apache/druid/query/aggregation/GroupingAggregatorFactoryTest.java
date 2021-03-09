@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import junitparams.converters.Nullable;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.constant.LongConstantAggregator;

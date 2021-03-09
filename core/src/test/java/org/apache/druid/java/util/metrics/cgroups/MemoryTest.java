@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

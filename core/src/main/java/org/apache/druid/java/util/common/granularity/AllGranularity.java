@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.granularity;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

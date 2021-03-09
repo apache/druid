@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Pair;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;

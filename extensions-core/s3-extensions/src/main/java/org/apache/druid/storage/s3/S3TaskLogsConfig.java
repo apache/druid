@@ -20,7 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 
 import javax.validation.constraints.NotNull;
 

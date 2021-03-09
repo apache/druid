@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;

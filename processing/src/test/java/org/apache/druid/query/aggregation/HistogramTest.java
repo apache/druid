@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;

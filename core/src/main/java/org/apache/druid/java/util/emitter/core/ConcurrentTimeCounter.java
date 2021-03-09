@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.emitter.core;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.UnsignedInts;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.primitives.UnsignedInts;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;

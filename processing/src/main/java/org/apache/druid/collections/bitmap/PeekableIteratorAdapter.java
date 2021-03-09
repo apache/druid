@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.PeekableIntIterator;
 

@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;

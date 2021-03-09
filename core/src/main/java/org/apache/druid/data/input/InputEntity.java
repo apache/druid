@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;

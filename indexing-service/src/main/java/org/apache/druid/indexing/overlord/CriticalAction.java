@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.Interval;
 

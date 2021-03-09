@@ -22,9 +22,9 @@ package org.apache.druid.hll;
 import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import com.google.common.base.Preconditions;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.UnsafeUtils;
 
 import java.lang.invoke.MethodHandle;

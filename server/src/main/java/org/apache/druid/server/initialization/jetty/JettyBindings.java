@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.java.util.common.logger.Logger;

@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableRangeSet;
+import org.apache.druid.com.google.common.collect.Range;
+import org.apache.druid.com.google.common.collect.RangeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.js.JavaScriptConfig;

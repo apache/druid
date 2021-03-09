@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;

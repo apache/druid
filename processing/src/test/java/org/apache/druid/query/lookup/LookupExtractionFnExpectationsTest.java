@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.lookup;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.junit.Assert;

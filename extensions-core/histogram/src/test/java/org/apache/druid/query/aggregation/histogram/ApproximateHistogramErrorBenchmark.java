@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import com.google.common.primitives.Floats;
+import org.apache.druid.com.google.common.primitives.Floats;
 import org.apache.druid.query.aggregation.Histogram;
 
 import java.util.Arrays;

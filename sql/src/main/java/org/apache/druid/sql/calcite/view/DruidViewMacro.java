@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.view;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import org.apache.calcite.rel.type.RelDataType;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.curator.inventory;
 
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;

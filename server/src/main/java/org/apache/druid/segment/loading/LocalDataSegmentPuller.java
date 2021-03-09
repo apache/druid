@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;

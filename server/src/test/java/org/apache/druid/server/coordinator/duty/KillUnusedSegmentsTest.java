@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;

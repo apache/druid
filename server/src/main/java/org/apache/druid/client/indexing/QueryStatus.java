@@ -22,8 +22,8 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Objects;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 /**
  * Should be synchronized with org.apache.druid.indexing.common.TaskStatus.

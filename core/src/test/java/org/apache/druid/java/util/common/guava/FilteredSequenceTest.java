@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Test;
 

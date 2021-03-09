@@ -19,8 +19,8 @@
 
 package org.apache.druid.server;
 
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.router.ConsistentHasher;

@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.DruidCoordinator;

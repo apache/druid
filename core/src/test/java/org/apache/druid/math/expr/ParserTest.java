@@ -19,9 +19,9 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;

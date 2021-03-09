@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;

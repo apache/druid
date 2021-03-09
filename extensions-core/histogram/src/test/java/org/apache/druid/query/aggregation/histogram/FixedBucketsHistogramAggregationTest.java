@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.granularity.Granularities;

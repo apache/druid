@@ -20,7 +20,7 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;

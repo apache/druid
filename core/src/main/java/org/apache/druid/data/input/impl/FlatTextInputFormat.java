@@ -20,8 +20,8 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;

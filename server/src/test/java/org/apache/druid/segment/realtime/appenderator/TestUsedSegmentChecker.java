@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;

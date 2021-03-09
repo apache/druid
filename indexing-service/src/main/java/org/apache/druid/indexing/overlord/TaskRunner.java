@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;

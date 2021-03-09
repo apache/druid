@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.BufferedReader;

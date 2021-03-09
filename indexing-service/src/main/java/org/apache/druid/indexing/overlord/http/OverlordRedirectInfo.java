@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.StringUtils;

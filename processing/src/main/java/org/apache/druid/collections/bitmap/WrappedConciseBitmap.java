@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;

@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;

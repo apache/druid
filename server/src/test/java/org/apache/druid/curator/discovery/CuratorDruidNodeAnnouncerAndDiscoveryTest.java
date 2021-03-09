@@ -21,8 +21,8 @@ package org.apache.druid.curator.discovery;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.DiscoveryDruidNode;

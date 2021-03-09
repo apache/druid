@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;

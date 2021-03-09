@@ -19,9 +19,9 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Sets;
 import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.KetamaNodeLocator;

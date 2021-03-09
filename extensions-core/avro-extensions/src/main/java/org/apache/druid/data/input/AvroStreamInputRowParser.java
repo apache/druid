@@ -21,7 +21,7 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.avro.AvroBytesDecoder;
 import org.apache.druid.data.input.avro.AvroParsers;

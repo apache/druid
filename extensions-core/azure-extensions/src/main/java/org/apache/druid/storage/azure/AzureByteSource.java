@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.StorageException;

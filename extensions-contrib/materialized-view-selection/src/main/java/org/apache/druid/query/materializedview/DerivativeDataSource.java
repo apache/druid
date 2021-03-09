@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.materializedview;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import java.util.Objects;
 import java.util.Set;

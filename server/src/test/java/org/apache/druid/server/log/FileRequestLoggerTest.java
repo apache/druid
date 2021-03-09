@@ -20,7 +20,7 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.CharStreams;
+import org.apache.druid.com.google.common.io.CharStreams;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.RequestLogLine;
 import org.easymock.EasyMock;

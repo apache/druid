@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.io.ByteSource;
-import com.google.common.io.LineProcessor;
+import org.apache.druid.com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.LineProcessor;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.Parser;
 

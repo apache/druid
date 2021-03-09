@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.java.util.common.FileUtils;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.utils;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Maps;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;
 
@@ -123,7 +123,7 @@ public final class CollectionUtils
 
   /**
    * Returns a LinkedHashMap with an appropriate size based on the callers expectedSize. This methods functionality
-   * mirrors that of com.google.common.collect.Maps#newLinkedHashMapWithExpectedSize in Guava 19+. Thus, this method
+   * mirrors that of org.apache.druid.com.google.common.collect.Maps#newLinkedHashMapWithExpectedSize in Guava 19+. Thus, this method
    * can be replaced with Guava's implementation once Druid has upgraded its Guava dependency to a sufficient version.
    *
    * @param expectedSize the expected size of the LinkedHashMap

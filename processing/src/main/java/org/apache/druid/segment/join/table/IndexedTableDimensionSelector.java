@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.UnmodifiableIterator;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.UnmodifiableIterator;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import org.junit.Assert;
 import org.junit.Test;

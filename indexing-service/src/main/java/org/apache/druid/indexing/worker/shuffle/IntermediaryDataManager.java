@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import com.google.common.collect.Iterators;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.io.Files;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableInt;

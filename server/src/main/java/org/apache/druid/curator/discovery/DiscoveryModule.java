@@ -19,7 +19,7 @@
 
 package org.apache.druid.curator.discovery;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;

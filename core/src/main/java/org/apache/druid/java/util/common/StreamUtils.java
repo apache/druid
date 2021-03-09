@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Predicate;
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.io.ByteSink;
+import org.apache.druid.com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteStreams;
 
 import java.io.BufferedOutputStream;
 import java.io.File;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.collect.ImmutableSortedSet;
+import org.apache.druid.com.google.common.collect.ImmutableSortedSet;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Assert;
 import org.junit.Test;

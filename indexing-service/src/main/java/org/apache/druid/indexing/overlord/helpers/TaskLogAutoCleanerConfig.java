@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.helpers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import java.util.concurrent.ThreadLocalRandom;
 

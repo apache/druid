@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.extraction;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;

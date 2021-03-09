@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;

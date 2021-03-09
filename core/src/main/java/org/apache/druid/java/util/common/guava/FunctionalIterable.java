@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
 import org.apache.druid.java.util.common.guava.nary.TrinaryTransformIterable;
 

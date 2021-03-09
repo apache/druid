@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Joiner;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.java.util.common.ISE;

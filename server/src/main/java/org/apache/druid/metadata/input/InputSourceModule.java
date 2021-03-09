@@ -22,7 +22,7 @@ package org.apache.druid.metadata.input;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.guice.JsonConfigProvider;

@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.router;
 
-import com.google.common.collect.Lists;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.hash.HashCode;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hashing;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;

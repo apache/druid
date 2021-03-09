@@ -22,7 +22,7 @@ package org.apache.druid.server.router;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Druids;

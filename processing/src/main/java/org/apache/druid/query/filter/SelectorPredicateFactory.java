@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;

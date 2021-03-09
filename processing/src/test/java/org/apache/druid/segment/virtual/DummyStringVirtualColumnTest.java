@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryRunnerTestHelper;

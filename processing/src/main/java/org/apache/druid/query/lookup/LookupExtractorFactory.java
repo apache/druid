@@ -20,7 +20,7 @@
 package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;

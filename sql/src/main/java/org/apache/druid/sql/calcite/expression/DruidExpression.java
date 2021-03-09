@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.base.Preconditions;
-import com.google.common.io.BaseEncoding;
-import com.google.common.primitives.Chars;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.io.BaseEncoding;
+import org.apache.druid.com.google.common.primitives.Chars;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;

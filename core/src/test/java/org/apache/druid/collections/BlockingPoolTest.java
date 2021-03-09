@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.base.Suppliers;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
 import org.junit.Assert;

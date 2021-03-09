@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.lookup;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.MapLookupExtractor;

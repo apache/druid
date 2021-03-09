@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;

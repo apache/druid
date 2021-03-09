@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;

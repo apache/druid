@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import io.timeandspace.cronscheduler.CronScheduler;
 import io.timeandspace.cronscheduler.CronTask;
 import org.apache.druid.java.util.common.concurrent.Execs;

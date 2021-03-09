@@ -19,7 +19,7 @@
 
 package org.apache.druid.inputsource.hdfs;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.hadoop.conf.Configuration;

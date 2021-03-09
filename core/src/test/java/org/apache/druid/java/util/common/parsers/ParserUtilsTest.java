@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 

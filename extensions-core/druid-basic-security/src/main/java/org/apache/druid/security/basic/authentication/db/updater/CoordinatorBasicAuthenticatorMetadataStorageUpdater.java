@@ -20,7 +20,7 @@
 package org.apache.druid.security.basic.authentication.db.updater;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.concurrent.LifecycleLock;

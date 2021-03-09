@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.mean;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;
 

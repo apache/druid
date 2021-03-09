@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.metadata;
 
-import com.google.common.io.CharSource;
-import com.google.common.io.Resources;
+import org.apache.druid.com.google.common.io.CharSource;
+import org.apache.druid.com.google.common.io.Resources;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;

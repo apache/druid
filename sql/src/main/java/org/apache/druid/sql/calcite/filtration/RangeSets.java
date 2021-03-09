@@ -19,11 +19,11 @@
 
 package org.apache.druid.sql.calcite.filtration;
 
-import com.google.common.collect.BoundType;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
+import org.apache.druid.com.google.common.collect.BoundType;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Range;
+import org.apache.druid.com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
 

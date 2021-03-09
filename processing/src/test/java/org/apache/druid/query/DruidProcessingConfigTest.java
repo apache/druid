@@ -19,7 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.IAE;

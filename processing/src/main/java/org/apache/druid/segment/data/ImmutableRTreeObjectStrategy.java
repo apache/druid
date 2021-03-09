@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.segment.writeout.WriteOutBytes;

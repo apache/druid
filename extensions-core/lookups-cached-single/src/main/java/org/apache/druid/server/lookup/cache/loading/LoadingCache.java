@@ -21,9 +21,9 @@ package org.apache.druid.server.lookup.cache.loading;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.cache.CacheLoader;
-import com.google.common.util.concurrent.ExecutionError;
-import com.google.common.util.concurrent.UncheckedExecutionException;
+import org.apache.druid.com.google.common.cache.CacheLoader;
+import org.apache.druid.com.google.common.util.concurrent.ExecutionError;
+import org.apache.druid.com.google.common.util.concurrent.UncheckedExecutionException;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;

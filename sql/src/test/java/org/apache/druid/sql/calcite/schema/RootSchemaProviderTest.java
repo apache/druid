@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.ISE;

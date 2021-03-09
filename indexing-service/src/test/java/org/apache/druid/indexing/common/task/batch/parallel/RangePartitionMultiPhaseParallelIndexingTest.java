@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.SetMultimap;
+import org.apache.druid.com.google.common.collect.ArrayListMultimap;
+import org.apache.druid.com.google.common.collect.HashMultimap;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Multimap;
+import org.apache.druid.com.google.common.collect.SetMultimap;
 import org.apache.druid.common.config.NullValueHandlingConfig;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;

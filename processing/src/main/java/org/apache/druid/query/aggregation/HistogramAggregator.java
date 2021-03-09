@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;

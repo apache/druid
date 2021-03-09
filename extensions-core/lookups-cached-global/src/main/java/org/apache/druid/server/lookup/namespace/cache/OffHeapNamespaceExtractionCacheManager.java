@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;

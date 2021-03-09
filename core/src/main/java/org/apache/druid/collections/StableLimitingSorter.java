@@ -19,10 +19,10 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Ints;
 
 import java.util.Comparator;
 import java.util.Iterator;

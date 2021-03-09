@@ -22,7 +22,7 @@ package org.apache.druid.jackson;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
-import com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Joiner;
 
 import java.io.IOException;
 import java.util.List;

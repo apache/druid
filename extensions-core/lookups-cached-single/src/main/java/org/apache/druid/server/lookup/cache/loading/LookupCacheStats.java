@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.lookup.cache.loading;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 /**
  * Statistics about the performance of a {@link LoadingCache}. Instances of this class are immutable.

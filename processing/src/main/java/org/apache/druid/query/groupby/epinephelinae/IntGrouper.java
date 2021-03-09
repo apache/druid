@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import java.util.function.ToIntFunction;
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.common.utils;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;

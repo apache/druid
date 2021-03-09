@@ -19,9 +19,9 @@
 
 package org.apache.druid.common.utils;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.StringUtils;
 

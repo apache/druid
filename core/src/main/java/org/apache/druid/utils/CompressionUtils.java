@@ -19,13 +19,13 @@
 
 package org.apache.druid.utils;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.io.ByteSink;
+import org.apache.druid.com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;

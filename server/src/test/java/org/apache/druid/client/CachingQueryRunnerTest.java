@@ -21,12 +21,12 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Bytes;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.primitives.Bytes;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.druid.client.cache.BackgroundCachePopulator;
 import org.apache.druid.client.cache.Cache;

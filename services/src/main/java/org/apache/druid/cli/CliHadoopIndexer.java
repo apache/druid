@@ -19,7 +19,7 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;

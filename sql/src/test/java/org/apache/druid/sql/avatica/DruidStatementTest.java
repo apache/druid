@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.avatica;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.schema.SchemaPlus;

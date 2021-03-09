@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.util.concurrent.Futures;
+import org.apache.druid.com.google.common.util.concurrent.Futures;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;

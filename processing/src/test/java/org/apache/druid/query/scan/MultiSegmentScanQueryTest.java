@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.scan;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.io.CharSource;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.io.CharSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.common.config.NullHandlingTest;

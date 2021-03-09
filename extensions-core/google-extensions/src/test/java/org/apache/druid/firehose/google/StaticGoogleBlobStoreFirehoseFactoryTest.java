@@ -20,7 +20,7 @@
 package org.apache.druid.firehose.google;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSourceTest;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.junit.Assert;

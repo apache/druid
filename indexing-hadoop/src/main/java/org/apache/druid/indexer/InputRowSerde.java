@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexer;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.io.ByteArrayDataInput;
+import org.apache.druid.com.google.common.io.ByteArrayDataOutput;
+import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;

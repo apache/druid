@@ -21,7 +21,7 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.junit.Assert;

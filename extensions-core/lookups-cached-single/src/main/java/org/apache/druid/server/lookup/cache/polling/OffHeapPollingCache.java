@@ -19,11 +19,11 @@
 
 package org.apache.druid.server.lookup.cache.polling;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;

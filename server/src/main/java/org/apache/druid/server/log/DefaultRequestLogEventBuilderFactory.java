@@ -20,7 +20,7 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.server.RequestLogLine;
 

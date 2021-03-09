@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.junit.Assert;

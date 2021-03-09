@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelNode;

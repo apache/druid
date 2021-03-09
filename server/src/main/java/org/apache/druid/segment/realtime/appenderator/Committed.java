@@ -21,7 +21,7 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 
 import java.util.HashMap;
 import java.util.Map;

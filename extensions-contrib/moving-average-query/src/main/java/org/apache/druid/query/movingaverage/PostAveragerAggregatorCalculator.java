@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.movingaverage;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.PostAggregator;

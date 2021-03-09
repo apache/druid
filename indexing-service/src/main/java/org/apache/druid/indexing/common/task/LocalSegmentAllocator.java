@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskLock;

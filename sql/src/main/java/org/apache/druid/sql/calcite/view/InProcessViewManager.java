@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.view;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.druid.java.util.common.ISE;

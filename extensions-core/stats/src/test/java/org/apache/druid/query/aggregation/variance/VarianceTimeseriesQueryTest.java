@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;

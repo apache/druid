@@ -20,13 +20,13 @@
 package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
-import com.google.common.collect.Iterables;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Joiner;
+import org.apache.druid.com.google.common.base.Splitter;
+import org.apache.druid.com.google.common.collect.Interner;
+import org.apache.druid.com.google.common.collect.Interners;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;

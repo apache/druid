@@ -21,7 +21,7 @@ package org.apache.druid.indexing.input;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSourceReader;

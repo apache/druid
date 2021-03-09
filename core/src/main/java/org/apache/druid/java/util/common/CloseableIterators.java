@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 

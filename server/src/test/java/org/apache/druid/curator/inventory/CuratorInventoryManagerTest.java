@@ -19,8 +19,8 @@
 
 package org.apache.druid.curator.inventory;
 
-import com.google.common.collect.Iterables;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;

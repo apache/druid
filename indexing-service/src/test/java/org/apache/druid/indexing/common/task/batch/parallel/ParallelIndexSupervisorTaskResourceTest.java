@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;

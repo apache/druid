@@ -19,7 +19,7 @@
 
 package org.apache.druid.security.basic.authorization.endpoint;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.ResourceAction;

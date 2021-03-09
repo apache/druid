@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.util.CalciteTests;

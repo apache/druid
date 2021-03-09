@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.LongsColumn;
 import org.apache.druid.segment.column.NumericColumn;

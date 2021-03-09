@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.IOException;

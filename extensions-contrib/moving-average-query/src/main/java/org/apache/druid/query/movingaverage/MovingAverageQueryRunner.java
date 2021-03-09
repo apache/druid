@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.movingaverage;
 
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;

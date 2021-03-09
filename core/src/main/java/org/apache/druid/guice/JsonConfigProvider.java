@@ -19,8 +19,8 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;

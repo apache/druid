@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.lookup.cache;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;

@@ -19,11 +19,11 @@
 
 package org.apache.druid.sql.calcite.filtration;
 
-import com.google.common.base.Function;
-import com.google.common.collect.BoundType;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.BoundType;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Range;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;

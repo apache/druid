@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

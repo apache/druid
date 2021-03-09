@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.http.client;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.http.client.auth.Credentials;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.joda.time.Duration;

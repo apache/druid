@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableRangeSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Range;
+import org.apache.druid.com.google.common.collect.RangeSet;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;

@@ -19,11 +19,11 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.SetMultimap;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSetMultimap;
+import org.apache.druid.com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;

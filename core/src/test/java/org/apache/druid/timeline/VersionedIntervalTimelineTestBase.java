@@ -19,11 +19,11 @@
 
 package org.apache.druid.timeline;
 
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.timeline.partition.NumberedOverwritingPartitionChunk;

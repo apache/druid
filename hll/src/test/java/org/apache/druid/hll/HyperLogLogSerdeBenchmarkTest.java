@@ -21,11 +21,11 @@ package org.apache.druid.hll;
 
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.hash.HashCode;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hasher;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;

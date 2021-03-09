@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.having;
 
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;

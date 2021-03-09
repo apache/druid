@@ -21,7 +21,7 @@ package org.apache.druid.server.router;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.query.Query;
 
 /**

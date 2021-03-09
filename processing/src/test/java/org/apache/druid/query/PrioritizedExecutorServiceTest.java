@@ -19,9 +19,9 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.junit.After;
 import org.junit.Assert;

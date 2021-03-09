@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.datasketches.Family;
 import org.apache.datasketches.Util;
 import org.apache.datasketches.theta.SetOperation;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.net.InetAddresses;
+import org.apache.druid.com.google.common.net.InetAddresses;
 
 import javax.annotation.Nullable;
 import java.net.Inet4Address;

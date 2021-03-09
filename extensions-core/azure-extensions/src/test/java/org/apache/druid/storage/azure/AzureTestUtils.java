@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;

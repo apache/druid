@@ -20,8 +20,8 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;

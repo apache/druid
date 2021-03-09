@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteSink;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

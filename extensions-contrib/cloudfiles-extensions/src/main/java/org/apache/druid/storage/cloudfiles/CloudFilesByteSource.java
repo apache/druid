@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.cloudfiles;
 
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteSource;
 import org.jclouds.io.Payload;
 
 import java.io.IOException;

@@ -22,7 +22,7 @@ package org.apache.druid.emitter.graphite;
 import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteSender;
 import com.codahale.metrics.graphite.PickledGraphite;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;

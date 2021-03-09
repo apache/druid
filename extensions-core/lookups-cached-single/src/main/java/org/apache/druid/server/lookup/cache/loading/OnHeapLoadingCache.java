@@ -22,8 +22,8 @@ package org.apache.druid.server.lookup.cache.loading;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.druid.com.google.common.cache.Cache;
+import org.apache.druid.com.google.common.cache.CacheBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
@@ -37,7 +37,7 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
 {
   private static final Logger log = new Logger(OnHeapLoadingCache.class);
   private static final int DEFAULT_INITIAL_CAPACITY = 16;
-  //See com.google.common.cache.CacheBuilder#DEFAULT_CONCURRENCY_LEVEL
+  //See org.apache.druid.com.google.common.cache.CacheBuilder#DEFAULT_CONCURRENCY_LEVEL
   private static final int DEFAULT_CONCURRENCY_LEVEL = 4;
 
   private final Cache<K, V> cache;

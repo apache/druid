@@ -21,7 +21,7 @@ package org.apache.druid.inputsource.hdfs;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;

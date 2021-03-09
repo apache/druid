@@ -19,8 +19,8 @@
 
 package org.apache.druid.server;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Splitter;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.guice.PropertiesModule;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.security;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.guice.ManageLifecycle;
 
 import java.util.List;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.cardinality.types;
 
-import com.google.common.hash.Hasher;
+import org.apache.druid.com.google.common.hash.Hasher;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.lookup.cache.polling;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.Maps;
 
 import java.util.Collections;
 import java.util.List;

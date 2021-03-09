@@ -19,7 +19,7 @@
 
 package org.apache.druid.emitter.ambari.metrics;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;

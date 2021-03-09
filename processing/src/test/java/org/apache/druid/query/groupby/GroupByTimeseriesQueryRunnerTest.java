@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.groupby;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;

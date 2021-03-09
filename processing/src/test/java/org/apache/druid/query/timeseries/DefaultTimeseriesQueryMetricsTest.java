@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.timeseries;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.common;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.BiMap;
+import org.apache.druid.com.google.common.collect.HashBiMap;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;

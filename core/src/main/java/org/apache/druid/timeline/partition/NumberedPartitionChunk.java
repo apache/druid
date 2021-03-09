@@ -19,9 +19,9 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
+import org.apache.druid.com.google.common.base.Objects;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ComparisonChain;
 
 public class NumberedPartitionChunk<T> implements PartitionChunk<T>
 {

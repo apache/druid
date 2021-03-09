@@ -19,8 +19,8 @@
 
 package org.apache.druid.testing.utils;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import org.apache.druid.com.google.common.collect.BiMap;
+import org.apache.druid.com.google.common.collect.HashBiMap;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericDatumWriter;

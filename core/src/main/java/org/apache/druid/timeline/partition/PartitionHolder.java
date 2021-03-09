@@ -19,7 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;

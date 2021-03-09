@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.filtration;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;

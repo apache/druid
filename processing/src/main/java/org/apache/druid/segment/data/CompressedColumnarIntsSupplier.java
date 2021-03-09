@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;

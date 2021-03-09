@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.granularity;
 
-import com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.collect.FluentIterable;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.JodaUtils;

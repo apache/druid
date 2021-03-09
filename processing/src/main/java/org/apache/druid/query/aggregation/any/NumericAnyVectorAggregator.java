@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;

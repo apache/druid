@@ -19,8 +19,8 @@
 
 package org.apache.druid.security.kerberos;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;

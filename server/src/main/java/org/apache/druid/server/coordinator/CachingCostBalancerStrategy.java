@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
 

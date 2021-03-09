@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kafka.test;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;

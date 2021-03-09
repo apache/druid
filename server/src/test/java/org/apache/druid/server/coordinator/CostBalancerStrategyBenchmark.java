@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;

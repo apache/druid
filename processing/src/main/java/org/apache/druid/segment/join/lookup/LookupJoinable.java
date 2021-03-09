@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.join.lookup;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;

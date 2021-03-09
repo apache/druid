@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.realtime;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;

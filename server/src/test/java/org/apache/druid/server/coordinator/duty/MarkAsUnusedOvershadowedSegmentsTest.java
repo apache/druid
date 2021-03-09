@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.client.ImmutableDruidDataSource;

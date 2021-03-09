@@ -19,8 +19,8 @@
 
 package org.apache.druid.benchmark.sequences;
 
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;

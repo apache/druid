@@ -21,7 +21,7 @@
 package org.apache.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.Event;
 
 import java.util.Collections;

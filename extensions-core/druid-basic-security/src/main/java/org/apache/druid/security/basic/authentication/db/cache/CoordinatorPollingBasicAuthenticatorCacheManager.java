@@ -20,7 +20,7 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.ArrayUtils;

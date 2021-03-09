@@ -21,7 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Ordering;
 
 import java.util.Comparator;
 import java.util.Iterator;

@@ -21,10 +21,10 @@ package org.apache.druid.query.aggregation.cardinality;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ColumnSelectorPlus;

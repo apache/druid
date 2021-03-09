@@ -22,7 +22,7 @@ package org.apache.druid.client.cache;
 import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Suppliers;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;

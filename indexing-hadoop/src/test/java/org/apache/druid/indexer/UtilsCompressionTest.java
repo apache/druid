@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexer;
 
-import com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

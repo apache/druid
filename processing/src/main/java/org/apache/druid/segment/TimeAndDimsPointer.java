@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.DateTimes;
 
 import javax.annotation.Nonnull;

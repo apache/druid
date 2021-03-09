@@ -20,8 +20,8 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.js.JavaScriptConfig;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.junit.Assert;

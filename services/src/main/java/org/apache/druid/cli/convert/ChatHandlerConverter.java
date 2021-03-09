@@ -19,7 +19,7 @@
 
 package org.apache.druid.cli.convert;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 import java.util.Properties;

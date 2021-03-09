@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections.spatial.split;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.spatial.Node;
 import org.apache.druid.collections.spatial.RTreeUtils;

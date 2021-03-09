@@ -25,7 +25,7 @@ import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;

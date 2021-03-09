@@ -20,8 +20,8 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Strings;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;

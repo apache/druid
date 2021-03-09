@@ -19,7 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.query.search.SearchQueryConfig;

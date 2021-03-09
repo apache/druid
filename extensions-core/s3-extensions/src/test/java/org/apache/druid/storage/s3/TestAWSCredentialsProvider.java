@@ -22,7 +22,7 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;

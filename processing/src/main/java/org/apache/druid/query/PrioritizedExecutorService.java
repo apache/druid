@@ -19,13 +19,13 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListenableFutureTask;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFutureTask;
+import org.apache.druid.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;

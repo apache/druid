@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common;
 
-import com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 

@@ -20,10 +20,10 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.primitives.Ints;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.apache.druid.concurrent.ConcurrentAwaitableCounter;
 import org.apache.druid.java.util.common.ISE;

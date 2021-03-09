@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;

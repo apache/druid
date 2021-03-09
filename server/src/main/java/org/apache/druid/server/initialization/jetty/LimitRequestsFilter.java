@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;

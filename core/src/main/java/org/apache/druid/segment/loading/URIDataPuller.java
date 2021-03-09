@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import java.io.IOException;

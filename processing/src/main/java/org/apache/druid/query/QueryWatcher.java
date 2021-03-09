@@ -19,7 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * This interface is in a very early stage and should not be considered stable.

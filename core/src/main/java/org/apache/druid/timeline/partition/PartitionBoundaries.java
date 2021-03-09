@@ -19,7 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.collect.ForwardingList;
+import org.apache.druid.com.google.common.collect.ForwardingList;
 
 import java.util.ArrayList;
 import java.util.Arrays;

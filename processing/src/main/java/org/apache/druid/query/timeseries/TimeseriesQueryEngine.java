@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.timeseries;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;

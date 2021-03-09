@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.ISE;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.data.IndexedInts;

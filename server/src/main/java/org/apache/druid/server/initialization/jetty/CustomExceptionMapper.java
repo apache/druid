@@ -21,7 +21,7 @@ package org.apache.druid.server.initialization.jetty;
 
 
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;

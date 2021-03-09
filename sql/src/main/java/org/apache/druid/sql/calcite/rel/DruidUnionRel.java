@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.FluentIterable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;

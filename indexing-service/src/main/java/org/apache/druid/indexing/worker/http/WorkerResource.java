@@ -19,12 +19,12 @@
 
 package org.apache.druid.indexing.worker.http;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.collect.Collections2;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.sun.jersey.spi.container.ResourceFilters;

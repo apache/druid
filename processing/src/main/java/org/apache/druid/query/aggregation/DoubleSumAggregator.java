@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.primitives.Doubles;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 import java.util.Comparator;

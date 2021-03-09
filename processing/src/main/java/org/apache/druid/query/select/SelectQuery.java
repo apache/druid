@@ -20,7 +20,7 @@
 package org.apache.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;

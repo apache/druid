@@ -19,7 +19,7 @@
 
 package org.apache.druid.client.selector;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;

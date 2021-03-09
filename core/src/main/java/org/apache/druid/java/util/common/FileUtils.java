@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.io.ByteSource;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
@@ -77,7 +77,7 @@ public class FileUtils
     try {
       StreamUtils.retryCopy(
           byteSource,
-          com.google.common.io.Files.asByteSink(outFile),
+          org.apache.druid.com.google.common.io.Files.asByteSink(outFile),
           shouldRetry,
           maxAttempts
       );
@@ -152,7 +152,7 @@ public class FileUtils
    *
    * <p>This only works for files <= {@link Integer#MAX_VALUE} bytes.
    *
-   * <p>Similar to {@link com.google.common.io.Files#map(File)}, but returns {@link MappedByteBufferHandler}, that
+   * <p>Similar to {@link org.apache.druid.com.google.common.io.Files#map(File)}, but returns {@link MappedByteBufferHandler}, that
    * makes it easier to unmap the buffer within try-with-resources pattern:
    * <pre>{@code
    * try (MappedByteBufferHandler fileMappingHandler = FileUtils.map(file)) {
@@ -170,7 +170,7 @@ public class FileUtils
    */
   public static MappedByteBufferHandler map(File file) throws IOException
   {
-    MappedByteBuffer mappedByteBuffer = com.google.common.io.Files.map(file);
+    MappedByteBuffer mappedByteBuffer = org.apache.druid.com.google.common.io.Files.map(file);
     return new MappedByteBufferHandler(mappedByteBuffer);
   }
 
@@ -331,7 +331,7 @@ public class FileUtils
 
   /**
    * Creates a temporary directory inside the configured temporary space (java.io.tmpdir). Similar to the method
-   * {@link com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
+   * {@link org.apache.druid.com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
    *
    * @throws IllegalStateException if the directory could not be created
    */
@@ -342,7 +342,7 @@ public class FileUtils
 
   /**
    * Creates a temporary directory inside the configured temporary space (java.io.tmpdir). Similar to the method
-   * {@link com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
+   * {@link org.apache.druid.com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
    *
    * @param prefix base directory name; if null/empty then this method will use "druid"
    *

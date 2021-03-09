@@ -19,8 +19,8 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.join.table.IndexedTable;

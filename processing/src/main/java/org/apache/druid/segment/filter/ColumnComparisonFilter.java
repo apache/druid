@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.BitmapIndexSelector;

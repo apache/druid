@@ -20,7 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.PasswordProvider;
 import org.joda.time.Period;

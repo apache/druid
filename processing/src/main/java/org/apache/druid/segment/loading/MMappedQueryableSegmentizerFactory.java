@@ -20,7 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;

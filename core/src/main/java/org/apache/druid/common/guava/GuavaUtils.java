@@ -19,9 +19,9 @@
 
 package org.apache.druid.common.guava;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -71,7 +71,7 @@ public class GuavaUtils
 
   /**
    * If first argument is not null, return it, else return the other argument. Sort of like
-   * {@link com.google.common.base.Objects#firstNonNull(Object, Object)} except will not explode if both arguments are
+   * {@link org.apache.druid.com.google.common.base.Objects#firstNonNull(Object, Object)} except will not explode if both arguments are
    * null.
    */
   @Nullable
@@ -84,8 +84,8 @@ public class GuavaUtils
   }
 
   /**
-   * Cancel futures manually, because sometime we can't cancel all futures in {@link com.google.common.util.concurrent.Futures.CombinedFuture}
-   * automatically. Especially when we call {@link  com.google.common.util.concurrent.Futures#allAsList(Iterable)} to create a batch of
+   * Cancel futures manually, because sometime we can't cancel all futures in {@link org.apache.druid.com.google.common.util.concurrent.Futures.CombinedFuture}
+   * automatically. Especially when we call {@link  org.apache.druid.com.google.common.util.concurrent.Futures#allAsList(Iterable)} to create a batch of
    * future.
    * @param mayInterruptIfRunning {@code true} if the thread executing this
    * task should be interrupted; otherwise, in-progress tasks are allowed

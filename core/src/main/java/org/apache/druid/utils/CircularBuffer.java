@@ -19,7 +19,7 @@
 
 package org.apache.druid.utils;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 
 /**
  * A circular buffer that supports random bidirectional access.

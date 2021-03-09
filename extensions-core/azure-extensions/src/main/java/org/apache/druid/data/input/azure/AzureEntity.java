@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.azure;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.base.Predicate;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import org.apache.druid.data.input.RetryingInputEntity;

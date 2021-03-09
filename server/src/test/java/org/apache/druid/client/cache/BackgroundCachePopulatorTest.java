@@ -20,7 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.CachingClusteredClientTestUtils;
 import org.apache.druid.java.util.common.DateTimes;

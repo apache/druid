@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;

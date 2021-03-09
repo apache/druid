@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
 import org.junit.After;

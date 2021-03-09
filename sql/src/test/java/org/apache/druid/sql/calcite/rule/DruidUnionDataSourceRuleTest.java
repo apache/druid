@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.query.TableDataSource;

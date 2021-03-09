@@ -20,7 +20,7 @@
 package org.apache.druid.client.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import junit.framework.Assert;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.java.util.common.Intervals;

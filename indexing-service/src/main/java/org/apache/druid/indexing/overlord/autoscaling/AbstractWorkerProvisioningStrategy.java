@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;

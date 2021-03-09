@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
-import com.google.common.collect.ForwardingConcurrentMap;
+import org.apache.druid.com.google.common.collect.ForwardingConcurrentMap;
 
 import java.util.concurrent.ConcurrentMap;
 

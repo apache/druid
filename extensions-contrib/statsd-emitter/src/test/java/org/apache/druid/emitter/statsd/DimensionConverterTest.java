@@ -20,7 +20,7 @@
 package org.apache.druid.emitter.statsd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;

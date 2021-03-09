@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.filtration;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 
 public class MoveMarkerFiltersToIntervals implements Function<Filtration, Filtration>
 {

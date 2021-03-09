@@ -20,7 +20,7 @@
 package org.apache.druid.server.lookup.cache.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.After;
 import org.junit.Assert;

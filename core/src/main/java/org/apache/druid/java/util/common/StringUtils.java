@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Strings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

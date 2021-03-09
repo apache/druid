@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator.cost;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
 

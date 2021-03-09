@@ -20,8 +20,8 @@
 package org.apache.druid.extendedset.intset;
 
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.UnmodifiableIterator;
+import org.apache.druid.com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.extendedset.utilities.IntList;
 import org.roaringbitmap.IntIterator;
 

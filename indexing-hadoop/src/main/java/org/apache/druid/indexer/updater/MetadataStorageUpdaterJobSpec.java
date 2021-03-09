@@ -20,7 +20,7 @@
 package org.apache.druid.indexer.updater;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.PasswordProvider;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.io.Files;
 import junit.framework.Assert;
 import org.junit.Rule;
 import org.junit.Test;

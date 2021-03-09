@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 

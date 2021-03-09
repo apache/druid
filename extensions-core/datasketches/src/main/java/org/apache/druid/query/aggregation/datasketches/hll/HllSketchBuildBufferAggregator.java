@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.google.common.util.concurrent.Striped;
+import org.apache.druid.com.google.common.util.concurrent.Striped;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.hll.HllSketch;
@@ -199,7 +199,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   }
 
   /**
-   * see https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
+   * see https://github.com/google/guava/blob/master/guava/src/org.apache.druid.com.google.common/util/concurrent/Striped.java#L536-L548
    *
    * @param hashCode
    *

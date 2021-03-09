@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Function;
-import com.google.common.collect.RangeSet;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.RangeSet;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import java.nio.ByteBuffer;

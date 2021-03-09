@@ -22,7 +22,7 @@ package org.apache.druid.storage.hdfs;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.hadoop.fs.Path;

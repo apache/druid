@@ -22,7 +22,7 @@ package org.apache.druid.common.aws;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Strings;
 
 public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsProvider
 {

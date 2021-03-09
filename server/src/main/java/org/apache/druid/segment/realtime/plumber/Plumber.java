@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime.plumber;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.query.Query;

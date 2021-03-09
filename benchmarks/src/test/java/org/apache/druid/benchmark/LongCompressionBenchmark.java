@@ -19,7 +19,7 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;

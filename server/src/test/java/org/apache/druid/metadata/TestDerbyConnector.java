@@ -19,8 +19,8 @@
 
 package org.apache.druid.metadata;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.junit.Assert;

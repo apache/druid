@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.NoopFirehoseFactory;
 import org.apache.druid.data.input.impl.NoopInputFormat;

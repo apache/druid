@@ -21,7 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Function;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.joda.time.DateTime;

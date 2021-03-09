@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.util;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.ColumnProcessors;

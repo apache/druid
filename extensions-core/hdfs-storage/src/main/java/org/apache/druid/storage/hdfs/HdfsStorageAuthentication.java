@@ -20,7 +20,7 @@
 package org.apache.druid.storage.hdfs;
 
 
-import com.google.common.base.Strings;
+import org.apache.druid.com.google.common.base.Strings;
 import com.google.inject.Inject;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.guice.ManageLifecycle;

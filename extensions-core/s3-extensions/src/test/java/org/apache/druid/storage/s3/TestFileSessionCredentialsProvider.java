@@ -20,7 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.auth.AWSSessionCredentials;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.druid.common.aws.FileSessionCredentialsProvider;
 import org.junit.Assert;
 import org.junit.Rule;

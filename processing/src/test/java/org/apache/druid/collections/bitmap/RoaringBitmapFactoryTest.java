@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.Iterables;
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;

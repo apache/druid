@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.log;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.server.RequestLogLine;
 
 import java.util.ArrayList;

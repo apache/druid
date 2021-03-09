@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby.having;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 

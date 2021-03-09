@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.js.JavaScriptConfig;
 import org.hamcrest.CoreMatchers;
 import org.junit.Rule;

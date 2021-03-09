@@ -19,11 +19,11 @@
 
 package org.apache.druid.java.util.http.client.pool;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Throwables;
+import org.apache.druid.com.google.common.cache.CacheBuilder;
+import org.apache.druid.com.google.common.cache.CacheLoader;
+import org.apache.druid.com.google.common.cache.LoadingCache;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;

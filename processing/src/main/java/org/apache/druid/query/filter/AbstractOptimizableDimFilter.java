@@ -20,8 +20,8 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.base.Suppliers;
 
 /**
  * Base class for DimFilters that support optimization. This abstract class provides a default implementation of

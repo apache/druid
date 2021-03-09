@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.http.security.StateResourceFilter;

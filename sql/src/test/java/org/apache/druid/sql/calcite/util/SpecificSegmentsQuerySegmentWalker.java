@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Ordering;
-import com.google.common.io.Closeables;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Ordering;
+import org.apache.druid.com.google.common.io.Closeables;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;

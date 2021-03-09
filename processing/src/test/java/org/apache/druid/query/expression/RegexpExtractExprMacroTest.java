@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Longs;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;

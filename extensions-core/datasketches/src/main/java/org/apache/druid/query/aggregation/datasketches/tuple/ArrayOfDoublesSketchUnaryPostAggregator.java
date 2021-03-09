@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.PostAggregator;
 
 import java.util.Objects;

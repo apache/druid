@@ -21,7 +21,7 @@ package org.apache.druid.emitter.dropwizard;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardConsoleReporter;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardJMXReporter;
 import org.apache.druid.guice.JsonConfigTesterBase;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;

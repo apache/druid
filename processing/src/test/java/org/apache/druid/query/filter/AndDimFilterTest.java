@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.FilterTestUtils;
 import org.apache.druid.segment.filter.TrueFilter;

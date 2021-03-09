@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;

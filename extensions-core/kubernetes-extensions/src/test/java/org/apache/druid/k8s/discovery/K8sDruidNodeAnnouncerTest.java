@@ -21,8 +21,8 @@ package org.apache.druid.k8s.discovery;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.jackson.DefaultObjectMapper;

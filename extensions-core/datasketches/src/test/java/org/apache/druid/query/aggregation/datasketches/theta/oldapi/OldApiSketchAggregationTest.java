@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta.oldapi;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.MapBasedRow;

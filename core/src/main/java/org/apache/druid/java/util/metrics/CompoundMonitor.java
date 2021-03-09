@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.Arrays;

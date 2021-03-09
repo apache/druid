@@ -19,13 +19,13 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingInputStream;
-import com.google.common.io.Files;
+import org.apache.druid.com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.io.ByteSink;
+import org.apache.druid.com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.io.ByteStreams;
+import org.apache.druid.com.google.common.io.CountingInputStream;
+import org.apache.druid.com.google.common.io.Files;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;

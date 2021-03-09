@@ -19,7 +19,7 @@
 
 package org.apache.druid.security.authentication.validator;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
 import com.google.inject.util.Providers;
 import org.apache.druid.java.util.common.IAE;

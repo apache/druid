@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.hyperloglog;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorObjectSelector;

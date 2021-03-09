@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.collect.Sets;
+import org.apache.druid.com.google.common.collect.Sets;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.filter.JavaScriptFilter;

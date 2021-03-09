@@ -19,8 +19,8 @@
 
 package org.apache.druid.math.expr.vector;
 
-import com.google.common.math.LongMath;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.math.LongMath;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Exprs;

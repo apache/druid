@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.ColumnSelectorFactory;

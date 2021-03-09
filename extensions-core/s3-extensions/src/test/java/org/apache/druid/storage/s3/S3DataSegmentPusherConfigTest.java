@@ -20,7 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Iterators;
+import org.apache.druid.com.google.common.collect.Iterators;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;

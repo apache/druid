@@ -21,7 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
+import org.apache.druid.com.google.common.base.Predicates;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 

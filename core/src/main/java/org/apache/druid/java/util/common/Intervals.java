@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 

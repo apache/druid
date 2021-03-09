@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.vector;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;

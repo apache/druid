@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.topn;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;

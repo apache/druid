@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.emitter.service;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.base.Predicate;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.java.util.emitter.service.AlertEvent.Severity;
 import org.junit.Assert;
 import org.junit.Test;

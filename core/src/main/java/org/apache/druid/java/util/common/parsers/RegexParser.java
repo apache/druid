@@ -19,12 +19,12 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.base.Splitter;
+import org.apache.druid.com.google.common.base.Strings;
+import org.apache.druid.com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.collect.Utils;
 
 import java.util.ArrayList;

@@ -20,7 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.primitives.Ints;
+import org.apache.druid.com.google.common.primitives.Ints;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.MapBasedRow;

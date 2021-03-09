@@ -22,7 +22,7 @@ package org.apache.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Lists;
 import org.apache.druid.server.security.ResourceAction;
 
 import java.util.ArrayList;

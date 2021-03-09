@@ -19,7 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.google.common.collect.FluentIterable;
+import org.apache.druid.com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;

@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.mean;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.google.common.primitives.Doubles;
+import org.apache.druid.com.google.common.primitives.Doubles;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

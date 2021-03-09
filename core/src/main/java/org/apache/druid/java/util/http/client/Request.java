@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.http.client;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
+import org.apache.druid.com.google.common.base.Supplier;
+import org.apache.druid.com.google.common.collect.Multimap;
+import org.apache.druid.com.google.common.collect.Multimaps;
 import org.apache.druid.java.util.common.StringUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;

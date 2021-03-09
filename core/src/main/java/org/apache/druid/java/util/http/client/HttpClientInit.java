@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.http.client;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory;

@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.http.security;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.druid.indexing.common.task.NoopTask;

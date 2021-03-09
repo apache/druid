@@ -19,7 +19,7 @@
 
 package org.apache.druid.k8s.discovery;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.com.google.common.base.Preconditions;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 
 import javax.annotation.Nullable;

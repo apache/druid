@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.base.Function;
+import org.apache.druid.com.google.common.base.Splitter;
 import org.apache.druid.common.config.NullHandling;
 import org.joda.time.DateTimeZone;
 

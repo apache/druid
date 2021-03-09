@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.cardinality;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
+import org.apache.druid.com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.com.google.common.hash.HashFunction;
+import org.apache.druid.com.google.common.hash.Hasher;
+import org.apache.druid.com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;

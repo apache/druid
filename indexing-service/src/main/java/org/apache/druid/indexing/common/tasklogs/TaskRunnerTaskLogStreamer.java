@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.common.tasklogs;
 
-import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
+import org.apache.druid.com.google.common.base.Optional;
+import org.apache.druid.com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;

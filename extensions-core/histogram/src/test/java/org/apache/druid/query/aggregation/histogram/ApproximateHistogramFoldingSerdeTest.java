@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.junit.Assert;

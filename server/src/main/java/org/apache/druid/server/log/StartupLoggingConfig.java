@@ -20,7 +20,7 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.com.google.common.collect.ImmutableList;
 
 import java.util.List;
 

@@ -19,9 +19,9 @@
 
 package org.apache.druid.cli.convert;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.druid.com.google.common.collect.ImmutableMap;
+import org.apache.druid.com.google.common.collect.Lists;
+import org.apache.druid.com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.List;
