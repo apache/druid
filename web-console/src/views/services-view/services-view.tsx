@@ -114,6 +114,7 @@ interface ServiceQueryResultRow {
   service: string;
   service_type: string;
   tier: string;
+  is_leader: number;
   curr_size: number;
   host: string;
   max_size: number;
@@ -164,7 +165,7 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   //   peon => 1
 
   static SERVICE_SQL = `SELECT
-  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size", "is_leader",
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 8
@@ -484,7 +485,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Detail',
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
+            show: hiddenColumns.exists('Detail'),
             id: 'queue',
             width: 400,
             filterable: false,
@@ -500,6 +501,8 @@ ORDER BY "rank" DESC, "service" DESC`;
                   details.push(`Blacklisted until: ${row.blacklistedUntil}`);
                 }
                 return details.join(' ');
+              } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
+                return (row.is_leader || 0) === 1 ? 'leader' : '';
               } else {
                 return (row.segmentsToLoad || 0) + (row.segmentsToDrop || 0);
               }
@@ -524,6 +527,10 @@ ORDER BY "rank" DESC, "service" DESC`;
 
                 case 'indexer':
                 case 'middle_manager':
+                  return row.value;
+
+                case 'coordinator':
+                case 'overlord':
                   return row.value;
 
                 default:
