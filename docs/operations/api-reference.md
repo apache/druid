@@ -165,9 +165,9 @@ Returns a list of all segments for each datasource enabled in the cluster.
 
 Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
 
-* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName}`
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName1}&datasources={dataSourceName2}`
 
-Returns a list of all segments for a specific datasource with the full segment metadata and an extra field `overshadowed`.
+Returns a list of all segments for one or more specific datasources with the full segment metadata and an extra field `overshadowed`.
 
 * `/druid/coordinator/v1/metadata/datasources`
 
