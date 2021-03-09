@@ -161,6 +161,10 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 Returns a list of all segments for each datasource enabled in the cluster.
 
+* `/druid/coordinator/v1/metadata/segments?datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Returns a list of all segments for one or more specific datasources enabled in the cluster.
+
 * `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus`
 
 Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
