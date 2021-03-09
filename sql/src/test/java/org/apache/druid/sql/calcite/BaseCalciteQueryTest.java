@@ -877,4 +877,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           };
     }
   }
+
+  protected Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
+  {
+    // since context is usually immutable in tests, make a copy
+    HashMap<String, Object> newContext = new HashMap<>(context);
+    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
+    return newContext;
+  }
 }

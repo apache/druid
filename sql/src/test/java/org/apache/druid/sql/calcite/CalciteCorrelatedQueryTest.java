@@ -28,7 +28,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -60,7 +59,6 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -567,13 +565,5 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   private MapBasedInputRow toRow(String time, Map<String, Object> event)
   {
     return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), DIMENSIONS, event);
-  }
-
-  private Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
-  {
-    // since context is usually immutable in tests, make a copy
-    HashMap<String, Object> newContext = new HashMap<>(context);
-    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
-    return newContext;
   }
 }
