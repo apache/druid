@@ -888,6 +888,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "invalidView", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
@@ -923,6 +924,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "forbiddenView", "VIEW", "NO", "NO"})
+            .add(new Object[]{"view", "invalidView", "VIEW", "NO", "NO"})
             .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
             .build()
     );
