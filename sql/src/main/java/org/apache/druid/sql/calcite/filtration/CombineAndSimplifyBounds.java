@@ -110,11 +110,13 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
 
   private static DimFilter doSimplifyAnd(final List<DimFilter> children)
   {
+    Preconditions.checkArgument(!children.isEmpty(), "And filter has no operands, how can this be?");
     return doSimplify(children, false);
   }
 
   private static DimFilter doSimplifyOr(final List<DimFilter> children)
   {
+    Preconditions.checkArgument(!children.isEmpty(), "Or filter has no operands, how can this be?");
     return doSimplify(children, true);
   }
 
@@ -134,7 +136,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
     final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
 
-    boolean allFalse = newChildren.size() > 0;
+    boolean allFalse = true;
     for (final DimFilter child : newChildren) {
       if (child instanceof BoundDimFilter) {
         final BoundDimFilter bound = (BoundDimFilter) child;
