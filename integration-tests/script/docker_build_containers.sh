@@ -34,6 +34,10 @@ else
     echo "Build druid-cluster with Java 11"
     docker build -t druid/cluster --build-arg JDK_VERSION=11-slim --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
+  15)
+    echo "Build druid-cluster with Java 15"
+    docker build -t druid/cluster --build-arg JDK_VERSION=15-slim --build-arg MYSQL_VERSION $SHARED_DIR/docker
+    ;;
   *)
     echo "Invalid JVM Runtime given. Stopping"
     exit 1
