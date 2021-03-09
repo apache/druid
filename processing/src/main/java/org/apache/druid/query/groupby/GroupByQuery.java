@@ -67,7 +67,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -345,6 +344,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   /**
    * If this query has a single universal timestamp, return it. Otherwise return null.
+   *
+   * If {@link #getIntervals()} is empty, there are no results (or timestamps) so this method returns null.
    *
    * This method will return a nonnull timestamp in the following two cases:
    *
@@ -717,7 +718,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(granularity)) {
       final List<Interval> intervals = getIntervals();
-      if (CollectionUtils.isNullOrEmpty(intervals)) {
+      if (intervals.isEmpty()) {
         // null, the "universal timestamp" of nothing
         return null;
       }
