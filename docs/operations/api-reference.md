@@ -157,19 +157,33 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 ##### GET
 
+* `/druid/coordinator/v1/metadata/segments`
+
+Returns a list of all segments for each datasource enabled in the cluster.
+
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus`
+
+Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
+
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName}`
+
+Returns a list of all segments for a specific datasource with the full segment metadata and an extra field `overshadowed`.
+
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of data sources with at least one used segment in the cluster.
+Returns a list of the names of datasources with at least one used segment in the cluster.
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
-Returns a list of the names of data sources, regardless of whether there are used segments belonging to those data
-sources in the cluster or not.
+Returns a list of the names of datasources, regardless of whether there are used segments belonging to those datasources in the cluster or not.
+
+* `/druid/coordinator/v1/metadata/datasources?includeDisabled`
+
+Returns a list of the names of datasources, regardless of whether the datasource is disabled or not.
 
 * `/druid/coordinator/v1/metadata/datasources?full`
 
-Returns a list of all data sources with at least one used segment in the cluster. Returns all metadata about those data
-sources as stored in the metadata store.
+Returns a list of all datasources with at least one used segment in the cluster. Returns all metadata about those datasources as stored in the metadata store.
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}`
 
@@ -280,13 +294,13 @@ Caution : Avoid using indexing or kill tasks and these API's at the same time fo
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as used all segments belonging to a data source. Returns a JSON object of the form
+Marks as used all segments belonging to a datasource. Returns a JSON object of the form
 `{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as used) as the result of this API call.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as used a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+Marks as used a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
 result of this API call.
 
@@ -314,7 +328,7 @@ JSON Request Payload:
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as unused all segments belonging to a data source. Returns a JSON object of the form
+Marks as unused all segments belonging to a datasource. Returns a JSON object of the form
 `{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as unused) as the result of this API call.
 
@@ -325,7 +339,7 @@ Runs a [Kill task](../ingestion/tasks.md) for a given interval and datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as unused a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+Marks as unused a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as unused) as the
 result of this API call.
 
