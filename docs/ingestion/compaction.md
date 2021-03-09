@@ -22,10 +22,14 @@ description: "Defines compaction and automatic compaction (auto-compaction or au
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+Query performance in Apache Druid depends on optimally sized segments. Compaction is one strategy you can use to optimize segment size for your Druid database. Compaction tasks read an existing set of segments for a given time interval and combine the data into a new "compacted" set of segments. The compacted segments are generally larger, but there are fewer of them. Here compaction increases performance because fewer segments require less the per-segment processing and the memory overhead for ingestion and for querying paths.
 
-Compaction in Apache Druid is a strategy to optimize segment size. Compaction tasks read an existing set of segments for a given time range and combine the data into a new "compacted" set of segments. The compacted segments are generally larger, but there are fewer of them. Compaction can sometimes increase performance because it reduces the number of segments and, consequently, the per-segment processing and the memory overhead required for ingestion and for querying paths.
+As a general strategy, compaction is effective when you have data arriving out of chronological order resulting in lots of small segments. This often happens, for example, if you are appending data using `appendToExisting` for [native batch](./native_batch.md) ingestion. Conversely, if you are rewriting your data with each ingestion task, you don't need to use compaction.
 
-As a strategy, compaction is effective when you have data arriving out of chronological order resulting in lots of small segments. For example if you are appending data using `appendToExisting` for [native batch](./native_batch.md) ingestion. Conversely, if you are rewriting your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
+In some cases you can use compaction to reduce segment size. For example, if a misconfigured ingestion task creates oversized segments, you can create a compaction task to split the segment files into smaller, more optimally sized ones.
+
+See [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your environment.
+
 
 ## Types of segment compaction
 You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using a segment search policy, the coordinator periodically identifies segments for compaction starting with the newest to oldest. When segments can benefit from compaction, the coordinator automatically submits a compaction task. 
@@ -35,9 +39,9 @@ Automatic compaction works in most use cases and should be your first option. To
 In cases where you require more control over compaction, you can manually submit compaction tasks. For example:
 - Automatic compaction is too slow.
 - You want to force compaction for a specific time range.
-- Compacting recent data before older data suboptimal is suboptimal in your environment.
+- You want to compact data out of chronological order.
 
-See [Setting up a manual compaction task](#setting-up-manual-compaction) more about manual compaction tasks.
+See [Setting up a manual compaction task](#setting-up-manual-compaction) for more about manual compaction tasks.
 
 
 ## Data handling with compaction
@@ -55,13 +59,12 @@ Unless you modify the query granularity in the [granularity spec](#compaction-gr
 
 > In Apache Druid 0.21.0 and prior, Druid sets the granularity for compacted segments to the default granularity of `NONE` regardless of the query granularity of the original segments.
 
-If you configure query granularity in compaction to go from a finer granularity like month to a coarser query granularity like year, then Druid overshadows the original segment with finer granularity. Because the new segments have a coarser granularity, running a kill task to remove the overshadowed segments for those intervals will cause you to permanently lose the finer granularity data.
-
+If you configure query granularity in compaction to go from a finer granularity like month to a coarser query granularity like year, then Druid overshadows the original segment with coarser granularity. Because the new segments have a coarser granularity, running a kill task to remove the overshadowed segments for those intervals will cause you to permanently lose the finer granularity data.
 
 ### Dimension handling
 Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment includes all dimensions of the input segments. 
 
-Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. For example, the data type of some dimensions can be changed from `string` to primitive types, or the order of dimensions can be changed for better locality. In this case, the dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
+Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. The dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
 
 If you want to use your own ordering and types, you can specify a custom `dimensionsSpec` in the compaction task spec.
 
@@ -101,16 +104,16 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 
 To control the number of result segments per time chunk, you can set [maxRowsPerSegment](../configuration/index.md#compaction-dynamic-configuration) or [numShards](../ingestion/native-batch.md#tuningconfig).
 
-> You can run multiple compaction tasks at the same time. For example, you can run 12 compaction tasks per month instead of running a single task for the entire year.
+> You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
-A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [DruidInputSource](native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec`include all dimensions and metrics of the input segments by default.
+A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [DruidInputSource](../native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
 
-Compaction tasks exit without doing anything and issue a failure status code:
+Compaction tasks would exit without doing anything and issue a failure status code:
 - if the interval you specify has no data segments loaded<br>
 OR
 - if the interval you specify is empty.
 
-The output segment can have different metadata from the input segments unless all input segments have the same metadata.
+Note that the metadata between input segments and the resulting compacted segments may differ if the metadata among the input segments differs as well. If all input segments have the same metadata, however, the resulting output segment will have the same metadata as all input segments.
 
 
 ### Example compaction task
@@ -159,7 +162,7 @@ The segments `inputSpec` is:
 
 ### Compaction granularity spec
 
-You can optionally use the `granularitySpec` object to configure the segment granularity and the query granularity of the compacted segments. They syntax is as follows:
+You can optionally use the `granularitySpec` object to configure the segment granularity and the query granularity of the compacted segments. Their syntax is as follows:
 ```json
     "type": "compact",
     "id": <task_id>,
@@ -180,7 +183,7 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null'. Accepts all [Query granularities](../querying/granularities.md).|No|
 |`queryGranularity`|Time chunking period for the query granularity. Defaults to 'null'. Accepts all [Query granularities](../querying/granularities.md). Not supported for automatic compaction.|No|
 
-For example, to set the set the segment granularity to "day" and the query granularity to "hour":
+For example, to set the segment granularity to "day" and the query granularity to "hour":
 ```json
 {
   "type" : "compact",

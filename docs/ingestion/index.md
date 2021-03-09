@@ -196,7 +196,7 @@ that datasource leads to much faster query times. This can often be done with ju
 footprint, since abbreviated datasources tend to be substantially smaller.
 - If you are using a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect
 rollup, you can potentially improve your rollup ratio by switching to a guaranteed perfect rollup option, or by
-[reindexing](data-management.md#reingesting-data) or [compacting](./compaction.md) your data in the background after initial ingestion.
+[reindexing](../data-management.md#reingesting-data) or [compacting](../compaction.md) your data in the background after initial ingestion.
 
 ### Perfect rollup vs Best-effort rollup
 
