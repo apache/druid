@@ -830,6 +830,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         "restrictedView",
         "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
     );
+
+    viewManager.createView(
+        plannerFactory,
+        "invalidView",
+        "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
+    );
     return sqlLifecycleFactory;
   }
 
