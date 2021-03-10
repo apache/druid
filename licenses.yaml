@@ -148,12 +148,28 @@ source_paths:
 ---
 
 name: AWS RDS SDK for Java
-license_category: source
+license_category: binary
 module: extensions/druid-aws-rds-extensions
 license_name: Apache License version 2.0
 version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-rds
+
+---
+
+name: Code adopted from org.apache.commons.dbcp2.BasicDataSource
+license_category: source
+module: server
+license_name: Apache License version 2.0
+version: 2.0.1
+source_paths:
+  - server/src/main/java/org/apache/druid/metadata/BasicDataSourceExt.java
+notice: |
+  Apache Commons DBCP
+  Copyright 2001-2020 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
