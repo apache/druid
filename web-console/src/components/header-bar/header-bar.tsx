@@ -130,6 +130,17 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       );
       break;
 
+    case 'coordinator-overlord':
+      label = 'Coordinator/Overlord mode';
+      message = (
+        <p>
+          It appears that you are accessing the console on the Coordinator/Overlord shared service.
+          Due to the lack of access to some APIs on this service the console will operate in a
+          limited mode. The full version of the console can be accessed on the Router service.
+        </p>
+      );
+      break;
+
     case 'coordinator':
       label = 'Coordinator mode';
       message = (
@@ -225,6 +236,15 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     </Menu>
   );
 
+  function setForcedMode(capabilities: Capabilities | undefined): void {
+    if (capabilities) {
+      localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, capabilities);
+    } else {
+      localStorageRemove(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    }
+    location.reload();
+  }
+
   const capabilitiesMode = capabilities.getModeExtended();
   const configMenu = (
     <Menu>
@@ -256,37 +276,25 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       <MenuDivider />
       <MenuItem icon={IconNames.COG} text="Console options">
         {capabilitiesOverride ? (
-          <MenuItem
-            text="Clear forced mode"
-            onClick={() => {
-              localStorageRemove(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-              location.reload();
-            }}
-          />
+          <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
         ) : (
           <>
+            {capabilitiesMode !== 'coordinator-overlord' && (
+              <MenuItem
+                text="Force Coordinator/Overlord mode"
+                onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
+              />
+            )}
             {capabilitiesMode !== 'coordinator' && (
               <MenuItem
                 text="Force Coordinator mode"
-                onClick={() => {
-                  localStorageSetJson(
-                    LocalStorageKeys.CAPABILITIES_OVERRIDE,
-                    Capabilities.COORDINATOR,
-                  );
-                  location.reload();
-                }}
+                onClick={() => setForcedMode(Capabilities.COORDINATOR)}
               />
             )}
             {capabilitiesMode !== 'overlord' && (
               <MenuItem
                 text="Force Overlord mode"
-                onClick={() => {
-                  localStorageSetJson(
-                    LocalStorageKeys.CAPABILITIES_OVERRIDE,
-                    Capabilities.OVERLORD,
-                  );
-                  location.reload();
-                }}
+                onClick={() => setForcedMode(Capabilities.OVERLORD)}
               />
             )}
           </>
