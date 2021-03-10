@@ -559,12 +559,14 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: ({ value }) => {
+            Cell: ({ value, aggregated }) => {
+              if (aggregated) return '';
               if (!value) return null;
               const disabled = value.version === '';
               const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
+            Aggregated: () => '',
           },
         ]}
       />
