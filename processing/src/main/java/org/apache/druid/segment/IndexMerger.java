@@ -26,7 +26,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.inject.ImplementedBy;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -40,6 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -123,7 +123,7 @@ public interface IndexMerger
     } else {
       log.info("Indexes have incompatible dimension orders, try falling back on dimension ordering from ingestionSpec");
       // Check if there is a valid dimension ordering in the ingestionSpec to fall back on
-      if (dimensionsSpec == null || CollectionUtils.isEmpty(dimensionsSpec.getDimensionNames())) {
+      if (dimensionsSpec == null || CollectionUtils.isNullOrEmpty(dimensionsSpec.getDimensionNames())) {
         log.info("Cannot fall back on dimension ordering from ingestionSpec as it does not exist");
         return null;
       }

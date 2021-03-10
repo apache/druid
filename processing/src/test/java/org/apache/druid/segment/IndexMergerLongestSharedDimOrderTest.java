@@ -24,10 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,7 +57,7 @@ public class IndexMergerLongestSharedDimOrderTest
   BitmapFactory mockBitmapFactory;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     when(mockSupplier.get()).thenReturn(mockColumnHolder);
     // This value does not matter
@@ -160,7 +162,7 @@ public class IndexMergerLongestSharedDimOrderTest
   {
     return new QueryableIndexIndexableAdapter(
         new SimpleQueryableIndex(
-            new Interval("2012-01-01/2012-01-02"),
+            new Interval("2012-01-01/2012-01-02", ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"))),
             new ListIndexed<>(dimensions),
             mockBitmapFactory,
             ImmutableMap.of(ColumnHolder.TIME_COLUMN_NAME, mockSupplier),
