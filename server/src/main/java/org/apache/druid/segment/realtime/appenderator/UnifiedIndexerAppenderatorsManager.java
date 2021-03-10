@@ -522,6 +522,30 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         int maxColumnsToMerge
     )
     {
+      return mergeQueryableIndex(
+          indexes,
+          rollup,
+          metricAggs,
+          null,
+          outDir,
+          indexSpec,
+          segmentWriteOutMediumFactory,
+          maxColumnsToMerge
+      );
+    }
+
+    @Override
+    public File mergeQueryableIndex(
+        List<QueryableIndex> indexes,
+        boolean rollup,
+        AggregatorFactory[] metricAggs,
+        @Nullable DimensionsSpec dimensionsSpec,
+        File outDir,
+        IndexSpec indexSpec,
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
+    )
+    {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
           new Callable<File>()
           {
@@ -533,6 +557,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                     indexes,
                     rollup,
                     metricAggs,
+                    dimensionsSpec,
                     outDir,
                     indexSpec,
                     segmentWriteOutMediumFactory,
@@ -647,21 +672,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         IndexSpec indexSpec,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File mergeQueryableIndex(
-        List<QueryableIndex> indexes,
-        boolean rollup,
-        AggregatorFactory[] metricAggs,
-        @Nullable DimensionsSpec dimensionsSpec,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);
