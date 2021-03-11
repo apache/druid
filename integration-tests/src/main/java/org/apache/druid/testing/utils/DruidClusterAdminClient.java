@@ -188,19 +188,23 @@ public class DruidClusterAdminClient
           }
           catch (Throwable e) {
             //
-            // supress logging for some specific exceptions to reduce excessive stack trace messages when waiting druid nodes to start up
+            // supress stack trace logging for some specific exceptions
+            // to reduce excessive stack trace messages when waiting druid nodes to start up
             //
             if (e.getCause() instanceof ChannelException) {
               Throwable channelException = e.getCause();
 
               if (channelException.getCause() instanceof ClosedChannelException) {
                 LOG.error("Channel Closed");
-              } else if (!"Channel disconnected".equals(channelException.getMessage())) {
-                // for 'Channel Disconnected', there's no need to log the error message
-                // because the underlying http client has already log this kind of message
+              } else if ("Channel disconnected".equals(channelException.getMessage())) {
+                // log message only
+                LOG.error("Channel disconnected");
+              } else {
+                // log stack trace for unknown exception
                 LOG.error(e, "");
               }
             } else {
+              // log stack trace for unknown exception
               LOG.error(e, "");
             }
 
