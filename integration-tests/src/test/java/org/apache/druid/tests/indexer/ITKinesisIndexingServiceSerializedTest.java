@@ -60,6 +60,16 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   }
 
   /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
+  @Test
+  public void testKinesisIndexDataWithWithAutoscaler() throws Exception
+  {
+    doTestIndexDataWithAutoscaler(false);
+  }
+
+  /**
    * This test must be run individually since the test affect and modify the state of the Druid cluster
    */
   @Test
