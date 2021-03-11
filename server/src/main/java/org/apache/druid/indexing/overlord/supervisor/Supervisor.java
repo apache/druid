@@ -68,7 +68,6 @@ public interface Supervisor
 
   /**
    * Computes maxLag, totalLag and avgLag
-   * Only supports Kafka ingestion so far.
    */
   LagStats computeLagStats();
 
