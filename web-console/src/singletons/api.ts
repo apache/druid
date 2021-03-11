@@ -47,7 +47,7 @@ export class Api {
 
   static encodePath(path: string): string {
     return path.replace(
-      /[?#%&'\[\]]/g,
+      /[?#%&'\[\]\\]/g,
       c =>
         '%' +
         c
