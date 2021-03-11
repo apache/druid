@@ -214,32 +214,47 @@ public class OverlordResourceTestClient
 
   public RowIngestionMetersTotals getTaskStats(String taskId)
   {
-    return (RowIngestionMetersTotals) ((IngestionStatsAndErrorsTaskReportData) getTaskReport(taskId).get("ingestionStatsAndErrors").getPayload()).getRowStats().get("buildSegments");
-  }
-
-  private Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
-  {
     try {
-      StatusResponseHolder response = makeRequest(
-          HttpMethod.GET,
-          StringUtils.format(
-              "%s%s",
-              getIndexerURL(),
-              StringUtils.format("task/%s/reports", StringUtils.urlEncode(taskId))
-          )
-      );
-      return jsonMapper.readValue(
-          response.getContent(),
-          new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
-          {
-          }
-      );
+      Object buildSegment = ((IngestionStatsAndErrorsTaskReportData) getTaskReport(taskId).get("ingestionStatsAndErrors").getPayload()).getRowStats().get("buildSegments");
+      return jsonMapper.convertValue(buildSegment, RowIngestionMetersTotals.class);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
+  private Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
+  {
+    return ITRetryUtil.retryUntilNoException(
+        new Callable<Map<String, IngestionStatsAndErrorsTaskReport>>()
+        {
+          @Override
+          public Map<String, IngestionStatsAndErrorsTaskReport> call()
+          {
+            try {
+              StatusResponseHolder response = makeRequest(
+                  HttpMethod.GET,
+                  StringUtils.format(
+                      "%s%s",
+                      getIndexerURL(),
+                      StringUtils.format("task/%s/reports", StringUtils.urlEncode(taskId))
+                  )
+              );
+              return jsonMapper.readValue(
+                  response.getContent(),
+                  new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
+                  {
+                  }
+              );
+            }
+            catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+          }
+        },
+        "Getting task report for task id=" + taskId
+    );
+  }
 
   public void waitUntilTaskCompletes(final String taskID)
   {

@@ -72,4 +72,44 @@ public class ITRetryUtil
     }
   }
 
+  public static <E> E retryUntilNoException(
+      Callable<E> callable,
+      String taskMessage
+  )
+  {
+    return retryUntilNoException(callable, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, taskMessage);
+  }
+
+  public static <E> E retryUntilNoException(
+      Callable<E> callable,
+      long delayInMillis,
+      int retryCount,
+      String taskMessage
+  )
+  {
+    try {
+      int currentTry = 0;
+      while (true) {
+        try {
+          return callable.call();
+        }
+        catch (Exception e) {
+          LOG.info(
+              "Ignoring exception to retry. Attempt[%d]: Task %s still not complete. Next retry in %d ms",
+              currentTry, taskMessage, delayInMillis
+          );
+        }
+        if (currentTry > retryCount) {
+          throw new ISE("Max number of retries[%d] exceeded for Task[%s]. Failing.", retryCount, taskMessage);
+        }
+        Thread.sleep(delayInMillis);
+
+        currentTry++;
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
 }
