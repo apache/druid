@@ -188,7 +188,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
         EVENTS_PER_SECOND,
         CYCLE_PADDING_MS
     );
-    final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(parserType, getResourceAsString(specPath), true);
+    final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(parserType, getResourceAsString(specPath));
     try (
         final Closeable closer = createResourceCloser(generatedTestConfig);
         final StreamEventWriter streamEventWriter = createStreamEventWriter(config, transactionEnabled)
@@ -241,8 +241,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,
-        getResourceAsString(JSON_INPUT_FORMAT_PATH),
-        true
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
     );
     try (
         final Closeable closer = createResourceCloser(generatedTestConfig);
@@ -305,8 +304,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
             INPUT_FORMAT,
-            getResourceAsString(JSON_INPUT_FORMAT_PATH),
-            true
+            getResourceAsString(JSON_INPUT_FORMAT_PATH)
     );
     try (
             final Closeable closer = createResourceCloser(generatedTestConfig);
@@ -386,8 +384,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,
-        getResourceAsString(JSON_INPUT_FORMAT_PATH),
-        true
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
     );
     try (
         final Closeable closer = createResourceCloser(generatedTestConfig);
@@ -464,9 +461,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,
-        getResourceAsString(JSON_INPUT_FORMAT_PATH),
-        // getTaskStats does not work when datasource name has special characters
-        false
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
     );
     try (
         final Closeable closer = createResourceCloser(generatedTestConfig);
@@ -552,8 +547,10 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     // Verify that event thrown away count was not incremented by the reshard
     List<TaskResponseObject> completedTasks = indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName());
     for (TaskResponseObject task : completedTasks) {
-      RowIngestionMetersTotals stats = indexer.getTaskStats(task.getId());
-      Assert.assertEquals(0L, stats.getThrownAway());
+      if (task.getStatus().isSuccess()) {
+        RowIngestionMetersTotals stats = indexer.getTaskStats(task.getId());
+        Assert.assertEquals(0L, stats.getThrownAway());
+      }
     }
   }
 
@@ -651,7 +648,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     private Function<String, String> streamIngestionPropsTransform;
     private Function<String, String> streamQueryPropsTransform;
 
-    GeneratedTestConfig(String parserType, String parserOrInputFormat, boolean useExtraDatasourceNameSuffix) throws Exception
+    GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
     {
       streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();
@@ -667,11 +664,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           30,
           "Wait for stream active"
       );
-      if (useExtraDatasourceNameSuffix) {
-        fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
-      } else {
-        fullDatasourceName = datasource;
-      }
+      fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
       streamIngestionPropsTransform = generateStreamIngestionPropsTransform(
           streamName,
           fullDatasourceName,
