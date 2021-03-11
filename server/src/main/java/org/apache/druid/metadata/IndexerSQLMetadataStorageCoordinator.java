@@ -1296,7 +1296,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     String segmentsTable = dbTables.getSegmentsTable();
     String segmentId = segment.getId().toString();
-    log.info("Removing segment [%s] [%s] from Metadata Storage [%s]!", segmentId, segment.getDataSource(), segmentsTable);
+    log.debug("Removing segment [%s] [%s] from Metadata Storage [%s]!", segmentId, segment.getDataSource(), segmentsTable);
     handle.createStatement(StringUtils.format("DELETE from %s WHERE id = :id", segmentsTable))
             .bind("id", segmentId)
             .execute();
