@@ -270,7 +270,7 @@ public class QueryResource implements QueryCountStatsProvider
                     }
                   }
                 },
-                ioReaderWriter.getResponseWriter().getRequestType()
+                ioReaderWriter.getResponseWriter().getResponseType()
             )
             .header("X-Druid-Query-Id", queryId);
 
@@ -414,7 +414,7 @@ public class QueryResource implements QueryCountStatsProvider
     String requestType = req.getContentType();
     String acceptHeader = req.getHeader("Accept");
 
-    // response type defaults to Content-Type if no 'Accept' header provided
+    // response type defaults to Content-Type if 'Accept' header not provided
     String responseType = Strings.isNullOrEmpty(acceptHeader) ? requestType : acceptHeader;
 
     boolean isRequestSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) || APPLICATION_SMILE.equals(requestType);
@@ -471,7 +471,7 @@ public class QueryResource implements QueryCountStatsProvider
       this.isPretty = isPretty;
     }
 
-    String getRequestType()
+    String getResponseType()
     {
       return responseType;
     }
