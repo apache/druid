@@ -113,7 +113,7 @@ public abstract class NumericLastBufferAggregator
         // cast to Pair<Long, Number> to support reindex such as doubleLast into longLast
         final SerializablePair<Long, Number> pair = (SerializablePair<Long, Number>) object;
         if (pair.lhs >= lastTime) {
-          if (pair.rhs == null ) {
+          if (pair.rhs == null) {
             // rhs might be NULL under SQL-compatibility mode
             updateTimeWithNull(buf, position, pair.lhs);
           } else {
