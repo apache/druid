@@ -547,9 +547,15 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     // Verify that event thrown away count was not incremented by the reshard
     List<TaskResponseObject> completedTasks = indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName());
     for (TaskResponseObject task : completedTasks) {
-      if (task.getStatus().isSuccess()) {
+      try {
         RowIngestionMetersTotals stats = indexer.getTaskStats(task.getId());
         Assert.assertEquals(0L, stats.getThrownAway());
+      }
+      catch (Exception e) {
+        // Failed task may not have a task stats report. We can ignore it as the task did not consume any data
+        if (!task.getStatus().isFailure()) {
+          throw e;
+        }
       }
     }
   }
