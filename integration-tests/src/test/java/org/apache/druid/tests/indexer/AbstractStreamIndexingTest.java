@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.utils.DruidClusterAdminClient;
@@ -43,6 +44,7 @@ import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.testng.Assert;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -541,6 +543,20 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       );
       // Verify that supervisor can catch up with the stream
       verifyIngestedData(generatedTestConfig, numWritten);
+    }
+    // Verify that event thrown away count was not incremented by the reshard
+    List<TaskResponseObject> completedTasks = indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName());
+    for (TaskResponseObject task : completedTasks) {
+      try {
+        RowIngestionMetersTotals stats = indexer.getTaskStats(task.getId());
+        Assert.assertEquals(0L, stats.getThrownAway());
+      }
+      catch (Exception e) {
+        // Failed task may not have a task stats report. We can ignore it as the task did not consume any data
+        if (!task.getStatus().isFailure()) {
+          throw e;
+        }
+      }
     }
   }
 

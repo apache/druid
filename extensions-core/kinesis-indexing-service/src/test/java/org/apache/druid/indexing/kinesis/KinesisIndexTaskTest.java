@@ -2645,7 +2645,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Check metrics
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway()); // EOS marker
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
