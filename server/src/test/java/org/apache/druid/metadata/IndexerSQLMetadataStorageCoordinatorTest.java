@@ -849,6 +849,39 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testDeleteSegmentsInMetaDataStorage() throws IOException
+  {
+    // Published segments to MetaDataStorage
+    coordinator.announceHistoricalSegments(SEGMENTS);
+
+    // check segments Published
+    Assert.assertEquals(
+            SEGMENTS,
+            ImmutableSet.copyOf(
+                    coordinator.retrieveUsedSegmentsForInterval(
+                            defaultSegment.getDataSource(),
+                            defaultSegment.getInterval(),
+                            Segments.ONLY_VISIBLE
+                    )
+            )
+    );
+    // remove segments in MetaDataStorage
+    coordinator.deleteSegments(SEGMENTS);
+
+    // check segments removed
+    Assert.assertEquals(
+            0,
+            ImmutableSet.copyOf(
+                    coordinator.retrieveUsedSegmentsForInterval(
+                            defaultSegment.getDataSource(),
+                            defaultSegment.getInterval(),
+                            Segments.ONLY_VISIBLE
+                    )
+            ).size()
+    );
+  }
+
+  @Test
   public void testSingleAdditionalNumberedShardWithNoCorePartitions() throws IOException
   {
     additionalNumberedShardTest(ImmutableSet.of(numberedSegment0of0));
