@@ -225,35 +225,25 @@ public class OverlordResourceTestClient
 
   private Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
   {
-    return ITRetryUtil.retryUntilNoException(
-        new Callable<Map<String, IngestionStatsAndErrorsTaskReport>>()
-        {
-          @Override
-          public Map<String, IngestionStatsAndErrorsTaskReport> call()
+    try {
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
+          StringUtils.format(
+              "%s%s",
+              getIndexerURL(),
+              StringUtils.format("task/%s/reports", StringUtils.urlEncode(taskId))
+          )
+      );
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
           {
-            try {
-              StatusResponseHolder response = makeRequest(
-                  HttpMethod.GET,
-                  StringUtils.format(
-                      "%s%s",
-                      getIndexerURL(),
-                      StringUtils.format("task/%s/reports", StringUtils.urlEncode(taskId))
-                  )
-              );
-              return jsonMapper.readValue(
-                  response.getContent(),
-                  new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
-                  {
-                  }
-              );
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
           }
-        },
-        "Getting task report for task id=" + taskId
-    );
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void waitUntilTaskCompletes(final String taskID)
