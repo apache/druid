@@ -25,7 +25,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class LongLastBufferAggregator extends NumericLastBufferAggregator<BaseLongColumnValueSelector>
+public class LongLastBufferAggregator extends NumericLastBufferAggregator
 {
   public LongLastBufferAggregator(
       BaseLongColumnValueSelector timeSelector,

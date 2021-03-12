@@ -113,7 +113,12 @@ public abstract class NumericFirstBufferAggregator
         // cast to Pair<Long, Number> to support reindex such as doubleFirst into longFirst
         final SerializablePair<Long, Number> pair = (SerializablePair<Long, Number>) object;
         if (pair.lhs < firstTime) {
-          updateTimeWithValue(buf, position, pair.lhs, pair.rhs);
+          if (pair.rhs == null) {
+            // rhs might be NULL under SQL-compatibility mode
+            updateTimeWithNull(buf, position, pair.lhs);
+          } else {
+            updateTimeWithValue(buf, position, pair.lhs, pair.rhs);
+          }
         }
         return;
       }

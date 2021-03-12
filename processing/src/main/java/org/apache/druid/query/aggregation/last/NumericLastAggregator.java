@@ -62,10 +62,19 @@ public abstract class NumericLastAggregator implements Aggregator
       final Object object = valueSelector.getObject();
 
       if (object instanceof SerializablePair) {
+
+        // cast to Pair<Long, Number> to support reindex from type such as doubleFirst into another type(longFirst)
         final SerializablePair<Long, Number> pair = (SerializablePair<Long, Number>) object;
         if (pair.lhs >= lastTime) {
           lastTime = pair.lhs;
-          setCurrentValue(pair.rhs);
+
+          // rhs might be NULL under SQL-compatibility mode
+          if (pair.rhs == null) {
+            rhsNull = true;
+          } else {
+            rhsNull = false;
+            setCurrentValue(pair.rhs);
+          }
         }
         return;
       }

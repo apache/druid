@@ -20,13 +20,12 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.query.aggregation.SerializablePairLongDouble;
-import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class DoubleLastBufferAggregator extends NumericLastBufferAggregator<BaseDoubleColumnValueSelector>
+public class DoubleLastBufferAggregator extends NumericLastBufferAggregator
 {
   public DoubleLastBufferAggregator(
       BaseLongColumnValueSelector timeSelector,

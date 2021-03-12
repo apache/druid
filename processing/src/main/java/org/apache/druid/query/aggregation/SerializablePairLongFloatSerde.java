@@ -46,7 +46,7 @@ public class SerializablePairLongFloatSerde extends AbstractSerializablePairSerd
   }
 
   @Override
-  protected SerializablePairLongFloat toPairObject(ByteBuffer buffer, int numBytes)
+  protected SerializablePairLongFloat toPairObject(ByteBuffer buffer)
   {
     final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
     long lhs = readOnlyBuffer.getLong();

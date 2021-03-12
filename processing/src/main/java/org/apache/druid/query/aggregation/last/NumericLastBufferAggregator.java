@@ -24,7 +24,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -35,7 +34,7 @@ import java.nio.ByteBuffer;
  * This could probably share a base type with
  * {@link org.apache.druid.query.aggregation.first.NumericFirstBufferAggregator} ...
  */
-public abstract class NumericLastBufferAggregator<TSelector extends BaseNullableColumnValueSelector>
+public abstract class NumericLastBufferAggregator
     implements BufferAggregator
 {
   static final int NULL_OFFSET = Long.BYTES;
@@ -114,7 +113,12 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
         // cast to Pair<Long, Number> to support reindex such as doubleLast into longLast
         final SerializablePair<Long, Number> pair = (SerializablePair<Long, Number>) object;
         if (pair.lhs >= lastTime) {
-          updateTimeWithValue(buf, position, pair.lhs, pair.rhs);
+          if (pair.rhs == null ) {
+            // rhs might be NULL under SQL-compatibility mode
+            updateTimeWithNull(buf, position, pair.lhs);
+          } else {
+            updateTimeWithValue(buf, position, pair.lhs, pair.rhs);
+          }
         }
         return;
       }

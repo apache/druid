@@ -93,7 +93,7 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
       @Override
       public T fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        return toPairObject(buffer, numBytes);
+        return toPairObject(buffer);
       }
 
       @Override
@@ -110,7 +110,7 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 
-  protected abstract T toPairObject(ByteBuffer buffer, int numBytes);
+  protected abstract T toPairObject(ByteBuffer buffer);
 
   protected abstract byte[] pairToBytes(T val);
 }

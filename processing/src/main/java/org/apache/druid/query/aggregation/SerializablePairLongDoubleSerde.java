@@ -46,7 +46,7 @@ public class SerializablePairLongDoubleSerde extends AbstractSerializablePairSer
   }
 
   @Override
-  protected SerializablePairLongDouble toPairObject(ByteBuffer buffer, int numBytes)
+  protected SerializablePairLongDouble toPairObject(ByteBuffer buffer)
   {
     final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
     long lhs = readOnlyBuffer.getLong();
