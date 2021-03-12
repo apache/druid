@@ -67,3 +67,8 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
     return;
   }
 }
+
+export function localStorageRemove(key: LocalStorageKeys): void {
+  if (typeof localStorage === 'undefined') return;
+  return localStorage.removeItem(key);
+}
