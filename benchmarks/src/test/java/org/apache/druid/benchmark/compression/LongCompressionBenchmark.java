@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
-import org.apache.druid.segment.data.ColumnarFloats;
-import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.data.ColumnarLongs;
+import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -42,34 +43,36 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Run {@link FloatCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
+ * Run {@link LongCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class FloatCompressionBenchmark
+public class LongCompressionBenchmark
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  @Param("floatCompress/")
+  @Param("longCompress/")
   private static String dirPath;
 
   @Param({"enumerate", "zipfLow", "zipfHigh", "sequential", "uniform"})
   private static String file;
 
-  @Param({"lz4", "none"})
+  @Param({"auto", "longs"})
+  private static String format;
+
+  @Param({"lz4"})
   private static String strategy;
 
-  private Supplier<ColumnarFloats> supplier;
+  private Supplier<ColumnarLongs> supplier;
 
   private MappedByteBufferHandler bufferHandler;
 
@@ -77,10 +80,10 @@ public class FloatCompressionBenchmark
   public void setup() throws Exception
   {
     File dir = new File(dirPath);
-    File compFile = new File(dir, file + "-" + strategy);
+    File compFile = new File(dir, file + "-" + strategy + "-" + format);
     bufferHandler = FileUtils.map(compFile);
     ByteBuffer buffer = bufferHandler.get();
-    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
   }
 
   @TearDown
@@ -89,26 +92,41 @@ public class FloatCompressionBenchmark
     bufferHandler.close();
   }
 
-  @Benchmark
-  public void readContinuous(Blackhole bh)
-  {
-    ColumnarFloats columnarFloats = supplier.get();
-    int count = columnarFloats.size();
-    for (int i = 0; i < count; i++) {
-      bh.consume(columnarFloats.get(i));
-    }
-    columnarFloats.close();
-  }
+//  @Benchmark
+//  public void readContinuous(Blackhole bh)
+//  {
+//    ColumnarLongs columnarLongs = supplier.get();
+//    int count = columnarLongs.size();
+//    for (int i = 0; i < count; i++) {
+//      bh.consume(columnarLongs.get(i));
+//    }
+//    columnarLongs.close();
+//  }
 
   @Benchmark
-  public void readSkipping(Blackhole bh)
+  public void readVectorizedSequential(Blackhole bh)
   {
-    ColumnarFloats columnarFloats = supplier.get();
-    int count = columnarFloats.size();
-    for (int i = 0; i < count; i += ThreadLocalRandom.current().nextInt(2000)) {
-      bh.consume(columnarFloats.get(i));
+    long[] vector = new long[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
+    ColumnarLongs columnarLongs = supplier.get();
+    int count = columnarLongs.size();
+    for (int i = 0; i < count; i++) {
+      if (i % vector.length == 0) {
+        columnarLongs.get(vector, i, Math.min(vector.length, count - i));
+      }
+      bh.consume(vector[i % vector.length]);
     }
-    columnarFloats.close();
+    columnarLongs.close();
   }
+
+//  @Benchmark
+//  public void readSkipping(Blackhole bh)
+//  {
+//    ColumnarLongs columnarLongs = supplier.get();
+//    int count = columnarLongs.size();
+//    for (int i = 0; i < count; i += ThreadLocalRandom.current().nextInt(2000)) {
+//      bh.consume(columnarLongs.get(i));
+//    }
+//    columnarLongs.close();
+//  }
 
 }

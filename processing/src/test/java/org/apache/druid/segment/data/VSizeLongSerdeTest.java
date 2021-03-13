@@ -238,8 +238,9 @@ public class VSizeLongSerdeTest
     final long[] out = new long[values.length + outPosition];
 
     for (int i = 0; i < values.length; i++) {
+
       Arrays.fill(out, -1);
-      deserializer.get(out, outPosition, i, 1);
+      deserializer.getDelta(out, outPosition, i, 1, 0);
 
       Assert.assertEquals(
           StringUtils.format("Deserializer (testContiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
@@ -258,7 +259,7 @@ public class VSizeLongSerdeTest
     final int outPosition = 1;
     final long[] out = new long[values.length + outPosition];
     Arrays.fill(out, -1);
-    deserializer.get(out, outPosition, 0, values.length);
+    deserializer.getDelta(out, outPosition, 0, values.length, 0);
 
     Assert.assertArrayEquals(
         StringUtils.format("Deserializer (testContiguousGetWholeRegion, numBits = %d)", numBits),
@@ -283,7 +284,7 @@ public class VSizeLongSerdeTest
       Arrays.fill(indexes, -1);
       indexes[outPosition] = i + indexOffset;
 
-      deserializer.get(out, outPosition, indexes, 1, indexOffset, values.length);
+      deserializer.getDelta(out, outPosition, indexes, 1, indexOffset, values.length, 0);
 
       Assert.assertEquals(
           StringUtils.format("Deserializer (testNoncontiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
@@ -318,7 +319,7 @@ public class VSizeLongSerdeTest
       }
     }
 
-    deserializer.get(out, outPosition, indexes, cnt, indexOffset, values.length);
+    deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, values.length, 0);
 
     Assert.assertArrayEquals(
         StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
@@ -357,7 +358,7 @@ public class VSizeLongSerdeTest
       }
     }
 
-    final int ret = deserializer.get(out, outPosition, indexes, cnt, indexOffset, limit);
+    final int ret = deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, limit, 0);
 
     Assert.assertArrayEquals(
         StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),

@@ -33,8 +33,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
-public class ColumnValueGenerator
+public class ColumnValueGenerator implements Supplier<Object>
 {
   private final GeneratorColumnSchema schema;
   private final long seed;
@@ -223,5 +224,11 @@ public class ColumnValueGenerator
     } else {
       ((EnumeratedDistribution) distribution).reseedRandomGenerator(seed);
     }
+  }
+
+  @Override
+  public Object get()
+  {
+    return generateRowValue();
   }
 }

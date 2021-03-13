@@ -17,14 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
-import org.apache.druid.segment.data.ColumnarLongs;
-import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
+import org.apache.druid.segment.data.ColumnarFloats;
+import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -46,7 +46,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Run {@link LongCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
+ * Run {@link FloatCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -54,25 +54,22 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class LongCompressionBenchmark
+public class FloatCompressionBenchmark
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  @Param("longCompress/")
+  @Param("floatCompress/")
   private static String dirPath;
 
   @Param({"enumerate", "zipfLow", "zipfHigh", "sequential", "uniform"})
   private static String file;
 
-  @Param({"auto", "longs"})
-  private static String format;
-
   @Param({"lz4", "none"})
   private static String strategy;
 
-  private Supplier<ColumnarLongs> supplier;
+  private Supplier<ColumnarFloats> supplier;
 
   private MappedByteBufferHandler bufferHandler;
 
@@ -80,10 +77,10 @@ public class LongCompressionBenchmark
   public void setup() throws Exception
   {
     File dir = new File(dirPath);
-    File compFile = new File(dir, file + "-" + strategy + "-" + format);
+    File compFile = new File(dir, file + "-" + strategy);
     bufferHandler = FileUtils.map(compFile);
     ByteBuffer buffer = bufferHandler.get();
-    supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
   }
 
   @TearDown
@@ -95,23 +92,23 @@ public class LongCompressionBenchmark
   @Benchmark
   public void readContinuous(Blackhole bh)
   {
-    ColumnarLongs columnarLongs = supplier.get();
-    int count = columnarLongs.size();
+    ColumnarFloats columnarFloats = supplier.get();
+    int count = columnarFloats.size();
     for (int i = 0; i < count; i++) {
-      bh.consume(columnarLongs.get(i));
+      bh.consume(columnarFloats.get(i));
     }
-    columnarLongs.close();
+    columnarFloats.close();
   }
 
   @Benchmark
   public void readSkipping(Blackhole bh)
   {
-    ColumnarLongs columnarLongs = supplier.get();
-    int count = columnarLongs.size();
+    ColumnarFloats columnarFloats = supplier.get();
+    int count = columnarFloats.size();
     for (int i = 0; i < count; i += ThreadLocalRandom.current().nextInt(2000)) {
-      bh.consume(columnarLongs.get(i));
+      bh.consume(columnarFloats.get(i));
     }
-    columnarLongs.close();
+    columnarFloats.close();
   }
 
 }
