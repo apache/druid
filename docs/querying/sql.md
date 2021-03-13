@@ -1008,6 +1008,7 @@ Connection context can be specified as JDBC connection properties or as a "conte
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the Broker (default: UTC)|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the Broker (default: true)|
 |`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.md) will be used instead.|druid.sql.planner.useApproximateTopN on the Broker (default: true)|
+|`useParsedExprCache`|Whether to use a cache for parsed expressions. This cache is created per query and stored on heap memory. Enabling cache can be useful when planning time takes long.|druid.sql.planner.useParsedExprCache on the Broker (default: false)|
 
 ## Metadata tables
 
