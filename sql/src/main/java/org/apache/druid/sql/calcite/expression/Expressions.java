@@ -660,6 +660,7 @@ public class Expressions
     if (druidExpression != null) {
       return new ExpressionDimFilter(
           druidExpression.getExpression(),
+          null,
           plannerContext.getCachingExprParser().lazyParse(druidExpression.getExpression())
       );
     } else {

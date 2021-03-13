@@ -29,6 +29,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -161,7 +162,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     properties.setProperty(getPlannerConfigKey("useApproximateTopN"), "false");
     properties.setProperty(getPlannerConfigKey("requireTimeCondition"), "true");
     properties.setProperty(getPlannerConfigKey("awaitInitializationOnStart"), "false");
-    properties.setProperty(getPlannerConfigKey("sqlTimeZone"), DateTimeZone.forID("Asia/Seoul").toString());
+    properties.setProperty(getPlannerConfigKey("sqlTimeZone"), DateTimes.inferTzFromString("Asia/Seoul").toString());
     properties.setProperty(getPlannerConfigKey("metadataSegmentCacheEnable"), "true");
     properties.setProperty(getPlannerConfigKey("metadataSegmentPollPeriod"), "20");
     properties.setProperty(getPlannerConfigKey("useParsedExprCache"), "true");
@@ -173,7 +174,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     Assert.assertFalse(plannerConfig.isUseApproximateTopN());
     Assert.assertTrue(plannerConfig.isRequireTimeCondition());
     Assert.assertFalse(plannerConfig.isAwaitInitializationOnStart());
-    Assert.assertEquals(DateTimeZone.forID("Asia/Seoul"), plannerConfig.getSqlTimeZone());
+    Assert.assertEquals(DateTimes.inferTzFromString("Asia/Seoul"), plannerConfig.getSqlTimeZone());
     Assert.assertTrue(plannerConfig.isMetadataSegmentCacheEnable());
     Assert.assertEquals(20, plannerConfig.getMetadataSegmentPollPeriod());
     Assert.assertTrue(plannerConfig.isUseParsedExprCache());

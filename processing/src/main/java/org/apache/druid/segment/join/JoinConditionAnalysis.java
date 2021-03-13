@@ -109,7 +109,7 @@ public class JoinConditionAnalysis
       final String condition,
       final String rightPrefix,
       final Supplier<Expr> exprSupplier
-      )
+  )
   {
     final Expr conditionExpr = exprSupplier.get();
     final List<Equality> equiConditions = new ArrayList<>();

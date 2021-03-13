@@ -51,15 +51,17 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    this.expression = expression;
-    this.filterTuning = filterTuning;
-    this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this(expression, filterTuning, Suppliers.memoize(() -> Parser.parse(expression, macroTable)));
   }
 
-  public ExpressionDimFilter(final String expression, final Supplier<Expr> exprSupplier)
+  public ExpressionDimFilter(
+      final String expression,
+      @Nullable final FilterTuning filterTuning,
+      final Supplier<Expr> exprSupplier
+  )
   {
     this.expression = expression;
-    this.filterTuning = null;
+    this.filterTuning = filterTuning;
     this.parsed = exprSupplier;
   }
 
