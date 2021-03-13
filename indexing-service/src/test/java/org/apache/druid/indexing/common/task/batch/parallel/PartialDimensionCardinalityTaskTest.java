@@ -21,12 +21,14 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -265,6 +267,38 @@ public class PartialDimensionCardinalityTaskTest
     }
 
     @Test
+    public void sendsCorrectReportWhenNonEmptyPartitionDimension()
+    {
+      InputSource inlineInputSource = new InlineInputSource(
+          ParallelIndexTestingFactory.createRowFromMap(0, ImmutableMap.of("dim1", "a", "dim2", "1")) + "\n" +
+          ParallelIndexTestingFactory.createRowFromMap(0, ImmutableMap.of("dim1", "a", "dim2", "2")) + "\n" +
+          ParallelIndexTestingFactory.createRowFromMap(0, ImmutableMap.of("dim1", "b", "dim2", "3")) + "\n" +
+          ParallelIndexTestingFactory.createRowFromMap(0, ImmutableMap.of("dim1", "b", "dim2", "4"))
+      );
+      HashedPartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, null,
+                                                                     Collections.singletonList("dim1")
+      );
+      ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
+          .partitionsSpec(partitionsSpec)
+          .build();
+
+      PartialDimensionCardinalityTaskBuilder taskBuilder = new PartialDimensionCardinalityTaskBuilder()
+          .inputSource(inlineInputSource)
+          .tuningConfig(tuningConfig)
+          .withDimensions(Arrays.asList("dim1", "dim2"));
+
+      DimensionCardinalityReport report = runTask(taskBuilder);
+
+      Assert.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
+      Map<Interval, byte[]> intervalToCardinalities = report.getIntervalToCardinalities();
+      byte[] hllSketchBytes = Iterables.getOnlyElement(intervalToCardinalities.values());
+      HllSketch hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
+      Assert.assertNotNull(hllSketch);
+      Assert.assertEquals(4L, (long) hllSketch.getEstimate());
+
+    }
+
+    @Test
     public void sendsCorrectReportWithMultipleIntervalsInData()
     {
       // Segment granularity is DAY, query granularity is HOUR
@@ -365,6 +399,12 @@ public class PartialDimensionCardinalityTaskTest
     PartialDimensionCardinalityTaskBuilder dataSchema(DataSchema dataSchema)
     {
       this.dataSchema = dataSchema;
+      return this;
+    }
+
+    PartialDimensionCardinalityTaskBuilder withDimensions(List<String> dims)
+    {
+      this.dataSchema = dataSchema.withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims)));
       return this;
     }
 

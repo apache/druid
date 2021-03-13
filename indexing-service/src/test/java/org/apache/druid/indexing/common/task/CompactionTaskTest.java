@@ -36,8 +36,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -312,6 +314,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -352,6 +355,47 @@ public class CompactionTaskTest
         SEGMENT_MAP
     );
     segmentLoaderFactory = new SegmentLoaderFactory(testIndexIO, OBJECT_MAPPER);
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithGranularitySpec()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.segmentGranularity(Granularities.HOUR);
+    final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
+
+    final Builder builder2 = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder2.tuningConfig(createTuningConfig());
+    builder2.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY));
+    final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
+    Assert.assertEquals(taskCreatedWithGranularitySpec.getSegmentGranularity(), taskCreatedWithSegmentGranularity.getSegmentGranularity());
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithGranularitySpecOverrideSegmentGranularity()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.segmentGranularity(Granularities.HOUR);
+    builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, Granularities.DAY));
+    final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
+    Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
 
   @Test
@@ -443,6 +487,7 @@ public class CompactionTaskTest
             null,
             500000,
             1000000L,
+            null,
             null,
             null,
             null,
@@ -592,7 +637,8 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -605,6 +651,7 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -661,7 +708,8 @@ public class CompactionTaskTest
         AGGREGATORS,
         SEGMENT_INTERVALS,
         tuningConfig,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -674,6 +722,7 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
+        null,
         1000000L,
         null,
         null,
@@ -730,7 +779,8 @@ public class CompactionTaskTest
         AGGREGATORS,
         SEGMENT_INTERVALS,
         tuningConfig,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -743,6 +793,7 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -799,7 +850,8 @@ public class CompactionTaskTest
         AGGREGATORS,
         SEGMENT_INTERVALS,
         tuningConfig,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -860,7 +912,8 @@ public class CompactionTaskTest
         dimensionsSpecs,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -901,7 +954,8 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         Arrays.asList(customMetricsSpec),
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -934,7 +988,8 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
 
@@ -1003,7 +1058,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testSegmentGranularity() throws IOException, SegmentLoadingException
+  public void testSegmentGranularityAndNullQueryGranularity() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1012,7 +1067,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
-        new PeriodGranularity(Period.months(3), null, null),
+        new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -1033,12 +1088,86 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         Collections.singletonList(COMPACTION_INTERVAL),
+        new PeriodGranularity(Period.months(3), null, null),
+        Granularities.NONE
+    );
+  }
+
+  @Test
+  public void testQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null)),
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(6, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        AGGREGATORS,
+        SEGMENT_INTERVALS,
+        Granularities.MONTH,
         new PeriodGranularity(Period.months(3), null, null)
     );
   }
 
   @Test
-  public void testNullSegmentGranularityAnd() throws IOException, SegmentLoadingException
+  public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(
+            new PeriodGranularity(Period.months(3), null, null),
+            new PeriodGranularity(Period.months(3), null, null)
+        ),
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+        new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
+    );
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(1, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        AGGREGATORS,
+        Collections.singletonList(COMPACTION_INTERVAL),
+        new PeriodGranularity(Period.months(3), null, null),
+        new PeriodGranularity(Period.months(3), null, null)
+    );
+  }
+
+  @Test
+  public void testNullGranularitySpec() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1066,9 +1195,98 @@ public class CompactionTaskTest
         expectedDimensionsSpec,
         AGGREGATORS,
         SEGMENT_INTERVALS,
-        Granularities.MONTH
+        Granularities.MONTH,
+        Granularities.NONE
     );
   }
+
+  @Test
+  public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, null),
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(6, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        AGGREGATORS,
+        SEGMENT_INTERVALS,
+        Granularities.MONTH,
+        Granularities.NONE
+    );
+  }
+
+  @Test
+  public void testChooseFinestGranularityWithNulls()
+  {
+    List<Granularity> input = Arrays.asList(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.DAY,
+        null,
+        Granularities.ALL,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.SECOND.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityNone()
+  {
+    List<Granularity> input = ImmutableList.of(
+        Granularities.DAY,
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.NONE,
+        Granularities.DAY,
+        Granularities.NONE,
+        Granularities.MINUTE
+    );
+    Assert.assertTrue(Granularities.NONE.equals(chooseFinestGranularityHelper(input)));
+  }
+
+  @Test
+  public void testChooseFinestGranularityAllNulls()
+  {
+    List<Granularity> input = Arrays.asList(
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertNull(chooseFinestGranularityHelper(input));
+  }
+
+  private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
+  {
+    SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    for (Granularity current : granularities) {
+      queryGranularity.set(CompactionTask.compareWithCurrent(queryGranularity.get(), current));
+    }
+    return queryGranularity.get();
+  }
+
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {
@@ -1119,7 +1337,8 @@ public class CompactionTaskTest
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
       List<Interval> expectedSegmentIntervals,
-      Granularity expectedSegmentGranularity
+      Granularity expectedSegmentGranularity,
+      Granularity expectedQueryGranularity
   )
   {
     assertIngestionSchema(
@@ -1133,6 +1352,7 @@ public class CompactionTaskTest
             null,
             500000,
             1000000L,
+            null,
             Long.MAX_VALUE,
             null,
             null,
@@ -1162,7 +1382,8 @@ public class CompactionTaskTest
             null,
             null
         ),
-        expectedSegmentGranularity
+        expectedSegmentGranularity,
+        expectedQueryGranularity
     );
   }
 
@@ -1172,7 +1393,8 @@ public class CompactionTaskTest
       List<AggregatorFactory> expectedMetricsSpec,
       List<Interval> expectedSegmentIntervals,
       ParallelIndexTuningConfig expectedTuningConfig,
-      Granularity expectedSegmentGranularity
+      Granularity expectedSegmentGranularity,
+      Granularity expectedQueryGranularity
   )
   {
     Preconditions.checkArgument(
@@ -1205,7 +1427,7 @@ public class CompactionTaskTest
       Assert.assertEquals(
           new UniformGranularitySpec(
               expectedSegmentGranularity,
-              Granularities.NONE,
+              expectedQueryGranularity,
               false,
               Collections.singletonList(expectedSegmentIntervals.get(i))
           ),

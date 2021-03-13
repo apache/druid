@@ -83,6 +83,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
             "%%TOPIC_VALUE%%",
             streamName
         );
+
         if (AbstractStreamIndexingTest.INPUT_FORMAT.equals(parserType)) {
           spec = StringUtils.replace(
               spec,
@@ -116,6 +117,13 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
             "%%STREAM_PROPERTIES_KEY%%",
             "consumerProperties"
         );
+
+        spec = StringUtils.replace(
+            spec,
+            "%%SCHEMA_REGISTRY_HOST%%",
+            StringUtils.format("http://%s", config.getSchemaRegistryInternalHost())
+        );
+
         return StringUtils.replace(
             spec,
             "%%STREAM_PROPERTIES_VALUE%%",

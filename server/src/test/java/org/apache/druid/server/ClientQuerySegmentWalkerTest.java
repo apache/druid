@@ -499,6 +499,7 @@ public class ClientQuerySegmentWalkerTest
                                            "j.",
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
+                                           null,
                                            ExprMacroTable.nil()
                                        )
                                    )
@@ -566,6 +567,7 @@ public class ClientQuerySegmentWalkerTest
                                            "j.",
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
+                                           null,
                                            ExprMacroTable.nil()
                                        )
                                    )
@@ -750,6 +752,7 @@ public class ClientQuerySegmentWalkerTest
                                            "j.",
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
+                                           null,
                                            ExprMacroTable.nil()
                                        )
                                    )

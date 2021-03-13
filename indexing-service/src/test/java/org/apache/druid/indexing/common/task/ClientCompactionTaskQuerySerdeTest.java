@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
@@ -45,6 +46,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -113,6 +115,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
         ImmutableMap.of("key", "value")
     );
 
@@ -186,6 +189,18 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getTuningConfig().getTotalNumMergeTasks().intValue(),
         task.getTuningConfig().getTotalNumMergeTasks()
     );
+    Assert.assertEquals(
+        query.getGranularitySpec(),
+        task.getGranularitySpec()
+    );
+    Assert.assertEquals(
+        query.getGranularitySpec().getQueryGranularity(),
+        task.getGranularitySpec().getQueryGranularity()
+    );
+    Assert.assertEquals(
+        query.getGranularitySpec().getSegmentGranularity(),
+        task.getGranularitySpec().getSegmentGranularity()
+    );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
 
@@ -207,6 +222,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 40000,
                 2000L,
+                null,
                 null,
                 null,
                 new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
@@ -242,6 +258,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -283,6 +300,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
         new HashMap<>()
     );
 

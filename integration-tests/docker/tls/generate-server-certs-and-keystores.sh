@@ -61,7 +61,7 @@ DNS.2 = localhost
 EOT
 
 # Generate a server certificate for this machine
-openssl genrsa -out server.key 1024 -sha256
+openssl genrsa -out server.key 1024
 openssl req -new -out server.csr -key server.key -reqexts req_ext -config csr.conf
 openssl x509 -req -days 3650 -in server.csr -CA root.pem -CAkey root.key -set_serial 0x22222222 -out server.pem -sha256 -extfile csr.conf -extensions req_ext
 

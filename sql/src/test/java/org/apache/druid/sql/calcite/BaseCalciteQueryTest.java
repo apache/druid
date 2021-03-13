@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -67,6 +68,8 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -99,6 +102,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class BaseCalciteQueryTest extends CalciteTestBase
@@ -371,7 +375,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       DataSource right,
       String rightPrefix,
       String condition,
-      JoinType joinType
+      JoinType joinType,
+      DimFilter filter
   )
   {
     return JoinDataSource.create(
@@ -380,8 +385,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         rightPrefix,
         condition,
         joinType,
+        filter,
         CalciteTests.createExprMacroTable()
     );
+  }
+
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType
+  )
+  {
+    return join(left, right, rightPrefix, condition, joinType, null);
   }
 
   public static String equalsCondition(DruidExpression left, DruidExpression right)
@@ -678,39 +695,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ObjectMapper objectMapper
   ) throws Exception
   {
-    final InProcessViewManager viewManager =
-        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
-        conglomerate,
-        walker,
+    final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
-        viewManager,
-        authorizerMapper
-    );
-
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
-        plannerConfig,
         authorizerMapper,
-        objectMapper,
-        CalciteTests.DRUID_SCHEMA_NAME
-    );
-    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
-
-    viewManager.createView(
-        plannerFactory,
-        "aview",
-        "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
-    );
-
-    viewManager.createView(
-        plannerFactory,
-        "bview",
-        "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
+        objectMapper
     );
 
     return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
@@ -754,6 +744,101 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  public Set<Resource> analyzeResources(
+      PlannerConfig plannerConfig,
+      String sql,
+      AuthenticationResult authenticationResult
+  )
+  {
+    SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
+        plannerConfig,
+        CalciteTests.createOperatorTable(),
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    );
+
+    SqlLifecycle lifecycle = lifecycleFactory.factorize();
+    lifecycle.initialize(sql, ImmutableMap.of());
+    return lifecycle.runAnalyzeResources(authenticationResult).getResources();
+  }
+
+  public SqlLifecycleFactory getSqlLifecycleFactory(
+      PlannerConfig plannerConfig,
+      DruidOperatorTable operatorTable,
+      ExprMacroTable macroTable,
+      AuthorizerMapper authorizerMapper,
+      ObjectMapper objectMapper
+  )
+  {
+    final InProcessViewManager viewManager =
+        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
+    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        viewManager,
+        authorizerMapper
+    );
+
+    final PlannerFactory plannerFactory = new PlannerFactory(
+        rootSchema,
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        authorizerMapper,
+        objectMapper,
+        CalciteTests.DRUID_SCHEMA_NAME
+    );
+    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
+
+    viewManager.createView(
+        plannerFactory,
+        "aview",
+        "SELECT SUBSTRING(dim1, 1, 1) AS dim1_firstchar FROM foo WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "bview",
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "cview",
+        "SELECT SUBSTRING(bar.dim1, 1, 1) AS dim1_firstchar, bar.dim2 as dim2, dnf.l2 as l2\n"
+        + "FROM (SELECT * from foo WHERE dim2 = 'a') as bar INNER JOIN druid.numfoo dnf ON bar.dim2 = dnf.dim2"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "dview",
+        "SELECT SUBSTRING(dim1, 1, 1) AS numfoo FROM foo WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "forbiddenView",
+        "SELECT __time, SUBSTRING(dim1, 1, 1) AS dim1_firstchar, dim2 FROM foo WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "restrictedView",
+        "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
+    );
+
+    viewManager.createView(
+        plannerFactory,
+        "invalidView",
+        "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
+    );
+    return sqlLifecycleFactory;
+  }
+
   protected void cannotVectorize()
   {
     cannotVectorize = true;
@@ -762,5 +847,48 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
+  }
+
+  /**
+   * This is a provider of query contexts that should be used by join tests.
+   * It tests various configs that can be passed to join queries. All the configs provided by this provider should
+   * have the join query engine return the same results.
+   */
+  public static class QueryContextForJoinProvider
+  {
+    @UsedByJUnitParamsRunner
+    public static Object[] provideQueryContexts()
+    {
+      return new Object[]{
+          // default behavior
+          QUERY_CONTEXT_DEFAULT,
+          // filter value re-writes enabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .build(),
+          // rewrite values enabled but filter re-writes disabled.
+          // This should be drive the same behavior as the previous config
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .build(),
+          // filter re-writes disabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .build(),
+          };
+    }
+  }
+
+  protected Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
+  {
+    // since context is usually immutable in tests, make a copy
+    HashMap<String, Object> newContext = new HashMap<>(context);
+    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
+    return newContext;
   }
 }

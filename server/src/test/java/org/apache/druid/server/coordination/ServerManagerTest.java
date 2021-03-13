@@ -75,6 +75,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -151,7 +152,7 @@ public class ServerManagerTest
           }
 
           @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy)
+          public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
             return new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
@@ -674,7 +675,8 @@ public class ServerManagerTest
               IndexIO.CURRENT_VERSION_ID,
               123L
           ),
-          false
+          false,
+          SegmentLazyLoadFailCallback.NOOP
       );
     }
     catch (SegmentLoadingException e) {

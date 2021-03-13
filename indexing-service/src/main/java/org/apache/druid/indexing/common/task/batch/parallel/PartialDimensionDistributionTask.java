@@ -50,7 +50,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -106,7 +105,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
   }
 
-  @VisibleForTesting  // Only for testing
+  @VisibleForTesting
   PartialDimensionDistributionTask(
       @Nullable String id,
       final String groupId,
@@ -334,7 +333,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
-    @VisibleForTesting  // to allow controlling false positive rate of bloom filter
+    @VisibleForTesting
+      // to allow controlling false positive rate of bloom filter
     DedupInputRowFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,
@@ -368,8 +368,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     private long getBucketTimestamp(InputRow inputRow)
     {
-      DateTime timestamp = inputRow.getTimestamp();
-      return queryGranularity.bucketStart(timestamp).getMillis();
+      final long timestamp = inputRow.getTimestampFromEpoch();
+      return queryGranularity.bucketStart(timestamp);
     }
 
     @Override

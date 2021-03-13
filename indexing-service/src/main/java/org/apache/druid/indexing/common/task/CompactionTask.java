@@ -31,7 +31,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
@@ -65,7 +67,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -90,6 +91,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -141,6 +143,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final Granularity segmentGranularity;
   @Nullable
+  private final ClientCompactionTaskGranularitySpec granularitySpec;
+  @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
@@ -172,7 +176,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
-      @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
+      @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
+      @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
@@ -202,6 +207,11 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
+    if (granularitySpec == null && segmentGranularity != null) {
+      this.granularitySpec = new ClientCompactionTaskGranularitySpec(segmentGranularity, null);
+    } else {
+      this.granularitySpec = granularitySpec;
+    }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
@@ -222,6 +232,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           indexTuningConfig.getAppendableIndexSpec(),
           indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getMaxBytesInMemory(),
+          indexTuningConfig.isSkipBytesInMemoryOverheadCheck(),
           indexTuningConfig.getMaxTotalRows(),
           indexTuningConfig.getNumShards(),
           null,
@@ -287,7 +298,14 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Override
   public Granularity getSegmentGranularity()
   {
-    return segmentGranularity;
+    return granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
+  }
+
+  @JsonProperty
+  @Nullable
+  public ClientCompactionTaskGranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
   }
 
   @Nullable
@@ -347,7 +365,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         partitionConfigurationManager,
         dimensionsSpec,
         metricsSpec,
-        segmentGranularity,
+        granularitySpec,
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory
@@ -455,7 +473,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
-      @Nullable final Granularity segmentGranularity,
+      @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
       final RetryPolicyFactory retryPolicyFactory
@@ -483,7 +501,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     final ParallelIndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig();
 
-    if (segmentGranularity == null) {
+    if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
       // original granularity
       final Map<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> intervalToSegments = new TreeMap<>(
           Comparators.intervalsByStartThenEnd()
@@ -518,12 +536,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       for (NonnullPair<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> entry : intervalToSegmentsUnified) {
         final Interval interval = entry.lhs;
         final List<NonnullPair<QueryableIndex, DataSegment>> segmentsToCompact = entry.rhs;
+        // If granularitySpec is not null, then set segmentGranularity. Otherwise,
+        // creates new granularitySpec and set segmentGranularity
+        Granularity segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
             segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
-            GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity()
+            granularitySpec == null ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null) : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
 
         specs.add(
@@ -550,7 +571,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           queryableIndexAndSegments,
           dimensionsSpec,
           metricsSpec,
-          segmentGranularity
+          granularitySpec
       );
 
       return Collections.singletonList(
@@ -618,33 +639,32 @@ public class CompactionTask extends AbstractBatchIndexTask
       List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      Granularity segmentGranularity
+      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec
   )
   {
-    // check index metadata
-    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
-      final QueryableIndex index = pair.lhs;
-      if (index.getMetadata() == null) {
-        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
-      }
-    }
-
-    // find granularity spec
-    // set rollup only if rollup is set for all segments
-    final boolean rollup = queryableIndexAndSegments.stream().allMatch(pair -> {
-      // We have already checked getMetadata() doesn't return null
-      final Boolean isRollup = pair.lhs.getMetadata().isRollup();
-      return isRollup != null && isRollup;
-    });
+    // check index metadata &
+    // Decide which values to propagate (i.e. carry over) for rollup & queryGranularity
+    final SettableSupplier<Boolean> rollup = new SettableSupplier<>();
+    final SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
+    decideRollupAndQueryGranularityCarryOver(rollup, queryGranularity, queryableIndexAndSegments);
 
     final Interval totalInterval = JodaUtils.umbrellaInterval(
         queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
     );
 
-    final GranularitySpec granularitySpec = new UniformGranularitySpec(
-        Preconditions.checkNotNull(segmentGranularity),
-        Granularities.NONE,
-        rollup,
+    final Granularity queryGranularityToUse;
+    if (granularitySpec.getQueryGranularity() == null) {
+      queryGranularityToUse = queryGranularity.get();
+      log.info("Generate compaction task spec with segments original query granularity [%s]", queryGranularityToUse);
+    } else {
+      queryGranularityToUse = granularitySpec.getQueryGranularity();
+      log.info("Generate compaction task spec with new query granularity overrided from input [%s]", queryGranularityToUse);
+    }
+
+    final GranularitySpec uniformGranularitySpec = new UniformGranularitySpec(
+        Preconditions.checkNotNull(granularitySpec.getSegmentGranularity()),
+        queryGranularityToUse,
+        rollup.get(),
         Collections.singletonList(totalInterval)
     );
 
@@ -656,14 +676,73 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                  ? createMetricsSpec(queryableIndexAndSegments)
                                                  : convertToCombiningFactories(metricsSpec);
 
-    return new DataSchema(
+    return new
+        DataSchema(
         dataSource,
         new TimestampSpec(null, null, null),
         finalDimensionsSpec,
         finalMetricsSpec,
-        granularitySpec,
+        uniformGranularitySpec,
         null
     );
+  }
+
+
+  /**
+   * Decide which rollup & queryCardinalities to propage for the compacted segment based on
+   * the data segments given
+   *
+   * @param rollup                    Reference to update with the rollup value
+   * @param queryGranularity          Reference to update with the queryGranularity value
+   * @param queryableIndexAndSegments The segments to compact
+   */
+  private static void decideRollupAndQueryGranularityCarryOver(
+      SettableSupplier<Boolean> rollup,
+      SettableSupplier<Granularity> queryGranularity,
+      List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments
+  )
+  {
+    final SettableSupplier<Boolean> rollupIsValid = new SettableSupplier<>(true);
+    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
+      final QueryableIndex index = pair.lhs;
+      if (index.getMetadata() == null) {
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
+      }
+      // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
+
+      // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
+      if (rollupIsValid.get()) {
+        Boolean isRollup = index.getMetadata().isRollup();
+        if (isRollup == null) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        } else if (rollup.get() == null) {
+          rollup.set(isRollup);
+        } else if (!rollup.get().equals(isRollup.booleanValue())) {
+          rollupIsValid.set(false);
+          rollup.set(false);
+        }
+      }
+
+      // Pick the finer, non-null, of the query granularities of the segments being compacted
+      Granularity current = index.getMetadata().getQueryGranularity();
+      queryGranularity.set(compareWithCurrent(queryGranularity.get(), current));
+    }
+  }
+
+  @VisibleForTesting
+  static Granularity compareWithCurrent(Granularity queryGranularity, Granularity current)
+  {
+    if (queryGranularity == null && current != null) {
+      queryGranularity = current;
+    } else if (queryGranularity != null
+               && current != null
+               && Granularity.IS_FINER_THAN.compare(current, queryGranularity) < 0) {
+      queryGranularity = current;
+    }
+    // we never propagate nulls when there is at least one non-null granularity thus
+    // do nothing for the case queryGranularity != null && current == null
+    return queryGranularity;
   }
 
   private static AggregatorFactory[] createMetricsSpec(
@@ -860,8 +939,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     ParallelIndexTuningConfig computeTuningConfig()
     {
       ParallelIndexTuningConfig newTuningConfig = tuningConfig == null
-                                          ? ParallelIndexTuningConfig.defaultConfig()
-                                          : tuningConfig;
+                                                  ? ParallelIndexTuningConfig.defaultConfig()
+                                                  : tuningConfig;
       PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
       if (partitionsSpec instanceof DynamicPartitionsSpec) {
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
@@ -890,6 +969,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     private AggregatorFactory[] metricsSpec;
     @Nullable
     private Granularity segmentGranularity;
+    @Nullable
+    private ClientCompactionTaskGranularitySpec granularitySpec;
     @Nullable
     private TuningConfig tuningConfig;
     @Nullable
@@ -940,6 +1021,12 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
+    public Builder granularitySpec(ClientCompactionTaskGranularitySpec granularitySpec)
+    {
+      this.granularitySpec = granularitySpec;
+      return this;
+    }
+
     public Builder tuningConfig(TuningConfig tuningConfig)
     {
       this.tuningConfig = tuningConfig;
@@ -965,6 +1052,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           dimensionsSpec,
           metricsSpec,
           segmentGranularity,
+          granularitySpec,
           tuningConfig,
           context,
           segmentLoaderFactory,
