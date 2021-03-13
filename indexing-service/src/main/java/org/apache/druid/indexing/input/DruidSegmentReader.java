@@ -42,6 +42,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -92,31 +94,44 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
-    final CleanableFile segmentFile = source.fetch(temporaryDirectory, null);
-    final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
-        new QueryableIndexStorageAdapter(
-            indexIO.loadIndex(segmentFile.file())
-        ),
-        source.getIntervalFilter()
-    );
+    final Closer closer = Closer.create();
 
-    final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
-        Filters.toFilter(dimFilter),
-        storageAdapter.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    try {
+      final CleanableFile segmentFile = closer.register(source.fetch(temporaryDirectory, null));
+      final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(segmentFile.file()));
+      final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
+          new QueryableIndexStorageAdapter(queryableIndex),
+          source.getIntervalFilter()
+      );
 
-    final Sequence<Map<String, Object>> sequence = Sequences.concat(
-        Sequences.map(
-            cursors,
-            this::cursorToSequence
-        )
-    );
+      final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
+          Filters.toFilter(dimFilter),
+          storageAdapter.getInterval(),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
 
-    return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
+      final Sequence<Map<String, Object>> sequence = Sequences.concat(
+          Sequences.map(
+              cursors,
+              this::cursorToSequence
+          )
+      );
+
+      return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, closer);
+    }
+    catch (Exception e) {
+      try {
+        closer.close();
+      }
+      catch (IOException e2) {
+        e.addSuppressed(e2);
+      }
+
+      throw e;
+    }
   }
 
   @Override
@@ -137,6 +152,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
    * Map<String, Object> intermediate rows, selecting the dimensions and metrics of this segment reader.
    *
    * @param cursor A cursor
+   *
    * @return A sequence of intermediate rows
    */
   private Sequence<Map<String, Object>> cursorToSequence(
@@ -149,16 +165,17 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   }
 
   /**
-   * @param sequence    A sequence of intermediate rows generated from a sequence of
-   *                    cursors in {@link #intermediateRowIterator()}
-   * @param segmentFile The underlying segment file containing the row data
+   * @param sequence  A sequence of intermediate rows generated from a sequence of
+   *                  cursors in {@link #intermediateRowIterator()}
+   * @param closeable Object to close when the iteration is complete
+   *
    * @return A CloseableIterator from a sequence of intermediate rows, closing the underlying segment file
-   *         when the iterator is closed.
+   * when the iterator is closed.
    */
   @VisibleForTesting
   static CloseableIterator<Map<String, Object>> makeCloseableIteratorFromSequenceAndSegmentFile(
       final Sequence<Map<String, Object>> sequence,
-      final CleanableFile segmentFile
+      final Closeable closeable
   )
   {
     return new CloseableIterator<Map<String, Object>>()
@@ -183,8 +200,8 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       public void close() throws IOException
       {
         Closer closer = Closer.create();
+        closer.register(closeable);
         closer.register(rowYielder);
-        closer.register(segmentFile);
         closer.close();
       }
     };

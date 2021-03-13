@@ -22,6 +22,7 @@ package org.apache.druid.indexing.input;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -30,6 +31,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
@@ -87,8 +89,11 @@ public class DruidSegmentInputEntity implements InputEntity
       @Override
       public void close()
       {
-        if (!segmentFile.delete()) {
-          log.warn("Could not clean temporary segment file: " + segmentFile);
+        try {
+          FileUtils.deleteDirectory(segmentFile);
+        }
+        catch (IOException e) {
+          log.noStackTrace().warn(e, "Could not clean temporary segment file: " + segmentFile);
         }
       }
     };
