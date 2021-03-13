@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -416,92 +416,137 @@ public class VSizeLongSerde
   public interface LongDeserializer
   {
     long get(int index);
+
+    default void get(long[] out, int outPosition, int startIndex, int length)
+    {
+      for (int i = 0; i < length; i++) {
+        out[outPosition + i] = get(startIndex + i);
+      }
+    }
+
+    default int get(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = get(index);
+      }
+
+      return length;
+    }
   }
 
   private static final class Size1Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size1Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
       int shift = 7 - (index & 7);
-      return (buffer.get(offset + (index >> 3)) >> shift) & 1;
+      return (buffer.getByte((index >> 3)) >> shift) & 1;
     }
   }
 
   private static final class Size2Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size2Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
       int shift = 6 - ((index & 3) << 1);
-      return (buffer.get(offset + (index >> 2)) >> shift) & 3;
+      return (buffer.getByte((index >> 2)) >> shift) & 3;
     }
   }
 
   private static final class Size4Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size4Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
       int shift = ((index + 1) & 1) << 2;
-      return (buffer.get(offset + (index >> 1)) >> shift) & 0xF;
+      return (buffer.getByte((index >> 1)) >> shift) & 0xF;
     }
   }
 
   private static final class Size8Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size8Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.get(offset + index) & 0xFF;
+      return buffer.getByte(index) & 0xFF;
+    }
+
+    @Override
+    public void get(long[] out, int outPosition, int startIndex, int length)
+    {
+      long pos = startIndex;
+      for (int i = 0; i < length; i++, pos += 1) {
+        out[outPosition + i] = buffer.getByte(pos) & 0xFF;
+      }
+    }
+
+    @Override
+    public int get(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = buffer.getByte(index) & 0xFF;
+      }
+
+      return length;
     }
   }
 
   private static final class Size12Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size12Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
@@ -509,37 +554,61 @@ public class VSizeLongSerde
     {
       int shift = ((index + 1) & 1) << 2;
       int offset = (index * 3) >> 1;
-      return (buffer.getShort(this.offset + offset) >> shift) & 0xFFF;
+      return (buffer.getShort(offset) >> shift) & 0xFFF;
     }
   }
 
   private static final class Size16Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size16Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getShort(offset + (index << 1)) & 0xFFFF;
+      return buffer.getShort((long) index << 1) & 0xFFFF;
+    }
+
+    @Override
+    public void get(long[] out, int outPosition, int startIndex, int length)
+    {
+      long pos = (long) startIndex << 1;
+      for (int i = 0; i < length; i++, pos += Short.BYTES) {
+        out[outPosition + i] = buffer.getShort(pos) & 0xFFFF;
+      }
+    }
+
+    @Override
+    public int get(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = buffer.getShort((long) index << 1) & 0xFFFF;
+      }
+
+      return length;
     }
   }
 
   private static final class Size20Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size20Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
@@ -547,116 +616,136 @@ public class VSizeLongSerde
     {
       int shift = (((index + 1) & 1) << 2) + 8;
       int offset = (index * 5) >> 1;
-      return (buffer.getInt(this.offset + offset) >> shift) & 0xFFFFF;
+      return (buffer.getInt(offset) >> shift) & 0xFFFFF;
     }
   }
 
   private static final class Size24Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size24Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getInt(offset + index * 3) >>> 8;
+      return buffer.getInt(index * 3L) >>> 8;
     }
   }
 
   private static final class Size32Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size32Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getInt(offset + (index << 2)) & 0xFFFFFFFFL;
+      return buffer.getInt(((long) index << 2)) & 0xFFFFFFFFL;
     }
   }
 
   private static final class Size40Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size40Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 5) >>> 24;
+      return buffer.getLong(index * 5L) >>> 24;
     }
   }
 
   private static final class Size48Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size48Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 6) >>> 16;
+      return buffer.getLong(index * 6L) >>> 16;
     }
   }
 
   private static final class Size56Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size56Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 7) >>> 8;
+      return buffer.getLong(index * 7L) >>> 8;
     }
   }
 
   private static final class Size64Des implements LongDeserializer
   {
-    final ByteBuffer buffer;
-    final int offset;
+    final Memory buffer;
 
     public Size64Des(ByteBuffer buffer, int bufferOffset)
     {
-      this.buffer = buffer;
-      this.offset = bufferOffset;
+      final ByteBuffer dup = buffer.duplicate();
+      dup.position(bufferOffset);
+      this.buffer = Memory.wrap(dup.slice(), buffer.order());
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + (index << 3));
+      return buffer.getLong((long) index << 3);
+    }
+
+    @Override
+    public void get(long[] out, int outPosition, int startIndex, int length)
+    {
+      buffer.getLongArray((long) startIndex << 3, out, outPosition, length);
+    }
+
+    @Override
+    public int get(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = buffer.getLong((long) index << 3);
+      }
+
+      return length;
     }
   }
-
 }
