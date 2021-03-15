@@ -29,6 +29,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -126,7 +127,7 @@ public class S3InputSource extends CloudObjectInputSource
     this.awsCredentialsProvider = awsCredentialsProvider;
   }
 
-  // for testing
+  @VisibleForTesting
   public S3InputSource(
       ServerSideEncryptingAmazonS3 s3Client,
       ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
