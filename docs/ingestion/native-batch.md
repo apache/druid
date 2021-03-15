@@ -892,7 +892,7 @@ Sample specs:
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
           "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd",
-          "awsAssumedRoleArn": "arn:aws:iam::2981002874992:role/role-s3"
+          "assumeRoleArn": "arn:aws:iam::2981002874992:role/role-s3"
         }
       },
       "inputFormat": {
@@ -926,8 +926,8 @@ Properties Object:
 |--------|-----------|-------|---------|
 |accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
 |secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
-|awsAssumedRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **awsAssumedRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
-|awsExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
+|assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
+|assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 **Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
 

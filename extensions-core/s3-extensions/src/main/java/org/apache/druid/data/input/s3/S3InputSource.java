@@ -104,7 +104,7 @@ public class S3InputSource extends CloudObjectInputSource
         () -> {
           if (s3ClientBuilder != null && s3InputSourceConfig != null) {
             if (s3InputSourceConfig.isCredentialsConfigured()) {
-              if (s3InputSourceConfig.getAwsAssumedRoleArn() == null) {
+              if (s3InputSourceConfig.getAssumeRoleArn() == null) {
                 s3ClientBuilder
                     .getAmazonS3ClientBuilder()
                     .withCredentials(createStaticCredentialsProvider(s3InputSourceConfig));
@@ -147,18 +147,18 @@ public class S3InputSource extends CloudObjectInputSource
       AWSCredentialsProvider awsCredentialsProvider
   )
   {
-    String awsAssumedRoleArn = s3InputSourceConfig.getAwsAssumedRoleArn();
-    if (awsAssumedRoleArn != null) {
+    String assumeRoleArn = s3InputSourceConfig.getAssumeRoleArn();
+    if (assumeRoleArn != null) {
       String roleSessionName = StringUtils.format("druid-s3-input-source-%s", UUID.randomUUID().toString());
       AWSSecurityTokenService securityTokenService = AWSSecurityTokenServiceClientBuilder.standard()
                                                                           .withCredentials(awsCredentialsProvider)
                                                                           .build();
       STSAssumeRoleSessionCredentialsProvider.Builder roleCredentialsProviderBuilder;
       roleCredentialsProviderBuilder = new STSAssumeRoleSessionCredentialsProvider
-          .Builder(awsAssumedRoleArn, roleSessionName).withStsClient(securityTokenService);
+          .Builder(assumeRoleArn, roleSessionName).withStsClient(securityTokenService);
 
-      if (s3InputSourceConfig.getAwsAssumeRoleExternalId() != null) {
-        roleCredentialsProviderBuilder.withExternalId(s3InputSourceConfig.getAwsAssumeRoleExternalId());
+      if (s3InputSourceConfig.getAssumeRoleExternalId() != null) {
+        roleCredentialsProviderBuilder.withExternalId(s3InputSourceConfig.getAssumeRoleExternalId());
       }
 
       s3ClientBuilder.getAmazonS3ClientBuilder().withCredentials(roleCredentialsProviderBuilder.build());

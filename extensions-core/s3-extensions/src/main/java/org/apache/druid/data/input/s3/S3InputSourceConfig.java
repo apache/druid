@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Contains properties for s3 input source.
@@ -35,10 +36,10 @@ public class S3InputSourceConfig
 {
   @Nullable
   @JsonProperty
-  private String awsAssumedRoleArn;
+  private String assumeRoleArn;
   @Nullable
   @JsonProperty
-  private String externalId;
+  private String assumeRoleExternalId;
   @JsonProperty
   private PasswordProvider accessKeyId;
   @JsonProperty
@@ -48,12 +49,12 @@ public class S3InputSourceConfig
   public S3InputSourceConfig(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey,
-      @JsonProperty("awsAssumedRoleArn") @Nullable String awsAssumedRoleArn,
-      @JsonProperty("awsExternalId") @Nullable String exteranlId
+      @JsonProperty("assumeRoleArn") @Nullable String assumeRoleArn,
+      @JsonProperty("assumeRoleExternalId") @Nullable String assumeRoleExternalId
   )
   {
-    this.awsAssumedRoleArn = awsAssumedRoleArn;
-    this.externalId = exteranlId;
+    this.assumeRoleArn = assumeRoleArn;
+    this.assumeRoleExternalId = assumeRoleExternalId;
     if (accessKeyId != null || secretAccessKey != null) {
       this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
       this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
@@ -61,15 +62,15 @@ public class S3InputSourceConfig
   }
 
   @Nullable
-  public String getAwsAssumedRoleArn()
+  public String getAssumeRoleArn()
   {
-    return awsAssumedRoleArn;
+    return assumeRoleArn;
   }
 
   @Nullable
-  public String getAwsAssumeRoleExternalId()
+  public String getAssumeRoleExternalId()
   {
-    return externalId;
+    return assumeRoleExternalId;
   }
 
   public PasswordProvider getAccessKeyId()
@@ -93,10 +94,10 @@ public class S3InputSourceConfig
   public String toString()
   {
     return "S3InputSourceConfig{" +
-           "awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
-           ", externalId='" + externalId + '\'' +
-           ", accessKeyId=" + accessKeyId +
+           "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
+           ", assumeRoleArn=" + assumeRoleArn +
+           ", assumeRoleExternalId=" + assumeRoleExternalId +
            '}';
   }
 
@@ -109,30 +110,16 @@ public class S3InputSourceConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     S3InputSourceConfig that = (S3InputSourceConfig) o;
-
-    if (awsAssumedRoleArn != null
-        ? !awsAssumedRoleArn.equals(that.awsAssumedRoleArn)
-        : that.awsAssumedRoleArn != null) {
-      return false;
-    }
-    if (externalId != null ? !externalId.equals(that.externalId) : that.externalId != null) {
-      return false;
-    }
-    if (accessKeyId != null ? !accessKeyId.equals(that.accessKeyId) : that.accessKeyId != null) {
-      return false;
-    }
-    return secretAccessKey != null ? secretAccessKey.equals(that.secretAccessKey) : that.secretAccessKey == null;
+    return Objects.equals(accessKeyId, that.accessKeyId) &&
+           Objects.equals(secretAccessKey, that.secretAccessKey) &&
+           Objects.equals(assumeRoleArn, that.assumeRoleArn) &&
+           Objects.equals(assumeRoleExternalId, that.assumeRoleExternalId);
   }
 
   @Override
   public int hashCode()
   {
-    int result = awsAssumedRoleArn != null ? awsAssumedRoleArn.hashCode() : 0;
-    result = 31 * result + (externalId != null ? externalId.hashCode() : 0);
-    result = 31 * result + (accessKeyId != null ? accessKeyId.hashCode() : 0);
-    result = 31 * result + (secretAccessKey != null ? secretAccessKey.hashCode() : 0);
-    return result;
+    return Objects.hash(accessKeyId, secretAccessKey, assumeRoleArn, assumeRoleExternalId);
   }
 }
