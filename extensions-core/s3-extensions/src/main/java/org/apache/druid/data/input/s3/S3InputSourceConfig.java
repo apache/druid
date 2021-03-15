@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Contains properties for s3 input source.
@@ -34,24 +33,60 @@ import java.util.Objects;
  */
 public class S3InputSourceConfig
 {
+  @Nullable
+  @JsonProperty
+  private String awsAssumedRoleArn;
+  @Nullable
+  @JsonProperty
+  private String externalId;
+  @JsonProperty
+  private PasswordProvider accessKeyId;
+  @JsonProperty
+  private PasswordProvider secretAccessKey;
+
   @JsonCreator
   public S3InputSourceConfig(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
-      @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
+      @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey,
+      @JsonProperty("awsAssumedRoleArn") @Nullable String awsAssumedRoleArn,
+      @JsonProperty("awsExternalId") @Nullable String exteranlId
   )
   {
+    this.awsAssumedRoleArn = awsAssumedRoleArn;
+    this.externalId = exteranlId;
     if (accessKeyId != null || secretAccessKey != null) {
       this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
       this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
     }
   }
 
-  @JsonProperty
-  private PasswordProvider accessKeyId;
+  public S3InputSourceConfig(
+      @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
+      @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey)
+  {
+    if (accessKeyId != null || secretAccessKey != null) {
+      this.accessKeyId = Preconditions.checkNotNull(
+          accessKeyId,
+          "accessKeyId cannot be null if secretAccessKey is given"
+      );
+      this.secretAccessKey = Preconditions.checkNotNull(
+          secretAccessKey,
+          "secretAccessKey cannot be null if accessKeyId is given"
+      );
+    }
+  }
 
-  @JsonProperty
-  private PasswordProvider secretAccessKey;
+  @Nullable
+  public String getAwsAssumedRoleArn()
+  {
+    return awsAssumedRoleArn;
+  }
 
+  @Nullable
+  public String getAwsAssumeRoleExternalId()
+  {
+    return externalId;
+  }
 
   public PasswordProvider getAccessKeyId()
   {
@@ -74,7 +109,9 @@ public class S3InputSourceConfig
   public String toString()
   {
     return "S3InputSourceConfig{" +
-           "accessKeyId=" + accessKeyId +
+           "awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
+           ", externalId='" + externalId + '\'' +
+           ", accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
            '}';
   }
@@ -88,14 +125,30 @@ public class S3InputSourceConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+
     S3InputSourceConfig that = (S3InputSourceConfig) o;
-    return Objects.equals(accessKeyId, that.accessKeyId) &&
-           Objects.equals(secretAccessKey, that.secretAccessKey);
+
+    if (awsAssumedRoleArn != null
+        ? !awsAssumedRoleArn.equals(that.awsAssumedRoleArn)
+        : that.awsAssumedRoleArn != null) {
+      return false;
+    }
+    if (externalId != null ? !externalId.equals(that.externalId) : that.externalId != null) {
+      return false;
+    }
+    if (accessKeyId != null ? !accessKeyId.equals(that.accessKeyId) : that.accessKeyId != null) {
+      return false;
+    }
+    return secretAccessKey != null ? secretAccessKey.equals(that.secretAccessKey) : that.secretAccessKey == null;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(accessKeyId, secretAccessKey);
+    int result = awsAssumedRoleArn != null ? awsAssumedRoleArn.hashCode() : 0;
+    result = 31 * result + (externalId != null ? externalId.hashCode() : 0);
+    result = 31 * result + (accessKeyId != null ? accessKeyId.hashCode() : 0);
+    result = 31 * result + (secretAccessKey != null ? secretAccessKey.hashCode() : 0);
+    return result;
   }
 }

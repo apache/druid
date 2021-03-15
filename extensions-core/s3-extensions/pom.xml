@@ -116,7 +116,7 @@
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-sts</artifactId>
       <scope>provided</scope>
-    </dependency>    
+    </dependency>
     <!-- Tests -->
     <dependency>
       <groupId>org.apache.druid</groupId>
