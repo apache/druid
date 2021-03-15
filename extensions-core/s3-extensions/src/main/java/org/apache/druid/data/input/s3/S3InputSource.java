@@ -149,7 +149,7 @@ public class S3InputSource extends CloudObjectInputSource
   {
     String awsAssumedRoleArn = s3InputSourceConfig.getAwsAssumedRoleArn();
     if (awsAssumedRoleArn != null) {
-      String roleSessionName = StringUtils.format("druid-s3-indexing-%s", UUID.randomUUID().toString());
+      String roleSessionName = StringUtils.format("druid-s3-input-source-%s", UUID.randomUUID().toString());
       AWSSecurityTokenService securityTokenService = AWSSecurityTokenServiceClientBuilder.standard()
                                                                           .withCredentials(awsCredentialsProvider)
                                                                           .build();
