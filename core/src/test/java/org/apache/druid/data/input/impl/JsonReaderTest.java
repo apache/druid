@@ -347,6 +347,62 @@ public class JsonReaderTest
   }
 
   @Test
+  public void testEmptyJSONText() throws IOException
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+            )
+        ),
+        null,
+        null,
+        false //make sure JsonReader is used
+    );
+
+    //input is empty
+    final ByteEntity source = new ByteEntity(
+        StringUtils.toUtf8(
+            "" // empty row
+        )
+    );
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+            Collections.emptyList()
+        ),
+        source,
+        null
+    );
+
+    //expect a ParseException on the following `next` call on iterator
+    expectedException.expect(ParseException.class);
+
+    // the 2nd line is ill-formed, so the parse of this text chunk aborts
+    final int numExpectedIterations = 0;
+
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+        iterator.next();
+        ++numActualIterations;
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+
+
+  @Test
   public void testSampleEmptyText() throws IOException
   {
     final JsonInputFormat format = new JsonInputFormat(

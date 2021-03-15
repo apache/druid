@@ -830,6 +830,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         "restrictedView",
         "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
     );
+
+    viewManager.createView(
+        plannerFactory,
+        "invalidView",
+        "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
+    );
     return sqlLifecycleFactory;
   }
 
@@ -876,5 +882,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               .build(),
           };
     }
+  }
+
+  protected Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
+  {
+    // since context is usually immutable in tests, make a copy
+    HashMap<String, Object> newContext = new HashMap<>(context);
+    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
+    return newContext;
   }
 }
