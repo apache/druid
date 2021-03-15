@@ -60,22 +60,6 @@ public class S3InputSourceConfig
     }
   }
 
-  public S3InputSourceConfig(
-      @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
-      @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey)
-  {
-    if (accessKeyId != null || secretAccessKey != null) {
-      this.accessKeyId = Preconditions.checkNotNull(
-          accessKeyId,
-          "accessKeyId cannot be null if secretAccessKey is given"
-      );
-      this.secretAccessKey = Preconditions.checkNotNull(
-          secretAccessKey,
-          "secretAccessKey cannot be null if accessKeyId is given"
-      );
-    }
-  }
-
   @Nullable
   public String getAwsAssumedRoleArn()
   {
