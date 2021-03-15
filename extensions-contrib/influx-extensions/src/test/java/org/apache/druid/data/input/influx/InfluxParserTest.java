@@ -132,6 +132,26 @@ public class InfluxParserTest
                   .with("bar", "baz")
                   .with("m", 1.0)
                   .with("n", 3.0)
+        ),
+        testCase("Unsigned integer in field value",
+                "foo,region=us-east-1,host=127.0.0.1 m=1.0,n=3.0,o=500i,u=123u 123456789",
+            Parsed.row("foo", 123L)
+                  .with("region", "us-east-1")
+                  .with("host", "127.0.0.1")
+                  .with("m", 1.0)
+                  .with("n", 3.0)
+                  .with("o", 500L)
+                  .with("u", 123L)
+        ),
+        testCase("Float with E notation in field value",
+                "foo,region=us-east-1,host=127.0.0.1 m=1.0,n=3.0,o=500i,f=-1.234456e+78 123456789",
+            Parsed.row("foo", 123L)
+                  .with("region", "us-east-1")
+                  .with("host", "127.0.0.1")
+                  .with("m", 1.0)
+                  .with("n", 3.0)
+                  .with("o", 500L)
+                  .with("f", -1.234456e+78)
         )
     ).toArray();
   }
@@ -164,6 +184,7 @@ public class InfluxParserTest
     Parser<String, Object> parser = new InfluxParser(Sets.newHashSet("cpu"));
     String input = "cpu,host=foo.bar.baz,region=us-east,application=echo pct_idle=99.3,pct_user=88.8,m1_load=2 1465839830100400200";
     Map<String, Object> parsed = parser.parseToMap(input);
+    assert parsed != null;
     MatcherAssert.assertThat(parsed.get("measurement"), Matchers.equalTo("cpu"));
   }
 
@@ -216,10 +237,10 @@ public class InfluxParserTest
 
     static Parsed row(String measurement, Long timestamp)
     {
-      Parsed e = new Parsed();
-      e.measurement = measurement;
-      e.timestamp = timestamp;
-      return e;
+      Parsed parsed = new Parsed();
+      parsed.measurement = measurement;
+      parsed.timestamp = timestamp;
+      return parsed;
     }
 
     Parsed with(String k, Object v)

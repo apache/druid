@@ -121,23 +121,21 @@ public class InfluxParser implements Parser<String, Object>
     return BACKSLASH_PATTERN.matcher(text.substring(1, text.length() - 1)).replaceAll("\"");
   }
 
-  private Object parseNumber(String raw)
+  private Number parseNumber(String raw)
   {
     if (raw.endsWith("i")) {
       return Long.valueOf(raw.substring(0, raw.length() - 1));
+    } else if (raw.endsWith("u")) {
+      return Math.abs(Long.parseLong(raw.substring(0, raw.length() - 1)));
     }
 
-    return new Double(raw);
+    return Double.valueOf(raw);
   }
 
-  private Object parseBool(String raw)
+  private Boolean parseBool(String raw)
   {
-    char first = raw.charAt(0);
-    if (first == 't' || first == 'T') {
-      return "true";
-    } else {
-      return "false";
-    }
+    final char first = raw.charAt(0);
+    return (first == 't' || first == 'T');
   }
 
   private String parseIdentifier(InfluxLineProtocolParser.IdentifierContext ctx)
@@ -161,7 +159,7 @@ public class InfluxParser implements Parser<String, Object>
       dest.put(TIMESTAMP_KEY, 0L);
     } else {
       timestamp = timestamp.substring(0, timestamp.length() - 6);
-      final long timestampMillis = Long.valueOf(timestamp);
+      final long timestampMillis = Long.parseLong(timestamp);
       dest.put(TIMESTAMP_KEY, timestampMillis);
     }
   }
