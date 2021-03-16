@@ -642,6 +642,33 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertFalse(iterator.hasNext());
   }
 
+  @Test
+  public void testIteratorReturnsAllMixedVersionSegmentsInConfiguredSegmentGranularity()
+  {
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), new Period("P1D"), "1994-04-29T00:00:00.000Z"),
+        new SegmentGenerateSpec(Intervals.of("2017-10-01T00:01:00/2017-10-01T00:02:00"), new Period("PT1H"), "1994-04-30T00:00:00.000Z")
+    );
+
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null))),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+
+    // We should get all segments in timeline back since skip offset is P0D.
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
   private static void assertCompactSegmentIntervals(
       CompactionSegmentIterator iterator,
       Period segmentPeriod,
@@ -713,7 +740,7 @@ public class NewestSegmentFirstPolicyTest
           final DataSegment segment = new DataSegment(
               DATA_SOURCE,
               segmentInterval,
-              version,
+              spec.version == null ? version : spec.version,
               null,
               ImmutableList.of(),
               ImmutableList.of(),
@@ -755,19 +782,31 @@ public class NewestSegmentFirstPolicyTest
     private final Period segmentPeriod;
     private final long segmentSize;
     private final int numSegmentsPerShard;
+    private final String version;
 
     SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod)
     {
-      this(totalInterval, segmentPeriod, DEFAULT_SEGMENT_SIZE, DEFAULT_NUM_SEGMENTS_PER_SHARD);
+      this(totalInterval, segmentPeriod, null);
+    }
+
+    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, String version)
+    {
+      this(totalInterval, segmentPeriod, DEFAULT_SEGMENT_SIZE, DEFAULT_NUM_SEGMENTS_PER_SHARD, version);
     }
 
     SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, long segmentSize, int numSegmentsPerShard)
+    {
+      this(totalInterval, segmentPeriod, segmentSize, numSegmentsPerShard, null);
+    }
+
+    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, long segmentSize, int numSegmentsPerShard, String version)
     {
       Preconditions.checkArgument(numSegmentsPerShard >= 1);
       this.totalInterval = totalInterval;
       this.segmentPeriod = segmentPeriod;
       this.segmentSize = segmentSize;
       this.numSegmentsPerShard = numSegmentsPerShard;
+      this.version = version;
     }
   }
 }
