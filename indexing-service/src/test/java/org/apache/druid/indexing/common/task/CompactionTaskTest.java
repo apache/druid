@@ -73,8 +73,10 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -176,6 +178,9 @@ public class CompactionTaskTest
   private static final IndexingServiceClient INDEXING_SERVICE_CLIENT = new NoopIndexingServiceClient();
   private static final ObjectMapper OBJECT_MAPPER = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
+  private static final String CONFLICTING_SEGMENT_GRANULARITY_FORMAT =
+      "Conflicting segment granularities found %s(segmentGranularity) and %s(granularitySpec.segmentGranularity).\n"
+      + "Remove `segmentGranularity` and set the `granularitySpec.segmentGranularity` to the expected granularity";
 
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static List<AggregatorFactory> AGGREGATORS;
@@ -379,11 +384,14 @@ public class CompactionTaskTest
     builder2.tuningConfig(createTuningConfig());
     builder2.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY));
     final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
-    Assert.assertEquals(taskCreatedWithGranularitySpec.getSegmentGranularity(), taskCreatedWithSegmentGranularity.getSegmentGranularity());
+    Assert.assertEquals(
+        taskCreatedWithGranularitySpec.getSegmentGranularity(),
+        taskCreatedWithSegmentGranularity.getSegmentGranularity()
+    );
   }
 
-  @Test
-  public void testCreateCompactionTaskWithGranularitySpecOverrideSegmentGranularity()
+  @Test(expected = IAE.class)
+  public void testCreateCompactionTaskWithConflictingGranularitySpecAndSegmentGranularityShouldThrowIAE()
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -394,8 +402,66 @@ public class CompactionTaskTest
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, Granularities.DAY));
+    try {
+      builder.build();
+    }
+    catch (IAE iae) {
+      Assert.assertEquals(
+          StringUtils.format(
+              CONFLICTING_SEGMENT_GRANULARITY_FORMAT,
+              Granularities.HOUR,
+              Granularities.MINUTE
+          ),
+          iae.getMessage()
+      );
+      throw iae;
+    }
+    Assert.fail("Should not have reached here!");
+  }
+
+  @Test(expected = IAE.class)
+  public void testCreateCompactionTaskWithNullSegmentGranularityInGranularitySpecAndSegmentGranularityShouldSucceed()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.segmentGranularity(Granularities.HOUR);
+    builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.DAY));
+    try {
+      builder.build();
+    }
+    catch (IAE iae) {
+      Assert.assertEquals(
+          StringUtils.format(
+              CONFLICTING_SEGMENT_GRANULARITY_FORMAT,
+              Granularities.HOUR,
+              null
+          ),
+          iae.getMessage()
+      );
+      throw iae;
+    }
+    Assert.fail("Should not have reached here!");
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithSameGranularitySpecAndSegmentGranularityShouldSucceed()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.segmentGranularity(Granularities.HOUR);
+    builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY));
     final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
-    Assert.assertEquals(Granularities.MINUTE, taskCreatedWithSegmentGranularity.getSegmentGranularity());
+    Assert.assertEquals(Granularities.HOUR, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
 
   @Test
@@ -1201,7 +1267,8 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
+  public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity()
+      throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
