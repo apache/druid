@@ -208,6 +208,10 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
+    // Prior to apache/druid#10843 users could specify segmentGranularity using `segmentGranularity`
+    // Now users should prefer to use `granularitySpec`
+    // In case users accidentally specify both, and they are conflicting, warn the user instead of proceeding
+    // by picking one or another.
     if (granularitySpec != null
         && segmentGranularity != null
         && !segmentGranularity.equals(granularitySpec.getSegmentGranularity())) {
